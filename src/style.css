@@ -1,0 +1,17 @@
+body {
+  margin: 0;
+  padding: 24px;
+  background: #f0f0f0;
+  font-family: sans-serif;
+}
+
+canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: white;
+}
+
+[role='alert'] {
+  color: #b00020;
+}
