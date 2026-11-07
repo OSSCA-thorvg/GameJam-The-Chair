@@ -221,3 +221,32 @@ test('speed telemetry settles to zero against a stationary cabinet despite wheel
     game.pause();
     assert.equal(game.getSnapshot().actualSpeed, 0);
 });
+
+test('airborne Q/E correction works while holding the opposite movement key', () => {
+    for (const [input, sign] of [[['right', 'q'], -1], [['left', 'e'], 1]]) {
+        const game = createGame();
+        game.startStage(2);
+        drive(game, state => state.checkpoint === 1);
+        game.reset();
+        for (let i = 0; i < 12; i++) game.step(dt);
+        game.setInput(...input);
+        game.jump();
+        for (let i = 0; i < 12; i++) game.step(dt);
+        const state = game.getSnapshot();
+        assert.equal(state.ground, false);
+        assert.ok(sign * state.player.w > .5, 'manual balance overrides movement tilt');
+    }
+});
+
+test('jumping across the office flag still saves the safe retry location', () => {
+    const game = createGame();
+    game.startStage(1);
+    game.setInput('right');
+    for (let i = 0; i < 120 * 15 && game.getSnapshot().player.x < 1330; i++) game.step(dt);
+    game.jump();
+    for (let i = 0; i < 120 && game.getSnapshot().player.x < 1400; i++) game.step(dt);
+    assert.equal(game.getSnapshot().ground, false);
+    assert.equal(game.getSnapshot().officeCheckpoint, true);
+    game.reset();
+    assert.equal(game.getSnapshot().player.x, 1400);
+});

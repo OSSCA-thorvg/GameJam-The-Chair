@@ -4,13 +4,17 @@
 <div class="scene" data-scene>
 <canvas data-base aria-label="사무실 의자 물리 게임. 방향키로 전후진, Space로 점프, Q E로 균형 조절. 복사기 종이, 청소 물통, 휴지통과 모니터 빛을 지나 오른쪽 출입문까지 이동하세요."></canvas><canvas data-tvg id="chair-office-one-tvg" aria-hidden="true" hidden></canvas><canvas class="labels" data-labels aria-hidden="true"></canvas>
 <div class="hud"><span data-stage-title>01 · 사무실 탈출</span><small data-hint>복사기 → 청소 물통 → 휴지통 → 모니터 빛 → 출입문</small><div class="focus-line"><span>사람 집중도</span><b data-focus>100%</b></div><div class="focus-track" role="progressbar" aria-label="사람 집중도" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" data-focus-meter><i data-focus-fill></i></div><small data-focus-note>방해 없으면 2초마다 +1%</small></div><div class="right"><span data-speed>0</span> km/h<br><span data-body>정상 근무</span></div>
+<div data-balance hidden aria-live="polite"></div>
 <div data-npc hidden><small data-name></small><span data-line></span></div>
 <div data-rider hidden><span data-face>😵</span><div><small>나 · 노트북은 놓지 않음</small><span data-quote></span></div></div>
 <div class="overlay" data-overlay><div class="modal"><div class="muted" data-kicker>21:00 · 아직 퇴근 전</div><h2 data-title>사무실이 나를<br>놓아주지 않는다.</h2><p data-desc>복사기는 종이를 퉤퉷, 청소 물통은 촤악,<br>휴지통에 빠지고, 모니터는 빛을 푸슝!<br>머리 충돌·휴지통 추락은 게임오버.<br>종이·불빛·오물에 집중도 −20%, 0%면 게임오버!</p><button class="start" data-start>의자 굴리기 →</button></div></div>
 </div>
 <div class="progress" aria-hidden="true"><span data-progress></span></div>
 <div class="row"><div class="status" data-status aria-live="polite">앞으로 가도, 뒤로 가도 정상 근무입니다.</div><div class="controls"><button data-stage="1">01 사무실</button><button data-stage="2">02 건물 내부</button><button data-reset>재시작 R</button><button data-pause>일시정지 P</button></div></div>
-<div class="row"><div class="controls"><button class="key" data-key="left">← 후진</button><button class="key" data-key="right">전진 →</button><button class="key" data-key="brake">↓ 제동</button><button class="key" data-jump>점프</button><button class="key" data-key="q" aria-label="앞바퀴 들기">↶ 들기 Q</button><button class="key" data-key="e" aria-label="앞바퀴 내리기">↷ 숙이기 E</button></div></div>
+<div class="row drive-controls">
+<div class="controls move-controls" aria-label="이동과 제동"><button class="key" data-key="left">← 후진</button><button class="key" data-key="right">전진 →</button><button class="key" data-key="brake">↓ 제동</button></div>
+<div class="controls action-controls" aria-label="점프와 균형"><button class="key" data-jump>점프 ↑</button><span class="balance-controls" role="group" aria-label="균형 조절"><button class="key" data-key="q" aria-label="왼쪽으로 균형 보정 Q">↶ Q</button><button class="key" data-key="e" aria-label="오른쪽으로 균형 보정 E">E ↷</button></span></div>
+</div>
 <p class="help">← → / A D 전후진 · Space / ↑ 점프 · Q E 균형 · ↓ / S 제동 · 휴지통은 점프로 피하세요 · R 재시작 · P 정지</p>
 
 

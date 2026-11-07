@@ -32,7 +32,7 @@ export function createHud(root: HTMLElement) {
         const GOAL = state.level.goal;
         text('[data-stage-label]', `THE CHAIR · STAGE 0${state.stage}`);
         text('[data-stage-title]', state.stage === 1 ? '01 · 사무실 탈출' : '02 · 회의실과 건물 내부');
-        text('[data-reset]', state.stage === 2 ? '체크포인트 R' : '재시작 R');
+        text('[data-reset]', state.stage === 2 || state.officeCheckpoint ? '체크포인트 R' : '재시작 R');
         const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
         text('[data-status]', status);
         text('[data-pause]', mode === 'pause' ? '계속 P' : '일시정지 P');
@@ -57,8 +57,8 @@ export function createHud(root: HTMLElement) {
         style('[data-focus-fill]', 'background', focus <= 20 ? '#d88e7e' : '#d2b783');
         q('[data-focus-meter]')?.setAttribute('aria-valuenow', String(focus));
         text('[data-focus-note]', lossReason === 'focus' ? '집중도 소진 · 게임오버' : focusNotice ? (focusNotice.kind === 'door' ? '회전문 충돌 −20%' : { paper: '종이', water: '오물', light: '불빛' }[focusNotice.kind] + ' 방해 −20%') : focusBlocked ? '방해 중 · 회복 대기' : '방해 없으면 2초마다 +1%');
-        text('[data-speed]', String(Math.round(Math.abs(p.vx) / 6)));
-        text('[data-body]', lossReason === 'focus' ? '집중도 소진' : glare > 0 ? '눈부심 · 잠깐 대기' : inBin ? '휴지통 추락 · 실패' : dirty ? '쓰레기범벅' : slip ? '오수 · 미끄러짐' : soaked ? '물범벅 · 업무 진행' : '정상 근무');
+        text('[data-speed]', String(mode === 'play' ? Math.round(Math.abs(state.actualSpeed) / 6) : 0));
+        text('[data-body]', lossReason === 'head' ? '머리 충돌 · 자세를 고쳐 재도전' : lossReason === 'focus' ? '집중도 소진' : glare > 0 ? '눈부심 · 잠깐 대기' : inBin ? '휴지통 추락 · 실패' : dirty ? '쓰레기범벅' : slip ? '오수 · 미끄러짐' : soaked ? '물범벅 · 업무 진행' : '정상 근무');
         style('[data-progress]', 'width', clamp(p.x / GOAL * 100, 0, 100) + '%');
         text('[data-hint]', inBin ? '휴지통 추락 · 재시작하세요' : slip ? '미끄러운 바닥 · 제동 거리 증가' : p.x < 720 ? '복사기는 가까이 가면 종이를 뱉어요' : p.x < 1300 ? (cleaning.spilled ? '젖은 바닥 · 미리 감속하세요' : '청소 물통 주의 · 가까이 가면 촤악!') : p.x < 1850 ? '휴지통은 점프로! 빠지면 게임오버' : p.x < 2220 ? (monitor.active ? '모니터 빛이 켜졌어요 · 꺼질 때 통과!' : monitor.warning ? '모니터 빛 예고 · 미리 제동하세요' : '빛이 꺼졌어요 · 지금 통과!') : '조금만 더… 오른쪽 출입문!');
         if (state.stage === 2) {
@@ -68,6 +68,22 @@ export function createHud(root: HTMLElement) {
             }
             text('.help', '← → / A D 이동 · Space / ↑ 점프 · Q E 균형 · ↓ / S 제동 · R 체크포인트 · P 정지');
         } else text('.help', '← → / A D 전후진 · Space / ↑ 점프 · Q E 균형 · ↓ / S 제동 · 휴지통은 점프로 피하세요 · R 재시작 · P 정지');
+        if (state.tutorialAssist) {
+            text('[data-hint]', state.ground ? '안전 연습 · ↑ 제자리 점프 / → + ↑ 전진 점프' : '기울면 가까이 뜨는 Q / E 방향으로 바로 세워요');
+        }
+        const balanceKey = state.balanceHint;
+        hidden('[data-balance]', mode !== 'play' || !balanceKey);
+        if (balanceKey && mode === 'play') {
+            text('[data-balance]', balanceKey === 'q' ? '↶ Q · 바로 세우기' : 'E ↷ · 바로 세우기');
+            style('[data-balance]', 'left', clamp((p.x - cam) * scale, 85, width - 85) + 'px');
+            style('[data-balance]', 'top', Math.max(160, (p.y - 120 + vertical) * scale) + 'px');
+        }
+        for (const key of ['q', 'e']) {
+            q(`[data-key="${key}"]`)?.classList.toggle('suggested', mode === 'play' && balanceKey === key);
+        }
+        if (state.stage === 1 && state.officeCheckpoint && !focusNotice && lossReason !== 'focus') {
+            text('[data-focus-note]', '휴지통 앞 저장 완료 · 재도전 시 집중도 100% / 물기 제거');
+        }
         hidden('[data-rider]', !reaction || !['play', 'impact', 'focuslost'].includes(mode));
         if (reaction) {
             text('[data-face]', reaction.face);

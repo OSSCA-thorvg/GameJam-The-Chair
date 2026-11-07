@@ -7,6 +7,7 @@ import type { GameEvent } from '../game/types';
 import type { Reaction, Speech } from './types';
 import type { GameState } from '../game/game';
 export function createFeedback() {
+    let practice: 'ready' | 'airborne' | 'landed' = 'ready';
     let reaction: Reaction | null = null;
     let speech: Speech | null = null;
     let status = '앞으로 가도, 뒤로 가도 정상 근무입니다.';
@@ -31,12 +32,21 @@ export function createFeedback() {
     }
     function receive(event: GameEvent, state: GameState) {
         if (event.type === 'reset') {
+            practice = 'ready';
             reaction = null;
             speech = null;
             panel = null;
-            status = state.stage === 2 ? '회의실 → 비상계단 → 창고 → 환풍구 → 기계실. 출장은 의자로 갑니다.' : '오른쪽 사무실 출입문까지. 아직은 발로 굴러갑니다.';
+            status = state.stage === 1 && state.officeCheckpoint ? '휴지통 앞에서 재개. 집중도 100%, 물기는 털고 다시 갑니다.' : state.stage === 2 ? '회의실 → 비상계단 → 창고 → 환풍구 → 기계실. 출장은 의자로 갑니다.' : '오른쪽 사무실 출입문까지. 아직은 발로 굴러갑니다.';
         }
         if (event.type === 'tick') {
+            if (state.tutorialAssist) {
+                if (practice === 'ready' && !state.ground && state.player.y < 365) {
+                    practice = 'airborne';
+                } else if (practice === 'airborne' && state.ground) {
+                    practice = 'landed';
+                    say('공중 결재 완료. 노트북 이상 무.', '😐', 2.6, 1);
+                }
+            }
             if (reaction && (reaction.life -= event.dt) <= 0) {
                 reaction = null;
             }
@@ -60,9 +70,13 @@ export function createFeedback() {
             case 'head-comment':
                 npc('산재 처리는…');
                 break;
-            case 'head-game-over':
-                overlay('GAME OVER · HEAD CONTACT', '머리가 먼저<br>퇴근했습니다.', state.stage === 2 ? '마지막 깃발에서 다시 출발합니다.<br>공중에서는 Q E로 자세를 맞춰주세요.' : '더러운 물 위에서는 브레이크도 미끄러워요.<br>공중에서는 Q E로 자세를 맞춰주세요.', '다시 정상 근무 ↻');
+            case 'head-game-over': {
+                const correction = Math.sin(state.player.a) >= 0 ? 'Q ↶' : 'E ↷';
+                const advice = (state.dirtyWaterExperienced || state.soaked) ? '젖은 바닥에서는 미리 감속하세요.' : '착지 전에 의자를 바로 세워주세요.';
+                const retry = state.stage === 2 || state.officeCheckpoint ? '마지막 깃발에서 다시 출발합니다.' : '출발 지점의 연습 바닥에서 다시 도전하세요.';
+                overlay('GAME OVER · HEAD CONTACT', '머리가 먼저<br>퇴근했습니다.', `${advice}<br>이번 기울기는 ${correction} 쪽으로 보정하세요.<br>${retry}`, '자세 고치고 다시 ↻');
                 break;
+            }
             case 'first-volley':
                 say('보고서가 왜 얼굴로 출력돼…', '😳');
                 break;
@@ -85,7 +99,7 @@ export function createFeedback() {
                 npc('산재 처리는…', '총무팀', 1810);
                 break;
             case 'bin-game-over':
-                overlay('GAME OVER · TRASH BIN', '업무와 함께<br>분리배출됐습니다.', '휴지통에 빠지면 게임오버입니다.<br>가장자리 전에 점프해서 건너세요.', '다시 정상 근무 ↻');
+                overlay('GAME OVER · TRASH BIN', '업무와 함께<br>분리배출됐습니다.', '휴지통 앞 깃발에서 집중도 100%, 마른 상태로 재개합니다.<br>바닥의 도약 표시에서 전진하며 점프하세요.', '다시 정상 근무 ↻');
                 break;
             case 'focus-lost':
                 say('앗 언제 여기까지 왔지?!', '😕', 3, 99);

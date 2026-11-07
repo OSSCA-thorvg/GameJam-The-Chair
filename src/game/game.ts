@@ -420,7 +420,8 @@ export function createGame(initialDeaths = 0) {
             coyote = 0;
             jumpQ = 0;
         }
-        const tilt = (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0) + (was ? 0 : dir);
+        const balancing = keys.has('q') || keys.has('e');
+        const tilt = (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0) + (was || balancing ? 0 : dir);
         p.w += tilt * (was ? 4.3 : 6.4) * dt;
         if (p.x < 300) {
             p.w += (-Math.sin(p.a) * 20 - p.w * 7) * dt;
@@ -565,7 +566,7 @@ export function createGame(initialDeaths = 0) {
             p.vx = Math.max(0, p.vx);
         }
         actualSpeed += (Math.abs(p.x - prev) / dt - actualSpeed) * (1 - Math.exp(-dt / .12));
-        if (stage === 1 && !officeCheckpoint && ground && p.x >= 1400 && p.x < bin.a - 70 && Math.abs(p.y - (F - 28)) < 20) {
+        if (stage === 1 && !officeCheckpoint && p.x >= 1400 && p.x < bin.a - 25) {
             officeCheckpoint = true;
             events.push({ type: 'cue', id: 'checkpoint' });
         }

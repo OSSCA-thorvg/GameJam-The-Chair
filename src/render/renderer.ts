@@ -66,7 +66,7 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
     function size() {
         W = Math.max(300, base.clientWidth || 800);
         H = base.clientHeight || 510;
-        VW = Math.max(760, W);
+        VW = W < 520 ? 540 : Math.max(760, W);
         scale = W / VW;
         vertical = Math.max(0, H / scale - 510) * .7;
         dpr = Math.min(devicePixelRatio || 1, 2);
@@ -358,8 +358,22 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
             polygon([[-14, -94], [-2, -104], [7, -94]], '#c4ae73');
             rod(-3, -98, 0, -88, 2, '#849267');
         }
+        if (mode === 'impact' || (mode === 'dead' && state.lossReason === 'head')) {
+            for (let i = 0; i < 8; i++) {
+                const angle = i * TAU / 8;
+                rod(Math.cos(angle) * 19, -77 + Math.sin(angle) * 19, Math.cos(angle) * 28, -77 + Math.sin(angle) * 28, 3, '#e5b17f');
+            }
+        }
         ox = oy = rotation = 0;
         localScale = 1;
+    }
+    function practiceFloor() {
+        if (cam > 340) return;
+        rect(45, F - 3, 260, 6, '#d2c8a3');
+        for (let x = 55; x < 300; x += 26) rect(x, F + 12, 13, 3, '#e4dabb');
+        label('↑', 115, F - 15, 22, '#e9e0c6');
+        label('→ ↑', 240, F - 15, 19, '#e9e0c6');
+        label('안전 연습 구역', 175, F + 40, 12, '#687783');
     }
     function building() {
         commands = [];
@@ -427,6 +441,7 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         rect(GOAL - 35, 105, 106, 205, '#677d7e'); rect(GOAL - 27, 113, 90, 190, '#b5c4bf');
         rect(GOAL - 31, 74, 98, 23, '#718e7b'); label('기계실 →', GOAL + 18, 91, 13, '#f0eddc');
         rod(GOAL + 40, 190, GOAL + 40, 229, 4, '#677d7e');
+        practiceFloor();
         ellipse(p.x, p.y + 35, 45, 5, '#91959c'); player();
         if (mode === 'pause') { rect(cam, -vertical, VW, H / scale, '#3a455ddd'); label('잠깐, 숨 고르는 중', cam + VW / 2, 250, 22, '#eee8d7'); }
     }
@@ -506,6 +521,15 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
             ox = oy = rotation = 0;
         }
         monitorDraw();
+        practiceFloor();
+        rod(1400, F, 1400, F - 80, 3, '#677d7e');
+        polygon([[1400, F - 80], [1432, F - 70], [1400, F - 58]], state.officeCheckpoint ? '#b8d6a2' : '#e0c18b');
+        label('재도전 지점', 1400, F + 38, 12, '#596c75');
+        for (let x = 1490; x < 1545; x += 18) {
+            polygon([[x, F - 4], [x + 12, F - 4], [x + 24, F - 12], [x + 12, F - 12]], '#e1c38b');
+        }
+        label('→ ↑', 1510, F - 23, 21, '#e9d5a5');
+        label('도약', 1510, F + 38, 12, '#596c75');
         binBack();
         ellipse(p.x, F + 8, 45, 5, '#91959c');
         player();
