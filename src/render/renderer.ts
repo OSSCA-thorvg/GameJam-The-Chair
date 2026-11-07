@@ -57,7 +57,7 @@ function setup(
     observer.observe(base);
     size();
 
-    function draw(next: GameState, effects: EffectsState) {
+    function draw(next: GameState, effects: EffectsState, camera?: number) {
         ctx.locale = getLocale();
         ctx.state = next;
         ctx.LEN = next.level.length;
@@ -89,7 +89,9 @@ function setup(
             ctx.cam = 0;
             ctx.wheel = 0;
         }
-        if (ctx.mode === 'play') {
+        if (camera !== undefined) {
+            ctx.cam = ctx.clamp(camera, 0, Math.max(0, ctx.LEN - ctx.VW));
+        } else if (ctx.mode === 'play') {
             const recovery = next.cleaning.spilled && next.bucketAge >= CLEANER_RECOVERY_START && next.bucketAge < CLEANER_RECOVERY_END
                 ? next.people.find((person) => person.id === 'cleaner')
                 : undefined;
@@ -125,10 +127,11 @@ function setup(
             renderer = 'canvas2d';
         }
     }
-    void initRenderer();
+    const ready = initRenderer();
 
     return {
         draw,
+        ready,
         info: () => ({ renderer, renderError, commands: ctx.commands.length }),
         destroy() {
             observer.disconnect();

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Chair · Animation preview</title>
+  </head>
+  <body>
+    <main class="preview">
+      <header><a href="/">← Game</a><h1>Animation preview</h1><small id="renderer">Loading renderer…</small></header>
+      <label for="motion">Scene</label>
+      <select id="motion" aria-label="Animation scene"></select>
+      <div id="chair-office-one">
+        <div class="scene">
+          <canvas data-base aria-label="Animation preview"></canvas>
+          <canvas data-tvg id="chair-office-one-tvg" aria-hidden="true" hidden></canvas>
+          <canvas class="labels" data-labels aria-hidden="true"></canvas>
+        </div>
+      </div>
+      <div class="preview-controls">
+        <button id="previous" type="button" aria-label="Previous frame">← Frame</button>
+        <button id="play" type="button" aria-label="Play animation">Play</button>
+        <button id="next" type="button" aria-label="Next frame">Frame →</button>
+        <label for="time">Time <output id="time-value" for="time">0.00 s</output></label>
+        <input id="time" type="range" min="0" max="0" step="0.0166667" value="0" />
+      </div>
+      <div id="markers" class="preview-markers" aria-label="Key moments"></div>
+    </main>
+    <script type="module" src="/src/preview.ts"></script>
+  </body>
+</html>
