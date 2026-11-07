@@ -8,7 +8,16 @@ export function bindInput(root: HTMLElement, game: Game) {
     function button(selector: string, action: () => void) {
         root.querySelector<HTMLElement>(selector)?.addEventListener('click', action, options);
     }
-    button('[data-start]', game.reset);
+    button('[data-start]', () => {
+        const state = game.getSnapshot();
+        if (state.mode === 'won' && state.stage === 1) {
+            game.startStage(2);
+        } else {
+            game.reset();
+        }
+    });
+    button('[data-stage="1"]', () => game.startStage(1));
+    button('[data-stage="2"]', () => game.startStage(2));
     button('[data-reset]', game.restart);
     button('[data-pause]', game.pause);
     window.addEventListener('keydown', e => {

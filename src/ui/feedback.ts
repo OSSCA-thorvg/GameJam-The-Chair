@@ -34,7 +34,7 @@ export function createFeedback() {
             reaction = null;
             speech = null;
             panel = null;
-            status = '오른쪽 사무실 출입문까지. 아직은 발로 굴러갑니다.';
+            status = state.stage === 2 ? '회의실 → 비상계단 → 창고 → 환풍구 → 기계실. 출장은 의자로 갑니다.' : '오른쪽 사무실 출입문까지. 아직은 발로 굴러갑니다.';
         }
         if (event.type === 'tick') {
             if (reaction && (reaction.life -= event.dt) <= 0) {
@@ -51,6 +51,9 @@ export function createFeedback() {
         const person = event.person;
         const n = person ? { ...person, ...NPC_COPY[person.id] } : undefined;
         switch (event.id) {
+            case 'checkpoint':
+                say('이동 중에도 자동 저장 완료.', '😐', 2.2, 1);
+                break;
             case 'head-hit':
                 say('저장… 저장은 했나…!', '😵', 3, 5);
                 break;
@@ -58,7 +61,7 @@ export function createFeedback() {
                 npc('산재 처리는…');
                 break;
             case 'head-game-over':
-                overlay('GAME OVER · HEAD CONTACT', '머리가 먼저<br>퇴근했습니다.', '더러운 물 위에서는 브레이크도 미끄러워요.<br>공중에서는 Q E로 자세를 맞춰주세요.', '다시 정상 근무 ↻');
+                overlay('GAME OVER · HEAD CONTACT', '머리가 먼저<br>퇴근했습니다.', state.stage === 2 ? '마지막 깃발에서 다시 출발합니다.<br>공중에서는 Q E로 자세를 맞춰주세요.' : '더러운 물 위에서는 브레이크도 미끄러워요.<br>공중에서는 Q E로 자세를 맞춰주세요.', '다시 정상 근무 ↻');
                 break;
             case 'first-volley':
                 say('보고서가 왜 얼굴로 출력돼…', '😳');
@@ -111,7 +114,11 @@ export function createFeedback() {
                 }
                 break;
             case 'stage-clear':
-                overlay('STAGE 01 CLEAR', '사무실 탈출.<br>노트북은 정상 작동.', `복사기 분사 ${bursts}회 · 종이 피격 ${paperHits}회 · 휴지통 ${binFalls}회 · 눈부심 ${lightHits}회 · 집중도 ${focus}%<br>다음 스테이지는 아직 열리지 않았습니다.`, '사무실 다시 굴리기 ↻');
+                if (state.stage === 2) {
+                    overlay('STAGE 02 CLEAR', '기계실 도착.<br>이동도 실적으로 인정.', `체크포인트 ${state.checkpoint}/4 · 집중도 ${focus}%<br>회사원은 출장 보고서를 작성하고 있습니다.`, '체크포인트에서 다시 굴리기 ↻');
+                    break;
+                }
+                overlay('STAGE 01 CLEAR', '사무실 탈출.<br>노트북은 정상 작동.', `복사기 분사 ${bursts}회 · 종이 피격 ${paperHits}회 · 휴지통 ${binFalls}회 · 눈부심 ${lightHits}회 · 집중도 ${focus}%<br>다음은 회의실과 건물 내부입니다.`, '회의실로 계속 →');
                 break;
             case 'light-hit':
                 say('눈부셔… 실적 칸이 안 보여!', '😣', 2.7, 2);

@@ -1,5 +1,6 @@
 import { init, type Canvas, type Shape, type ThorVGNamespace } from '@thorvg/webcanvas';
 import wasmUrl from '../../node_modules/@thorvg/webcanvas/dist/thorvg.wasm?url';
+import { STAGE_TWO } from '../game/stage2';
 import { LEVEL } from '../game/level';
 import type { GameState } from '../game/game';
 import type { DeepReadonly, Person } from '../game/types';
@@ -20,8 +21,8 @@ export function createRenderer(root: HTMLElement) {
 }
 function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement, labels: HTMLCanvasElement, bg: CanvasRenderingContext2D, lg: CanvasRenderingContext2D) {
     const F = LEVEL.floor;
-    const LEN = LEVEL.length;
-    const GOAL = LEVEL.goal;
+    let LEN: number = LEVEL.length;
+    let GOAL: number = LEVEL.goal;
     const TAU = Math.PI * 2;
     const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
     let W = 800;
@@ -360,6 +361,75 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         ox = oy = rotation = 0;
         localScale = 1;
     }
+    function building() {
+        commands = [];
+        ox = oy = rotation = 0;
+        rect(cam, -vertical, VW, H / scale, '#a9afbc');
+        rect(cam, -vertical, VW, 57 + vertical, '#747d91');
+        rod(cam, 57, cam + VW, 57, 4, '#d1d1c6');
+        for (let x = Math.floor(cam / 235) * 235; x < cam + VW + 235; x += 235) {
+            rect(x + 17, 80, 197, 193, '#69788c');
+            rect(x + 24, 87, 183, 179, '#9aa9b2');
+            rod(x + 113, 87, x + 113, 267, 4, '#69788c');
+            rect(x + 43, 27, 145, 7, '#f1e9cf');
+        }
+        rect(cam, 287, VW, 250, '#a0a7b1');
+        rod(cam, 315, cam + VW, 315, 2, '#8c94a1');
+        for (const [x, title] of [[190, '회의실 / MEETING'], [1180, '비상계단 / STAIRS'], [2050, '비품 창고 / STORAGE'], [2820, '승강로 / LIFT']] as const) {
+            rect(x - 85, 110, 210, 32, '#687e7c');
+            label(title, x + 20, 131, 13, '#f0eddc');
+        }
+        rect(120, 300, 400, 12, '#b8a283');
+        for (const x of [150, 465]) rod(x, 312, x, 420, 7, '#697585');
+        for (let x = 150; x < 500; x += 110) {
+            rect(x, 278, 50, 22, '#596577'); rect(x + 5, 282, 40, 13, '#a8b9c3');
+        }
+        for (const ob of solids) polygon(ob.p.map(v => [v.x, v.y]), C.floor);
+        for (const item of state.furniture) {
+            const x = item.x, y = item.y;
+            if (item.kind === 'cabinet') {
+                rect(x - 50, y - 55, 100, 48, '#c6c9bf');
+                for (let i = 0; i < 2; i++) { rect(x - 45, y - 50 + i * 23, 90, 20, '#afb8b2'); rect(x - 9, y - 45 + i * 23, 18, 3, '#6c7d83'); }
+            } else {
+                rod(x - 18, y - 37, x - 22, y - 90, 6, '#515665');
+                rect(x - 30, y - 90, 18, 48, '#6f7687'); rect(x - 24, y - 40, 48, 8, '#6f7687');
+                rod(x, y - 32, x, y - 10, 5, C.steel); rod(x - 22, y - 8, x + 22, y - 8, 4, C.steel);
+            }
+            ellipse(x - item.width / 2 + 8, y - 5, 5, 5, '#3f4650'); ellipse(x + item.width / 2 - 8, y - 5, 5, 5, '#3f4650');
+        }
+        const door = state.door;
+        rect(door.x - 58, 210, 116, 210, '#7d91937f');
+        rod(door.x - 59, 210, door.x - 59, 420, 6, '#596879'); rod(door.x + 59, 210, door.x + 59, 420, 6, '#596879');
+        rod(door.x, 220, door.x, 418, 5, '#596879');
+        const reach = Math.cos(door.angle) * 52;
+        polygon([[door.x, 230], [door.x + reach, 242], [door.x + reach, 405], [door.x, 418]], '#c5dcd4b0');
+        polygon([[door.x, 230], [door.x - reach, 242], [door.x - reach, 405], [door.x, 418]], '#8faeb0b0');
+        ellipse(door.x, 192, 7, 7, door.open ? '#b8d6a2' : '#e0b477');
+        label(door.open ? '→' : '↻', door.x, 177, 24, '#f0eddc');
+        for (const [a, b, ya, yb] of [[1020, 1400, 420, 500], [1580, 1900, 500, 420]]) {
+            rod(a, ya - 95, b, yb - 95, 5, '#697585');
+            for (let x = a; x <= b; x += 70) { const y = ya + (yb - ya) * (x - a) / (b - a); rod(x, y - 95, x, y, 3, '#7d8995'); }
+        }
+        rect(2350, 185, 350, 18, '#687783');
+        for (let x = 2360; x < 2690; x += 24) rod(x, 189, x + 12, 198, 3, '#9eafb1');
+        label('→', 2460, 275, 25, '#e6d6a8');
+        for (const x of [2700, 3150]) rod(x, 160, x, 500, 7, '#687783');
+        const lift = state.elevator;
+        rect(lift.x, lift.y, lift.width, lift.height, '#7e9a91');
+        for (let x = lift.x + 10; x < lift.x + lift.width; x += 24) rect(x, lift.y + 2, 12, 4, '#e6d6a8');
+        label('↔', lift.x + lift.width / 2, lift.y - 20, 24, '#e9e3ce');
+        label('↗', 3180, 445, 27, '#ead6a5');
+        for (let i = 1; i < STAGE_TWO.checkpoints.length; i++) {
+            const mark = STAGE_TWO.checkpoints[i];
+            rod(mark.x, mark.y + 28, mark.x, mark.y - 65, 3, '#677d7e');
+            polygon([[mark.x, mark.y - 65], [mark.x + 32, mark.y - 55], [mark.x, mark.y - 43]], state.checkpoint >= i ? '#b8d6a2' : '#e0c18b');
+        }
+        rect(GOAL - 35, 105, 106, 205, '#677d7e'); rect(GOAL - 27, 113, 90, 190, '#b5c4bf');
+        rect(GOAL - 31, 74, 98, 23, '#718e7b'); label('기계실 →', GOAL + 18, 91, 13, '#f0eddc');
+        rod(GOAL + 40, 190, GOAL + 40, 229, 4, '#677d7e');
+        ellipse(p.x, p.y + 35, 45, 5, '#91959c'); player();
+        if (mode === 'pause') { rect(cam, -vertical, VW, H / scale, '#3a455ddd'); label('잠깐, 숨 고르는 중', cam + VW / 2, 250, 22, '#eee8d7'); }
+    }
     function world() {
         commands = [];
         ox = oy = rotation = 0;
@@ -546,6 +616,8 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
     }
     function draw(next: GameState, effects: EffectsState) {
         state = next;
+        LEN = state.level.length;
+        GOAL = state.level.goal;
         ({ player: p, mode, cleaning, people, solids, papers, inBin, soaked, dirty, time: t } = state);
         monitor = { ...state.monitor, ...ART.monitor };
         bin = { ...state.bin, bottom: ART.binBottom };
@@ -563,7 +635,11 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         lastTime = t;
         lg.setTransform(dpr, 0, 0, dpr, 0, 0);
         lg.clearRect(0, 0, W, H);
-        world();
+        if (state.stage === 2) {
+            building();
+        } else {
+            world();
+        }
         paint();
         return { cam, scale, vertical, width: W };
     }

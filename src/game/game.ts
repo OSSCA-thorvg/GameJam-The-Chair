@@ -1,9 +1,14 @@
+import { STAGE_TWO, createFurniture, elevatorAt, doorAt, type StageId } from './stage2';
 import { LEVEL, RULES, FIXED_STEP } from './level';
 import type { Point, Player, Snapshot, Person, Paper, Input, GameEvent, DeepReadonly } from './types';
 export function createGame(initialDeaths = 0) {
     const F = LEVEL.floor;
-    const LEN = LEVEL.length;
-    const GOAL = LEVEL.goal;
+    let stage: StageId = 1;
+    let checkpoint = 0;
+    let furniture = createFurniture();
+    let elevator = elevatorAt(0);
+    let LEN: number = LEVEL.length;
+    let GOAL: number = LEVEL.goal;
     const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
     const monitor = { ...LEVEL.monitor };
     const copier = { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 };
@@ -64,12 +69,19 @@ export function createGame(initialDeaths = 0) {
         return [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
     }
     function build() {
+        if (stage === 2) {
+            solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
+            people = [];
+            furniture = createFurniture();
+            return;
+        }
         solids = [{ p: polyRect(-400, F, bin.a + 400, 350) }, { p: polyRect(bin.b, F, LEN - bin.b + 400, 350) }];
         people = [{ id: 'manager', x: 320, said: false }, { id: 'cleaner', x: 1000, said: false }, { id: 'admin', x: 1810, said: false }];
     }
     function reset() {
         build();
-        p = { x: 100, y: F - 28, vx: 0, vy: 0, a: 0, w: 0 };
+        const spawn = stage === 2 ? STAGE_TWO.checkpoints[checkpoint] : { x: 100, y: F - 28 };
+        p = { ...spawn, vx: 0, vy: 0, a: 0, w: 0 };
         keys.clear();
         ground = false;
         coyote = 0;
@@ -77,6 +89,7 @@ export function createGame(initialDeaths = 0) {
         escapeQueued = false;
         time = 0;
         t = 0;
+        elevator = elevatorAt(0);
         acc = 0;
         dirty = false;
         inBin = false;
@@ -357,7 +370,7 @@ export function createGame(initialDeaths = 0) {
         lightPenaltyRemaining = Math.max(0, lightPenaltyRemaining - dt);
         lightCooldown = Math.max(0, lightCooldown - dt);
         events.push({ type: 'tick', dt });
-        if (Math.abs(p.x - copier.x) < 180 && copier.cool === 0 && copier.burst === 0) {
+        if (stage === 1 && Math.abs(p.x - copier.x) < 180 && copier.cool === 0 && copier.burst === 0) {
             copier.dir = p.x < copier.x ? -1 : 1;
             volley++;
             copier.burst = 3;
@@ -376,7 +389,9 @@ export function createGame(initialDeaths = 0) {
         if (mode !== 'play') {
             return;
         }
-        cleaningStep(dt);
+        if (stage === 1) {
+            cleaningStep(dt);
+        }
         if (mode !== 'play') {
             return;
         }
@@ -421,9 +436,60 @@ export function createGame(initialDeaths = 0) {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.a += p.w * dt;
-        if (binCooldown === 0 && p.x > bin.a + 25 && p.x < bin.b - 25 && p.y + 28 >= bin.rim && p.vy >= 0) {
+        if (stage === 1 && binCooldown === 0 && p.x > bin.a + 25 && p.x < bin.b - 25 && p.y + 28 >= bin.rim && p.vy >= 0) {
             binEnter();
             return;
+        }
+        if (stage === 2) {
+            const oldElevator = elevator;
+            elevator = elevatorAt(t);
+            if (was && Math.abs(p.y + 28 - oldElevator.y) < 12 && p.x > oldElevator.x - 15 && p.x < oldElevator.x + oldElevator.width + 15) {
+                p.x += elevator.x - oldElevator.x;
+            }
+            for (const item of furniture) {
+                const reach = item.width / 2 + 44;
+                if (Math.abs(p.x - item.x) < reach && p.y + 20 > item.y - item.height && p.y - 45 < item.y) {
+                    const side = p.x < item.x ? -1 : 1;
+                    item.vx += p.vx * dt * 8;
+                    p.vx *= Math.exp(-2 * dt);
+                    p.x = item.x + side * reach;
+                }
+                item.x += item.vx * dt;
+                item.vx *= Math.exp(-3 * dt);
+                item.x = clamp(item.x, item.kind === 'cabinet' ? 2050 : 280, item.kind === 'cabinet' ? 2295 : 600);
+            }
+            for (let i = 0; i < furniture.length; i++) {
+                for (let j = i + 1; j < furniture.length; j++) {
+                    const a = furniture[i];
+                    const b = furniture[j];
+                    const overlap = (a.width + b.width) / 2 - Math.abs(a.x - b.x);
+                    if (overlap > 0 && a.kind === b.kind) {
+                        const sign = a.x < b.x ? -1 : 1;
+                        a.x += sign * overlap / 2;
+                        b.x -= sign * overlap / 2;
+                        a.vx = b.vx = (a.vx + b.vx) / 2;
+                    }
+                }
+            }
+            solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
+            for (const item of furniture) {
+                solids.push({ p: polyRect(item.x - item.width / 2, item.y - item.height, item.width, item.height) });
+            }
+            solids.push({ p: polyRect(elevator.x, elevator.y, elevator.width, elevator.height) });
+            const door = doorAt(t);
+            if (!door.open && Math.abs(p.x - door.x) < 47 && p.y > 260) {
+                const side = prev < door.x ? -1 : 1;
+                p.x = door.x + side * 48;
+                p.vx = side * 70;
+                p.w *= .5;
+            }
+            for (let i = checkpoint + 1; i < STAGE_TWO.checkpoints.length; i++) {
+                const mark = STAGE_TWO.checkpoints[i];
+                if (p.x >= mark.x && Math.abs(p.y - mark.y) < 65) {
+                    checkpoint = i;
+                    events.push({ type: 'cue', id: 'checkpoint' });
+                }
+            }
         }
         ground = false;
         let c = Math.cos(p.a);
@@ -469,7 +535,9 @@ export function createGame(initialDeaths = 0) {
                 }
             }
         }
-        monitorStep(dt, prev);
+        if (stage === 1) {
+            monitorStep(dt, prev);
+        }
         if (mode !== 'play') {
             return;
         }
@@ -485,7 +553,7 @@ export function createGame(initialDeaths = 0) {
             events.push({ type: 'cue', id: 'rolling' });
             rollCooldown = 9;
         }
-        if (p.vx < -60 && reverseCooldown === 0) {
+        if (people.length > 0 && p.vx < -60 && reverseCooldown === 0) {
             const n = people.reduce((a, b) => Math.abs(a.x - p.x) < Math.abs(b.x - p.x) ? a : b);
             if (Math.abs(n.x - p.x) < 300) {
                 events.push({ type: 'cue', id: 'reverse-comment', person: { ...n } });
@@ -502,6 +570,11 @@ export function createGame(initialDeaths = 0) {
             events.push({ type: 'speck', x: p.x - 15, vx: -p.vx * .2 });
         }
         if (p.y > F + 250) {
+            if (stage === 2) {
+                deaths++;
+                reset();
+                return;
+            }
             binEnter();
             return;
         }
@@ -544,7 +617,9 @@ export function createGame(initialDeaths = 0) {
     function getSnapshot() {
         // Detached data: even untyped renderers cannot mutate the live simulation.
         return structuredClone({
-            game: 'office-stage-one', mode, focus, focusClock, focusLossTime, focusNotice, lossReason,
+            game: stage === 1 ? 'office-stage-one' : 'building-stage-two',
+            stage, checkpoint, furniture, elevator, door: doorAt(t), level: { length: LEN, goal: GOAL },
+            mode, focus, focusClock, focusLossTime, focusNotice, lossReason,
             player: p, ground, slip, dirty, inBin, binAge, time, deaths, bursts, paperHits, binFalls,
             dirtyWaterExperienced: wetSeen, cleaningSpilled: cleaning.spilled, soaked,
             paperPenaltyRemaining, lightPenaltyRemaining, cleaning, lightHits,
@@ -579,6 +654,13 @@ export function createGame(initialDeaths = 0) {
     }
     return {
         reset, jump, pause, step, advance,
+        startStage(id: StageId) {
+            stage = id;
+            checkpoint = 0;
+            LEN = stage === 1 ? LEVEL.length : STAGE_TWO.length;
+            GOAL = stage === 1 ? LEVEL.goal : STAGE_TWO.goal;
+            reset();
+        },
         restart() {
             if (mode === 'play') {
                 deaths++;
