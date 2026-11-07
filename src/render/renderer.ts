@@ -152,6 +152,7 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         lg.fillText(text, (x - cam) * scale, (y + vertical) * scale);
     }
     function plant(x: number) {
+        ellipse(x + 2, F - 10, 18, 2.8, '#515c6d40');
         rect(x - 13, F - 40, 26, 30, '#ccc9b5');
         for (let i = 0; i < 5; i++) {
             rod(x, F - 40, x + (i - 2) * 12, F - 70 - Math.abs(i - 2) * 4, 3, '#6c8267');
@@ -159,6 +160,8 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         }
     }
     function desk(x: number) {
+        ellipse(x + 10, F - 25, 8, 2.1, '#515c6d46');
+        ellipse(x + 128, F - 25, 8, 2.1, '#515c6d46');
         rect(x, F - 105, 140, 9, C.wood);
         rod(x + 10, F - 95, x + 10, F - 25, 6, C.steel);
         rod(x + 128, F - 95, x + 128, F - 25, 6, C.steel);
@@ -168,18 +171,68 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         rect(x + 40, F - 112, 63, 5, '#526274');
     }
     function person(n: DeepReadonly<Person>) {
-        const x = n.x;
-        const y = F - 20;
-        rod(x - 7, y - 40, x - 10, y, 8, '#565e70');
-        rod(x + 5, y - 40, x + 10, y, 8, '#565e70');
-        polygon([[x - 17, y - 93], [x + 10, y - 93], [x + 18, y - 41], [x - 20, y - 41]], '#727d8b');
-        polygon([[x - 9, y - 93], [x + 5, y - 93], [x - 1, y - 69]], C.shirt);
-        rect(x - 2, y - 88, 4, 24, '#9e6955');
-        rod(x - 14, y - 86, x - 29, y - 55, 8, '#727d8b');
-        rod(x - 29, y - 55, x - 4, y - 63, 7, '#727d8b');
-        polygon([[x - 13, y - 124], [x + 5, y - 132], [x + 17, y - 113], [x + 10, y - 96], [x - 8, y - 99]], C.skin);
-        polygon([[x - 14, y - 122], [x + 4, y - 134], [x + 14, y - 125], [x + 1, y - 125], [x - 10, y - 114]], '#49505b');
-        rect(x + 7, y - 114, 2, 3, C.ink);
+        ox = n.x;
+        oy = F - 17;
+        localScale = .85;
+        ellipse(-2, 0, 30, 3, '#515c6d62');
+        switch (n.id) {
+            case 'manager':
+                // Wide suit shoulders and folded arms.
+                polygon([[-25, -48], [24, -48], [20, -4], [7, -4], [1, -40], [-5, -4], [-19, -4]], '#455064');
+                polygon([[-19, -8], [-6, -8], [-4, -1], [-26, -1], [-26, -4]], '#333b4a');
+                polygon([[7, -8], [20, -8], [29, -3], [29, -1], [7, -1]], '#333b4a');
+                polygon([[-31, -101], [-13, -108], [11, -108], [31, -99], [34, -77], [25, -70], [26, -44], [-26, -44], [-24, -68], [-35, -75]], '#57637a');
+                polygon([[-31, -101], [-13, -108], [-7, -108], [-13, -66], [-26, -44], [-24, -68], [-35, -75]], '#626e85');
+                polygon([[-13, -107], [12, -107], [1, -78]], '#e0dfd2');
+                polygon([[-4, -102], [4, -102], [6, -97], [4, -80], [0, -74], [-4, -80], [-3, -96]], '#956457');
+                polygon([[-9, -114], [10, -114], [10, -104], [0, -99], [-9, -104]], '#b4967a');
+                polygon([[-17, -147], [-3, -154], [15, -147], [20, -131], [15, -126], [12, -114], [-7, -111], [-18, -123]], '#dfbe99');
+                polygon([[-20, -144], [-10, -157], [12, -155], [21, -146], [9, -145], [-5, -149], [-14, -140], [-15, -130], [-20, -134]], '#434957');
+                polygon([[-19, -143], [-15, -142], [-16, -130], [-20, -134]], '#7a818d');
+                polygon([[10, -137], [17, -137], [17, -135], [10, -135]], '#484655');
+                polygon([[-28, -84], [0, -79], [22, -83], [24, -72], [-1, -68], [-27, -72]], '#424e64');
+                polygon([[-13, -80], [-5, -79], [-3, -73], [-13, -74]], '#d4b18e');
+                polygon([[11, -80], [19, -82], [21, -76], [12, -74]], '#d4b18e');
+                break;
+            case 'cleaner':
+                // Rolled sleeves with the mop tucked into the grip.
+                polygon([[-16, -49], [14, -50], [19, -7], [8, -5], [0, -40], [-7, -6], [-19, -7]], '#536373');
+                polygon([[-20, -8], [-7, -8], [-7, -1], [-26, -1], [-26, -5]], '#3c4753');
+                polygon([[7, -8], [18, -8], [26, -3], [26, -1], [8, -1]], '#3c4753');
+                polygon([[-17, -99], [-2, -107], [17, -102], [24, -86], [14, -78], [16, -47], [-17, -45], [-22, -78], [-27, -85]], '#79909f');
+                polygon([[-17, -99], [-8, -104], [-7, -48], [-17, -45], [-22, -78], [-27, -85]], '#899eaa');
+                polygon([[-10, -105], [1, -97], [11, -104], [15, -97], [6, -91], [0, -97], [-5, -89], [-13, -98]], '#a5b3b9');
+                polygon([[-8, -115], [7, -115], [9, -103], [0, -98], [-8, -103]], '#bb9b7c');
+                polygon([[-13, -144], [2, -149], [17, -140], [20, -128], [24, -123], [18, -121], [14, -109], [-5, -111], [-13, -121]], '#e5c6a2');
+                polygon([[-18, -138], [-14, -151], [-5, -150], [5, -157], [18, -145], [11, -141], [1, -145], [-6, -135], [-11, -139], [-13, -124], [-18, -129]], '#424d5c');
+                polygon([[13, -131], [16, -131], [16, -127], [13, -127]], '#4b5059');
+                polygon([[18, -86], [22, -88], [79, -4], [74, -2]], '#808c7b');
+                polygon([[70, -8], [79, -11], [91, -3], [87, 1], [64, 1]], '#b1ad8e');
+                polygon([[17, -81], [26, -66], [38, -70], [42, -64], [26, -55], [19, -57], [9, -73]], '#e0be9c');
+                polygon([[10, -78], [20, -85], [24, -78], [14, -70]], '#a9b8c0');
+                break;
+            case 'admin':
+                // Long cardigan, tied hair, and a layered clipboard.
+                polygon([[-19, -53], [16, -53], [17, -6], [6, -6], [0, -42], [-7, -6], [-18, -6]], '#495368');
+                polygon([[-18, -8], [-7, -8], [-7, -1], [-26, -1], [-26, -5]], '#363d4d');
+                polygon([[6, -8], [17, -8], [24, -3], [24, -1], [6, -1]], '#363d4d');
+                polygon([[-20, -104], [-8, -108], [10, -108], [24, -102], [28, -77], [20, -74], [21, -39], [-21, -39], [-17, -76], [-25, -79]], '#66566e');
+                polygon([[-20, -104], [-8, -108], [-5, -41], [-21, -39], [-17, -76], [-25, -79]], '#78647d');
+                polygon([[-8, -108], [10, -108], [1, -82]], '#ddd4c5');
+                polygon([[-8, -117], [8, -117], [8, -104], [1, -99], [-8, -104]], '#aa8e73');
+                polygon([[-18, -140], [-6, -152], [14, -146], [20, -133], [18, -117], [4, -110], [-14, -117]], '#dfbd9d');
+                polygon([[-22, -140], [-14, -154], [0, -158], [15, -152], [20, -141], [3, -146], [-10, -133], [-10, -120], [-18, -117]], '#4b3f49');
+                ellipse(-18, -124, 10, 10, '#4b3f49');
+                polygon([[10, -133], [15, -133], [15, -131], [10, -131]], '#514552');
+                polygon([[-2, -79], [13, -81], [10, -68], [0, -68]], '#ac9e92');
+                polygon([[-1, -76], [33, -75], [29, -51], [-5, -53]], '#b8a682');
+                polygon([[4, -72], [28, -71], [25, -55], [1, -56]], '#d8cbb4');
+                polygon([[10, -74], [23, -74], [23, -70], [10, -70]], '#8b8e95');
+                polygon([[-7, -65], [4, -61], [3, -55], [-10, -59]], '#d7b697');
+                break;
+        }
+        ox = oy = 0;
+        localScale = 1;
     }
     function binBack() {
         rect(bin.a - 8, F - 16, 176, 10, '#5b6e70');
@@ -197,24 +250,29 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
     function cleaningDraw() {
         const spread = cleaning.spilled ? Math.min(1, cleaning.age / .8) : 0;
         if (spread > 0) {
-            for (let i = 0; i < 11; i++) {
-                const x = cleaning.a + 15 + i * 30 * spread;
-                ellipse(x, F + 3, Math.max(2, (24 + i % 3 * 7) * spread), 4 + i % 2 * 2, '#7f8970');
-            }
-            ellipse(cleaning.a + 155 * spread, F + 2, 85 * spread, 3, '#a1a88b');
-            rod(cleaning.a + 70 * spread, F + 2, cleaning.a + 130 * spread, F + 2, 1, '#c0c7a4');
-            for (let i = 0; i < 6; i++) {
-                const x = cleaning.a + 25 + i * 48 * spread;
-                rod(x, F + 1, x + 25, F + 1, 2, '#e1dfc4');
-                rod(x + 5, F + 8, x + 18, F + 8, 1, '#cfd5bf');
-            }
+            const width = (cleaning.b - cleaning.a) * spread;
+            const inlet = Math.min(cleaning.x - 46 - cleaning.a, width * .5);
+            const depth = 6 + 15 * spread;
+            ox = cleaning.a;
+            oy = F;
+            effectPath([inlet, -17], [
+                [inlet * .35, -8, 0, -4, 0, 3],
+                [0, depth, width * .28, depth + 2, width * .42, depth],
+                [width * .66, depth + 1, width * .94, depth - 6, width, depth - 4],
+                [width, depth - 13, width * .57, depth - 10, width * .41, depth - 14],
+                [width * .2, depth - 16, inlet * 1.3, -8, inlet, -17]
+            ], gradientFill(0, -17, 0, depth + 2, [[0, '#777b5f'], [.55, '#8f9679'], [1, '#78826e']]));
+            ellipse(width * .28, depth - 6, width * .1, spread * 1.8, '#c6cbae90');
+            ellipse(width * .48, depth - 9, width * .06, spread * 1.4, '#c6cbae70');
+            ox = oy = 0;
             if (state.slip) {
                 rod(p.x - 95, F - 2, p.x - 30, F - 2, 3, '#5e716c');
                 rod(p.x - 82, F + 4, p.x - 18, F + 4, 2, '#61736e');
             }
         }
-        // A mop and wheeled cleaning bucket are ordinary office props; the bucket tips as the chair approaches.
+        // The wheeled bucket tips as the chair approaches.
         const tip = cleaning.spilled ? Math.min(1, cleaning.age / .42) : 0;
+        ellipse(cleaning.x - tip * 20, F + 1, 28 + tip * 5, 3, '#515c6d48');
         ox = cleaning.x;
         oy = F - 3;
         rotation = -tip * 1.25;
@@ -228,10 +286,6 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         ellipse(15, 2, 5, 5, '#555f66');
         rect(-11, -36, 19, 13, '#eee1b5');
         ox = oy = rotation = 0;
-        rod(cleaning.x + 42, F - 5, cleaning.x + 20 + tip * 50, F - 137 + tip * 81, 5, '#9eaa9e');
-        for (let i = 0; i < 6; i++) {
-            rod(cleaning.x + 25 + i * 7, F - 10, cleaning.x + 20 + i * 9, F + 3, 3, '#999e81');
-        }
         if (cleaning.spilled && cleaning.age < 1.1) {
             const u = clamp(cleaning.age / 1.1, 0, 1);
             const reach = Math.sin(Math.min(1, u * 2) * Math.PI / 2);
@@ -326,25 +380,45 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         rect(-30, -15, 62, 12, '#6f7687');
         rod(-15, -22, -15, -8, 3, C.steel);
         rod(20, -22, 20, -8, 3, C.steel);
-        rod(-4, -22, 27, -19, 13, '#535c70');
-        rod(27, -19, 38, 3, 10, '#535c70');
-        rect(31, 0, 25, 8, '#393c46');
-        polygon([[-18, -64], [4, -62], [14, -24], [-12, -23]], C.shirt);
-        rod(0, -62, 0, -69, 7, C.skin);
-        polygon([[-12, -88], [4, -94], [15, -81], [12, -66], [-4, -64], [-13, -75]], C.skin);
-        polygon([[-14, -85], [-4, -97], [7, -94], [14, -86], [2, -88], [-9, -79]], '#3c3b43');
+        polygon([[-10, -25], [22, -25], [32, -22], [43, 4], [35, 6], [23, -13], [-9, -15]], '#4e5b70');
+        polygon([[35, 3], [42, 3], [50, 6], [55, 9], [52, 10], [35, 7]], '#383f4e');
+        polygon([[-14, -26], [22, -25], [29, -21], [34, 11], [26, 13], [21, -12], [-13, -16]], '#5b6b80');
+        polygon([[-11, -25], [20, -24], [26, -21], [7, -20], [-10, -21]], '#6d7b8e');
+        polygon([[25, -18], [27, -17], [31, 10], [29, 10]], '#49586c');
+        polygon([[26, 11], [33, 10], [35, 15], [26, 16]], '#383f4e');
+
+        polygon([[-17, -63], [-6, -64], [5, -60], [9, -25], [-17, -23]], C.shirt);
+        polygon([[-17, -62], [-11, -61], [-11, -24], [-17, -23]], '#d9d6c5');
+        polygon([[-7, -70], [4, -68], [5, -60], [1, -56], [-7, -62]], '#d5b18b');
+        polygon([[-9, -65], [0, -60], [6, -60], [4, -55], [0, -52], [-6, -57]], '#fff6de');
+        polygon([[1, -58], [5, -57], [5, -54], [8, -36], [6, -33], [1, -34], [2, -54]], '#a65e44');
+
+        polygon([[-13, -87], [-4, -95], [10, -91], [13, -84], [14, -79], [17, -75], [13, -74], [11, -66], [2, -66], [-9, -69], [-12, -77]], C.skin);
+        polygon([[-11, -76], [-7, -72], [1, -69], [11, -69], [11, -66], [2, -66], [-9, -69]], '#d3b18c');
+        polygon([[-15, -87], [-5, -100], [10, -97], [16, -88], [3, -87], [-3, -83], [-10, -77]], '#3c424f');
+        polygon([[-7, -93], [-4, -98], [3, -96]], '#687380');
         const glance = state.lossReason === 'focus' ? .5 + .5 * Math.sin(state.focusLossTime * 6) : state.focusNotice ? Math.sin((1.7 - state.focusNotice.life) / 1.7 * Math.PI) : 0;
-        rect(4 - glance * 12, -84, 10, 6, '#c3d0d0');
-        rod(1 - glance * 12, -84, 15 - glance * 12, -84, 2, C.ink);
-        rect(9 - glance * 14, -82, 2, 2, C.ink);
-        rod(-10, -55, 6, -38, 8, C.shirt);
-        rod(6, -38, 32, -34, 6, C.skin);
-        rod(1, -57, 8, -37, 3, '#ac6954');
+        const gx = -glance * 10;
+        ellipse(-7, -81, 2.7, 3.4, C.skin);
+        rod(-5, -83, 4, -84, 1.35, '#3a414b');
+        rect(3 + gx, -86, 11, 6, '#50606a');
+        rect(4 + gx, -85, 9, 4, '#83c8e4');
+        rect(5 + gx, -85, 2, 4, '#bfe6ef');
+        rect(12 + gx, -84, 1.2, 2, '#446d82');
+        rod(9, -71, 12, -71, 1, '#9c775f');
+
+        polygon([[-17, -58], [-13, -60], [-9, -57], [-8, -35], [-18, -34]], '#e6e0cc');
+        polygon([[-19, -39], [-8, -39], [-8, -34], [-19, -33]], '#fff6de');
+        polygon([[-16, -34], [-9, -35], [23, -36], [25, -32], [-15, -27]], C.skin);
+        polygon([[-15, -29], [23, -33], [24, -32], [-15, -27]], '#d3aa80');
         polygon([[21, -31], [54, -31], [65, -59], [33, -59]], '#555f70');
+
         polygon([[35, -55], [59, -55], [51, -35], [27, -35]], '#a8b9c3');
+
         rod(18, -29, 55, -29, 3, C.steel);
         const tap = state.lossReason === 'focus' ? 0 : Math.sin(t * 24) * 1.8;
-        rect(26, -35 + tap, 8, 3, C.skin);
+        polygon([[17, -36], [23, -38], [30, -36], [34, -33], [31, -32], [26, -34], [18, -33]], '#d3aa80');
+        polygon([[21, -36 + tap], [25, -39 + tap], [30, -38 + tap], [35, -35 + tap], [36, -33 + tap], [33, -33 + tap], [29, -35 + tap], [23, -33 + tap]], C.skin);
         if (state.focusNotice?.kind === 'water') rod(7, -39, 44, -57, 5, C.skin);
         if (saveFlash > 0) {
             rect(40, -52, 11, 11, '#e0ecd2');
@@ -526,31 +600,37 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
             rod(x + 24, 179, x + 207, 179, 3, '#69788c');
             rect(x + 43, 27, 145, 7, '#f1e9cf');
         }
-        rect(cam, 287, VW, F - 287, '#a0a7b1');
-        rod(cam, 315, cam + VW, 315, 2, '#8c94a1');
+        const rearFloor = F - 62;
+        rect(cam, 287, VW, rearFloor - 287, '#a0a7b1');
+        rect(cam, rearFloor - 5, VW, 6, '#848e9d');
+        rect(cam, rearFloor + 1, VW, F - rearFloor - 1, '#aeb3bb');
+        for (const ob of solids) {
+            polygon(ob.p.map(v => [v.x, v.y]), C.floor);
+            const [topLeft, topRight] = ob.p;
+            rod(topLeft.x, topLeft.y, topRight.x, topRight.y, 1.2, '#a5abb5');
+        }
+        rod(cam, rearFloor + 28, cam + VW, rearFloor + 28, .9, '#9da5b1');
+        for (let x = Math.floor(left / 110) * 110; x < right; x += 110) {
+            rod(x + 15, rearFloor + 1, x, F, 1, '#9ca5b1');
+            if (x <= bin.a - 30 || x >= bin.b + 35) {
+                rod(x, F, x - 35, F + 150, 1.15, '#a7adb6');
+            }
+        }
         for (let x = 110; x < GOAL; x += 420) {
             if (x < left - 200 || x > right) {
                 continue;
             }
             desk(x);
-            plant(x + 205);
+            plant(x + (x === 110 ? 295 : 205));
         }
         for (const n of people) {
             if (n.x > left && n.x < right) {
                 person(n);
             }
         }
-        for (const ob of solids) {
-            polygon(ob.p.map(v => [v.x, v.y]), C.floor);
-        }
-        for (let x = Math.floor(cam / 110) * 110; x < right; x += 110) {
-            if (x > bin.a - 30 && x < bin.b + 30) {
-                continue;
-            }
-            rod(x, F + 5, x - 35, F + 150, 1, '#a1a5ad');
-        }
         cleaningDraw();
         const x = copier.x;
+        ellipse(x + 3, F - 20, 61, 4.2, '#515c6d56');
         rect(x - 56, F - 108, 112, 88, '#c6c9bf');
         rect(x - 48, F - 96, 40, 61, '#aeb7b5');
         rect(x - 1, F - 96, 47, 22, '#717f88');
