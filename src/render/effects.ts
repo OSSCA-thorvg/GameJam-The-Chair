@@ -80,7 +80,7 @@ export function createEffects() {
         if (event.type === 'water-splash') {
             for (let i = 0; i < EFFECT_STYLE.splashCount; i++) {
                 const side = event.side;
-                waterDrops.push({ x: event.x - 10, y: F - 24, vx: side * (90 + (i % 8) * 29) + (i % 3 - 1) * 30, vy: -100 - (i % 7) * 32, life: 1.3 + (i % 4) * .18, r: 3 + i % 4, landed: false });
+                waterDrops.push({ x: event.x + side * 10, y: F - 24, vx: side * (90 + (i % 8) * 29) + (i % 3 - 1) * 30, vy: -100 - (i % 7) * 32, life: 1.3 + (i % 4) * .18, r: 3 + i % 4, landed: false });
             }
         }
         if (event.type === 'water-step') {

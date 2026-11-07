@@ -15,5 +15,5 @@ export const LEVEL = Object.freeze({
     ].map(part => Object.freeze(part)))
 });
 // Rule durations are independent from the visual effect durations in render/effects.ts.
-export const RULES = Object.freeze({ paperPenalty: 2.4, lightPenalty: 1.65, waterExposure: 1.3 });
+export const RULES = Object.freeze({ paperPenalty: 2.4, lightPenalty: 1.65, waterExposure: 1.3, bucketReset: 3 });
 export const FIXED_STEP = 1 / 120;

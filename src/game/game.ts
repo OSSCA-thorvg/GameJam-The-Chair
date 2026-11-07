@@ -17,6 +17,7 @@ export function createGame(initialDeaths = 0) {
     const monitor = { ...LEVEL.monitor };
     const copier = { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 };
     const cleaning = { ...LEVEL.cleaning, spilled: false, age: 0, followup: false, splashDir: 0 };
+    const bucket: { age: number; armed: boolean; spills: number } = { age: RULES.bucketReset, armed: true, spills: 0 };
     const bin = { ...LEVEL.bin };
     const parts = LEVEL.playerContacts;
     const events: GameEvent[] = [];
@@ -56,7 +57,7 @@ export function createGame(initialDeaths = 0) {
         p: Point[];
         practice?: true;
     }[] = [];
-    let soaked = false;
+    let soakedOnSpill = 0;
     let lightPenaltyRemaining = 0;
     let lightHits = 0;
     let doorHits = 0;
@@ -122,8 +123,9 @@ export function createGame(initialDeaths = 0) {
         volley = 0;
         lossReason = null;
         focusLossTime = 0;
-        soaked = false;
-        Object.assign(cleaning, { spilled: false, age: 0, followup: false });
+        soakedOnSpill = 0;
+        Object.assign(cleaning, { spilled: false, age: 0, followup: false, splashDir: 0 });
+        Object.assign(bucket, { age: RULES.bucketReset, armed: true, spills: 0 });
         lightPenaltyRemaining = 0;
         lightHits = 0;
         doorHits = 0;
@@ -254,23 +256,31 @@ export function createGame(initialDeaths = 0) {
         events.push({ type: 'particles-step', dt });
     }
     function cleaningStep(dt: number) {
-        if (!cleaning.spilled && Math.abs(p.x - cleaning.x) < 150 && p.y > F - 200) {
+        const nearBucket = Math.abs(p.x - cleaning.x) < 150;
+        const upright = bucket.age >= RULES.bucketReset;
+        if (upright && !nearBucket) {
+            bucket.armed = true;
+        }
+        if (upright && bucket.armed && nearBucket && p.y > F - 200) {
+            bucket.age = 0;
+            bucket.armed = false;
+            bucket.spills++;
             cleaning.spilled = true;
-            cleaning.age = 0;
             cleaning.splashDir = p.x < cleaning.x ? -1 : 1;
             events.push({ type: 'water-splash', x: cleaning.x, side: cleaning.splashDir });
             events.push({ type: 'cue', id: 'water-spilled' });
             events.push({ type: 'cue', id: 'water-comment' });
         }
         if (cleaning.spilled) {
+            bucket.age += dt;
             cleaning.age += dt;
             if (!cleaning.followup && cleaning.age > 2.75) {
                 cleaning.followup = true;
                 events.push({ type: 'cue', id: 'water-followup' });
             }
-            if (!soaked && cleaning.age < RULES.waterExposure && Math.abs(p.x - cleaning.x) < 210 && p.y > F - 150) {
-                soaked = true;
-                focusHit('water', 0);
+            if (soakedOnSpill !== bucket.spills && waterExposureActive()) {
+                soakedOnSpill = bucket.spills;
+                focusHit('water', bucket.spills);
                 if (mode !== 'play') {
                     return;
                 }
@@ -338,8 +348,11 @@ export function createGame(initialDeaths = 0) {
             events.push({ type: 'cue', id: 'focus-game-over' });
         }
     }
+    function waterExposureActive() {
+        return bucket.age < RULES.waterExposure && Math.abs(p.x - cleaning.x) < 210 && p.y > F - 150;
+    }
     function focusBlocked() {
-        return paperPenaltyRemaining > 0 || lightPenaltyRemaining > 0 || (cleaning.spilled && cleaning.age < RULES.waterExposure && Math.abs(p.x - cleaning.x) < 210 && p.y > F - 150);
+        return paperPenaltyRemaining > 0 || lightPenaltyRemaining > 0 || waterExposureActive();
     }
     function focusStep(dt: number) {
         if (focusNotice && (focusNotice.life -= dt) <= 0) {
@@ -667,7 +680,8 @@ export function createGame(initialDeaths = 0) {
             stage, checkpoint, furniture, elevator, door: doorAt(t), level: { length: LEN, goal: GOAL },
             mode, focus, focusClock, focusLossTime, focusNotice, lossReason,
             player: p, ground, slip, dirty, inBin, binAge, time, deaths, bursts, paperHits, binFalls,
-            dirtyWaterExperienced: wetSeen, cleaningSpilled: cleaning.spilled, soaked,
+            dirtyWaterExperienced: wetSeen, cleaningSpilled: cleaning.spilled, soaked: soakedOnSpill > 0,
+            bucketAge: bucket.age,
             paperPenaltyRemaining, lightPenaltyRemaining, cleaning, lightHits, doorHits,
             monitor: { ...monitor, ...monitorPhase() }, papers, people, solids, copier, bin,
             focusBlocked: focusBlocked()
