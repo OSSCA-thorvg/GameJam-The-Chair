@@ -1,3 +1,18 @@
 node_modules/
 dist/
 .DS_Store
+AGENTS.md
+docs/
+
+# Personal MCP client configuration
+.codex/
+.vscode/
+.mcp.json
+
+# Playwright generated artifacts
+.playwright-mcp/
+playwright-report/
+blob-report/
+test-results/
+playwright/.cache/
+playwright/.auth/

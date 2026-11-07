@@ -1,9 +1,18 @@
+import { STAGE_TWO, createFurniture, elevatorAt, doorAt, chairFloorAt, type StageId } from './stage2';
 import { LEVEL, RULES, FIXED_STEP } from './level';
 import type { Point, Player, Snapshot, Person, Paper, Input, GameEvent, DeepReadonly } from './types';
 export function createGame(initialDeaths = 0) {
     const F = LEVEL.floor;
-    const LEN = LEVEL.length;
-    const GOAL = LEVEL.goal;
+    let stage: StageId = 1;
+    let checkpoint = 0;
+    let officeCheckpoint = false;
+    let actualSpeed = 0;
+    let lessons = { moved: false, jumped: false, braked: false, binJumped: false };
+    let practiceJump = false;
+    let furniture = createFurniture();
+    let elevator = elevatorAt(0);
+    let LEN: number = LEVEL.length;
+    let GOAL: number = LEVEL.goal;
     const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
     const monitor = { ...LEVEL.monitor };
     const copier = { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 };
@@ -45,16 +54,18 @@ export function createGame(initialDeaths = 0) {
     let people: Person[] = [];
     let solids: {
         p: Point[];
+        practice?: true;
     }[] = [];
     let soaked = false;
     let lightPenaltyRemaining = 0;
     let lightHits = 0;
+    let doorHits = 0;
     let lightCooldown = 0;
     let focus = 100;
     let focusClock = 0;
     let focusEvents = new Set<string>();
     let focusNotice: {
-        kind: 'paper' | 'water' | 'light';
+        kind: 'paper' | 'water' | 'light' | 'door';
         life: number;
     } | null = null;
     let volley = 0;
@@ -64,12 +75,21 @@ export function createGame(initialDeaths = 0) {
         return [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
     }
     function build() {
+        if (stage === 2) {
+            solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
+            people = [];
+            furniture = createFurniture();
+            return;
+        }
         solids = [{ p: polyRect(-400, F, bin.a + 400, 350) }, { p: polyRect(bin.b, F, LEN - bin.b + 400, 350) }];
         people = [{ id: 'manager', x: 320, said: false }, { id: 'cleaner', x: 1000, said: false }, { id: 'admin', x: 1810, said: false }];
     }
     function reset() {
         build();
-        p = { x: 100, y: F - 28, vx: 0, vy: 0, a: 0, w: 0 };
+        const spawn = stage === 2 ? STAGE_TWO.checkpoints[checkpoint] : { x: officeCheckpoint ? 1400 : 100, y: F - 28 };
+        p = { ...spawn, vx: 0, vy: 0, a: 0, w: 0 };
+        actualSpeed = 0;
+        practiceJump = false;
         keys.clear();
         ground = false;
         coyote = 0;
@@ -77,6 +97,7 @@ export function createGame(initialDeaths = 0) {
         escapeQueued = false;
         time = 0;
         t = 0;
+        elevator = elevatorAt(0);
         acc = 0;
         dirty = false;
         inBin = false;
@@ -105,6 +126,7 @@ export function createGame(initialDeaths = 0) {
         Object.assign(cleaning, { spilled: false, age: 0, followup: false });
         lightPenaltyRemaining = 0;
         lightHits = 0;
+        doorHits = 0;
         lightCooldown = 0;
         Object.assign(copier, { cool: 0, burst: 0, next: 0 });
         mode = 'play';
@@ -191,7 +213,7 @@ export function createGame(initialDeaths = 0) {
     function shoot() {
         const dir = copier.dir;
         for (let i = 0; i < 4; i++) {
-            papers.push({ x: copier.x + dir * 48, y: F - 90 - i * 4, vx: dir * (200 + i * 24), vy: -60 - i * 27, a: i * .8, w: dir * (3 + i), life: 5, hit: false, landed: false, volley });
+            papers.push({ x: copier.x + dir * 48, y: F - 90 - i * 4, vx: dir * (200 + i * 24), vy: -60 - i * 27, a: i * .8, w: dir * (3 + i), life: 5, hit: false, landed: false, volley, safe: volley === 1 && bursts === 0 });
         }
         bursts++;
         events.push({ type: 'volley' });
@@ -215,7 +237,7 @@ export function createGame(initialDeaths = 0) {
                 z.w *= .9;
                 z.landed = true;
             }
-            if (!z.hit && !z.landed && !inBin && Math.hypot(z.x - p.x, z.y - (p.y - 50)) < 48) {
+            if (!z.safe && !z.hit && !z.landed && !inBin && Math.hypot(z.x - p.x, z.y - (p.y - 50)) < 48) {
                 z.hit = true;
                 paperHits++;
                 focusHit('paper', z.volley);
@@ -275,7 +297,7 @@ export function createGame(initialDeaths = 0) {
         events.push({ type: 'cue', id: 'bin-comment' });
         events.push({ type: 'cue', id: 'bin-game-over' });
     }
-    function focusHit(kind: 'paper' | 'water' | 'light', id: number) {
+    function focusHit(kind: 'paper' | 'water' | 'light' | 'door', id: number) {
         if (mode !== 'play') {
             return;
         }
@@ -357,11 +379,11 @@ export function createGame(initialDeaths = 0) {
         lightPenaltyRemaining = Math.max(0, lightPenaltyRemaining - dt);
         lightCooldown = Math.max(0, lightCooldown - dt);
         events.push({ type: 'tick', dt });
-        if (Math.abs(p.x - copier.x) < 180 && copier.cool === 0 && copier.burst === 0) {
+        if (stage === 1 && Math.abs(p.x - copier.x) < 180 && copier.cool === 0 && copier.burst === 0) {
             copier.dir = p.x < copier.x ? -1 : 1;
             volley++;
             copier.burst = 3;
-            copier.next = 0;
+            copier.next = .75;
             copier.cool = 4.6;
         }
         if (copier.burst > 0) {
@@ -376,7 +398,9 @@ export function createGame(initialDeaths = 0) {
         if (mode !== 'play') {
             return;
         }
-        cleaningStep(dt);
+        if (stage === 1) {
+            cleaningStep(dt);
+        }
         if (mode !== 'play') {
             return;
         }
@@ -394,14 +418,19 @@ export function createGame(initialDeaths = 0) {
             slipCooldown = 7;
         }
         if (jumpQ > 0 && coyote > 0) {
+            if (p.x < 300) practiceJump = true;
             p.vy = -350;
             p.w -= dir * .12;
             ground = false;
             coyote = 0;
             jumpQ = 0;
         }
-        const tilt = (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0) + (was ? 0 : dir);
+        const balancing = keys.has('q') || keys.has('e');
+        const tilt = (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0) + (was || balancing ? 0 : dir);
         p.w += tilt * (was ? 4.3 : 6.4) * dt;
+        if (p.x < 300) {
+            p.w += (-Math.sin(p.a) * 20 - p.w * 7) * dt;
+        }
         if (was && dir) {
             p.vx += dir * (slip ? 110 : 305) * dt;
         }
@@ -421,9 +450,77 @@ export function createGame(initialDeaths = 0) {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.a += p.w * dt;
-        if (binCooldown === 0 && p.x > bin.a + 25 && p.x < bin.b - 25 && p.y + 28 >= bin.rim && p.vy >= 0) {
+        if (stage === 1 && binCooldown === 0 && p.x > bin.a + 25 && p.x < bin.b - 25 && p.y + 28 >= bin.rim && p.vy >= 0) {
             binEnter();
             return;
+        }
+        if (stage === 2) {
+            const oldElevator = elevator;
+            elevator = elevatorAt(t);
+            if (was && Math.abs(p.y + 28 - oldElevator.y) < 12 && p.x > oldElevator.x - 15 && p.x < oldElevator.x + oldElevator.width + 15) {
+                p.x += elevator.x - oldElevator.x;
+            }
+            for (const item of furniture) {
+                const reach = item.width / 2 + 44;
+                if (Math.abs(p.x - item.x) < reach && p.y + 20 > item.y - item.height && p.y - 45 < item.y) {
+                    const side = p.x < item.x ? -1 : 1;
+                    item.vx += p.vx * dt * 8;
+                    p.vx *= Math.exp(-2 * dt);
+                    p.x = item.x + side * reach;
+                }
+                item.x += item.vx * dt;
+                item.vx *= Math.exp(-3 * dt);
+                item.x = clamp(item.x, item.kind === 'cabinet' ? 2050 : 40, item.kind === 'cabinet' ? 2295 : LEN - 40);
+                if (item.kind === 'chair') {
+                    item.y = chairFloorAt(item.x);
+                }
+            }
+            for (let i = 0; i < furniture.length; i++) {
+                for (let j = i + 1; j < furniture.length; j++) {
+                    const a = furniture[i];
+                    const b = furniture[j];
+                    const overlap = (a.width + b.width) / 2 - Math.abs(a.x - b.x);
+                    if (overlap > 0 && a.kind === b.kind) {
+                        const sign = a.x < b.x ? -1 : 1;
+                        a.x += sign * overlap / 2;
+                        b.x -= sign * overlap / 2;
+                        a.vx = b.vx = (a.vx + b.vx) / 2;
+                    }
+                }
+            }
+            solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
+            for (const item of furniture) {
+                solids.push({ p: polyRect(item.x - item.width / 2, item.y - item.height, item.width, item.height) });
+            }
+            solids.push({ p: polyRect(elevator.x, elevator.y, elevator.width, elevator.height) });
+            const door = doorAt(t);
+            if (!door.open && Math.abs(p.x - door.x) < 47 && p.y > 260) {
+                const side = prev < door.x ? -1 : 1;
+                p.x = door.x + side * 48;
+                p.vx = side * 70;
+                p.w *= .5;
+                focusHit('door', ++doorHits);
+                if (mode !== 'play') {
+                    return;
+                }
+            }
+            for (let i = checkpoint + 1; i < STAGE_TWO.checkpoints.length; i++) {
+                const mark = STAGE_TWO.checkpoints[i];
+                if (p.x >= mark.x && Math.abs(p.y - mark.y) < 65) {
+                    checkpoint = i;
+                    events.push({ type: 'cue', id: 'checkpoint' });
+                }
+            }
+        }
+        solids = solids.filter(ob => !ob.practice);
+        if (!lessons.jumped) {
+            const pile = LEVEL.practicePaper;
+            solids.push({ p: [
+                { x: pile.x - pile.width / 2, y: F },
+                { x: pile.x - 3, y: F - pile.height },
+                { x: pile.x + 3, y: F - pile.height },
+                { x: pile.x + pile.width / 2, y: F }
+            ], practice: true });
         }
         ground = false;
         let c = Math.cos(p.a);
@@ -469,7 +566,9 @@ export function createGame(initialDeaths = 0) {
                 }
             }
         }
-        monitorStep(dt, prev);
+        if (stage === 1) {
+            monitorStep(dt, prev);
+        }
         if (mode !== 'play') {
             return;
         }
@@ -481,11 +580,23 @@ export function createGame(initialDeaths = 0) {
             p.x = 40;
             p.vx = Math.max(0, p.vx);
         }
+        lessons.moved ||= p.x > 140;
+        lessons.braked ||= ground && keys.has('brake');
+        lessons.binJumped ||= stage === 1 && p.x > bin.b && p.y < F;
+        if (!lessons.jumped && practiceJump && ground && p.x < 330) {
+            lessons.jumped = true;
+            events.push({ type: 'cue', id: 'practice-cleared' });
+        }
+        actualSpeed += (Math.abs(p.x - prev) / dt - actualSpeed) * (1 - Math.exp(-dt / .12));
+        if (stage === 1 && !officeCheckpoint && p.x >= 1400 && p.x < bin.a - 25) {
+            officeCheckpoint = true;
+            events.push({ type: 'cue', id: 'checkpoint' });
+        }
         if (ground && dir && Math.abs(p.vx) > 95 && rollCooldown === 0) {
             events.push({ type: 'cue', id: 'rolling' });
             rollCooldown = 9;
         }
-        if (p.vx < -60 && reverseCooldown === 0) {
+        if (people.length > 0 && p.vx < -60 && reverseCooldown === 0) {
             const n = people.reduce((a, b) => Math.abs(a.x - p.x) < Math.abs(b.x - p.x) ? a : b);
             if (Math.abs(n.x - p.x) < 300) {
                 events.push({ type: 'cue', id: 'reverse-comment', person: { ...n } });
@@ -502,6 +613,11 @@ export function createGame(initialDeaths = 0) {
             events.push({ type: 'speck', x: p.x - 15, vx: -p.vx * .2 });
         }
         if (p.y > F + 250) {
+            if (stage === 2) {
+                deaths++;
+                reset();
+                return;
+            }
             binEnter();
             return;
         }
@@ -542,12 +658,17 @@ export function createGame(initialDeaths = 0) {
     }
     build();
     function getSnapshot() {
+        const predictedAngle = Math.atan2(Math.sin(p.a), Math.cos(p.a)) + p.w * .2;
+        const balanceHint: 'q' | 'e' | null = mode === 'play' && Math.abs(predictedAngle) > .18 ? (predictedAngle > 0 ? 'q' : 'e') : null;
         // Detached data: even untyped renderers cannot mutate the live simulation.
         return structuredClone({
-            game: 'office-stage-one', mode, focus, focusClock, focusLossTime, focusNotice, lossReason,
+            game: stage === 1 ? 'office-stage-one' : 'building-stage-two',
+            lessons, officeCheckpoint, actualSpeed: mode === 'play' ? actualSpeed : 0, tutorialAssist: mode === 'play' && p.x < 300, balanceHint,
+            stage, checkpoint, furniture, elevator, door: doorAt(t), level: { length: LEN, goal: GOAL },
+            mode, focus, focusClock, focusLossTime, focusNotice, lossReason,
             player: p, ground, slip, dirty, inBin, binAge, time, deaths, bursts, paperHits, binFalls,
             dirtyWaterExperienced: wetSeen, cleaningSpilled: cleaning.spilled, soaked,
-            paperPenaltyRemaining, lightPenaltyRemaining, cleaning, lightHits,
+            paperPenaltyRemaining, lightPenaltyRemaining, cleaning, lightHits, doorHits,
             monitor: { ...monitor, ...monitorPhase() }, papers, people, solids, copier, bin,
             focusBlocked: focusBlocked()
         });
@@ -579,6 +700,15 @@ export function createGame(initialDeaths = 0) {
     }
     return {
         reset, jump, pause, step, advance,
+        startStage(id: StageId) {
+            stage = id;
+            checkpoint = 0;
+            officeCheckpoint = false;
+            lessons = { moved: false, jumped: false, braked: false, binJumped: false };
+            LEN = stage === 1 ? LEVEL.length : STAGE_TWO.length;
+            GOAL = stage === 1 ? LEVEL.goal : STAGE_TWO.goal;
+            reset();
+        },
         restart() {
             if (mode === 'play') {
                 deaths++;

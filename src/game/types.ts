@@ -29,12 +29,13 @@ export type Paper = {
     hit: boolean;
     landed: boolean;
     volley: number;
+    safe: boolean;
 };
 export type Input = 'left' | 'right' | 'brake' | 'q' | 'e';
 export type DeepReadonly<T> = T extends object ? {
     readonly [K in keyof T]: DeepReadonly<T[K]>;
 } : T;
-export type CueId = 'head-hit' | 'head-comment' | 'head-game-over' | 'first-volley' | 'paper-hit' | 'water-spilled' | 'water-comment' | 'water-followup' | 'bin-fall' | 'bin-comment' | 'bin-game-over' | 'focus-lost' | 'focus-game-over' | 'slipping' | 'rolling' | 'reverse-comment' | 'person-comment' | 'stage-clear' | 'light-hit' | 'light-comment';
+export type CueId = 'practice-cleared' | 'checkpoint' | 'head-hit' | 'head-comment' | 'head-game-over' | 'first-volley' | 'paper-hit' | 'water-spilled' | 'water-comment' | 'water-followup' | 'bin-fall' | 'bin-comment' | 'bin-game-over' | 'focus-lost' | 'focus-game-over' | 'slipping' | 'rolling' | 'reverse-comment' | 'person-comment' | 'stage-clear' | 'light-hit' | 'light-comment';
 export type GameEvent = {
     type: 'cue';
     id: CueId;

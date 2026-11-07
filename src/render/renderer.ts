@@ -1,5 +1,6 @@
 import { init, type Canvas, type Shape, type ThorVGNamespace } from '@thorvg/webcanvas';
 import wasmUrl from '../../node_modules/@thorvg/webcanvas/dist/thorvg.wasm?url';
+import { STAGE_TWO } from '../game/stage2';
 import { LEVEL } from '../game/level';
 import type { GameState } from '../game/game';
 import type { DeepReadonly, Person } from '../game/types';
@@ -20,8 +21,8 @@ export function createRenderer(root: HTMLElement) {
 }
 function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement, labels: HTMLCanvasElement, bg: CanvasRenderingContext2D, lg: CanvasRenderingContext2D) {
     const F = LEVEL.floor;
-    const LEN = LEVEL.length;
-    const GOAL = LEVEL.goal;
+    let LEN: number = LEVEL.length;
+    let GOAL: number = LEVEL.goal;
     const TAU = Math.PI * 2;
     const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
     let W = 800;
@@ -56,6 +57,8 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
     let specks: DeepReadonly<EffectsState['specks']> = [];
     let paperFace = 0;
     let glare = 0;
+    let practiceBurst = 0;
+    let saveFlash = 0;
     let commands: DrawCommand[] = [];
     let pool: Shape[] = [];
     let TVG: ThorVGNamespace | null = null;
@@ -65,7 +68,7 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
     function size() {
         W = Math.max(300, base.clientWidth || 800);
         H = base.clientHeight || 510;
-        VW = Math.max(760, W);
+        VW = W < 520 ? 540 : Math.max(760, W);
         scale = W / VW;
         vertical = Math.max(0, H / scale - 510) * .7;
         dpr = Math.min(devicePixelRatio || 1, 2);
@@ -182,7 +185,6 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         rect(bin.a - 8, F - 16, 176, 10, '#5b6e70');
         polygon([[bin.a + 5, F - 7], [bin.b - 5, F - 7], [bin.b - 16, bin.bottom], [bin.a + 16, bin.bottom]], '#687b7d');
         ellipse(bin.x, F - 8, 79, 12, '#303d44');
-        label('紙 / PAPER', bin.x, F - 30, 12);
     }
     function binFront() {
         polygon([[bin.a + 5, F + 3], [bin.b - 5, F + 3], [bin.b - 16, bin.bottom], [bin.a + 16, bin.bottom]], '#8d9c96');
@@ -191,10 +193,6 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         }
         ellipse(bin.x, F + 3, 78, 7, '#a4b1a5');
         rect(bin.x - 27, F + 35, 54, 29, '#d7dcc7');
-        label('분리배출', bin.x, F + 54, 11);
-        if (inBin) {
-            label('GAME OVER', bin.x, F - 117, 15, '#79472c');
-        }
     }
     function cleaningDraw() {
         const spread = cleaning.spilled ? Math.min(1, cleaning.age / .8) : 0;
@@ -205,6 +203,15 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
             }
             ellipse(cleaning.a + 155 * spread, F + 2, 85 * spread, 3, '#a1a88b');
             rod(cleaning.a + 70 * spread, F + 2, cleaning.a + 130 * spread, F + 2, 1, '#c0c7a4');
+            for (let i = 0; i < 6; i++) {
+                const x = cleaning.a + 25 + i * 48 * spread;
+                rod(x, F + 1, x + 25, F + 1, 2, '#e1dfc4');
+                rod(x + 5, F + 8, x + 18, F + 8, 1, '#cfd5bf');
+            }
+            if (state.slip) {
+                rod(p.x - 95, F - 2, p.x - 30, F - 2, 3, '#5e716c');
+                rod(p.x - 82, F + 4, p.x - 18, F + 4, 2, '#61736e');
+            }
         }
         // A mop and wheeled cleaning bucket are ordinary office props; the bucket tips as the chair approaches.
         const tip = cleaning.spilled ? Math.min(1, cleaning.age / .42) : 0;
@@ -260,14 +267,12 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
             }
             ox = oy = rotation = 0;
         }
-        label(cleaning.spilled ? (cleaning.age < 1.4 ? '촤아악!!' : '더러운 물 · 미끄러움') : '청소 중 · 물통 조심', 1045, F - 56, 14, cleaning.spilled ? '#586d50' : '#756846');
     }
     function monitorDraw() {
         const m = monitorPhase();
         const x = monitor.x;
         const y = monitor.y;
         // The light starts inside the screen of the ordinary monitor on the last desk.
-        label(m.active ? '푸슝— 푸슝!' : m.warning ? '화면 반사 예고…' : '빛이 꺼졌다 · 지금 통과', x, y - 35, 13, m.active ? '#ffe0a6' : '#e1e6ee');
         if (m.active) {
             const age = m.phase - .8;
             const u = age / 1.3;
@@ -293,20 +298,21 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         }
         else if (m.warning) {
             const charge = m.phase / .8;
+            for (let i = 0; i < 5; i++) {
+                rect(monitor.wall - 48 + i * 20, F - 2, 9, 3 + charge * 9, tint('#f1d8a5', .3 + charge * .6));
+            }
+            rect(x - 19, y - 12, 32 * charge, 5, '#ead5a4');
             const blink = .45 + .55 * Math.sin(charge * Math.PI * 3) ** 2;
             ellipse(x - 3, y - 2, 4 + charge * 5, 3 + charge * 3, tint('#fff4c6', blink * .65));
             rod(x - 5, y - 21, x - 5, y - 29 - charge * 5, 2, '#dca468');
             rod(x - 22, y - 16, x - 28 - charge * 4, y - 23, 2, '#dca468');
         }
-        for (let i = 0; i < 4; i++) {
-            rect(monitor.wall - 58 + i * 20, F + 10, 11, 3, '#c79c64');
-        }
-        label(m.active ? '빛이 꺼질 때까지 대기' : m.warning ? '잠깐, 곧 눈부셔요!' : '→ 통과', monitor.wall - 50, F + 43, 12, '#735f46');
+
     }
     function player() {
         ox = p.x + ART.player.offsetX;
         oy = p.y + ART.player.offsetY;
-        rotation = p.a;
+        rotation = p.a + (mode === 'play' && t < 1 && !state.lessons.moved ? Math.sin(t * 12) * .025 : 0);
         localScale = ART.player.scale;
         rod(0, -4, 0, 16, 6, C.steel);
         rod(-29, 21, 0, 13, 5, C.steel);
@@ -327,17 +333,24 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         rod(0, -62, 0, -69, 7, C.skin);
         polygon([[-12, -88], [4, -94], [15, -81], [12, -66], [-4, -64], [-13, -75]], C.skin);
         polygon([[-14, -85], [-4, -97], [7, -94], [14, -86], [2, -88], [-9, -79]], '#3c3b43');
-        rect(4, -84, 10, 6, '#c3d0d0');
-        rod(1, -84, 15, -84, 2, C.ink);
-        rect(9, -82, 2, 2, C.ink);
+        const glance = state.lossReason === 'focus' ? .5 + .5 * Math.sin(state.focusLossTime * 6) : state.focusNotice ? Math.sin((1.7 - state.focusNotice.life) / 1.7 * Math.PI) : 0;
+        rect(4 - glance * 12, -84, 10, 6, '#c3d0d0');
+        rod(1 - glance * 12, -84, 15 - glance * 12, -84, 2, C.ink);
+        rect(9 - glance * 14, -82, 2, 2, C.ink);
         rod(-10, -55, 6, -38, 8, C.shirt);
         rod(6, -38, 32, -34, 6, C.skin);
         rod(1, -57, 8, -37, 3, '#ac6954');
         polygon([[21, -31], [54, -31], [65, -59], [33, -59]], '#555f70');
         polygon([[35, -55], [59, -55], [51, -35], [27, -35]], '#a8b9c3');
         rod(18, -29, 55, -29, 3, C.steel);
-        const tap = Math.sin(t * 24) * 1.8;
+        const tap = state.lossReason === 'focus' ? 0 : Math.sin(t * 24) * 1.8;
         rect(26, -35 + tap, 8, 3, C.skin);
+        if (state.focusNotice?.kind === 'water') rod(7, -39, 44, -57, 5, C.skin);
+        if (saveFlash > 0) {
+            rect(40, -52, 11, 11, '#e0ecd2');
+            rect(42, -52, 6, 4, '#728a7b');
+            rect(43, -45, 5, 3, '#728a7b');
+        }
         if (paperFace > 0) {
             polygon([[-13, -89], [13, -85], [10, -65], [-15, -69]], C.paper);
             rod(-8, -82, 9, -80, 1, '#a8a79e');
@@ -357,8 +370,132 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
             polygon([[-14, -94], [-2, -104], [7, -94]], '#c4ae73');
             rod(-3, -98, 0, -88, 2, '#849267');
         }
+        if (mode === 'impact' || (mode === 'dead' && state.lossReason === 'head')) {
+            for (let i = 0; i < 8; i++) {
+                const angle = i * TAU / 8;
+                rod(Math.cos(angle) * 19, -77 + Math.sin(angle) * 19, Math.cos(angle) * 28, -77 + Math.sin(angle) * 28, 3, '#e5b17f');
+            }
+        }
         ox = oy = rotation = 0;
         localScale = 1;
+    }
+    function practiceFloor() {
+        if (cam > 340) return;
+        rect(45, F - 3, 260, 6, '#d2c8a3');
+        for (let x = 55; x < 300; x += 26) rect(x, F + 12, 13, 3, '#e4dabb');
+        polygon([[290, F + 7], [303, F + 14], [290, F + 21]], '#e4dabb');
+        const pile = LEVEL.practicePaper;
+        if (!state.lessons.jumped) {
+            for (let i = 0; i < 3; i++) rect(pile.x - pile.width / 2 + i * 3, F - 2 - i * 2, pile.width - i * 4, 2, C.paper);
+        }
+        if (practiceBurst > 0) {
+            const age = 1.3 - practiceBurst;
+            for (let i = 0; i < 7; i++) {
+                ox = pile.x + (i - 3) * age * 37;
+                oy = F - 9 - Math.sin(age / 1.3 * Math.PI) * (45 + i % 3 * 15);
+                rotation = age * (i % 2 ? 2 : -2);
+                rect(-10, -5, 20, 10, C.paper);
+                rod(-6, -1, 5, -1, 1, '#a2aaa8');
+            }
+            ox = oy = rotation = 0;
+        }
+    }
+    function checkpointFlag(x: number, y: number, active: boolean) {
+        const raising = active && Math.abs(p.x - x) < 170 ? clamp((1.5 - saveFlash) / .45, 0, 1) : 1;
+        const height = active ? 25 + 55 * raising : 25;
+        rod(x, y, x, y - 93, 3, '#677d7e');
+        polygon([[x, y - height], [x + 32, y - height + 10], [x, y - height + 22]], active ? '#b8d6a2' : '#b4bab3');
+        if (active) {
+            rod(x + 7, y - height + 10, x + 12, y - height + 15, 2, '#526d66');
+            rod(x + 12, y - height + 15, x + 21, y - height + 6, 2, '#526d66');
+        }
+        if (state.lossReason && active) {
+            ellipse(x, y + 4, 27, 5, '#d7cf9b');
+        }
+    }
+    function building() {
+        commands = [];
+        ox = oy = rotation = 0;
+        rect(cam, -vertical, VW, H / scale, '#a9afbc');
+        rect(cam, -vertical, VW, 57 + vertical, '#747d91');
+        rod(cam, 57, cam + VW, 57, 4, '#d1d1c6');
+        for (let x = Math.floor(cam / 235) * 235; x < cam + VW + 235; x += 235) {
+            rect(x + 17, 80, 197, 193, '#69788c');
+            rect(x + 24, 87, 183, 179, '#9aa9b2');
+            rod(x + 113, 87, x + 113, 267, 4, '#69788c');
+            rect(x + 43, 27, 145, 7, '#f1e9cf');
+        }
+        rect(cam, 287, VW, 250, '#a0a7b1');
+        rod(cam, 315, cam + VW, 315, 2, '#8c94a1');
+        for (const [x, title] of [[190, '회의실 / MEETING'], [1180, '비상계단 / STAIRS'], [2050, '비품 창고 / STORAGE'], [2820, '승강로 / LIFT']] as const) {
+            rect(x - 85, 110, 210, 32, '#687e7c');
+            label(title, x + 20, 131, 13, '#f0eddc');
+        }
+        rect(120, 300, 400, 12, '#b8a283');
+        for (const x of [150, 465]) rod(x, 312, x, 420, 7, '#697585');
+        for (let x = 150; x < 500; x += 110) {
+            rect(x, 278, 50, 22, '#596577'); rect(x + 5, 282, 40, 13, '#a8b9c3');
+        }
+        for (const ob of solids) polygon(ob.p.map(v => [v.x, v.y]), C.floor);
+        for (const item of state.furniture) {
+            const x = item.x, y = item.y;
+            if (item.kind === 'cabinet') {
+                rect(x - 50, y - 55, 100, 48, '#c6c9bf');
+                for (let i = 0; i < 2; i++) { rect(x - 45, y - 50 + i * 23, 90, 20, '#afb8b2'); rect(x - 9, y - 45 + i * 23, 18, 3, '#6c7d83'); }
+            } else {
+                rod(x - 18, y - 37, x - 22, y - 90, 6, '#515665');
+                rect(x - 30, y - 90, 18, 48, '#6f7687'); rect(x - 24, y - 40, 48, 8, '#6f7687');
+                rod(x, y - 32, x, y - 10, 5, C.steel); rod(x - 22, y - 8, x + 22, y - 8, 4, C.steel);
+            }
+            ellipse(x - item.width / 2 + 8, y - 5, 5, 5, '#3f4650'); ellipse(x + item.width / 2 - 8, y - 5, 5, 5, '#3f4650');
+        }
+        const door = state.door;
+        rect(door.x - 58, 210, 116, 210, '#7d91937f');
+        rod(door.x - 59, 210, door.x - 59, 420, 6, '#596879'); rod(door.x + 59, 210, door.x + 59, 420, 6, '#596879');
+        rod(door.x, 220, door.x, 418, 5, '#596879');
+        const reach = Math.cos(door.angle) * 52;
+        polygon([[door.x, 230], [door.x + reach, 242], [door.x + reach, 405], [door.x, 418]], '#c5dcd4b0');
+        polygon([[door.x, 230], [door.x - reach, 242], [door.x - reach, 405], [door.x, 418]], '#8faeb0b0');
+        ellipse(door.x, 192, 7, 7, door.open ? '#b8d6a2' : '#e0b477');
+        label(door.open ? '→' : '↻', door.x, 177, 24, '#f0eddc');
+        for (const x of [door.x - 100, door.x - 76]) {
+            ellipse(x, F + 4, 8, 3, '#d1c8a5');
+            rod(x - 8, F + 12, x + 8, F + 12, 2, '#778783');
+        }
+        if (door.open) {
+            polygon([[door.x - 14, F + 12], [door.x + 6, F + 12], [door.x + 6, F + 6], [door.x + 19, F + 16], [door.x + 6, F + 26], [door.x + 6, F + 20], [door.x - 14, F + 20]], '#d8dfbf');
+        } else {
+            rod(door.x - 28, F + 12, door.x + 28, F + 12, 5, '#d5be92');
+            rod(door.x - 28, F + 20, door.x + 28, F + 20, 3, '#d5be92');
+        }
+        for (const [a, b, ya, yb] of [[1020, 1400, 420, 500], [1580, 1900, 500, 420]]) {
+            rod(a, ya - 95, b, yb - 95, 5, '#697585');
+            for (let x = a; x <= b; x += 70) { const y = ya + (yb - ya) * (x - a) / (b - a); rod(x, y - 95, x, y, 3, '#7d8995'); }
+        }
+        rect(2350, 185, 350, 18, '#687783');
+        for (let x = 2360; x < 2690; x += 24) rod(x, 189, x + 12, 198, 3, '#9eafb1');
+        label('→', 2460, 275, 25, '#e6d6a8');
+        for (const x of [2700, 3150]) rod(x, 160, x, 500, 7, '#687783');
+        rod(2700, 322, 3160, 322, 2, '#d7ccb0');
+        for (let x = 2700; x < 3160; x += 48) ellipse(x, 322, 3, 3, '#f0dfb5');
+        const lift = state.elevator;
+        rect(lift.x, lift.y, lift.width, lift.height, '#7e9a91');
+        for (let x = lift.x + 10; x < lift.x + lift.width; x += 24) rect(x, lift.y + 2, 12, 4, '#e6d6a8');
+        label('↔', lift.x + lift.width / 2, lift.y - 20, 24, '#e9e3ce');
+        for (let x = 2890; x < 3380; x += 95) {
+            const y = 500 - (x - 2850) * 190 / 550;
+            rod(x, y - 5, x + 28, y - 15, 4, '#e0d1a4');
+        }
+        for (let i = 1; i < STAGE_TWO.checkpoints.length; i++) {
+            const mark = STAGE_TWO.checkpoints[i];
+            checkpointFlag(mark.x, mark.y + 28, state.checkpoint >= i);
+        }
+        rect(GOAL - 35, 105, 106, 205, '#677d7e'); rect(GOAL - 27, 113, 90, 190, '#b5c4bf');
+        rect(GOAL - 31, 74, 98, 23, '#718e7b'); label('기계실 →', GOAL + 18, 91, 13, '#f0eddc');
+        rod(GOAL + 40, 190, GOAL + 40, 229, 4, '#677d7e');
+        practiceFloor();
+        ellipse(p.x, p.y + 35, 45, 5, '#91959c'); player();
+
     }
     function world() {
         commands = [];
@@ -417,7 +554,16 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         rect(x - 56, F - 108, 112, 88, '#c6c9bf');
         rect(x - 48, F - 96, 40, 61, '#aeb7b5');
         rect(x - 1, F - 96, 47, 22, '#717f88');
-        rect(x + 6, F - 91, 21, 9, copier.flash > 0 ? '#edc883' : '#9fbdad');
+        const charging = copier.burst > 0;
+        rect(x + 6, F - 91, 21, 9, charging ? '#edc883' : '#9fbdad');
+        if (charging) {
+            for (const dx of [-34, -10, 14, 38]) {
+                ellipse(x + dx, F - 103, 7, 4, '#6a7880');
+                rod(x + dx, F - 106, x + dx + Math.sin(t * 22) * 4, F - 100, 2, '#e4d8b6');
+            }
+            polygon([[x - 71, F - 125], [x - 61, F - 139], [x - 51, F - 125]], '#edd0a1');
+        }
+
         rect(x - 56, F - 120, 112, 12, '#dcdccc');
         polygon([[x - 45, F - 121], [x + 35, F - 132], [x + 48, F - 151], [x - 35, F - 143]], '#e7e4d6');
         rect(x - 65, F - 91, 22, 7, '#333d49');
@@ -425,7 +571,6 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         for (let j = 0; j < 3; j++) {
             rect(x - 37, F - 70 + j * 11, 22, 3, '#737f87');
         }
-        label(copier.flash > 0 ? '퉤! 퉷!!' : '자동 출력 · 접근 감지', x, F - 167, 14, copier.flash > 0 ? '#ffd5a8' : '#e1e6ee');
         for (const z of papers) {
             ox = z.x;
             oy = z.y;
@@ -436,6 +581,12 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
             ox = oy = rotation = 0;
         }
         monitorDraw();
+        practiceFloor();
+        checkpointFlag(1400, F, state.officeCheckpoint);
+        for (let x = 1490; x < 1545; x += 18) {
+            polygon([[x, F - 4], [x + 12, F - 4], [x + 24, F - 12], [x + 12, F - 12]], '#e1c38b');
+        }
+
         binBack();
         ellipse(p.x, F + 8, 45, 5, '#91959c');
         player();
@@ -460,17 +611,9 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         rect(GOAL - 27, F - 197, 90, 190, '#b5c4bf');
         rod(GOAL + 40, F - 120, GOAL + 40, F - 81, 4, '#677d7e');
         rect(GOAL - 31, F - 236, 98, 23, '#718e7b');
-        label('사무실 출입문 →', GOAL + 18, F - 218, 12, '#f0eddc');
+        label('출구 →', GOAL + 18, F - 218, 12, '#f0eddc');
         if (glare > 0) {
             rect(cam, -vertical, VW, H / scale, '#fff7d5' + Math.round(Math.min(.22, glare * .16) * 255).toString(16).padStart(2, '0'));
-            label('으… 눈부셔!', p.x, p.y - 119, 15, '#856e4e');
-        }
-        if (mode === 'impact') {
-            label('머리 충돌 · 0.25×', p.x, 120, 17, '#974c41');
-        }
-        if (mode === 'pause') {
-            rect(cam, -vertical, VW, H / scale, '#3a455d');
-            label('잠깐, 숨 고르는 중', cam + VW / 2, H / scale / 2 - vertical, 22, '#eee8d7');
         }
     }
     function rgb(hex: string): [
@@ -546,11 +689,13 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
     }
     function draw(next: GameState, effects: EffectsState) {
         state = next;
+        LEN = state.level.length;
+        GOAL = state.level.goal;
         ({ player: p, mode, cleaning, people, solids, papers, inBin, soaked, dirty, time: t } = state);
         monitor = { ...state.monitor, ...ART.monitor };
         bin = { ...state.bin, bottom: ART.binBottom };
         copier = { ...state.copier, flash: effects.copierFlash };
-        ({ waterDrops, waterRipples, specks, paperFace, glare } = effects);
+        ({ waterDrops, waterRipples, specks, paperFace, glare, practiceBurst, saveFlash } = effects);
         const dt = Math.max(0, t - lastTime);
         if (t < lastTime) {
             cam = 0;
@@ -563,7 +708,11 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         lastTime = t;
         lg.setTransform(dpr, 0, 0, dpr, 0, 0);
         lg.clearRect(0, 0, W, H);
-        world();
+        if (state.stage === 2) {
+            building();
+        } else {
+            world();
+        }
         paint();
         return { cam, scale, vertical, width: W };
     }
