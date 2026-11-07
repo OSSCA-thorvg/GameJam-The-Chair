@@ -29,9 +29,15 @@ function cleanerHead(ctx: RenderCtx, x = 0, y = 0, facing = 1) {
     headPart([[13, -131], [16, -131], [16, -127], [13, -127]], '#4b5059');
 }
 
-function cleanerMop(ctx: RenderCtx) {
-    ctx.polygon([[18, -86], [22, -88], [79, -4], [74, -2]], '#808c7b');
-    ctx.polygon([[70, -8], [79, -11], [91, -3], [87, 1], [64, 1]], '#b1ad8e');
+function cleanerMop(ctx: RenderCtx, laid = 0) {
+    const lerp = (a: number[][], b: number[][]): Vector[] =>
+        a.map(([x, y], i) => [x + (b[i][0] - x) * laid, y + (b[i][1] - y) * laid]);
+    const handleUp: number[][] = [[18, -86], [22, -88], [79, -4], [74, -2]];
+    const handleDown: number[][] = [[-42, -5], [-42, -2], [65, -2], [65, -5]];
+    const headUp: number[][] = [[70, -8], [79, -11], [91, -3], [87, 1], [64, 1]];
+    const headDown: number[][] = [[62, -5], [71, -8], [86, -3], [82, 1], [56, 1]];
+    ctx.polygon(lerp(handleUp, handleDown), '#808c7b');
+    ctx.polygon(lerp(headUp, headDown), '#b1ad8e');
 }
 
 export function person(ctx: RenderCtx, n: DeepReadonly<Person>) {
@@ -128,8 +134,10 @@ export function recoveringCleaner(ctx: RenderCtx, n: DeepReadonly<Person>) {
     const hipY = footY - 42 + 11 * bend;
     const shoulderX = hipX - side * (26 * bend + 42 * lift * stance);
     const shoulderY = hipY - 46 + 8 * bend;
-    const frontFootX = n.x - 13 + (distance - 14) * frontStance;
-    const rearFootX = n.x + 13 + (distance + 11) * rearStance;
+    const walkingFrontFootX = n.x - 13 + (distance - 14) * frontStance;
+    const walkingRearFootX = n.x + 13 + (distance + 11) * rearStance;
+    const frontFootX = walkingFrontFootX + (hipX - 13 - walkingFrontFootX) * bend;
+    const rearFootX = walkingRearFootX + (hipX + 13 - walkingRearFootX) * bend;
     const footfall = crossing ? TAU : Math.PI;
     const footLift = (out: number, back: number) =>
         5 * (Math.abs(Math.sin(footfall * out)) + Math.abs(Math.sin(footfall * back)));
@@ -140,10 +148,12 @@ export function recoveringCleaner(ctx: RenderCtx, n: DeepReadonly<Person>) {
     const kneeY = footY - 23 + 5 * bend;
 
     ctx.ellipse(hipX, footY, 27 + 7 * stance, 2.5, '#515c6d62');
+    const mopLaid = easeBetween(age, CLEANER_MOTION_START, 1.8) *
+        (1 - easeBetween(age, 3.25, CLEANER_MOTION_END));
     ctx.ox = n.x;
     ctx.oy = footY;
     ctx.localScale = .85;
-    cleanerMop(ctx);
+    cleanerMop(ctx, mopLaid);
     ctx.ox = ctx.oy = 0;
     ctx.localScale = 1;
 
