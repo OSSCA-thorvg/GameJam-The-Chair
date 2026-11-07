@@ -3,3 +3,8 @@ dist/
 .DS_Store
 AGENTS.md
 docs/
+
+# Personal MCP client configuration
+.codex/
+.vscode/
+.mcp.json
