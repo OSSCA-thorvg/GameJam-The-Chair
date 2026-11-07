@@ -8,6 +8,7 @@ import { createRenderCtx } from './context';
 import { drawWorld } from './scene/world';
 import { drawBuilding } from './scene/building';
 import { drawRooftop } from './scene/rooftop';
+import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './scene/cleaning';
 import { paint } from './paint';
 
 export function createRenderer(root: HTMLElement, getLocale: () => Locale = () => 'en') {
@@ -89,7 +90,13 @@ function setup(
             ctx.wheel = 0;
         }
         if (ctx.mode === 'play') {
-            ctx.cam += (ctx.clamp(ctx.p.x - ctx.VW * .35, 0, Math.max(0, ctx.LEN - ctx.VW)) - ctx.cam) * Math.min(1, dt * 7);
+            const recovery = next.cleaning.spilled && next.bucketAge >= CLEANER_RECOVERY_START && next.bucketAge < CLEANER_RECOVERY_END
+                ? next.people.find((person) => person.id === 'cleaner')
+                : undefined;
+            const focusX = recovery
+                ? (next.player.x + (next.cleaning.x + recovery.x) / 2) / 2 - ctx.VW / 2
+                : ctx.p.x - ctx.VW * .35;
+            ctx.cam += (ctx.clamp(focusX, 0, Math.max(0, ctx.LEN - ctx.VW)) - ctx.cam) * Math.min(1, dt * 7);
             ctx.wheel += ctx.p.vx * dt / 8;
         }
         lastTime = t;

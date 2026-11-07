@@ -29,13 +29,16 @@ type CleanerPose = {
     rearArm: LimbPose;
 };
 
+export const CLEANER_RECOVERY_START = 1.35;
+export const CLEANER_RECOVERY_END = 3.55;
+
 const RESTING_CLEANER: CleanerControls = {
     approach: 0, frontStep: 0, rearStep: 0, frontLift: 0, rearLift: 0,
     hipDrop: 0, lean: 0, turn: 0, grip: 0, bucketTilt: 1, bucketLift: 0, retreat: 0,
 };
 const CLEANER_BEATS: readonly CleanerBeat[] = [
     { at: .9, pose: RESTING_CLEANER },
-    { at: 1.35, pose: RESTING_CLEANER },
+    { at: CLEANER_RECOVERY_START, pose: RESTING_CLEANER },
     { at: 1.55, pose: { ...RESTING_CLEANER, turn: 1 } },
     { at: 1.68, pose: { ...RESTING_CLEANER, turn: 1, approach: .2, frontStep: .5, frontLift: 1, hipDrop: .15 } },
     { at: 1.8, pose: { ...RESTING_CLEANER, turn: 1, approach: .45, frontStep: 1, hipDrop: .3 } },
