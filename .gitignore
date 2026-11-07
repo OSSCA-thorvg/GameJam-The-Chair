@@ -8,3 +8,11 @@ docs/
 .codex/
 .vscode/
 .mcp.json
+
+# Playwright generated artifacts
+.playwright-mcp/
+playwright-report/
+blob-report/
+test-results/
+playwright/.cache/
+playwright/.auth/
