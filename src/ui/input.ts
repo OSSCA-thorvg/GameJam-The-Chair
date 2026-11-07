@@ -83,6 +83,11 @@ export function bindInput(root: HTMLElement, game: Game) {
             return;
         }
         if (state.mode !== 'play') return;
+        if (e.key === 'ArrowDown' && state.stage === 2) {
+            e.preventDefault();
+            if (!e.repeat) game.interact();
+            return;
+        }
         const k = km[e.key];
         if (k || e.code === 'Space' || e.key === 'ArrowUp' || e.key === 'f' || e.key === 'F') {
             e.preventDefault();
@@ -110,6 +115,7 @@ export function bindInput(root: HTMLElement, game: Game) {
         for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, () => game.release(key), options);
     });
     root.querySelector<HTMLElement>('[data-jump]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.jump(); }, options);
+    root.querySelector<HTMLElement>('[data-interact]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.interact(); }, options);
     root.querySelector<HTMLElement>('[data-spray]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.spray(); }, options);
     const observer = new MutationObserver(() => {
         if ((game.getSnapshot().mode === 'pause') !== menuOpen || (!!panel && !panel.hidden) !== panelOpen) syncMenu();

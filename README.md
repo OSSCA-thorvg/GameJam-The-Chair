@@ -23,9 +23,13 @@ To inspect the cleaner, copier, fan, head impact, or extinguisher animation, ope
 Clear each stage to continue to the next. The pause menu lists cleared stages for replay and saves your progress in this browser.
 
 - Stage 1: dodge copier paper, spilled water, the trash bin and monitor light to leave the office.
-- Stage 2: push meeting chairs, time the revolving door, descend the emergency stairs, and push a cabinet into place to reach the vent. Ride the moving lift platform or use the lower recovery ramp to reach the machine room.
+- Stage 2: watch a worker send three cheering chairs home, stop for a chair-only badge scan, and jump over an overtime delivery cart. Enter the extended meeting for an optional six-second scene, or continue straight to the machine room.
 
-Use Left/Right or A/D to move, Space/Up to jump, and Q/E to balance. F sprays the extinguisher once equipped in stage 3. P pauses. Both stages start with a safe jump practice area. R retries from the last flag: before the trash bin in stage 1, or the last checkpoint in stage 2. Retries restore full focus and a dry chair. Selecting a stage starts it from the beginning.
+Use Left/Right or A/D to move, Space/Up to jump, and Q/E to balance. F sprays the extinguisher once equipped in stage 3. P pauses.
+
+Near the stage 2 meeting door, press Down to enter. Press Down again to leave early. Touch controls use the same down arrow. At the badge scanner, release the movement keys and wait for approval.
+
+Stages 1 and 2 start with a safe jump practice area. R retries from the last flag: before the trash bin in stage 1, or the last checkpoint in stage 2. Retries restore full focus and a dry chair. Selecting a stage starts it from the beginning.
 
 ## Test
 
@@ -33,7 +37,7 @@ Use Left/Right or A/D to move, Space/Up to jump, and Q/E to balance. F sprays th
 npm test
 ```
 
-The tests check stage 2 traversal, pushing chairs without jumping, starter jump landings, checkpoint retries, actual movement speed, failure guidance, and stage 1 hazards.
+The tests check stage 2 traversal, chair dispatch, meeting entry and return, badge scanning, cart avoidance and collision, starter jump landings, checkpoint retries, actual movement speed, failure guidance, and stage 1 hazards.
 
 ## Build
 

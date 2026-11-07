@@ -54,6 +54,8 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         q('[data-focus-meter]')?.setAttribute('aria-valuenow', String(focus));
         text('[data-focus]', focus + '%');
         text('[data-status]', feedback.status);
+        hidden('[data-interact]', state.stage !== 2);
+        hidden('[data-meeting-help]', state.stage !== 2);
         hidden('[data-spray-help]', !state.hasExtinguisher);
         hidden('[data-spray]', !state.hasExtinguisher);
         hidden('[data-stage-menu]', state.completedStage === 0);
@@ -81,7 +83,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         }
         previousMode = mode;
         hidden('[data-stats]', mode !== 'won');
-        text('[data-stats-text]', `${t('Focus')} ${focus}% · ${t('Paper')} ${state.paperHits} · ${t('Bin')} ${state.binFalls} · ${t('Light')} ${state.lightHits} · ${t('Door')} ${state.doorHits}`);
+        text('[data-stats-text]', `${t('Focus')} ${focus}% · ${t('Paper')} ${state.paperHits} · ${t('Bin')} ${state.binFalls} · ${t('Light')} ${state.lightHits} · ${state.stage === 2 ? t('Cart') : t('Door')} ${state.stage === 2 ? state.corridor.cartHits : state.doorHits}`);
         hidden('[data-rider]', !active || !feedback.reaction);
         if (feedback.reaction) {
             text('[data-quote]', feedback.reaction.text);

@@ -1,8 +1,8 @@
 import { LEVEL, RULES } from './level';
-import { STAGE_TWO, createFurniture, elevatorAt, type StageId, type Furniture } from './stage2';
+import { STAGE_TWO, createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
 import type { GameEvent, Input, Paper, Person, Player, Point, Snapshot } from './types';
 
-export type FocusNotice = { kind: 'paper' | 'water' | 'light' | 'door'; life: number };
+export type FocusNotice = { kind: 'paper' | 'water' | 'light' | 'door' | 'cart'; life: number };
 export type Impact = { frames: Snapshot[]; elapsed: number; point: Point };
 export type Solid = { p: Point[]; practice?: true };
 
@@ -34,7 +34,7 @@ export type GameCore = {
     actualSpeed: number;
 
     furniture: Furniture[];
-    elevator: ReturnType<typeof elevatorAt>;
+    corridor: Corridor;
     readonly monitor: { wall: number; period: number };
     copier: { x: number; cool: number; burst: number; next: number; dir: number };
     cleaning: { x: number; a: number; b: number; spilled: boolean; age: number; followup: boolean; splashDir: number };
@@ -109,7 +109,7 @@ export function createCore(initialDeaths: number): GameCore {
         actualSpeed: 0,
 
         furniture: createFurniture(),
-        elevator: elevatorAt(0),
+        corridor: createCorridor(),
         monitor: { ...LEVEL.monitor },
         copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 },
         cleaning: { ...LEVEL.cleaning, spilled: false, age: 0, followup: false, splashDir: 0 },
