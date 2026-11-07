@@ -10,7 +10,7 @@ export function focusBlocked(s: GameCore) {
     return s.paperPenaltyRemaining > 0 || s.lightPenaltyRemaining > 0 || waterExposureActive(s);
 }
 
-export function focusHit(s: GameCore, kind: 'paper' | 'water' | 'light' | 'door', id: number) {
+export function focusHit(s: GameCore, kind: 'paper' | 'water' | 'light' | 'door' | 'cart', id: number) {
     if (s.mode !== 'play') return;
     const token = kind + ':' + id;
     if (s.focusEvents.has(token)) return;

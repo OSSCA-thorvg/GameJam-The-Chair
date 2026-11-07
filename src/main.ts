@@ -116,7 +116,7 @@ function frame(ms: number) {
 }
 // Retain the existing browser debugging API without exposing live game state.
 const officeStageOne = {
-    reset: game.reset, startStage: game.startStage, step: game.step, jump: game.jump, pause: game.pause, draw,
+    interact: game.interact, leaveMeeting: game.leaveMeeting, reset: game.reset, startStage: game.startStage, step: game.step, jump: game.jump, pause: game.pause, draw,
     advanceImpact: game.advanceImpact, advanceFocusLoss: game.advanceFocusLoss,
     setInput: (...v: Input[]) => game.setInput(...v),
     state: () => ({ ...game.getSnapshot(), ...effects.snapshot(), ...renderer?.info(), reaction: feedback.snapshot().reaction })

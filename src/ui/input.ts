@@ -51,6 +51,7 @@ export function bindInput(root: HTMLElement, game: Game) {
         });
     }
     button('[data-reset]', game.restart);
+    button('[data-meeting]', game.interact);
     button('[data-pause]', togglePause);
     button('[data-resume]', togglePause);
     window.addEventListener('keydown', e => {
@@ -87,7 +88,8 @@ export function bindInput(root: HTMLElement, game: Game) {
         if (k || e.code === 'Space' || e.key === 'ArrowUp' || e.key === 'f' || e.key === 'F') {
             e.preventDefault();
             if (k) game.press(k);
-            if (!e.repeat && (e.code === 'Space' || e.key === 'ArrowUp')) game.jump();
+            if (!e.repeat && e.key === 'ArrowUp' && (state.canEnterMeeting || state.corridor.room.kind === 'meeting')) game.interact();
+            else if (!e.repeat && (e.code === 'Space' || e.key === 'ArrowUp')) game.jump();
             if (!e.repeat && (e.key === 'f' || e.key === 'F')) game.spray();
         }
     }, options);
