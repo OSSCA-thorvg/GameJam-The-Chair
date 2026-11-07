@@ -54,12 +54,13 @@ export function createGame(initialDeaths = 0) {
     let soaked = false;
     let lightPenaltyRemaining = 0;
     let lightHits = 0;
+    let doorHits = 0;
     let lightCooldown = 0;
     let focus = 100;
     let focusClock = 0;
     let focusEvents = new Set<string>();
     let focusNotice: {
-        kind: 'paper' | 'water' | 'light';
+        kind: 'paper' | 'water' | 'light' | 'door';
         life: number;
     } | null = null;
     let volley = 0;
@@ -118,6 +119,7 @@ export function createGame(initialDeaths = 0) {
         Object.assign(cleaning, { spilled: false, age: 0, followup: false });
         lightPenaltyRemaining = 0;
         lightHits = 0;
+        doorHits = 0;
         lightCooldown = 0;
         Object.assign(copier, { cool: 0, burst: 0, next: 0 });
         mode = 'play';
@@ -288,7 +290,7 @@ export function createGame(initialDeaths = 0) {
         events.push({ type: 'cue', id: 'bin-comment' });
         events.push({ type: 'cue', id: 'bin-game-over' });
     }
-    function focusHit(kind: 'paper' | 'water' | 'light', id: number) {
+    function focusHit(kind: 'paper' | 'water' | 'light' | 'door', id: number) {
         if (mode !== 'play') {
             return;
         }
@@ -482,6 +484,10 @@ export function createGame(initialDeaths = 0) {
                 p.x = door.x + side * 48;
                 p.vx = side * 70;
                 p.w *= .5;
+                focusHit('door', ++doorHits);
+                if (mode !== 'play') {
+                    return;
+                }
             }
             for (let i = checkpoint + 1; i < STAGE_TWO.checkpoints.length; i++) {
                 const mark = STAGE_TWO.checkpoints[i];
@@ -622,7 +628,7 @@ export function createGame(initialDeaths = 0) {
             mode, focus, focusClock, focusLossTime, focusNotice, lossReason,
             player: p, ground, slip, dirty, inBin, binAge, time, deaths, bursts, paperHits, binFalls,
             dirtyWaterExperienced: wetSeen, cleaningSpilled: cleaning.spilled, soaked,
-            paperPenaltyRemaining, lightPenaltyRemaining, cleaning, lightHits,
+            paperPenaltyRemaining, lightPenaltyRemaining, cleaning, lightHits, doorHits,
             monitor: { ...monitor, ...monitorPhase() }, papers, people, solids, copier, bin,
             focusBlocked: focusBlocked()
         });

@@ -56,14 +56,16 @@ export function createHud(root: HTMLElement) {
         style('[data-focus-fill]', 'width', focus + '%');
         style('[data-focus-fill]', 'background', focus <= 20 ? '#d88e7e' : '#d2b783');
         q('[data-focus-meter]')?.setAttribute('aria-valuenow', String(focus));
-        text('[data-focus-note]', lossReason === 'focus' ? '집중도 소진 · 게임오버' : focusNotice ? ({ paper: '종이', water: '오물', light: '불빛' }[focusNotice.kind] + ' 방해 −20%') : focusBlocked ? '방해 중 · 회복 대기' : '방해 없으면 2초마다 +1%');
+        text('[data-focus-note]', lossReason === 'focus' ? '집중도 소진 · 게임오버' : focusNotice ? (focusNotice.kind === 'door' ? '회전문 충돌 −20%' : { paper: '종이', water: '오물', light: '불빛' }[focusNotice.kind] + ' 방해 −20%') : focusBlocked ? '방해 중 · 회복 대기' : '방해 없으면 2초마다 +1%');
         text('[data-speed]', String(Math.round(Math.abs(p.vx) / 6)));
         text('[data-body]', lossReason === 'focus' ? '집중도 소진' : glare > 0 ? '눈부심 · 잠깐 대기' : inBin ? '휴지통 추락 · 실패' : dirty ? '쓰레기범벅' : slip ? '오수 · 미끄러짐' : soaked ? '물범벅 · 업무 진행' : '정상 근무');
         style('[data-progress]', 'width', clamp(p.x / GOAL * 100, 0, 100) + '%');
         text('[data-hint]', inBin ? '휴지통 추락 · 재시작하세요' : slip ? '미끄러운 바닥 · 제동 거리 증가' : p.x < 720 ? '복사기는 가까이 가면 종이를 뱉어요' : p.x < 1300 ? (cleaning.spilled ? '젖은 바닥 · 미리 감속하세요' : '청소 물통 주의 · 가까이 가면 촤악!') : p.x < 1850 ? '휴지통은 점프로! 빠지면 게임오버' : p.x < 2220 ? (monitor.active ? '모니터 빛이 켜졌어요 · 꺼질 때 통과!' : monitor.warning ? '모니터 빛 예고 · 미리 제동하세요' : '빛이 꺼졌어요 · 지금 통과!') : '조금만 더… 오른쪽 출입문!');
         if (state.stage === 2) {
             text('[data-hint]', p.x < 620 ? '의자끼리 쿵! 밀어서 길을 만드세요' : p.x < 900 ? (state.door.open ? '초록불 → 회전문 통과!' : '↻ 회전 중 · 넓은 바닥에서 기다려요') : p.x < 1950 ? '비상계단 · ↓ 제동으로 속도 조절' : p.x < 2350 ? '서랍을 오른쪽으로 밀고, 올라서서 환풍구로 점프!' : p.x < 2700 ? '깃발에 저장 완료 · 움직이는 발판을 기다려요' : p.x < 3400 ? '놓쳐도 괜찮아요 · 아래 경사로로 복귀 ↗' : '기계실 도착! 회사원은 여전히 업무 중');
-            text('[data-focus-note]', `체크포인트 ${state.checkpoint}/4 · 실패하면 깃발에서 재개`);
+            if (!focusNotice && lossReason !== 'focus') {
+                text('[data-focus-note]', `체크포인트 ${state.checkpoint}/4 · 실패하면 깃발에서 재개`);
+            }
             text('.help', '← → / A D 이동 · Space / ↑ 점프 · Q E 균형 · ↓ / S 제동 · R 체크포인트 · P 정지');
         } else text('.help', '← → / A D 전후진 · Space / ↑ 점프 · Q E 균형 · ↓ / S 제동 · 휴지통은 점프로 피하세요 · R 재시작 · P 정지');
         hidden('[data-rider]', !reaction || !['play', 'impact', 'focuslost'].includes(mode));
