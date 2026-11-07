@@ -25,20 +25,88 @@ function bubble(ctx: RenderCtx, text: Message, x: number, y: number, width: numb
     ctx.polygon([[x - 8, y + 20], [x + 9, y + 20], [x - 10, y + 36]], fill);
     ctx.label(translate(text, ctx.locale), x, y + 5, 13, ctx.tint('#344955', alpha));
 }
-function worker(ctx: RenderCtx, x: number, y: number, reach = 0, facing = 1) {
-    const sway = Math.sin(ctx.t * 3) * Math.abs(reach) * 2;
-    ctx.rod(x - 8, y - 45, x - 12 - sway, y - 3, 10, '#445567');
-    ctx.rod(x + 7, y - 45, x + 12 + sway, y - 3, 10, '#445567');
-    ctx.rect(x - 20, y - 5, 19, 5, '#303d4a');
-    ctx.rect(x + 4, y - 5, 20, 5, '#303d4a');
-    ctx.polygon([[x - 14, y - 87], [x + 12, y - 87], [x + 17, y - 43], [x - 17, y - 43]], '#eee9d8');
-    ctx.rod(x + facing * 8, y - 77, x + facing * (18 + reach * 14), y - 62, 8, '#e8e0cb');
-    ctx.rod(x + facing * (18 + reach * 14), y - 62, x + facing * (17 + reach * 32), y - 49 - reach * 12, 7, '#d5b390');
-    ctx.ellipse(x, y - 104, 13, 17, '#d9b896');
-    ctx.polygon([[x - 13, y - 107], [x - 11, y - 122], [x + 9, y - 122], [x + 15, y - 110]], '#384352');
-    ctx.rod(x - 10, y - 105, x + 10, y - 105, 2, '#485566');
-    ctx.rod(x, y - 85, x + 4, y - 58, 4, '#ac725f');
+type WorkerRole = 'facilitator' | 'jacket' | 'vest';
+
+function head(ctx: RenderCtx, x: number, y: number, facing: number, hair: string, tied = false) {
+    const shape = (points: Vector[], color: string) =>
+        ctx.polygon(points.map(([px, py]) => [x + facing * px, y + py]), color);
+    if (tied) ctx.ellipse(x - facing * 13, y + 6, 8, 9, hair);
+    shape([[-11, -13], [6, -16], [12, -8], [14, -1], [17, 1], [13, 3],
+        [11, 11], [0, 15], [-10, 10], [-13, 1]], '#ddbd9d');
+    shape([[-15, -4], [-16, -11], [-10, -19], [1, -22], [12, -16],
+        [16, -9], [5, -13], [-7, -5], [-10, 4], [-14, 1]], hair);
+    shape([[7, -2], [11, -2], [11, 0], [7, 0]], '#4c4951');
 }
+
+function worker(ctx: RenderCtx, x: number, y: number, role: WorkerRole, facing = 1, palm?: Vector) {
+    const facilitator = role === 'facilitator';
+    const vest = role === 'vest';
+    const fabric = facilitator ? '#715c75' : vest ? '#877b70' : '#5b6b83';
+    const light = facilitator ? '#88718a' : vest ? '#9b8c7d' : '#72829a';
+    const hair = facilitator ? '#4f414d' : vest ? '#494755' : '#424b5a';
+    const stride = palm ? 5 : 0;
+    const shape = (points: Vector[], color: string) =>
+        ctx.polygon(points.map(([px, py]) => [x + facing * px, y + py]), color);
+
+    ctx.ellipse(x, y + 1, 25, 3, '#35465624');
+    shape([[-13,-45],[12,-45],[16+stride,-4],[6+stride,-4],[0,-35],[-6,-4],[-16-stride,-4]], '#485467');
+    shape([[-16-stride,-7],[-6,-7],[-4,0],[-22-stride,0],[-22-stride,-3]], '#34404c');
+    shape([[6+stride,-7],[16+stride,-7],[23+stride,-2],[23+stride,0],[6+stride,0]], '#34404c');
+    const hem = facilitator ? -35 : -43;
+    shape([[-17,-84],[-8,-90],[10,-90],[20,-83],[16,-67],[19,hem],[-17,hem],[-15,-63],[-23,-68]], fabric);
+    shape([[-17,-84],[-8,-90],[-5,hem],[-17,hem],[-15,-63],[-23,-68]], light);
+    shape([[-9,-89],[11,-89],[2,-67]], '#e8e3d3');
+    shape([[-6,-98],[7,-98],[9,-89],[1,-84],[-6,-90]], '#b99a80');
+    head(ctx, x, y - 105, facing, hair, facilitator);
+
+    if (facilitator) {
+        shape([[-13,-63],[12,-65],[16,-42],[-9,-39]], '#b1a17d');
+        shape([[-9,-59],[9,-61],[12,-45],[-7,-43]], '#e0d4bb');
+        shape([[-4,-62],[5,-63],[6,-59],[-3,-58]], '#8c9296');
+        shape([[-18,-73],[-14,-62],[-7,-56],[-9,-51],[-16,-55],[-23,-68]], light);
+        shape([[-11,-57],[-5,-55],[-6,-50],[-13,-52]], '#d7b493');
+        if (palm) {
+            const elbowX = x + (palm[0] - x) * .56;
+            const elbowY = y - 72;
+            ctx.rod(x + facing * 13, y - 79, elbowX, elbowY, 9, fabric);
+            ctx.rod(elbowX, elbowY, palm[0], palm[1], 7, light);
+            ctx.ellipse(palm[0], palm[1], 4, 3.2, '#ddbd9d');
+        } else {
+            shape([[14,-80],[21,-74],[29,-69],[36,-72],[38,-68],[29,-63],[19,-66],[12,-72]], fabric);
+            shape([[34,-71],[40,-75],[44,-73],[40,-67],[36,-67]], '#ddbd9d');
+        }
+    } else if (vest) {
+        shape([[0,-85],[4,-84],[3,-75],[0,-74],[-2,-78]], '#a76e56');
+        shape([[-17,-77],[-23,-61],[-13,-54],[6,-58],[4,-64],[-11,-62],[-8,-74]], '#e9e3d6');
+        shape([[13,-79],[20,-70],[15,-59],[8,-60],[10,-69],[7,-77]], '#e9e3d6');
+        shape([[9,-69],[6,-77],[8,-86],[13,-85],[13,-77],[15,-70]], '#ddbd9d');
+    } else {
+        shape([[-16,-78],[-22,-60],[-13,-54],[2,-56],[0,-63],[-10,-62],[-8,-75]], light);
+        shape([[15,-79],[21,-64],[16,-55],[-5,-55],[-6,-62],[11,-63],[8,-75]], fabric);
+        shape([[-8,-64],[-1,-62],[-1,-57],[-9,-58]], '#ddbd9d');
+        shape([[5,-62],[12,-63],[14,-58],[7,-57]], '#ddbd9d');
+    }
+}
+
+function typingWorker(ctx: RenderCtx, x: number, y: number, tied: boolean) {
+    const shirt = tied ? '#8d746f' : '#728b9a';
+    const sleeve = tied ? '#a38a82' : '#8ca1ad';
+    const tap = Math.sin(ctx.t * 16 + (tied ? 1.7 : 0)) * 1.4;
+    ctx.rect(x - 21, y - 39, 11, 37, '#556673');
+    ctx.polygon([[x-13,y-42],[x+3,y-44],[x+10,y-30],[x+7,y-1],[x-13,y-1]], shirt);
+    ctx.polygon([[x-12,y-39],[x-5,y-40],[x-3,y-1],[x-13,y-1]], sleeve);
+    ctx.polygon([[x-5,y-51],[x+6,y-51],[x+8,y-42],[x+1,y-38],[x-5,y-43]], '#b99a80');
+    head(ctx, x, y - 58, 1, tied ? '#4f414d' : '#424b5a', tied);
+    ctx.rect(x - 29, y, 74, 7, '#a7a18e');
+    ctx.rod(x-3,y-34,x+6,y-14,8,sleeve);
+    ctx.rod(x+6,y-14,x+24,y-5+tap,5,'#ddbd9d');
+    ctx.ellipse(x+26,y-4+tap,4,2.5,'#ddbd9d');
+    ctx.rect(x + 17, y - 3, 17, 3, '#455665');
+    ctx.polygon([[x+30,y-35],[x+46,y-36],[x+44,y-14],[x+28,y-13]], '#526674');
+    ctx.rod(x+36,y-14,x+36,y-3,3,'#526674');
+    ctx.rect(x + 31, y - 3, 12, 3, '#526674');
+}
+
 function chair(ctx: RenderCtx, x: number, y: number) {
     ctx.ellipse(x, y + 3, 37, 5, '#35465622');
     ctx.rod(x - 18, y - 37, x - 22, y - 90, 6, '#515665');
@@ -76,7 +144,8 @@ function room(ctx: RenderCtx) {
     for (let i = 0; i < 3; i++) {
         ctx.rod(x - 180, 177 + i * 16, x + 65 - i * 32, 177 + i * 16, 3, '#9ba9a0');
     }
-    for (const dx of [-210, -10, 155]) worker(ctx, x + dx, 397, scene.age > 3 ? .8 : .2, dx > 0 ? -1 : 1);
+    worker(ctx, x - 10, 397, 'jacket', -1);
+    worker(ctx, x + 119, 397, 'vest', -1);
     ctx.rect(x - 190, 330, 370, 15, '#ab9274');
     ctx.rod(x - 170, 345, x - 170, 420, 8, '#657b7b');
     ctx.rod(x + 160, 345, x + 160, 420, 8, '#657b7b');
@@ -85,7 +154,8 @@ function room(ctx: RenderCtx) {
         ctx.label('···', x + dx, 405, 18, '#7c8d85');
     }
     const pushing = Math.max(0, scene.age - 4.6) * 100;
-    worker(ctx, x - 156 + pushing, 420, scene.age > 4.6 ? 1 : .1);
+    worker(ctx, x - 156 + pushing, 420, 'facilitator', 1,
+        scene.age > 4.6 ? [ctx.p.x - 31, ctx.p.y - 61] : undefined);
     const line: Message = scene.age < 2.4 ? 'The chairs have gone home.' : scene.age < 3.5 ? 'People, please stay for the next agenda.' : 'Oh, one more chair! You may leave!';
     bubble(ctx, line, x, 75, 440);
     player(ctx);
@@ -112,14 +182,10 @@ export function drawBuilding(ctx: RenderCtx) {
     for (const office of c.offices) {
         const x = office.x;
         ctx.rect(x - 110, 174, 220, 181, '#617983');
-        for (const dx of [-60, 50]) {
-            ctx.rect(x + dx - 35, 265, 66, 7, '#87958f');
-            ctx.ellipse(x + dx - 8, 227, 10, 13, '#566c75');
-            ctx.rect(x + dx - 19, 240, 21, 26, '#566c75');
-            ctx.rect(x + dx + 5, 234, 26, 21, '#c5ddd6');
-            ctx.rod(x + dx - 4, 250, x + dx + 9 + Math.sin(ctx.t * 16) * 2, 262, 4, '#78918f');
-        }
-        ctx.rect(x - 105, 180, 210, 170, '#c9e8e233');
+        ctx.rect(x - 105, 180, 210, 170, '#839895');
+        typingWorker(ctx, x - 65, 269, false);
+        typingWorker(ctx, x + 32, 269, true);
+        ctx.rect(x - 105, 180, 210, 170, '#6d8b99a0');
         ctx.rod(x, 175, x, 355, 5, '#849a9e');
         ctx.polygon([[x - 98, 184], [x - 75, 184], [x + 55, 347], [x + 32, 347]], '#edf4e719');
         if (office.life > 0) bubble(ctx, 'tap… tap…', x, 166, 146, false, Math.min(.78, office.life * 2));
@@ -132,7 +198,8 @@ export function drawBuilding(ctx: RenderCtx) {
     ctx.rect(mx - 70, 147, 140, 25, '#e1d7bb');
     ctx.label(translate('Meeting extended', ctx.locale), mx, 164, 13, '#4f6268');
     const pushPhase = c.dispatchStarted && c.dispatchAge < 3.5 ? Math.sin(Math.max(0, c.dispatchAge - .35) * Math.PI / .9) ** 2 : 0;
-    worker(ctx, mx - 57 + pushPhase * 22, 420, pushPhase);
+    worker(ctx, mx - 57 + pushPhase * 10, 420, 'facilitator', 1,
+        pushPhase > 0 ? [mx - 18 + pushPhase * 9, 344 - pushPhase * 11] : undefined);
     if (c.dispatchStarted && c.dispatchAge < 1.5) bubble(ctx, 'Meeting extended. Chairs may leave.', mx + 40, 103, 310);
     state.furniture.forEach((item, i) => {
         if (!item.released) return;
