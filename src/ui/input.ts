@@ -1,7 +1,7 @@
 import type { Game } from '../game/game';
 import type { Input } from '../game/types';
 export function bindInput(root: HTMLElement, game: Game) {
-    const km: Partial<Record<string, Input>> = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ArrowDown: 'brake', s: 'brake', S: 'brake', q: 'q', Q: 'q', e: 'e', E: 'e' };
+    const km: Partial<Record<string, Input>> = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', q: 'q', Q: 'q', e: 'e', E: 'e' };
     const controller = new AbortController();
     const options = { signal: controller.signal };
     const menu = root.querySelector<HTMLElement>('[data-pause-menu]');
@@ -45,9 +45,11 @@ export function bindInput(root: HTMLElement, game: Game) {
         else if (state.mode === 'won' && state.stage === 2) game.startStage(3);
         else game.reset();
     });
-    button('[data-stage="1"]', () => game.startStage(1));
-    button('[data-stage="2"]', () => game.startStage(2));
-    button('[data-stage="3"]', () => game.startStage(3));
+    for (const stage of [1, 2, 3] as const) {
+        button(`[data-stage="${stage}"]`, () => {
+            if (stage <= game.getSnapshot().completedStage) game.startStage(stage);
+        });
+    }
     button('[data-reset]', game.restart);
     button('[data-pause]', togglePause);
     button('[data-resume]', togglePause);
@@ -99,7 +101,7 @@ export function bindInput(root: HTMLElement, game: Game) {
     }, options);
     root.querySelectorAll<HTMLElement>('[data-key]').forEach(button => {
         const key = button.dataset.key;
-        if (key !== 'left' && key !== 'right' && key !== 'brake' && key !== 'q' && key !== 'e') return;
+        if (key !== 'left' && key !== 'right' && key !== 'q' && key !== 'e') return;
         button.addEventListener('pointerdown', e => {
             e.preventDefault();
             game.press(key);

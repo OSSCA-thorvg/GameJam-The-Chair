@@ -5,6 +5,7 @@ import { createRenderer } from './render/renderer';
 import { createFeedback } from './ui/feedback';
 import { createHud } from './ui/hud';
 import { bindInput } from './ui/input';
+import type { StageId } from './game/stage2';
 import type { Input } from './game/types';
 import markup from './scene.html?raw';
 import './style.css';
@@ -46,15 +47,19 @@ for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) 
     });
 }
 let savedDeaths = 0;
+let savedCompletedStage: 0 | StageId = 0;
 try {
     const saved = JSON.parse(localStorage.getItem('the-chair-office-v1') || 'null');
+    if (saved?.completedStage === 1 || saved?.completedStage === 2 || saved?.completedStage === 3) {
+        savedCompletedStage = saved.completedStage;
+    }
     if (Number.isFinite(saved?.deaths)) {
         savedDeaths = Math.max(0, saved.deaths);
     }
 }
 catch {
 }
-const game = createGame(savedDeaths);
+const game = createGame(savedDeaths, savedCompletedStage);
 const effects = createEffects();
 const feedback = createFeedback(() => locale);
 const unbind = bindInput(root, game);
@@ -70,10 +75,11 @@ let presentationErrorReported = false;
 function draw() {
     const state = game.getSnapshot();
     const events = game.drainEvents();
-    if (state.deaths !== savedDeaths) {
+    if (state.deaths !== savedDeaths || state.completedStage !== savedCompletedStage) {
         savedDeaths = state.deaths;
+        savedCompletedStage = state.completedStage;
         try {
-            localStorage.setItem('the-chair-office-v1', JSON.stringify({ deaths: savedDeaths }));
+            localStorage.setItem('the-chair-office-v1', JSON.stringify({ deaths: savedDeaths, completedStage: savedCompletedStage }));
         }
         catch {
         }
@@ -86,7 +92,7 @@ function draw() {
         }
         const visual = effects.snapshot();
         const view = renderer?.draw(state, visual) ?? { cam: 0, scale: 1, vertical: 0, width: 800 };
-        hud.draw(state, feedback.snapshot(), visual, view, renderer?.info().renderer ?? 'canvas2d');
+        hud.draw(state, feedback.snapshot(), visual, view);
     }
     catch (error) {
         if (!presentationErrorReported) {

@@ -21,7 +21,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
     let previousFocus = 100;
     let focusIntroduced = false;
     let introduceUntil = 0;
-    function draw(state: GameState, feedback: FeedbackState, _effects: EffectsState, view: Viewport, renderer: string) {
+    function draw(state: GameState, feedback: FeedbackState, _effects: EffectsState, view: Viewport) {
         const t = (message: Message) => translate(message, getLocale());
         const { player: p, mode, focus, lessons } = state;
         const { cam, scale, vertical, width } = view;
@@ -55,9 +55,12 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         q('[data-focus-meter]')?.setAttribute('aria-valuenow', String(focus));
         text('[data-focus]', focus + '%');
         text('[data-status]', feedback.status);
-        text('[data-renderer]', renderer === 'thorvg' ? 'ThorVG WebCanvas' : 'Canvas2D');
-        text('[data-speed]', String(Math.round(state.actualSpeed / 6)));
-        text('[data-body]', `${t('Position')} ${Math.round(p.x)}, ${Math.round(p.y)}`);
+        hidden('[data-spray-help]', !state.hasExtinguisher);
+        hidden('[data-spray]', !state.hasExtinguisher);
+        hidden('[data-stage-menu]', state.completedStage === 0);
+        for (const stage of [1, 2, 3]) {
+            hidden(`[data-stage="${stage}"]`, stage > state.completedStage);
+        }
         const panel = feedback.panel;
         hidden('[data-overlay]', mode !== 'intro' && !panel);
         if (mode === 'intro') {
@@ -101,12 +104,8 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
                 suggested = 'jump';
                 cueX = 1510;
                 cueY = 365;
-            } else if (state.stage === 2 && !lessons.braked && p.x > 880 && p.x < 1020) {
-                cue = '↓';
-                suggested = 'brake';
-                cueX = 980;
-                cueY = 365;
-            } else if (state.stage === 3 && !lessons.sprayed && p.x > 500 && p.x < 900) {
+
+            } else if (state.hasExtinguisher && !lessons.sprayed && p.x > 500 && p.x < 900) {
                 cue = touch ? '💨' : 'F';
                 suggested = 'spray';
                 cueX = 700;
@@ -117,7 +116,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         text('[data-balance]', cue);
         style('[data-balance]', 'left', clamp((cueX - cam) * scale, 40, width - 40) + 'px');
         style('[data-balance]', 'top', Math.max(95, (cueY + vertical) * scale) + 'px');
-        for (const key of ['left', 'right', 'brake', 'q', 'e']) {
+        for (const key of ['left', 'right', 'q', 'e']) {
             q(`[data-key="${key}"]`)?.classList.toggle('suggested', active && suggested === key);
         }
         q('[data-jump]')?.classList.toggle('suggested', active && suggested === 'jump');
