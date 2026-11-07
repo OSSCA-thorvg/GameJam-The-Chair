@@ -105,3 +105,32 @@ test('stage1 still emits copier hazards after switching back from stage2', () =>
     for (let i = 0; i < 360; i++) { game.step(dt); game.drainEvents(); }
     assert.ok(game.getSnapshot().bursts > 0);
 });
+
+test('each revolving-door collision costs 20 focus and repeated hits cause game over', () => {
+    const game = createGame();
+    game.startStage(2);
+    drive(game, state => state.player.x > 650);
+    let hits = 0;
+    for (let i = 0; i < 120 * 60; i++) {
+        const before = game.getSnapshot();
+        if (before.mode !== 'play') break;
+        game.setInput(before.player.x < before.door.x ? 'right' : 'left');
+        game.step(dt);
+        const after = game.getSnapshot();
+        if (after.doorHits > before.doorHits) {
+            hits++;
+            assert.equal(after.focus, Math.max(0, before.focus - 20));
+            assert.equal(after.focusNotice.kind, 'door');
+        }
+        game.drainEvents();
+    }
+    const failed = game.getSnapshot();
+    assert.ok(hits >= 5, 'separate contacts keep deducting focus');
+    assert.equal(failed.focus, 0);
+    assert.equal(failed.mode, 'focuslost');
+    game.advance(2);
+    assert.equal(game.getSnapshot().mode, 'dead');
+    game.reset();
+    assert.equal(game.getSnapshot().focus, 100);
+    assert.equal(game.getSnapshot().doorHits, 0);
+});
