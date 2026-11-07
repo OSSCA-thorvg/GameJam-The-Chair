@@ -2,7 +2,7 @@ import { translate } from '../../i18n';
 import type { DeepReadonly, Person } from '../../game/types';
 import type { RenderCtx } from '../context';
 import { plant, desk, binBack, binFront, practiceFloor, checkpointFlag } from './decor';
-import { cleaningDraw, person, recoveringCleaner, CLEANER_MOTION_START, CLEANER_MOTION_END } from './cleaning';
+import { cleaningDraw, person } from './cleaning';
 import { monitorDraw } from './monitor';
 import { player, debugCollisions } from './player';
 import { EFFECT_STYLE } from '../art';
@@ -78,22 +78,14 @@ export function drawWorld(ctx: RenderCtx) {
     let cleaner: DeepReadonly<Person> | undefined;
     for (const n of people) {
         if (n.x > left && n.x < right) {
-            const movingCleaner = n.id === 'cleaner' && cleaning.spilled && (
-                cleaning.splashDir < 0
-                    ? state.bucketAge > CLEANER_MOTION_START && state.bucketAge < CLEANER_MOTION_END
-                    : state.bucketAge > 1.78 && state.bucketAge < 3.4
-            );
-            if (movingCleaner) {
+            if (n.id === 'cleaner') {
                 cleaner = n;
             } else {
                 person(ctx, n);
             }
         }
     }
-    cleaningDraw(ctx);
-    if (cleaner) {
-        recoveringCleaner(ctx, cleaner);
-    }
+    cleaningDraw(ctx, cleaner);
     const x = copier.x;
     ctx.ellipse(x + 3, F - 20, 61, 4.2, '#515c6d56');
     ctx.rect(x - 56, F - 108, 112, 88, '#c6c9bf');

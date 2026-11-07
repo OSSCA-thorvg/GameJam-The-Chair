@@ -2,21 +2,99 @@ import type { Vector, Curve } from '../types';
 import type { DeepReadonly, Person } from '../../game/types';
 import type { RenderCtx } from '../context';
 
-export const CLEANER_MOTION_START = 1.55;
-export const CLEANER_MOTION_END = 3.55;
-const BUCKET_GRIP_TIME = 2.4;
-const BUCKET_UPRIGHT_TIME = 2.9;
+type CleanerControls = {
+    approach: number;
+    frontStep: number;
+    rearStep: number;
+    frontLift: number;
+    rearLift: number;
+    hipDrop: number;
+    lean: number;
+    turn: number;
+    grip: number;
+    bucketTilt: number;
+    bucketLift: number;
+    retreat: number;
+};
+type CleanerBeat = { at: number; pose: CleanerControls };
+type LimbPose = { root: Vector; joint: Vector; end: Vector };
+type BucketPose = { origin: Vector; angle: number; frontGrip: Vector; rearGrip: Vector };
+type CleanerPose = {
+    hip: Vector;
+    shoulder: Vector;
+    facing: number;
+    frontLeg: LimbPose;
+    rearLeg: LimbPose;
+    frontArm: LimbPose;
+    rearArm: LimbPose;
+};
 
-function easeBetween(value: number, start: number, end: number) {
-    const progress = Math.max(0, Math.min(1, (value - start) / (end - start)));
-    return progress * progress * (3 - 2 * progress);
+const RESTING_CLEANER: CleanerControls = {
+    approach: 0, frontStep: 0, rearStep: 0, frontLift: 0, rearLift: 0,
+    hipDrop: 0, lean: 0, turn: 0, grip: 0, bucketTilt: 1, bucketLift: 0, retreat: 0,
+};
+const CLEANER_BEATS: readonly CleanerBeat[] = [
+    { at: .9, pose: RESTING_CLEANER },
+    { at: 1.35, pose: RESTING_CLEANER },
+    { at: 1.55, pose: { ...RESTING_CLEANER, turn: 1 } },
+    { at: 1.68, pose: { ...RESTING_CLEANER, turn: 1, approach: .2, frontStep: .5, frontLift: 1, hipDrop: .15 } },
+    { at: 1.8, pose: { ...RESTING_CLEANER, turn: 1, approach: .45, frontStep: 1, hipDrop: .3 } },
+    { at: 1.93, pose: { ...RESTING_CLEANER, turn: 1, approach: .75, frontStep: 1, rearStep: .5, rearLift: 1, hipDrop: .2 } },
+    { at: 2.05, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, frontStep: 1, rearStep: 1, hipDrop: .1 } },
+    { at: 2.23, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, frontStep: 1, rearStep: 1, lean: .1 } },
+    { at: 2.4, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, frontStep: 1, rearStep: 1, hipDrop: 1, lean: 1, grip: 1 } },
+    { at: 2.65, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, frontStep: 1, rearStep: 1, hipDrop: .45, lean: .45, grip: 1, bucketTilt: .5, bucketLift: 8 } },
+    { at: 2.9, pose: { ...RESTING_CLEANER, approach: 1, frontStep: 1, rearStep: 1, grip: 1, bucketTilt: 0 } },
+    { at: 3.03, pose: { ...RESTING_CLEANER, approach: 1, frontStep: 1, rearStep: 1, bucketTilt: 0 } },
+    { at: 3.12, pose: { ...RESTING_CLEANER, approach: 1, frontStep: .5, rearStep: 1, frontLift: 1, hipDrop: .15, bucketTilt: 0, retreat: .25 } },
+    { at: 3.2, pose: { ...RESTING_CLEANER, approach: 1, rearStep: 1, hipDrop: .3, bucketTilt: 0, retreat: .5 } },
+    { at: 3.27, pose: { ...RESTING_CLEANER, approach: 1, rearStep: .5, rearLift: 1, hipDrop: .15, bucketTilt: 0, retreat: .75 } },
+    { at: 3.35, pose: { ...RESTING_CLEANER, approach: 1, bucketTilt: 0, retreat: 1 } },
+];
+
+function mix(a: number, b: number, amount: number) {
+    return a + (b - a) * amount;
 }
 
-function bucketAngle(ctx: RenderCtx) {
-    const age = ctx.state.bucketAge;
-    const fall = Math.max(0, Math.min(1, age / .42));
-    const lift = easeBetween(age, BUCKET_GRIP_TIME, BUCKET_UPRIGHT_TIME);
-    return ctx.cleaning.splashDir * fall * (1 - lift) * 1.25;
+function sampleCleaner(age: number): CleanerControls {
+    let previous = CLEANER_BEATS[0];
+    if (age <= previous.at) return previous.pose;
+    for (let i = 1; i < CLEANER_BEATS.length; i++) {
+        const next = CLEANER_BEATS[i];
+        if (age <= next.at) {
+            const progress = (age - previous.at) / (next.at - previous.at);
+            const amount = progress * progress * (3 - 2 * progress);
+            const a = previous.pose;
+            const b = next.pose;
+            return {
+                approach: mix(a.approach, b.approach, amount),
+                frontStep: mix(a.frontStep, b.frontStep, amount),
+                rearStep: mix(a.rearStep, b.rearStep, amount),
+                frontLift: mix(a.frontLift, b.frontLift, amount),
+                rearLift: mix(a.rearLift, b.rearLift, amount),
+                hipDrop: mix(a.hipDrop, b.hipDrop, amount),
+                lean: mix(a.lean, b.lean, amount),
+                turn: mix(a.turn, b.turn, amount),
+                grip: mix(a.grip, b.grip, amount),
+                bucketTilt: mix(a.bucketTilt, b.bucketTilt, amount),
+                bucketLift: mix(a.bucketLift, b.bucketLift, amount),
+                retreat: mix(a.retreat, b.retreat, amount),
+            };
+        }
+        previous = next;
+    }
+    return previous.pose;
+}
+
+function bucketPose(ctx: RenderCtx, motion: CleanerControls): BucketPose {
+    const fall = ctx.cleaning.spilled ? Math.min(1, ctx.state.bucketAge / .42) : 0;
+    const angle = ctx.cleaning.splashDir * fall * motion.bucketTilt * 1.25;
+    const origin: Vector = [ctx.cleaning.x, ctx.F - 5 - 15 * Math.abs(Math.sin(angle)) - 2 * Math.cos(angle) - motion.bucketLift];
+    const point = (x: number, y: number): Vector => [
+        origin[0] + x * Math.cos(angle) - y * Math.sin(angle),
+        origin[1] + x * Math.sin(angle) + y * Math.cos(angle),
+    ];
+    return { origin, angle, frontGrip: point(-12, -66), rearGrip: point(12, -66) };
 }
 
 function cleanerHead(ctx: RenderCtx, x = 0, y = 0, facing = 1) {
@@ -29,18 +107,19 @@ function cleanerHead(ctx: RenderCtx, x = 0, y = 0, facing = 1) {
     headPart([[13, -131], [16, -131], [16, -127], [13, -127]], '#4b5059');
 }
 
-function cleanerMop(ctx: RenderCtx, laid = 0) {
-    const lerp = (a: number[][], b: number[][]): Vector[] =>
-        a.map(([x, y], i) => [x + (b[i][0] - x) * laid, y + (b[i][1] - y) * laid]);
-    const handleUp: number[][] = [[18, -86], [22, -88], [79, -4], [74, -2]];
-    const handleDown: number[][] = [[-42, -5], [-42, -2], [65, -2], [65, -5]];
-    const headUp: number[][] = [[70, -8], [79, -11], [91, -3], [87, 1], [64, 1]];
-    const headDown: number[][] = [[62, -5], [71, -8], [86, -3], [82, 1], [56, 1]];
-    ctx.polygon(lerp(handleUp, handleDown), '#808c7b');
-    ctx.polygon(lerp(headUp, headDown), '#b1ad8e');
+function cleanerMop(ctx: RenderCtx) {
+    ctx.polygon([[18, -86], [22, -88], [79, -4], [74, -2]], '#808c7b');
+    ctx.polygon([[70, -8], [79, -11], [91, -3], [87, 1], [64, 1]], '#b1ad8e');
 }
 
 export function person(ctx: RenderCtx, n: DeepReadonly<Person>) {
+    if (n.id === 'cleaner') {
+        const motion = sampleCleaner(0);
+        const pose = cleanerPose(ctx, n, motion, bucketPose(ctx, motion));
+        drawCleanerBody(ctx, n, pose);
+        drawArm(ctx, pose.frontArm, true);
+        return;
+    }
     const F = ctx.F;
     ctx.ox = n.x;
     ctx.oy = F - 17;
@@ -63,17 +142,6 @@ export function person(ctx: RenderCtx, n: DeepReadonly<Person>) {
             ctx.polygon([[-28, -84], [0, -79], [22, -83], [24, -72], [-1, -68], [-27, -72]], '#424e64');
             ctx.polygon([[-13, -80], [-5, -79], [-3, -73], [-13, -74]], '#d4b18e');
             ctx.polygon([[11, -80], [19, -82], [21, -76], [12, -74]], '#d4b18e');
-            break;
-        case 'cleaner':
-            ctx.polygon([[-16, -49], [14, -50], [19, -7], [8, -5], [0, -40], [-7, -6], [-19, -7]], '#536373');
-            ctx.polygon([[-20, -8], [-7, -8], [-7, -1], [-26, -1], [-26, -5]], '#3c4753');
-            ctx.polygon([[7, -8], [18, -8], [26, -3], [26, -1], [8, -1]], '#3c4753');
-            ctx.polygon([[-17, -99], [-2, -107], [17, -102], [24, -86], [14, -78], [16, -47], [-17, -45], [-22, -78], [-27, -85]], '#79909f');
-            ctx.polygon([[-17, -99], [-8, -104], [-7, -48], [-17, -45], [-22, -78], [-27, -85]], '#899eaa');
-            cleanerHead(ctx);
-            cleanerMop(ctx);
-            ctx.polygon([[17, -81], [26, -66], [38, -70], [42, -64], [26, -55], [19, -57], [9, -73]], '#e0be9c');
-            ctx.polygon([[10, -78], [20, -85], [24, -78], [14, -70]], '#a9b8c0');
             break;
         case 'admin':
             ctx.polygon([[-19, -53], [16, -53], [17, -6], [6, -6], [0, -42], [-7, -6], [-18, -6]], '#495368');
@@ -98,117 +166,98 @@ export function person(ctx: RenderCtx, n: DeepReadonly<Person>) {
     ctx.localScale = 1;
 }
 
-export function recoveringCleaner(ctx: RenderCtx, n: DeepReadonly<Person>) {
-    const TAU = ctx.TAU;
-    const F = ctx.F;
-    const cleaning = ctx.cleaning;
-    const age = ctx.state.bucketAge;
-    const side = cleaning.splashDir;
-    const start = side < 0 ? CLEANER_MOTION_START : 1.78;
-    const end = side < 0 ? CLEANER_MOTION_END : 3.4;
-    const returnTime = BUCKET_UPRIGHT_TIME;
-    const bend = easeBetween(age, 2.05, BUCKET_GRIP_TIME) *
-        (1 - easeBetween(age, BUCKET_GRIP_TIME, BUCKET_UPRIGHT_TIME));
-    const lift = easeBetween(age, BUCKET_GRIP_TIME, BUCKET_UPRIGHT_TIME);
-    const crossing = side < 0;
-    const frontStep = crossing
-        ? (easeBetween(age, start, 1.83) + easeBetween(age, 1.99, 2.19)) / 2
-        : easeBetween(age, start, 2.16);
-    const rearStep = crossing
-        ? (easeBetween(age, 1.74, 2.02) + easeBetween(age, 2.11, 2.32)) / 2
-        : easeBetween(age, start + .19, 2.32);
-    const frontBack = crossing
-        ? (easeBetween(age, 3.02, 3.23) + easeBetween(age, 3.34, end)) / 2
-        : easeBetween(age, returnTime + .09, end);
-    const rearBack = crossing
-        ? (easeBetween(age, returnTime, 3.09) + easeBetween(age, 3.21, 3.44)) / 2
-        : easeBetween(age, returnTime, end - .09);
-    const frontStance = frontStep * (1 - frontBack);
-    const rearStance = rearStep * (1 - rearBack);
-    const stance = (frontStance + rearStance) / 2;
+function kneeBetween(root: Vector, end: Vector, direction: number): Vector {
+    const dx = end[0] - root[0];
+    const dy = end[1] - root[1];
+    const distance = Math.max(.001, Math.hypot(dx, dy));
+    const along = (21 * 21 - 22 * 22 + distance * distance) / (2 * distance);
+    const bend = Math.sqrt(Math.max(0, 21 * 21 - along * along));
+    return [root[0] + dx / distance * along + direction * dy / distance * bend,
+        root[1] + dy / distance * along - direction * dx / distance * bend];
+}
 
-    const footY = F - 17;
-    const distance = cleaning.x + (side > 0 ? 91 : -80) - n.x;
-    const step = distance * stance;
-    const hipX = n.x + step;
-    const hipY = footY - 42 + 11 * bend;
-    const shoulderX = hipX - side * (26 * bend + 42 * lift * stance);
-    const shoulderY = hipY - 46 + 8 * bend;
-    const walkingFrontFootX = n.x - 13 + (distance - 14) * frontStance;
-    const walkingRearFootX = n.x + 13 + (distance + 11) * rearStance;
-    const frontFootX = walkingFrontFootX + (hipX - 13 - walkingFrontFootX) * bend;
-    const rearFootX = walkingRearFootX + (hipX + 13 - walkingRearFootX) * bend;
-    const footfall = crossing ? TAU : Math.PI;
-    const footLift = (out: number, back: number) =>
-        5 * (Math.abs(Math.sin(footfall * out)) + Math.abs(Math.sin(footfall * back)));
-    const frontFootY = footY - 3 - footLift(frontStep, frontBack);
-    const rearFootY = footY - 3 - footLift(rearStep, rearBack);
-    const frontKneeX = frontFootX + 4 - 3 * bend;
-    const rearKneeX = rearFootX - 4 - 5 * bend;
-    const kneeY = footY - 23 + 5 * bend;
+function armPose(root: Vector, rest: Vector, grip: Vector, amount: number, direction: number): LimbPose {
+    const end: Vector = [mix(rest[0], grip[0], amount), mix(rest[1], grip[1], amount)];
+    return { root, end, joint: [mix(root[0], end[0], .5) - direction * 7, mix(root[1], end[1], .5) + 7] };
+}
 
-    ctx.ellipse(hipX, footY, 27 + 7 * stance, 2.5, '#515c6d62');
-    const mopLaid = easeBetween(age, CLEANER_MOTION_START, 1.8) *
-        (1 - easeBetween(age, 3.25, CLEANER_MOTION_END));
+function cleanerPose(ctx: RenderCtx, n: DeepReadonly<Person>, motion: CleanerControls, bucket: BucketPose): CleanerPose {
+    const toward = ctx.cleaning.x < n.x ? -1 : 1;
+    const footY = ctx.F - 20;
+    const targetX = ctx.cleaning.x - toward * 20;
+    const hipX = mix(n.x, targetX, motion.approach * (1 - motion.retreat));
+    const frontFoot: Vector = [mix(n.x + toward * 11, targetX + toward * 13, motion.frontStep), footY - motion.frontLift * 9];
+    const rearFoot: Vector = [mix(n.x - toward * 11, targetX - toward * 13, motion.rearStep), footY - motion.rearLift * 9];
+    let hipY = ctx.F - 59 + motion.hipDrop * 18;
+    for (const [foot, offset] of [[frontFoot, toward * 6], [rearFoot, -toward * 6]] satisfies [Vector, number][]) {
+        const reach = Math.sqrt(Math.max(1, 43 * 43 - (foot[0] - hipX - offset) ** 2));
+        hipY = Math.max(hipY, foot[1] - reach);
+    }
+    const gripX = (bucket.frontGrip[0] + bucket.rearGrip[0]) / 2;
+    const shoulder: Vector = [hipX + (gripX - hipX) * motion.lean * .55, hipY - 46 + motion.hipDrop * 8];
+    const frontHip: Vector = [hipX + toward * 6, hipY];
+    const rearHip: Vector = [hipX - toward * 6, hipY];
+    const restHand: Vector = [hipX + 32 * (1 - motion.turn) * (1 - motion.retreat) + toward * 14 * motion.turn + 13 * motion.retreat,
+        shoulder[1] + 32 + 6 * motion.retreat];
+    return {
+        hip: [hipX, hipY], shoulder, facing: mix(1, toward, motion.turn),
+        frontLeg: { root: frontHip, joint: kneeBetween(frontHip, frontFoot, toward), end: frontFoot },
+        rearLeg: { root: rearHip, joint: kneeBetween(rearHip, rearFoot, toward), end: rearFoot },
+        frontArm: armPose([shoulder[0] + 7, shoulder[1] + 8], restHand, bucket.frontGrip, motion.grip, toward),
+        rearArm: armPose([shoulder[0] - 8, shoulder[1] + 8], [hipX - 11, shoulder[1] + 37], bucket.rearGrip, motion.grip, -toward),
+    };
+}
+
+function drawArm(ctx: RenderCtx, arm: LimbPose, near: boolean) {
+    ctx.rod(...arm.root, ...arm.joint, near ? 9 : 7, near ? '#79909f' : '#6c8393');
+    ctx.ellipse(...arm.joint, near ? 5 : 4, 4, '#a5b3b9');
+    ctx.rod(...arm.joint, ...arm.end, near ? 6 : 5, '#e0be9c');
+    ctx.ellipse(...arm.end, 4, 3.4, '#e0be9c');
+}
+
+function drawLeg(ctx: RenderCtx, leg: LimbPose, near: boolean, facing: number) {
+    const fill = near ? '#536373' : '#485867';
+    ctx.rod(...leg.root, ...leg.joint, near ? 11 : 10, fill);
+    ctx.rod(...leg.joint, ...leg.end, near ? 9 : 8, fill);
+    ctx.ellipse(...leg.joint, near ? 4.5 : 4, 4.5, fill);
+    const [x, y] = leg.end;
+    const direction = facing < 0 ? -1 : 1;
+    ctx.polygon([[-6, -3], [4, -3], [10, 2], [-7, 2]].map(([px, py]) => [x + px * direction, y + py]), '#3c4753');
+}
+
+function drawCleanerBody(ctx: RenderCtx, n: DeepReadonly<Person>, pose: CleanerPose) {
+    ctx.ellipse(pose.hip[0], ctx.F - 17, 28, 2.5, '#515c6d62');
     ctx.ox = n.x;
-    ctx.oy = footY;
+    ctx.oy = ctx.F - 17;
     ctx.localScale = .85;
-    cleanerMop(ctx, mopLaid);
+    cleanerMop(ctx);
     ctx.ox = ctx.oy = 0;
     ctx.localScale = 1;
-
-    ctx.rod(hipX + 7, hipY, rearKneeX, kneeY, 10, '#485867');
-    ctx.rod(rearKneeX, kneeY, rearFootX, rearFootY, 8, '#485867');
-    ctx.ellipse(rearKneeX, kneeY, 4, 4, '#485867');
-    ctx.polygon([[rearFootX - 4, rearFootY - 3], [rearFootX + 4, rearFootY - 3],
-        [rearFootX + 9, rearFootY + 2], [rearFootX - 7, rearFootY + 2]], '#3c4753');
-    ctx.rod(hipX - 7, hipY, frontKneeX, kneeY, 11, '#536373');
-    ctx.rod(frontKneeX, kneeY, frontFootX, frontFootY, 9, '#536373');
-    ctx.ellipse(frontKneeX, kneeY, 4.5, 4.5, '#536373');
-    ctx.polygon([[frontFootX - 4, frontFootY - 3], [frontFootX + 4, frontFootY - 3],
-        [frontFootX + 5, frontFootY + 2], [frontFootX - 10, frontFootY + 2]], '#3c4753');
-
+    drawArm(ctx, pose.rearArm, false);
+    drawLeg(ctx, pose.rearLeg, false, pose.facing);
+    drawLeg(ctx, pose.frontLeg, true, pose.facing);
+    const [hipX, hipY] = pose.hip;
+    const [shoulderX, shoulderY] = pose.shoulder;
     ctx.polygon([[shoulderX - 13, shoulderY], [shoulderX + 11, shoulderY - 4],
-        [hipX + 12, hipY + 3], [hipX - 12, hipY + 5],
-        [shoulderX - 16, shoulderY + 12]], '#79909f');
+        [hipX + 12, hipY + 3], [hipX - 12, hipY + 5], [shoulderX - 16, shoulderY + 12]], '#79909f');
     ctx.polygon([[shoulderX - 13, shoulderY], [shoulderX - 6, shoulderY - 1],
-        [hipX - 5, hipY + 4], [hipX - 12, hipY + 5],
-        [shoulderX - 16, shoulderY + 12]], '#899eaa');
-
-    const angle = bucketAngle(ctx);
-    const handleX = side * (-18 + 36 * lift);
-    const gripX = cleaning.x + handleX * Math.cos(angle) + 66 * Math.sin(angle);
-    const gripY = F - 3 + handleX * Math.sin(angle) - 66 * Math.cos(angle);
-    const reach = easeBetween(age, 2.13, BUCKET_GRIP_TIME) * (1 - easeBetween(age, BUCKET_UPRIGHT_TIME, 3.07));
-    const restX = n.x + 32 + step;
-    const restY = footY - 55;
-    const handX = restX + (gripX - restX) * reach;
-    const handY = restY + (gripY - restY) * reach;
-    const sleeveX = shoulderX + 7 - (7 + 5 * side) * reach;
-    const sleeveY = shoulderY + 9;
-    const elbowX = sleeveX + (handX - sleeveX) * .46 + 7 * side * reach;
-    const elbowY = sleeveY + (handY - sleeveY) * .53 + 6;
-    ctx.rod(sleeveX, sleeveY, elbowX, elbowY, 9, '#79909f');
-    ctx.ellipse(elbowX, elbowY, 5, 4, '#a5b3b9');
-    ctx.rod(elbowX, elbowY, handX, handY, 6, '#e0be9c');
-    ctx.ellipse(handX, handY, 4, 3.4, '#e0be9c');
-
-    const turnBack = side < 0 ? 1.99 : 3.16;
-    const turn = easeBetween(age, start, start + .17) *
-        (1 - easeBetween(age, turnBack, turnBack + .22));
-    ctx.ox = shoulderX - 8 * side * stance;
+        [hipX - 5, hipY + 4], [hipX - 12, hipY + 5], [shoulderX - 16, shoulderY + 12]], '#899eaa');
+    ctx.ox = shoulderX;
     ctx.oy = shoulderY + 87;
     ctx.localScale = .85;
-    cleanerHead(ctx, 0, 0, 1 - 2 * turn);
+    cleanerHead(ctx, 0, 0, pose.facing);
     ctx.ox = ctx.oy = 0;
     ctx.localScale = 1;
 }
 
-export function cleaningDraw(ctx: RenderCtx) {
+export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
     const F = ctx.F;
     const cleaning = ctx.cleaning;
     const state = ctx.state;
     const p = ctx.p;
+    const motion = sampleCleaner(cleaning.spilled ? state.bucketAge : 0);
+    const bucket = bucketPose(ctx, motion);
+    const pose = cleaner ? cleanerPose(ctx, cleaner, motion, bucket) : undefined;
     const spread = cleaning.spilled ? Math.min(1, cleaning.age / .8) : 0;
     if (spread > 0) {
         const width = (cleaning.b - cleaning.a) * spread;
@@ -232,12 +281,13 @@ export function cleaningDraw(ctx: RenderCtx) {
         }
     }
     const { bucketAge } = state;
-    const angle = bucketAngle(ctx);
+    const angle = bucket.angle;
     const tip = Math.abs(angle) / 1.25;
     const side = cleaning.splashDir;
     ctx.ellipse(cleaning.x + side * tip * 20, F + 1, 28 + tip * 5, 3, '#515c6d48');
-    ctx.ox = cleaning.x;
-    ctx.oy = F - 3;
+    if (cleaner && pose) drawCleanerBody(ctx, cleaner, pose);
+    ctx.ox = bucket.origin[0];
+    ctx.oy = bucket.origin[1];
     ctx.rotation = angle;
     ctx.polygon([[-23, -50], [20, -50], [15, -7], [-18, -7]], '#c0a775');
     ctx.ellipse(-2, -50, 22, 6, '#647260');
@@ -249,6 +299,7 @@ export function cleaningDraw(ctx: RenderCtx) {
     ctx.ellipse(15, 2, 5, 5, '#555f66');
     ctx.rect(-11, -36, 19, 13, '#eee1b5');
     ctx.ox = ctx.oy = ctx.rotation = 0;
+    if (pose) drawArm(ctx, pose.frontArm, true);
     if (bucketAge < 1.1) {
         const u = ctx.clamp(bucketAge / 1.1, 0, 1);
         const reach = Math.sin(Math.min(1, u * 2) * Math.PI / 2);
