@@ -1,3 +1,4 @@
+import { translate } from '../../i18n';
 import { STAGE_TWO } from '../../game/stage2';
 import type { RenderCtx } from '../context';
 import { practiceFloor, checkpointFlag } from './decor';
@@ -29,9 +30,9 @@ export function drawBuilding(ctx: RenderCtx) {
     }
     ctx.rect(cam, 287, VW, 250, '#a0a7b1');
     ctx.rod(cam, 315, cam + VW, 315, 2, '#8c94a1');
-    for (const [x, title] of [[190, '회의실 / MEETING'], [1180, '비상계단 / STAIRS'], [2050, '비품 창고 / STORAGE'], [2820, '승강로 / LIFT']] as const) {
+    for (const [x, title] of [[190, 'Meeting room'], [1180, 'Emergency stairs'], [2050, 'Storage'], [2820, 'Lift shaft']] as const) {
         ctx.rect(x - 85, 110, 210, 32, '#687e7c');
-        ctx.label(title, x + 20, 131, 13, '#f0eddc');
+        ctx.label(translate(title, ctx.locale), x + 20, 131, 13, '#f0eddc');
     }
     ctx.rect(120, 300, 400, 12, '#b8a283');
     for (const x of [150, 465]) ctx.rod(x, 312, x, 420, 7, '#697585');
@@ -106,7 +107,7 @@ export function drawBuilding(ctx: RenderCtx) {
     ctx.rect(GOAL - 35, 105, 106, 205, '#677d7e');
     ctx.rect(GOAL - 27, 113, 90, 190, '#b5c4bf');
     ctx.rect(GOAL - 31, 74, 98, 23, '#718e7b');
-    ctx.label('기계실 →', GOAL + 18, 91, 13, '#f0eddc');
+    ctx.label(translate('Mechanical room →', ctx.locale), GOAL + 18, 91, 13, '#f0eddc');
     ctx.rod(GOAL + 40, 190, GOAL + 40, 229, 4, '#677d7e');
     practiceFloor(ctx);
     ctx.ellipse(p.x, p.y + 35, 45, 5, '#91959c');

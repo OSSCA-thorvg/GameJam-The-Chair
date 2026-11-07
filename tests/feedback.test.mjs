@@ -10,7 +10,7 @@ const { createGame } = await load('src/game/game.ts');
 const { createFeedback } = await load('src/ui/feedback.ts');
 
 test('head failures retain one short cause, joke and correction key', () => {
-    const feedback = createFeedback();
+    const feedback = createFeedback(() => 'ko');
     const state = createGame().getSnapshot();
     state.player.a = .9;
     feedback.receive({ type: 'cue', id: 'head-game-over' }, state);
@@ -23,7 +23,7 @@ test('head failures retain one short cause, joke and correction key', () => {
 });
 
 test('bin and focus failures have distinct concise causes without restoration paragraphs', () => {
-    const feedback = createFeedback();
+    const feedback = createFeedback(() => 'ko');
     const state = createGame().getSnapshot();
     feedback.receive({ type: 'cue', id: 'bin-game-over' }, state);
     assert.deepEqual(feedback.snapshot().panel, { k: '휴지통 추락', title: '업무와 함께 분리배출.', desc: '', button: '다시' });
@@ -31,15 +31,16 @@ test('bin and focus failures have distinct concise causes without restoration pa
     assert.deepEqual(feedback.snapshot().panel, { k: '집중도 소진', title: '앗, 여기가 어디지?', desc: '', button: '다시' });
 });
 
-test('water gets one short bubble without NPC followups or accessible joke duplication', () => {
-    const feedback = createFeedback();
+test('water keeps the rider reaction and restores the cleaner response without status duplication', () => {
+    const feedback = createFeedback(() => 'ko');
     const state = createGame().getSnapshot();
     feedback.receive({ type: 'reset' }, state);
     feedback.receive({ type: 'cue', id: 'water-spilled' }, state);
     assert.equal(feedback.snapshot().reaction.text, '노트북은?!');
     assert.doesNotMatch(feedback.snapshot().status, /노트북/);
-    for (const id of ['water-comment', 'water-followup', 'rolling', 'reverse-comment', 'person-comment']) feedback.receive({ type: 'cue', id }, state);
-    assert.equal(feedback.snapshot().speech, null);
+    feedback.receive({ type: 'cue', id: 'water-comment' }, state);
+    assert.equal(feedback.snapshot().speech.text, '앗! 청소 중이었는데…');
+    assert.equal(feedback.snapshot().speech.name, '김 대리');
     assert.equal(feedback.snapshot().reaction.text, '노트북은?!');
     feedback.receive({ type: 'tick', dt: 3 }, state);
     feedback.receive({ type: 'cue', id: 'water-spilled' }, state);
@@ -47,11 +48,73 @@ test('water gets one short bubble without NPC followups or accessible joke dupli
 });
 
 test('checkpoint uses an accessibility notification while clear panels omit statistics', () => {
-    const feedback = createFeedback();
+    const feedback = createFeedback(() => 'ko');
     const state = createGame().getSnapshot();
     feedback.receive({ type: 'cue', id: 'checkpoint' }, state);
     assert.equal(feedback.snapshot().reaction, null);
     assert.equal(feedback.snapshot().status, '체크포인트 저장.');
     feedback.receive({ type: 'cue', id: 'stage-clear' }, state);
     assert.deepEqual(feedback.snapshot().panel, { k: '', title: '퇴근 처리 중…', desc: '', button: '다음' });
+});
+
+
+test('stage one NPCs use their original approach and reverse dialogue', () => {
+    const state = createGame().getSnapshot();
+    for (const [id, name, text, x] of [
+        ['manager', '박 과장', '벌써 퇴근하는 거야?', 320],
+        ['cleaner', '김 대리', '앗, 청소 물통 넘어간다!', 1000],
+        ['admin', '총무팀', '쓰레기 분리배출 부탁드려요.', 1810]
+    ]) {
+        const feedback = createFeedback(() => 'ko');
+        const person = { id, x, said: true };
+        feedback.receive({ type: 'cue', id: 'person-comment', person }, state);
+        assert.deepEqual(feedback.snapshot().speech, { name, text, x, life: 3.4 });
+        feedback.receive({ type: 'cue', id: 'reverse-comment', person }, state);
+        assert.equal(feedback.snapshot().speech.text, '다시 출근하는 거야?');
+        assert.equal(feedback.snapshot().speech.x, x);
+    }
+});
+
+test('monitor and accident responses retain the original speaker and line', () => {
+    const state = createGame().getSnapshot();
+    const feedback = createFeedback(() => 'ko');
+    feedback.receive({ type: 'cue', id: 'light-hit' }, state);
+    feedback.receive({ type: 'cue', id: 'light-comment' }, state);
+    assert.equal(feedback.snapshot().reaction.text, '눈부셔… 실적 칸이 안 보여!');
+    assert.deepEqual(feedback.snapshot().speech, { text: '밝은 미래가 보이죠?', name: '옆자리 동료', x: 2300, life: 3.4 });
+    for (const [id, name] of [['head-comment', '박 과장'], ['bin-comment', '총무팀']]) {
+        feedback.receive({ type: 'cue', id }, state);
+        assert.equal(feedback.snapshot().speech.text, '산재 처리는…');
+        assert.equal(feedback.snapshot().speech.name, name);
+    }
+});
+
+test('dialogue expires, resets and stays out of later stages', () => {
+    const game = createGame();
+    const state = game.getSnapshot();
+    const feedback = createFeedback(() => 'ko');
+    const cue = { type: 'cue', id: 'light-comment' };
+    feedback.receive(cue, state);
+    feedback.receive({ type: 'tick', dt: 3.5 }, state);
+    assert.equal(feedback.snapshot().speech, null);
+    feedback.receive(cue, state);
+    feedback.receive({ type: 'reset' }, state);
+    assert.equal(feedback.snapshot().speech, null);
+    game.startStage(2);
+    feedback.receive(cue, game.getSnapshot());
+    assert.equal(feedback.snapshot().speech, null);
+});
+
+test('each printer volley triggers a fresh readable burst, then disappears', async () => {
+    const { createEffects } = await load('src/render/effects.ts');
+    const effects = createEffects();
+    effects.receive({ type: 'volley' });
+    effects.receive({ type: 'tick', dt: .3 });
+    assert.ok(effects.snapshot().copierFlash > 0);
+    effects.receive({ type: 'tick', dt: .3 });
+    assert.equal(effects.snapshot().copierFlash, 0);
+    effects.receive({ type: 'volley' });
+    assert.ok(effects.snapshot().copierFlash > 0);
+    effects.receive({ type: 'reset' });
+    assert.equal(effects.snapshot().copierFlash, 0);
 });

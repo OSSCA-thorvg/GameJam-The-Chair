@@ -1,3 +1,4 @@
+import type { Locale } from '../i18n';
 import { init, type Canvas, type Shape, type ThorVGNamespace } from '@thorvg/webcanvas';
 import wasmUrl from '../../node_modules/@thorvg/webcanvas/dist/thorvg.wasm?url';
 import type { GameState } from '../game/game';
@@ -9,7 +10,7 @@ import { drawBuilding } from './scene/building';
 import { drawRooftop } from './scene/rooftop';
 import { paint } from './paint';
 
-export function createRenderer(root: HTMLElement) {
+export function createRenderer(root: HTMLElement, getLocale: () => Locale = () => 'en') {
     const base = root.querySelector<HTMLCanvasElement>('[data-base]');
     const cn = root.querySelector<HTMLCanvasElement>('[data-tvg]');
     const labels = root.querySelector<HTMLCanvasElement>('[data-labels]');
@@ -18,7 +19,7 @@ export function createRenderer(root: HTMLElement) {
     if (!base || !cn || !labels || !bg || !lg) {
         throw new Error('Game canvases are unavailable.');
     }
-    return setup(root, base, cn, labels, bg, lg);
+    return setup(root, base, cn, labels, bg, lg, getLocale);
 }
 
 function setup(
@@ -28,6 +29,7 @@ function setup(
     labels: HTMLCanvasElement,
     bg: CanvasRenderingContext2D,
     lg: CanvasRenderingContext2D,
+    getLocale: () => Locale,
 ) {
     const ctx = createRenderCtx(bg, lg);
     let lastTime = 0;
@@ -55,6 +57,7 @@ function setup(
     size();
 
     function draw(next: GameState, effects: EffectsState) {
+        ctx.locale = getLocale();
         ctx.state = next;
         ctx.LEN = next.level.length;
         ctx.GOAL = next.level.goal;

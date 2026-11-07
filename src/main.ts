@@ -1,3 +1,4 @@
+import { isMessage, resolveLocale, translate, type Locale } from './i18n';
 import { createGame } from './game/game';
 import { createEffects } from './render/effects';
 import { createRenderer } from './render/renderer';
@@ -13,6 +14,37 @@ if (!app) {
 }
 app.innerHTML = markup;
 const root = document.getElementById('chair-office-one')!;
+let locale: Locale = resolveLocale(navigator.languages);
+try {
+    const savedLocale = localStorage.getItem('the-chair-locale');
+    if (savedLocale === 'en' || savedLocale === 'ko') locale = savedLocale;
+} catch {}
+function applyLocale() {
+    document.documentElement.lang = locale;
+    root.lang = locale;
+    document.title = `The Chair · ${translate('Business as usual.', locale)}`;
+    for (const element of root.querySelectorAll<HTMLElement>('[data-i18n]')) {
+        const message = element.dataset.i18n;
+        if (message !== undefined && isMessage(message)) element.textContent = translate(message, locale);
+    }
+    for (const element of root.querySelectorAll<HTMLElement>('[data-i18n-aria]')) {
+        const message = element.dataset.i18nAria;
+        if (message !== undefined && isMessage(message)) element.setAttribute('aria-label', translate(message, locale));
+    }
+    for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) {
+        button.setAttribute('aria-pressed', String(button.dataset.locale === locale));
+    }
+}
+applyLocale();
+for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) {
+    button.addEventListener('click', () => {
+        const selected = button.dataset.locale;
+        if (selected !== 'en' && selected !== 'ko') return;
+        locale = selected;
+        try { localStorage.setItem('the-chair-locale', locale); } catch {}
+        applyLocale();
+    });
+}
 let savedDeaths = 0;
 try {
     const saved = JSON.parse(localStorage.getItem('the-chair-office-v1') || 'null');
@@ -24,12 +56,12 @@ catch {
 }
 const game = createGame(savedDeaths);
 const effects = createEffects();
-const feedback = createFeedback();
+const feedback = createFeedback(() => locale);
 const unbind = bindInput(root, game);
-const hud = createHud(root);
+const hud = createHud(root, () => locale);
 let renderer: ReturnType<typeof createRenderer> | null = null;
 try {
-    renderer = createRenderer(root);
+    renderer = createRenderer(root, () => locale);
 }
 catch (error) {
     console.error('Renderer unavailable', error);

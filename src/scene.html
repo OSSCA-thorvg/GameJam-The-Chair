@@ -1,29 +1,31 @@
 <div id="chair-office-one">
 <div class="scene" data-scene>
-<canvas data-base aria-label="의자를 타고 탈출하는 게임. 조작법은 일시정지 메뉴에서 확인할 수 있습니다."></canvas><canvas data-tvg id="chair-office-one-tvg" aria-hidden="true" hidden></canvas><canvas class="labels" data-labels aria-hidden="true"></canvas>
+<canvas data-base aria-label="Chair escape game. Controls are in the pause menu." data-i18n-aria="Chair escape game. Controls are in the pause menu."></canvas><canvas data-tvg id="chair-office-one-tvg" aria-hidden="true" hidden></canvas><canvas class="labels" data-labels aria-hidden="true"></canvas>
 <div class="focus-hud" data-play-hud hidden>
 <svg class="laptop-icon" viewBox="0 0 28 22" aria-hidden="true"><path d="M5 2h18v14H5zM1 18h26l-2 3H3z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-<div class="focus-track" role="progressbar" aria-label="집중도" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" data-focus-meter><i data-focus-trail></i><i data-focus-fill></i></div>
-<span class="focus-intro" data-focus-intro hidden>집중도</span>
+<div class="focus-track" role="progressbar" aria-label="Focus" data-i18n-aria="Focus" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" data-focus-meter><i data-focus-trail></i><i data-focus-fill></i></div>
+<span class="focus-intro" data-focus-intro hidden data-i18n="Focus">Focus</span>
 </div>
-<button class="pause-button" data-pause aria-label="일시정지 메뉴" aria-haspopup="dialog" aria-expanded="false" hidden>Ⅱ</button>
+<button class="pause-button" data-pause aria-label="Pause menu" data-i18n-aria="Pause menu" aria-haspopup="dialog" aria-expanded="false" hidden>Ⅱ</button>
 <div class="stage-entry" data-stage-label hidden></div>
 <div class="key-cue" data-balance hidden aria-hidden="true"></div>
 <div class="bubble" data-rider hidden><span data-quote></span></div>
+<div class="bubble npc-bubble" data-npc hidden><small data-name></small><span data-line></span></div>
 <div class="overlay" data-overlay role="dialog" aria-modal="true" aria-labelledby="chair-panel-title"><div class="modal">
-<small data-kicker hidden></small><h1 id="chair-panel-title" data-title>THE CHAIR</h1><p data-desc>오늘도 정상 근무 중입니다.</p><button class="start" data-start>시작</button>
-<details class="stats" data-stats hidden><summary>기록</summary><p data-stats-text></p></details>
+<small data-kicker hidden></small><h1 id="chair-panel-title" data-title>THE CHAIR</h1><p data-desc data-i18n="Business as usual.">Business as usual.</p><button class="start" data-start data-i18n="Start">Start</button>
+<details class="stats" data-stats hidden><summary data-i18n="Records">Records</summary><p data-stats-text></p></details>
 </div></div>
 <div class="overlay pause-overlay" data-pause-menu role="dialog" aria-modal="true" aria-labelledby="chair-pause-title" hidden><div class="modal pause-modal">
-<h2 id="chair-pause-title">잠깐</h2><div class="menu-actions"><button class="start" data-resume>계속</button><button data-reset>다시</button></div>
-<details><summary>조작법</summary><dl class="key-list"><div><dt>← → / A D</dt><dd>이동</dd></div><div><dt>↑ / Space</dt><dd>점프</dd></div><div><dt>Q ↶ / E ↷</dt><dd>균형</dd></div><div><dt>↓ / S</dt><dd>제동</dd></div><div><dt>F</dt><dd>Spray extinguisher · 소화기 분사</dd></div><div><dt>P / Esc</dt><dd>일시정지</dd></div><div><dt>R</dt><dd>재도전</dd></div></dl><p>집중도 <b data-focus>100%</b> · 방해마다 −20%. 방해가 없으면 2초마다 +1%.</p><p>깃발에서 다시 출발하면 집중도 100%, 물기는 사라집니다.</p></details>
-<details><summary>스테이지</summary><div class="menu-actions"><button data-stage="1">01 사무실</button><button data-stage="2">02 건물 내부</button><button data-stage="3">03 Rooftop · 기계실·옥상</button></div></details>
-<details class="diagnostics"><summary>진단</summary><p data-renderer></p><p>속도 <span data-speed>0</span> km/h</p><p data-body></p></details>
+<div class="menu-actions" role="group" aria-label="Language / 언어"><button data-locale="en" lang="en">English</button><button data-locale="ko" lang="ko">한국어</button></div>
+<h2 id="chair-pause-title" data-i18n="Paused">Paused</h2><div class="menu-actions"><button class="start" data-resume data-i18n="Resume">Resume</button><button data-reset data-i18n="Retry">Retry</button></div>
+<details><summary data-i18n="Controls">Controls</summary><dl class="key-list"><div><dt>← → / A D</dt><dd data-i18n="Move">Move</dd></div><div><dt>↑ / Space</dt><dd data-i18n="Jump">Jump</dd></div><div><dt>Q ↶ / E ↷</dt><dd data-i18n="Balance">Balance</dd></div><div><dt>↓ / S</dt><dd data-i18n="Brake">Brake</dd></div><div><dt>F</dt><dd data-i18n="Spray extinguisher">Spray extinguisher</dd></div><div><dt>P / Esc</dt><dd data-i18n="Pause">Pause</dd></div><div><dt>R</dt><dd data-i18n="Restart">Restart</dd></div></dl><p><span data-i18n="Focus">Focus</span> <b data-focus>100%</b> · <span data-i18n="Each distraction: −20%. Recover +1% every 2 seconds without distractions.">Each distraction: −20%. Recover +1% every 2 seconds without distractions.</span></p><p data-i18n="Restarting at a flag restores full focus and dries you off.">Restarting at a flag restores full focus and dries you off.</p></details>
+<details><summary data-i18n="Stages">Stages</summary><div class="menu-actions"><button data-stage="1" data-i18n="01 Office">01 Office</button><button data-stage="2" data-i18n="02 Inside the building">02 Inside the building</button><button data-stage="3" data-i18n="03 Mechanical room &amp; rooftop">03 Mechanical room &amp; rooftop</button></div></details>
+<details class="diagnostics"><summary data-i18n="Diagnostics">Diagnostics</summary><p data-renderer></p><p><span data-i18n="Speed">Speed</span> <span data-speed>0</span> km/h</p><p data-body></p></details>
 </div></div>
 </div>
-<div class="drive-controls" aria-label="터치 조작">
-<div class="move-controls"><button data-key="left" aria-label="후진">←</button><button data-key="right" aria-label="전진">→</button><button data-key="brake" aria-label="제동">↓</button></div>
-<div class="action-controls"><button data-jump aria-label="점프">↑</button><button data-spray aria-label="Spray extinguisher · 소화기 분사">💨</button><span class="balance-controls" role="group" aria-label="균형 조절"><button data-key="q" aria-label="왼쪽으로 균형 보정">↶</button><button data-key="e" aria-label="오른쪽으로 균형 보정">↷</button></span></div>
+<div class="drive-controls" aria-label="Touch controls" data-i18n-aria="Touch controls">
+<div class="move-controls"><button data-key="left" aria-label="Reverse" data-i18n-aria="Reverse">←</button><button data-key="right" aria-label="Forward" data-i18n-aria="Forward">→</button><button data-key="brake" aria-label="Brake" data-i18n-aria="Brake">↓</button></div>
+<div class="action-controls"><button data-jump aria-label="Jump" data-i18n-aria="Jump">↑</button><button data-spray aria-label="Spray extinguisher" data-i18n-aria="Spray extinguisher">💨</button><span class="balance-controls" role="group" aria-label="Balance controls" data-i18n-aria="Balance controls"><button data-key="q" aria-label="Lean left" data-i18n-aria="Lean left">↶</button><button data-key="e" aria-label="Lean right" data-i18n-aria="Lean right">↷</button></span></div>
 </div>
 <div class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-status></div>
 </div>

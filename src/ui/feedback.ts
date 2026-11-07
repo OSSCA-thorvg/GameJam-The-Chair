@@ -1,73 +1,127 @@
+import { translate, type Locale, type Message } from '../i18n';
 import type { GameEvent } from '../game/types';
 import type { Reaction, Speech } from './types';
 import type { GameState } from '../game/game';
-export function createFeedback() {
-    let reaction: Reaction | null = null;
-    const speech: Speech | null = null;
-    let status = '';
+const NPC_COPY = {
+    manager: { name: "Manager Park", text: "Leaving already?" },
+    cleaner: { name: "Kim", text: "Watch the mop bucket!" },
+    admin: { name: "Admin", text: "Please sort your trash." }
+} satisfies Record<string, { name: Message; text: Message }>;
+export function createFeedback(getLocale: () => Locale = () => 'en') {
+    let reaction: (Omit<Reaction, 'text'> & { text: Message }) | null = null;
+    let speech: (Omit<Speech, 'text' | 'name'> & { text: Message; name: Message }) | null = null;
+    let status: Message = '';
     let waterRemarked = false;
-    let panel: { k: string; title: string; desc: string; button: string } | null = null;
-    function say(text: string) {
+    let panel: { k: Message; title: Message; desc: string; button: Message } | null = null;
+    function say(text: Message) {
         reaction = { text, face: '', life: 1.8, priority: 1 };
     }
-    function overlay(k: string, title: string, desc = '', button = '다시') {
+    function npc(text: Message, name: Message, x: number) {
+        speech = { text, name, x, life: 3.4 };
+    }
+    function overlay(k: Message, title: Message, desc = '', button: Message = 'Retry') {
         reaction = null;
         panel = { k, title, desc, button };
     }
     function receive(event: GameEvent, state: GameState) {
         if (event.type === 'reset') {
             reaction = null;
+            speech = null;
             panel = null;
             waterRemarked = false;
-            status = state.stage === 2 || state.officeCheckpoint ? '체크포인트에서 시작합니다.' : '시작합니다.';
+            status = state.stage === 2 || state.officeCheckpoint ? "Starting from checkpoint." : "Starting.";
         }
         if (event.type === 'tick' && reaction && (reaction.life -= event.dt) <= 0) {
             reaction = null;
         }
+        if (event.type === 'tick' && speech && (speech.life -= event.dt) <= 0) {
+            speech = null;
+        }
         if (event.type !== 'cue') return;
+        if (state.stage === 1) {
+            const person = event.person;
+            switch (event.id) {
+                case 'person-comment':
+                    if (person && !speech) npc(NPC_COPY[person.id].text, NPC_COPY[person.id].name, person.x);
+                    break;
+                case 'reverse-comment':
+                    if (person) npc("Back to work already?", NPC_COPY[person.id].name, person.x);
+                    break;
+                case 'water-comment':
+                    npc("Hey! I was cleaning…", NPC_COPY.cleaner.name, 1000);
+                    break;
+                case 'head-comment':
+                    npc("About that workplace injury claim…", NPC_COPY.manager.name, 320);
+                    break;
+                case 'bin-comment':
+                    npc("About that workplace injury claim…", NPC_COPY.admin.name, 1810);
+                    break;
+                case 'light-comment':
+                    npc("A bright future, right?", "Coworker", 2300);
+                    break;
+                case 'first-volley':
+                    say("Why is this report printing into my face…");
+                    break;
+                case 'paper-hit':
+                    say("Those are my monthly results…");
+                    break;
+                case 'light-hit':
+                    say("Too bright… I can't see my numbers!");
+                    break;
+            }
+        }
         switch (event.id) {
             case 'practice-cleared':
-                say('결재 완료');
+                say("Approved");
                 break;
             case 'checkpoint':
-                status = '체크포인트 저장.';
+                status = "Checkpoint saved.";
                 break;
             case 'water-spilled':
                 if (!waterRemarked) {
-                    say('노트북은?!');
+                    say("My laptop?!");
                     waterRemarked = true;
                 }
                 break;
             case 'head-hit':
                 reaction = null;
-                status = '머리 충돌.';
+                status = "Head impact.";
                 break;
             case 'head-game-over':
-                overlay('머리 충돌', '머리가 먼저 퇴근했습니다.', Math.sin(state.player.a) >= 0 ? 'Q ↶' : 'E ↷');
+                overlay("Head impact", "Your head clocked out first.", Math.sin(state.player.a) >= 0 ? 'Q ↶' : 'E ↷');
                 break;
             case 'bin-fall':
                 reaction = null;
-                status = '휴지통 추락.';
+                status = "Trash bin fall.";
                 break;
             case 'bin-game-over':
-                overlay('휴지통 추락', '업무와 함께 분리배출.');
+                overlay("Trash bin fall", "Recycled along with your work.");
                 break;
             case 'focus-lost':
                 reaction = null;
-                status = '집중도 소진.';
+                status = "Focus depleted.";
                 break;
             case 'focus-game-over':
-                overlay('집중도 소진', '앗, 여기가 어디지?');
+                overlay("Focus depleted", "Wait, where am I?");
                 break;
             case 'spray-empty':
-                status = 'Extinguisher empty · 소화기 비었음.';
+                status = "Extinguisher empty.";
                 break;
             case 'stage-clear':
-                status = state.stage === 1 ? '사무실 탈출.' : state.stage === 2 ? '기계실 도착.' : 'Rooftop cleared · 옥상 탈출.';
-                overlay('', state.stage === 1 ? '퇴근 처리 중…' : state.stage === 2 ? '출장 처리 완료.' : 'Officially resigned · 정식 퇴사 처리됨.', '', state.stage === 3 ? 'Retry · 다시' : '다음');
+                status = state.stage === 1 ? "Office escaped." : state.stage === 2 ? "Mechanical room reached." : "Rooftop cleared.";
+                overlay('', state.stage === 1 ? "Clocking out…" : state.stage === 2 ? "Business trip complete." : "Officially resigned.", '', state.stage === 3 ? "Retry stage" : "Next");
                 break;
         }
     }
-    return { receive, snapshot: () => ({ reaction, speech, status, panel }) };
+    function snapshot() {
+        const t = (message: Message) => translate(message, getLocale());
+        return {
+            reaction: reaction ? { ...reaction, text: t(reaction.text) } : null,
+            speech: speech ? { ...speech, text: t(speech.text), name: t(speech.name) } : null,
+            status: t(status),
+            panel: panel ? { ...panel, k: t(panel.k), title: t(panel.title), button: t(panel.button) } : null
+        };
+    }
+    return { receive, snapshot };
 }
 export type FeedbackState = ReturnType<ReturnType<typeof createFeedback>['snapshot']>;

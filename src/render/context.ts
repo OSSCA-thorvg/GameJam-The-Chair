@@ -1,3 +1,4 @@
+import type { Locale } from '../i18n';
 import { LEVEL } from '../game/level';
 import type { GameState } from '../game/game';
 import type { DeepReadonly } from '../game/types';
@@ -6,6 +7,7 @@ import { ART } from './art';
 import type { EffectsState } from './effects';
 
 export type RenderCtx = {
+    locale: Locale;
     bg: CanvasRenderingContext2D;
     lg: CanvasRenderingContext2D;
 
@@ -75,6 +77,7 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
     const TAU = Math.PI * 2;
     const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
     const ctx = {
+        locale: 'en' satisfies Locale,
         bg,
         lg,
         F: LEVEL.floor,

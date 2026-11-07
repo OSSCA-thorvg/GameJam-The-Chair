@@ -1,9 +1,12 @@
+import { translate } from '../../i18n';
 import type { DeepReadonly, Person } from '../../game/types';
 import type { RenderCtx } from '../context';
 import { plant, desk, binBack, binFront, practiceFloor, checkpointFlag } from './decor';
 import { cleaningDraw, person, recoveringCleaner, CLEANER_MOTION_START, CLEANER_MOTION_END } from './cleaning';
 import { monitorDraw } from './monitor';
 import { player, debugCollisions } from './player';
+import { EFFECT_STYLE } from '../art';
+import type { Vector } from '../types';
 
 export function drawWorld(ctx: RenderCtx) {
     const F = ctx.F;
@@ -145,8 +148,25 @@ export function drawWorld(ctx: RenderCtx) {
     ctx.rect(GOAL - 27, F - 197, 90, 190, '#b5c4bf');
     ctx.rod(GOAL + 40, F - 120, GOAL + 40, F - 81, 4, '#677d7e');
     ctx.rect(GOAL - 31, F - 236, 98, 23, '#718e7b');
-    ctx.label('출구 →', GOAL + 18, F - 218, 12, '#f0eddc');
+    ctx.label(translate('Exit →', ctx.locale), GOAL + 18, F - 218, 12, '#f0eddc');
     if (ctx.glare > 0) {
         ctx.rect(cam, -vertical, VW, H / scale, '#fff7d5' + Math.round(Math.min(.22, ctx.glare * .16) * 255).toString(16).padStart(2, '0'));
+    }
+    if (copier.flash > 0 && ctx.mode === 'play') {
+        const age = EFFECT_STYLE.copierFlashDuration - copier.flash;
+        const pop = .9 + .1 * Math.min(1, age / .06);
+        const y = F - 205;
+        const line = translate('PTUI! PTUI!!', ctx.locale);
+        ctx.lg.font = `${18 * ctx.scale}px system-ui,sans-serif`;
+        const radiusX = Math.max(82, ctx.lg.measureText(line).width / ctx.scale / 2 + 24);
+        const burst: Vector[] = Array.from({ length: 24 }, (_, i) => {
+            const angle = i / 24 * ctx.TAU;
+            const radius = i % 2 === 0 ? 1 : .76;
+            return [x + Math.cos(angle) * radiusX * radius * pop, y + Math.sin(angle) * 37 * radius * pop];
+        });
+        ctx.polygon([[x - 16, y + 21], [x + 5, F - 151], [x + 16, y + 20]], C.ink);
+        ctx.polygon(burst, C.ink);
+        ctx.polygon(burst.map(([px, py]) => [x + (px - x) * .94, y + (py - y) * .88]), '#fff0bc');
+        ctx.label(line, x, y + 6, 18, C.ink);
     }
 }
