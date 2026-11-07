@@ -107,24 +107,33 @@ function fanRide(): PreviewScene {
     const base = game.getSnapshot();
     const fan = STAGE_THREE.fans[0];
     const effects = createEffects().snapshot();
-    return {
-        id: 'fan-ride', label: 'Rooftop · Fan wind', duration: fan.period, focusX: fan.x,
-        markers: [{ at: 0, label: 'Idle' }, { at: fan.period / 4, label: 'Peak wind' }, { at: fan.period / 2, label: 'Wind stops' }],
-        sample(time) {
-            const at = Math.max(0, Math.min(fan.period, time));
-            const lift = Math.max(0, Math.sin(at * Math.PI * 2 / fan.period));
-            return {
-                state: {
-                    ...base,
-                    time: at,
-                    player: { ...base.player, x: fan.x + 18 * Math.sin(at * 2), y: fan.y - 28 - lift * 110, a: .1 * Math.sin(at * 3) },
-                    onFan: fanStrength(fan, at) > 60,
-                    fans: STAGE_THREE.fans.map(item => ({ ...item, active: fanStrength(item, at) > 60, power: fanStrength(item, at) })),
-                },
-                effects,
-            };
-        },
-    };
+    const floorY = fan.y - 28;
+    const duration = 2.3;
+    let y = floorY;
+    let vy = -440;
+    const frames: PreviewFrame[] = [];
+    for (let i = 0; i <= Math.round(duration / FRAME_TIME); i++) {
+        const at = i * FRAME_TIME;
+        const power = fanStrength(fan, at);
+        if (i > 0) {
+            vy += (800 - power) * FRAME_TIME;
+            y = Math.min(floorY, y + vy * FRAME_TIME);
+            if (y === floorY) vy = 0;
+        }
+        frames.push({
+            state: {
+                ...base,
+                time: at,
+                player: { ...base.player, x: fan.x, y, vy },
+                ground: y === floorY && vy === 0,
+                onFan: power > 60 && y < floorY,
+                fans: STAGE_THREE.fans.map(item => ({ ...item, active: fanStrength(item, at) > 60, power: fanStrength(item, at) })),
+            },
+            effects,
+        });
+    }
+    return recordedScene('fan-ride', 'Rooftop · Fan wind', fan.x,
+        [{ at: 0, label: 'Takeoff' }, { at: fan.period / 4, label: 'Peak wind' }, { at: fan.period / 2, label: 'Wind stops' }, { at: 1.9, label: 'Landing' }], frames);
 }
 
 function headImpact(): PreviewScene {

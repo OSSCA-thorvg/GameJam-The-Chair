@@ -43,7 +43,14 @@ test('fan preview shows the chair rising with active wind', () => {
     assert.equal(idle.onFan, false);
     assert.equal(peak.onFan, true);
     assert.ok(peak.player.y < idle.player.y);
-    assert.equal(scene.sample(1.8).state.onFan, false);
+    const falling = scene.sample(1.8).state;
+    const landed = scene.sample(1.9).state;
+    assert.equal(falling.onFan, false);
+    assert.ok(falling.player.vy > 0);
+    assert.ok(falling.player.y < idle.player.y);
+    assert.equal(landed.player.y, idle.player.y);
+    assert.equal(landed.player.vy, 0);
+    assert.equal(landed.ground, true);
 });
 
 test('impact preview replays a collision through its game-over frame', () => {
