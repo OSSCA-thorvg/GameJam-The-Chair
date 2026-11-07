@@ -233,6 +233,10 @@ export function drawBuilding(ctx: RenderCtx) {
     worker(ctx, mx - 57 + pushPhase * 10, 420, 'facilitator', 1,
         pushPhase > 0 ? [mx - 18 + pushPhase * 9, 344 - pushPhase * 11] : undefined);
     if (c.dispatchStarted && c.dispatchAge < 1.5) bubble(ctx, 'Meeting extended. Chairs may leave.', mx + 40, 103, 310);
+    if (state.canEnterMeeting) {
+        ctx.rect(mx - 57, 216, 114, 32, '#263a45e8');
+        ctx.label(translate('↓ Enter', ctx.locale), mx, 238, 16, '#f6eddc');
+    }
     state.furniture.forEach((item, i) => {
         if (!item.released) return;
         chair(ctx, item.x, item.y);

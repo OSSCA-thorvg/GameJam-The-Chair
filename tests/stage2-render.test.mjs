@@ -44,9 +44,11 @@ function render(state, locale, width) {
 
 test('corridor and meeting render finite vector paths in both languages and narrow views', async () => {
     const game = createGame(); game.startStage(2);
+    assert.ok(!render(game.getSnapshot(), 'en', 1000).labels.some(({ text }) => text === '↓ Enter'));
     const frames = new Map(); let visited = false;
     for (let i = 0; i < 7200; i++) {
         const state = game.getSnapshot();
+        if (state.canEnterMeeting && !frames.has('entrance')) frames.set('entrance', state);
         if (state.canEnterMeeting && !visited && state.corridor.dispatchAge > 2.7) { game.interact(); visited = true; }
         if (state.corridor.dispatchAge > 1.8 && state.corridor.dispatchAge < 2.1 && !frames.has('chairs')) frames.set('chairs', state);
         if (state.corridor.room.kind === 'meeting' && state.corridor.room.age > 3.7 && !frames.has('meeting')) frames.set('meeting', state);
@@ -64,9 +66,10 @@ test('corridor and meeting render finite vector paths in both languages and narr
         game.step(1/120); game.drainEvents();
     }
     assert.equal(game.getSnapshot().mode, 'won');
-    assert.equal(frames.size, 4);
+    assert.equal(frames.size, 5);
     for (const [name, state] of frames) for (const locale of ['en', 'ko']) for (const width of [540, 1000]) {
         const frame = render(state, locale, width);
+        if (name === 'entrance') assert.ok(frame.labels.some(({ text }) => text === (locale === 'en' ? '↓ Enter' : '↓ 들어가기')));
         if (locale === 'en') for (const { text } of frame.labels) assert.doesNotMatch(text, /[가-힣]/);
         for (const { text } of frame.labels) assert.doesNotMatch(text, /^(Exit|Lift shaft|Mechanical room)/);
         if (process.env.STAGE2_PREVIEW_DIR) {

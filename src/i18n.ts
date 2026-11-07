@@ -80,6 +80,7 @@ const korean = {
     "Mechanical room →": "기계실 →",
     "Mechanical room": "기계실",
     "Enter or leave meeting room": "회의실 들어가기·나가기",
+    "↓ Enter": "↓ 들어가기",
     "Meeting extended": "회의 연장",
     "Meeting: when should this meeting end?": "회의 종료 시각을 정하기 위한 회의",
     "The chairs have gone home.": "의자 세 분은 먼저 퇴근하셨습니다.",
