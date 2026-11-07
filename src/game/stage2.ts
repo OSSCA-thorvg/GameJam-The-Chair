@@ -1,4 +1,7 @@
 import type { Point } from './types';
+import type { Message } from '../i18n';
+
+export const TYPING_SOUNDS = ['tap… tap…', 't-t-t-tap…', 'tak… tap…', 'tap-tap-tap!', 'tick… tick-tap…'] satisfies Message[];
 export type StageId = 1 | 2 | 3;
 export type Furniture = { kind: 'chair'; x: number; y: number; width: number; height: number; vx: number; released: boolean; cheer: number };
 export const STAGE_TWO = {
@@ -19,7 +22,8 @@ export type Corridor = {
     lift: { kind: 'waiting' } | { kind: 'arriving'; age: number } | { kind: 'open'; age: number } | { kind: 'departed' };
     cartHits: number;
     cart: { x: number; hit: boolean } | null;
-    offices: { x: number; life: number; cooldown: number; nearby: boolean }[];
+    typingCooldown: number;
+    offices: { x: number; life: number; cooldown: number; nearby: boolean; phrase: number; offset: Point }[];
 };
 export function createCorridor(checkpoint = 0): Corridor {
     return {
@@ -27,7 +31,8 @@ export function createCorridor(checkpoint = 0): Corridor {
         dispatchStarted: checkpoint > 0, dispatchAge: checkpoint > 0 ? 10 : 0,
         scanner: { approved: checkpoint >= 2, progress: checkpoint >= 2 ? 1 : 0 },
         lift: { kind: checkpoint >= 3 ? 'departed' : 'waiting' }, cart: null, cartHits: 0,
-        offices: STAGE_TWO.offices.map(x => ({ x, life: 0, cooldown: 0, nearby: false })),
+        typingCooldown: 0,
+        offices: STAGE_TWO.offices.map(x => ({ x, life: 0, cooldown: 0, nearby: false, phrase: 0, offset: { x: 0, y: 0 } })),
     };
 }
 export function createFurniture(checkpoint = 0): Furniture[] {

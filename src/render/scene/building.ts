@@ -1,11 +1,11 @@
 import { translate, type Message } from '../../i18n';
-import { STAGE_TWO } from '../../game/stage2';
+import { STAGE_TWO, TYPING_SOUNDS } from '../../game/stage2';
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
 import { practiceFloor, checkpointFlag } from './decor';
 import { player } from './player';
 
-function bubble(ctx: RenderCtx, text: Message, x: number, y: number, width: number, spiky = false, alpha = 1) {
+function bubble(ctx: RenderCtx, text: Message, x: number, y: number, width: number, spiky = false, alpha = 1, tail = true) {
     const fill = ctx.tint(spiky ? '#fff1b2' : '#f7f4e9', alpha);
     if (spiky) {
         const points: Vector[] = [];
@@ -22,7 +22,7 @@ function bubble(ctx: RenderCtx, text: Message, x: number, y: number, width: numb
             [x - width / 2, y - 22, x - width / 2, y - 22, x - width / 2 + 12, y - 22],
         ], ctx.gradientFill(x, y - 22, x, y + 22, [[0, '#ffffff'], [1, '#e2e8df']], alpha));
     }
-    ctx.polygon([[x - 8, y + 20], [x + 9, y + 20], [x - 10, y + 36]], fill);
+    if (tail) ctx.polygon([[x - 8, y + 20], [x + 9, y + 20], [x - 10, y + 36]], fill);
     ctx.label(translate(text, ctx.locale), x, y + 5, 13, ctx.tint('#344955', alpha));
 }
 type WorkerRole = 'facilitator' | 'jacket' | 'vest';
@@ -188,7 +188,7 @@ export function drawBuilding(ctx: RenderCtx) {
         ctx.rect(x - 105, 180, 210, 170, '#6d8b99a0');
         ctx.rod(x, 175, x, 355, 5, '#849a9e');
         ctx.polygon([[x - 98, 184], [x - 75, 184], [x + 55, 347], [x + 32, 347]], '#edf4e719');
-        if (office.life > 0) bubble(ctx, 'tap… tap…', x, 166, 146, false, Math.min(.78, office.life * 2));
+        if (office.life > 0) bubble(ctx, TYPING_SOUNDS[office.phrase], x + office.offset.x, 174 + office.offset.y, 156, false, Math.min(.78, office.life * 2), false);
     }
     const mx = STAGE_TWO.meeting;
     ctx.rect(mx - 78, 180, 156, 240, '#687f80');

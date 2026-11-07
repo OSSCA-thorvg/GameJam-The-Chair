@@ -1,5 +1,5 @@
 import type { GameCore } from '../core';
-import { STAGE_TWO } from '../stage2';
+import { STAGE_TWO, TYPING_SOUNDS } from '../stage2';
 import { focusHit } from './focus';
 
 export function canEnterMeeting(s: GameCore) {
@@ -37,15 +37,23 @@ export function meetingStep(s: GameCore, dt: number) {
 }
 export function corridorStep(s: GameCore, dt: number, previousX: number) {
     const c = s.corridor, p = s.p;
+    c.typingCooldown = Math.max(0, c.typingCooldown - dt);
     for (const office of c.offices) {
         office.life = Math.max(0, office.life - dt);
         office.cooldown = Math.max(0, office.cooldown - dt);
         const nearby = Math.abs(p.x - office.x) < 190;
-        if (nearby && (!office.nearby || office.cooldown === 0)) {
+        if (nearby && !office.nearby) office.cooldown = 0;
+        office.nearby = nearby;
+    }
+    if (c.typingCooldown === 0 && !c.offices.some(office => office.life > 0)) {
+        const office = c.offices.find(office => office.nearby && office.cooldown === 0);
+        if (office) {
+            office.phrase = (office.phrase + 1 + Math.floor(Math.random() * (TYPING_SOUNDS.length - 1))) % TYPING_SOUNDS.length;
+            office.offset = { x: (Math.random() - .5) * 80, y: -20 - Math.random() * 45 };
             office.life = 1.5;
             office.cooldown = 4.5;
+            c.typingCooldown = office.life + .3;
         }
-        office.nearby = nearby;
     }
     if (p.x > 320) c.dispatchStarted = true;
     if (c.dispatchStarted) {
