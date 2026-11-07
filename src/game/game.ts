@@ -11,9 +11,10 @@ import { monitorPhase, monitorStep } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
 import { binEnter } from './systems/bin';
 
-export function createGame(initialDeaths = 0) {
+export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId = 0) {
     const F = LEVEL.floor;
     const s = createCore(initialDeaths);
+    let completedStage = initialCompletedStage;
 
     function build() {
         if (s.stage === 3) {
@@ -106,24 +107,22 @@ export function createGame(initialDeaths = 0) {
     }
 
     function spray() {
-        if (s.mode !== 'play') return;
+        if (s.mode !== 'play' || s.stage !== 3) return;
         if (s.sprayCooldown > 0) return;
         if (s.sprayAmmo <= 0) {
             s.events.push({ type: 'cue', id: 'spray-empty' });
             return;
         }
         const dx = (s.keys.has('right') ? 1 : 0) - (s.keys.has('left') ? 1 : 0);
-        const dy = s.keys.has('brake') ? -1 : 1;
-        const len = Math.hypot(dx, dy) || 1;
+        const len = Math.hypot(dx, 1);
         const nx = dx / len;
-        const ny = dy / len;
+        const ny = 1 / len;
         s.sprayDir = { x: nx, y: ny };
         s.p.vx -= nx * 220;
         s.p.vy -= ny * 260;
         s.sprayAmmo--;
         s.sprayCooldown = .35;
         s.sprayBurst = .32;
-        s.lessons.sprayed = true;
         s.events.push({ type: 'cue', id: 'spray' });
     }
 
@@ -212,10 +211,6 @@ export function createGame(initialDeaths = 0) {
             p.vx += dir * (s.slip ? 110 : 305) * dt;
         } else if (!was && dir) {
             p.vx += dir * 55 * dt;
-        }
-        if (s.keys.has('brake') && was) {
-            p.vx *= Math.exp(-(s.slip ? .38 : 6) * dt);
-            p.w *= Math.exp(-4 * dt);
         }
         p.vy += 800 * dt;
         p.vx *= Math.exp(-(was ? (s.slip ? .015 : .55) : .09) * dt);
@@ -373,8 +368,6 @@ export function createGame(initialDeaths = 0) {
             p.vx = Math.max(0, p.vx);
         }
         s.lessons.moved ||= p.x > 140;
-        s.lessons.braked ||= s.ground && s.keys.has('brake');
-        s.lessons.binJumped ||= s.stage === 1 && p.x > s.bin.b && p.y < F;
         if (!s.lessons.jumped && s.practiceJump && s.ground && p.x < 330) {
             s.lessons.jumped = true;
             s.events.push({ type: 'cue', id: 'practice-cleared' });
@@ -414,6 +407,7 @@ export function createGame(initialDeaths = 0) {
             return;
         }
         if (p.x > s.GOAL) {
+            if (s.stage > completedStage) completedStage = s.stage;
             s.mode = 'won';
             s.keys.clear();
             s.events.push({ type: 'cue', id: 'stage-clear' });
@@ -423,8 +417,6 @@ export function createGame(initialDeaths = 0) {
     build();
 
     function getSnapshot() {
-        const predictedAngle = Math.atan2(Math.sin(s.p.a), Math.cos(s.p.a)) + s.p.w * .2;
-        const balanceHint: 'q' | 'e' | null = s.mode === 'play' && Math.abs(predictedAngle) > .18 ? (predictedAngle > 0 ? 'q' : 'e') : null;
         return structuredClone({
             game: s.stage === 1 ? 'office-stage-one' : s.stage === 2 ? 'building-stage-two' : 'rooftop-stage-three',
             fans: s.stage === 3 ? STAGE_THREE.fans.map(f => ({ ...f, active: fanStrength(f, s.t) > 60, power: fanStrength(f, s.t) })) : [],
@@ -434,8 +426,9 @@ export function createGame(initialDeaths = 0) {
             officeCheckpoint: s.officeCheckpoint,
             actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
             tutorialAssist: s.mode === 'play' && s.p.x < 300,
-            balanceHint,
             stage: s.stage,
+            completedStage,
+            hasExtinguisher: s.stage === 3,
             checkpoint: s.checkpoint,
             furniture: s.furniture,
             elevator: s.elevator,
@@ -507,7 +500,7 @@ export function createGame(initialDeaths = 0) {
             s.stage = id;
             s.checkpoint = 0;
             s.officeCheckpoint = false;
-            s.lessons = { moved: false, jumped: false, braked: false, binJumped: false, sprayed: false };
+            s.lessons = { moved: false, jumped: false };
             s.LEN = s.stage === 1 ? LEVEL.length : s.stage === 2 ? STAGE_TWO.length : STAGE_THREE.length;
             s.GOAL = s.stage === 1 ? LEVEL.goal : s.stage === 2 ? STAGE_TWO.goal : STAGE_THREE.goal;
             reset();

@@ -8,5 +8,5 @@ export const ART = {
     debugCollisions: false
 };
 export const EFFECT_STYLE = {
-    paperDuration: 2.4, glareDuration: 1.65, copierFlashDuration: .24, splashCount: 48, speckColor: '#7c8870'
+    paperDuration: 2.4, glareDuration: 1.65, copierFlashDuration: .55, splashCount: 48, speckColor: '#7c8870'
 };

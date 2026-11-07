@@ -1,3 +1,4 @@
+import { translate } from '../../i18n';
 import { STAGE_THREE } from '../../game/stage3';
 import type { RenderCtx } from '../context';
 import { checkpointFlag } from './decor';
@@ -52,8 +53,7 @@ export function drawRooftop(ctx: RenderCtx) {
     // Mechanical room sign (English primary, Korean secondary).
     ctx.rect(300, 326, 180, 36, '#5e6b7d');
     ctx.rect(304, 330, 172, 28, '#48525f');
-    ctx.label('Mechanical Room', 390, 343, 12, '#f0eddc');
-    ctx.label('기계실', 390, 357, 10, '#d5d0b9');
+    ctx.label(translate('Mechanical room', ctx.locale), 390, 343, 12, '#f0eddc');
 
     // Gap edge markers between first and second ground segment.
     ctx.rod(900, 410, 900, 440, 5, '#c3b375');
@@ -167,8 +167,7 @@ export function drawRooftop(ctx: RenderCtx) {
         ])
     );
     ctx.rect(GOAL - 31, 28, 98, 32, '#718e7b');
-    ctx.label('Rooftop →', GOAL + 18, 42, 12, '#f0eddc');
-    ctx.label('옥상 →', GOAL + 18, 55, 10, '#d5d0b9');
+    ctx.label(translate('Rooftop →', ctx.locale), GOAL + 18, 42, 12, '#f0eddc');
 
     // Chair shadow and player.
     ctx.ellipse(p.x, p.y + 35, 45, 5, '#91959c');

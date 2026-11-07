@@ -28,7 +28,7 @@ function drive(game, stop = state => state.mode !== 'play') {
         }
         if (p.x > 2520 && p.x < 2650 && !liftReady) {
             liftReady = state.time % 8 > 7;
-            if (!liftReady) keys.splice(0, keys.length, 'brake');
+            if (!liftReady) keys.splice(0, keys.length, ...(p.vx > 6 ? ['left'] : p.vx < -6 ? ['right'] : []));
         }
         game.setInput(...keys);
         if (state.ground && ((p.x > 460 && p.x < 670) || (p.x > 2160 && p.x < 2370))) game.jump();
@@ -43,6 +43,7 @@ test('stage2 can be completed through furniture, vent, moving platform and recov
     game.startStage(2);
     const { state, seen } = drive(game);
     assert.equal(state.mode, 'won');
+    assert.equal(state.completedStage, 2, 'only a completed route records stage progress');
     assert.equal(state.deaths, 0);
     assert.equal(state.checkpoint, 4);
     assert.deepEqual([...seen.checkpoints], [0, 1, 2, 3, 4]);
@@ -268,9 +269,6 @@ test('starter jump completes one contextual lesson and emits its reward once', (
     game.setInput('right');
     for (let i = 0; i < 100; i++) game.step(dt);
     assert.equal(game.getSnapshot().lessons.moved, true);
-    game.setInput('brake');
-    for (let i = 0; i < 100; i++) game.step(dt);
-    assert.equal(game.getSnapshot().lessons.braked, true);
 });
 
 test('spray on stage three gives upward recoil, consumes ammo, and reloads on ground', () => {
@@ -319,4 +317,60 @@ test('copier previews its shot and its first paper batch is safe', () => {
     assert.ok(state.papers.every(paper => paper.safe));
     for (let i = 0; i < 60 && game.getSnapshot().bursts < 2; i++) game.step(dt);
     assert.ok(game.getSnapshot().papers.some(paper => !paper.safe), 'later shots retain the hazard');
+});
+
+
+test('extinguisher becomes available in stage three and cannot be used in earlier stages', () => {
+    const game = createGame();
+    for (const stage of [1, 2, 3, 1]) {
+        game.startStage(stage);
+        game.drainEvents();
+        const before = game.getSnapshot();
+        assert.equal(before.hasExtinguisher, stage === 3);
+        game.spray();
+        const after = game.getSnapshot();
+        if (stage === 3) {
+            assert.equal(after.spray.ammo, before.spray.ammo - 1);
+            assert.ok(game.drainEvents().some(event => event.type === 'cue' && event.id === 'spray'));
+        } else {
+            assert.deepEqual(after, before);
+            assert.deepEqual(game.drainEvents(), []);
+        }
+    }
+});
+
+test('cleared-stage history survives retries, stage changes and saved-game restoration', () => {
+    const game = createGame(0, 1);
+    assert.equal(game.getSnapshot().completedStage, 1);
+    game.startStage(2);
+    assert.equal(game.getSnapshot().completedStage, 1, 'entering a stage does not mark it cleared');
+    const { state } = drive(game);
+    assert.equal(state.completedStage, 2);
+    game.restart();
+    assert.equal(game.getSnapshot().completedStage, 2);
+    game.startStage(1);
+    assert.equal(game.getSnapshot().completedStage, 2);
+    const restored = createGame(state.deaths, state.completedStage);
+    assert.equal(restored.getSnapshot().completedStage, 2);
+    assert.equal(createGame().getSnapshot().completedStage, 0);
+});
+
+
+test('removed braking commands do not slow or stabilize a coasting chair', () => {
+    for (const command of ['brake', 'ArrowDown', 's']) {
+        const coasting = createGame();
+        const removedInput = createGame();
+        for (const game of [coasting, removedInput]) {
+            game.reset();
+            game.setInput('right');
+            for (let i = 0; i < 60; i++) game.step(dt);
+        }
+        coasting.setInput();
+        removedInput.setInput(command);
+        for (let i = 0; i < 60; i++) {
+            coasting.step(dt);
+            removedInput.step(dt);
+            assert.deepEqual(removedInput.getSnapshot().player, coasting.getSnapshot().player);
+        }
+    }
 });

@@ -1,8 +1,10 @@
+import { translate, type Locale, type Message } from '../i18n';
 import type { GameState } from '../game/game';
 import type { FeedbackState } from './feedback';
 import type { EffectsState } from '../render/effects';
 import type { Viewport } from '../render/renderer';
-export function createHud(root: HTMLElement) {
+import { LEVEL } from '../game/level';
+export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en') {
     const q = (selector: string) => root.querySelector<HTMLElement>(selector);
     const text = (selector: string, value: string) => {
         const el = q(selector);
@@ -19,12 +21,12 @@ export function createHud(root: HTMLElement) {
     let previousFocus = 100;
     let focusIntroduced = false;
     let introduceUntil = 0;
-    function draw(state: GameState, feedback: FeedbackState, _effects: EffectsState, view: Viewport, renderer: string) {
-        const { player: p, mode, focus, lessons } = state;
+    function draw(state: GameState, feedback: FeedbackState, _effects: EffectsState, view: Viewport) {
+        const t = (message: Message) => translate(message, getLocale());
+        const { player: p, mode, focus } = state;
         const { cam, scale, vertical, width } = view;
         const active = mode === 'play';
         const paused = mode === 'pause';
-        const touch = matchMedia('(pointer: coarse), (max-width: 650px)').matches;
         const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
         if (state.stage !== lastStage || state.time < lastTime) {
             focusIntroduced = false;
@@ -43,7 +45,7 @@ export function createHud(root: HTMLElement) {
         hidden('[data-pause-menu]', !paused);
         q('[data-pause]')?.setAttribute('aria-expanded', String(paused));
         hidden('[data-stage-label]', !active || state.time > 2.2);
-        text('[data-stage-label]', state.stage === 1 ? '01 사무실' : state.stage === 2 ? '02 건물 내부' : '03 Rooftop · 기계실·옥상');
+        text('[data-stage-label]', state.stage === 1 ? t('01 Office') : state.stage === 2 ? t('02 Inside the building') : t('03 Mechanical room & rooftop'));
         hidden('[data-focus-intro]', !active || !focusIntroduced || state.time > introduceUntil);
         style('[data-focus-fill]', 'width', focus + '%');
         style('[data-focus-trail]', 'width', focus + '%');
@@ -52,15 +54,18 @@ export function createHud(root: HTMLElement) {
         q('[data-focus-meter]')?.setAttribute('aria-valuenow', String(focus));
         text('[data-focus]', focus + '%');
         text('[data-status]', feedback.status);
-        text('[data-renderer]', renderer === 'thorvg' ? 'ThorVG WebCanvas' : 'Canvas2D');
-        text('[data-speed]', String(Math.round(state.actualSpeed / 6)));
-        text('[data-body]', `위치 ${Math.round(p.x)}, ${Math.round(p.y)}`);
+        hidden('[data-spray-help]', !state.hasExtinguisher);
+        hidden('[data-spray]', !state.hasExtinguisher);
+        hidden('[data-stage-menu]', state.completedStage === 0);
+        for (const stage of [1, 2, 3]) {
+            hidden(`[data-stage="${stage}"]`, stage > state.completedStage);
+        }
         const panel = feedback.panel;
         hidden('[data-overlay]', mode !== 'intro' && !panel);
         if (mode === 'intro') {
             text('[data-title]', 'THE CHAIR');
-            text('[data-desc]', '오늘도 정상 근무 중입니다.');
-            text('[data-start]', '시작');
+            text('[data-desc]', t('Business as usual.'));
+            text('[data-start]', t('Start'));
             hidden('[data-kicker]', true);
         } else if (panel) {
             text('[data-kicker]', panel.k);
@@ -76,54 +81,28 @@ export function createHud(root: HTMLElement) {
         }
         previousMode = mode;
         hidden('[data-stats]', mode !== 'won');
-        text('[data-stats-text]', `집중도 ${focus}% · 종이 ${state.paperHits} · 휴지통 ${state.binFalls} · 빛 ${state.lightHits} · 회전문 ${state.doorHits}`);
-        let cue = '';
-        let cueX = p.x;
-        let cueY = p.y - 115;
-        let suggested = '';
-        if (active) {
-            if (state.balanceHint) {
-                suggested = state.balanceHint;
-                cue = state.balanceHint === 'q' ? (touch ? '↶' : 'Q ↶') : (touch ? '↷' : 'E ↷');
-            } else if (!lessons.moved && p.x < 300) {
-                cue = '→';
-                suggested = 'right';
-            } else if (!lessons.jumped && p.x > 155 && p.x < 300) {
-                cue = '↑';
-                suggested = 'jump';
-                cueX = 225;
-                cueY = 365;
-            } else if (state.stage === 1 && !lessons.binJumped && p.x > 1400 && p.x < 1570) {
-                cue = '↑';
-                suggested = 'jump';
-                cueX = 1510;
-                cueY = 365;
-            } else if (state.stage === 2 && !lessons.braked && p.x > 880 && p.x < 1020) {
-                cue = '↓';
-                suggested = 'brake';
-                cueX = 980;
-                cueY = 365;
-            } else if (state.stage === 3 && !lessons.sprayed && p.x > 500 && p.x < 900) {
-                cue = touch ? '💨' : 'F';
-                suggested = 'spray';
-                cueX = 700;
-                cueY = 365;
-            }
-        }
-        hidden('[data-balance]', !cue);
-        text('[data-balance]', cue);
-        style('[data-balance]', 'left', clamp((cueX - cam) * scale, 40, width - 40) + 'px');
-        style('[data-balance]', 'top', Math.max(95, (cueY + vertical) * scale) + 'px');
-        for (const key of ['left', 'right', 'brake', 'q', 'e']) {
-            q(`[data-key="${key}"]`)?.classList.toggle('suggested', active && suggested === key);
-        }
-        q('[data-jump]')?.classList.toggle('suggested', active && suggested === 'jump');
-        q('[data-spray]')?.classList.toggle('suggested', active && suggested === 'spray');
-        hidden('[data-rider]', !active || !feedback.reaction || !!cue);
+        text('[data-stats-text]', `${t('Focus')} ${focus}% · ${t('Paper')} ${state.paperHits} · ${t('Bin')} ${state.binFalls} · ${t('Light')} ${state.lightHits} · ${t('Door')} ${state.doorHits}`);
+        hidden('[data-rider]', !active || !feedback.reaction);
         if (feedback.reaction) {
             text('[data-quote]', feedback.reaction.text);
-            style('[data-rider]', 'left', clamp((p.x - cam) * scale, 65, width - 65) + 'px');
+            const halfWidth = (q('[data-rider]')?.offsetWidth ?? 0) / 2 + 10;
+            style('[data-rider]', 'left', clamp((p.x - cam) * scale, halfWidth, width - halfWidth) + 'px');
             style('[data-rider]', 'top', Math.max(110, (p.y - 110 + vertical) * scale) + 'px');
+        }
+        const speech = feedback.speech;
+        const speechX = speech ? (speech.x - cam) * scale : 0;
+        const speaking = state.stage === 1 && !!speech && ['play', 'impact', 'dead'].includes(mode)
+            && speechX > 0 && speechX < width;
+        hidden('[data-npc]', !speaking);
+        if (speaking && speech) {
+            text('[data-name]', speech.name);
+            text('[data-line]', speech.text);
+            const bubble = q('[data-npc]');
+            const halfWidth = (bubble?.offsetWidth ?? 0) / 2 + 10;
+            const left = clamp(speechX, halfWidth, width - halfWidth);
+            style('[data-npc]', 'left', left + 'px');
+            style('[data-npc]', '--tail-x', (speechX - left + (bubble?.offsetWidth ?? 0) / 2) + 'px');
+            style('[data-npc]', 'top', mode === 'dead' ? '105px' : Math.max(110, (LEVEL.floor - 177 + vertical) * scale) + 'px');
         }
         q('.drive-controls')?.toggleAttribute('inert', !active);
     }
