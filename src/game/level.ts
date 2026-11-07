@@ -3,6 +3,7 @@ export const LEVEL = Object.freeze({
     floor: 420,
     length: 2600,
     goal: 2440,
+    practicePaper: Object.freeze({ x: 225, width: 42, height: 6 }),
     monitor: Object.freeze({ wall: 2110, period: 4.8 }),
     copier: Object.freeze({ x: 550 }),
     cleaning: Object.freeze({ x: 945, a: 885, b: 1210 }),

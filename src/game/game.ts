@@ -7,6 +7,8 @@ export function createGame(initialDeaths = 0) {
     let checkpoint = 0;
     let officeCheckpoint = false;
     let actualSpeed = 0;
+    let lessons = { moved: false, jumped: false, braked: false, binJumped: false };
+    let practiceJump = false;
     let furniture = createFurniture();
     let elevator = elevatorAt(0);
     let LEN: number = LEVEL.length;
@@ -86,6 +88,7 @@ export function createGame(initialDeaths = 0) {
         const spawn = stage === 2 ? STAGE_TWO.checkpoints[checkpoint] : { x: officeCheckpoint ? 1400 : 100, y: F - 28 };
         p = { ...spawn, vx: 0, vy: 0, a: 0, w: 0 };
         actualSpeed = 0;
+        practiceJump = false;
         keys.clear();
         ground = false;
         coyote = 0;
@@ -209,7 +212,7 @@ export function createGame(initialDeaths = 0) {
     function shoot() {
         const dir = copier.dir;
         for (let i = 0; i < 4; i++) {
-            papers.push({ x: copier.x + dir * 48, y: F - 90 - i * 4, vx: dir * (200 + i * 24), vy: -60 - i * 27, a: i * .8, w: dir * (3 + i), life: 5, hit: false, landed: false, volley });
+            papers.push({ x: copier.x + dir * 48, y: F - 90 - i * 4, vx: dir * (200 + i * 24), vy: -60 - i * 27, a: i * .8, w: dir * (3 + i), life: 5, hit: false, landed: false, volley, safe: volley === 1 && bursts === 0 });
         }
         bursts++;
         events.push({ type: 'volley' });
@@ -233,7 +236,7 @@ export function createGame(initialDeaths = 0) {
                 z.w *= .9;
                 z.landed = true;
             }
-            if (!z.hit && !z.landed && !inBin && Math.hypot(z.x - p.x, z.y - (p.y - 50)) < 48) {
+            if (!z.safe && !z.hit && !z.landed && !inBin && Math.hypot(z.x - p.x, z.y - (p.y - 50)) < 48) {
                 z.hit = true;
                 paperHits++;
                 focusHit('paper', z.volley);
@@ -379,7 +382,7 @@ export function createGame(initialDeaths = 0) {
             copier.dir = p.x < copier.x ? -1 : 1;
             volley++;
             copier.burst = 3;
-            copier.next = 0;
+            copier.next = .75;
             copier.cool = 4.6;
         }
         if (copier.burst > 0) {
@@ -414,6 +417,7 @@ export function createGame(initialDeaths = 0) {
             slipCooldown = 7;
         }
         if (jumpQ > 0 && coyote > 0) {
+            if (p.x < 300) practiceJump = true;
             p.vy = -350;
             p.w -= dir * .12;
             ground = false;
@@ -565,6 +569,13 @@ export function createGame(initialDeaths = 0) {
             p.x = 40;
             p.vx = Math.max(0, p.vx);
         }
+        lessons.moved ||= p.x > 140;
+        lessons.braked ||= ground && keys.has('brake');
+        lessons.binJumped ||= stage === 1 && p.x > bin.b && p.y < F;
+        if (!lessons.jumped && practiceJump && ground && p.x < 330) {
+            lessons.jumped = true;
+            events.push({ type: 'cue', id: 'practice-cleared' });
+        }
         actualSpeed += (Math.abs(p.x - prev) / dt - actualSpeed) * (1 - Math.exp(-dt / .12));
         if (stage === 1 && !officeCheckpoint && p.x >= 1400 && p.x < bin.a - 25) {
             officeCheckpoint = true;
@@ -641,7 +652,7 @@ export function createGame(initialDeaths = 0) {
         // Detached data: even untyped renderers cannot mutate the live simulation.
         return structuredClone({
             game: stage === 1 ? 'office-stage-one' : 'building-stage-two',
-            officeCheckpoint, actualSpeed: mode === 'play' ? actualSpeed : 0, tutorialAssist: mode === 'play' && p.x < 300, balanceHint,
+            lessons, officeCheckpoint, actualSpeed: mode === 'play' ? actualSpeed : 0, tutorialAssist: mode === 'play' && p.x < 300, balanceHint,
             stage, checkpoint, furniture, elevator, door: doorAt(t), level: { length: LEN, goal: GOAL },
             mode, focus, focusClock, focusLossTime, focusNotice, lossReason,
             player: p, ground, slip, dirty, inBin, binAge, time, deaths, bursts, paperHits, binFalls,
@@ -682,6 +693,7 @@ export function createGame(initialDeaths = 0) {
             stage = id;
             checkpoint = 0;
             officeCheckpoint = false;
+            lessons = { moved: false, jumped: false, braked: false, binJumped: false };
             LEN = stage === 1 ? LEVEL.length : STAGE_TWO.length;
             GOAL = stage === 1 ? LEVEL.goal : STAGE_TWO.goal;
             reset();
