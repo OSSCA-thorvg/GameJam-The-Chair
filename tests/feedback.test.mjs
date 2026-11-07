@@ -9,16 +9,16 @@ async function load(entry) {
 const { createGame } = await load('src/game/game.ts');
 const { createFeedback } = await load('src/ui/feedback.ts');
 
-test('head failures retain one short cause, joke and correction key', () => {
+test('head failures retain the short cause and joke without control hints', () => {
     const feedback = createFeedback(() => 'ko');
     const state = createGame().getSnapshot();
     state.player.a = .9;
     feedback.receive({ type: 'cue', id: 'head-game-over' }, state);
-    assert.deepEqual(feedback.snapshot().panel, { k: '머리 충돌', title: '머리가 먼저 퇴근했습니다.', desc: 'Q ↶', button: '다시' });
+    assert.deepEqual(feedback.snapshot().panel, { k: '머리 충돌', title: '머리가 먼저 퇴근했습니다.', desc: '', button: '다시' });
     state.player.a = -.9;
     state.dirtyWaterExperienced = true;
     feedback.receive({ type: 'cue', id: 'head-game-over' }, state);
-    assert.equal(feedback.snapshot().panel.desc, 'E ↷');
+    assert.equal(feedback.snapshot().panel.desc, '');
     assert.equal(feedback.snapshot().reaction, null);
 });
 
@@ -117,4 +117,27 @@ test('each printer volley triggers a fresh readable burst, then disappears', asy
     assert.ok(effects.snapshot().copierFlash > 0);
     effects.receive({ type: 'reset' });
     assert.equal(effects.snapshot().copierFlash, 0);
+});
+
+
+test('all game-over panels omit control advice in both languages and all stages', () => {
+    for (const locale of ['en', 'ko']) {
+        for (const stage of [1, 2, 3]) {
+            const game = createGame();
+            game.startStage(stage);
+            const state = game.getSnapshot();
+            const feedback = createFeedback(() => locale);
+            for (const angle of [-.9, .9]) {
+                state.player.a = angle;
+                for (const id of ['head-game-over', 'bin-game-over', 'focus-game-over']) {
+                    feedback.receive({ type: 'cue', id }, state);
+                    const panel = feedback.snapshot().panel;
+                    assert.equal(panel.desc, '');
+                    assert.ok(panel.title);
+                    assert.ok(panel.button);
+                    assert.doesNotMatch(Object.values(panel).join(' '), /[QE] [↶↷]|brake|제동/);
+                }
+            }
+        }
+    }
 });

@@ -23,11 +23,10 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
     let introduceUntil = 0;
     function draw(state: GameState, feedback: FeedbackState, _effects: EffectsState, view: Viewport) {
         const t = (message: Message) => translate(message, getLocale());
-        const { player: p, mode, focus, lessons } = state;
+        const { player: p, mode, focus } = state;
         const { cam, scale, vertical, width } = view;
         const active = mode === 'play';
         const paused = mode === 'pause';
-        const touch = matchMedia('(pointer: coarse), (max-width: 650px)').matches;
         const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
         if (state.stage !== lastStage || state.time < lastTime) {
             focusIntroduced = false;
@@ -83,45 +82,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         previousMode = mode;
         hidden('[data-stats]', mode !== 'won');
         text('[data-stats-text]', `${t('Focus')} ${focus}% · ${t('Paper')} ${state.paperHits} · ${t('Bin')} ${state.binFalls} · ${t('Light')} ${state.lightHits} · ${t('Door')} ${state.doorHits}`);
-        let cue = '';
-        let cueX = p.x;
-        let cueY = p.y - 115;
-        let suggested = '';
-        if (active) {
-            if (state.balanceHint) {
-                suggested = state.balanceHint;
-                cue = state.balanceHint === 'q' ? (touch ? '↶' : 'Q ↶') : (touch ? '↷' : 'E ↷');
-            } else if (!lessons.moved && p.x < 300) {
-                cue = '→';
-                suggested = 'right';
-            } else if (!lessons.jumped && p.x > 155 && p.x < 300) {
-                cue = '↑';
-                suggested = 'jump';
-                cueX = 225;
-                cueY = 365;
-            } else if (state.stage === 1 && !lessons.binJumped && p.x > 1400 && p.x < 1570) {
-                cue = '↑';
-                suggested = 'jump';
-                cueX = 1510;
-                cueY = 365;
-
-            } else if (state.hasExtinguisher && !lessons.sprayed && p.x > 500 && p.x < 900) {
-                cue = touch ? '💨' : 'F';
-                suggested = 'spray';
-                cueX = 700;
-                cueY = 365;
-            }
-        }
-        hidden('[data-balance]', !cue);
-        text('[data-balance]', cue);
-        style('[data-balance]', 'left', clamp((cueX - cam) * scale, 40, width - 40) + 'px');
-        style('[data-balance]', 'top', Math.max(95, (cueY + vertical) * scale) + 'px');
-        for (const key of ['left', 'right', 'q', 'e']) {
-            q(`[data-key="${key}"]`)?.classList.toggle('suggested', active && suggested === key);
-        }
-        q('[data-jump]')?.classList.toggle('suggested', active && suggested === 'jump');
-        q('[data-spray]')?.classList.toggle('suggested', active && suggested === 'spray');
-        hidden('[data-rider]', !active || !feedback.reaction || !!cue);
+        hidden('[data-rider]', !active || !feedback.reaction);
         if (feedback.reaction) {
             text('[data-quote]', feedback.reaction.text);
             const halfWidth = (q('[data-rider]')?.offsetWidth ?? 0) / 2 + 10;

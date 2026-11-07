@@ -123,7 +123,6 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         s.sprayAmmo--;
         s.sprayCooldown = .35;
         s.sprayBurst = .32;
-        s.lessons.sprayed = true;
         s.events.push({ type: 'cue', id: 'spray' });
     }
 
@@ -369,7 +368,6 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             p.vx = Math.max(0, p.vx);
         }
         s.lessons.moved ||= p.x > 140;
-        s.lessons.binJumped ||= s.stage === 1 && p.x > s.bin.b && p.y < F;
         if (!s.lessons.jumped && s.practiceJump && s.ground && p.x < 330) {
             s.lessons.jumped = true;
             s.events.push({ type: 'cue', id: 'practice-cleared' });
@@ -419,8 +417,6 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
     build();
 
     function getSnapshot() {
-        const predictedAngle = Math.atan2(Math.sin(s.p.a), Math.cos(s.p.a)) + s.p.w * .2;
-        const balanceHint: 'q' | 'e' | null = s.mode === 'play' && Math.abs(predictedAngle) > .18 ? (predictedAngle > 0 ? 'q' : 'e') : null;
         return structuredClone({
             game: s.stage === 1 ? 'office-stage-one' : s.stage === 2 ? 'building-stage-two' : 'rooftop-stage-three',
             fans: s.stage === 3 ? STAGE_THREE.fans.map(f => ({ ...f, active: fanStrength(f, s.t) > 60, power: fanStrength(f, s.t) })) : [],
@@ -430,7 +426,6 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             officeCheckpoint: s.officeCheckpoint,
             actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
             tutorialAssist: s.mode === 'play' && s.p.x < 300,
-            balanceHint,
             stage: s.stage,
             completedStage,
             hasExtinguisher: s.stage === 3,
@@ -505,7 +500,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             s.stage = id;
             s.checkpoint = 0;
             s.officeCheckpoint = false;
-            s.lessons = { moved: false, jumped: false, binJumped: false, sprayed: false };
+            s.lessons = { moved: false, jumped: false };
             s.LEN = s.stage === 1 ? LEVEL.length : s.stage === 2 ? STAGE_TWO.length : STAGE_THREE.length;
             s.GOAL = s.stage === 1 ? LEVEL.goal : s.stage === 2 ? STAGE_TWO.goal : STAGE_THREE.goal;
             reset();

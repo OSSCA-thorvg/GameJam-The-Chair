@@ -88,7 +88,7 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
                 status = "Head impact.";
                 break;
             case 'head-game-over':
-                overlay("Head impact", "Your head clocked out first.", Math.sin(state.player.a) >= 0 ? 'Q ↶' : 'E ↷');
+                overlay("Head impact", "Your head clocked out first.");
                 break;
             case 'bin-fall':
                 reaction = null;
