@@ -14,6 +14,7 @@ export const STAGE_TWO = {
     terrain: [[{ x: -400, y: 420 }, { x: 3500, y: 420 }, { x: 3500, y: 800 }, { x: -400, y: 800 }]] satisfies Point[][],
 };
 export type Corridor = {
+    appearanceSeed: number;
     room: { kind: 'corridor' } | { kind: 'meeting'; age: number; returnX: number };
     meetingVisited: boolean;
     dispatchAge: number;
@@ -27,6 +28,7 @@ export type Corridor = {
 };
 export function createCorridor(checkpoint = 0): Corridor {
     return {
+        appearanceSeed: Math.floor(Math.random() * 0x100000000),
         room: { kind: 'corridor' }, meetingVisited: false,
         dispatchStarted: checkpoint > 0, dispatchAge: checkpoint > 0 ? 10 : 0,
         scanner: { approved: checkpoint >= 2, progress: checkpoint >= 2 ? 1 : 0 },

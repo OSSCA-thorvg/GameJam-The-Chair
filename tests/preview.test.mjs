@@ -75,3 +75,13 @@ test('extinguisher preview keeps the spray plume and recoil in sync', () => {
     assert.ok(recoil.player.y < start.player.y);
     assert.equal(scene.sample(.5).state.spray.burst, 0);
 });
+
+test('office preview keeps one staff mix through the typing motion', () => {
+    const scene = previewScenes.find(scene => scene.id === 'office-typing');
+    assert.ok(scene);
+    const start = scene.sample(0).state;
+    const typing = scene.sample(.25).state;
+    assert.equal(start.stage, 2);
+    assert.equal(typing.corridor.appearanceSeed, start.corridor.appearanceSeed);
+    assert.equal(typing.time, .25);
+});

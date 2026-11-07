@@ -36,16 +36,36 @@ type OfficeAppearance = {
     skin: string;
     glasses: boolean;
 };
-const OFFICE_STAFF = [
-    { hairstyle: 'parted', hair: '#343c48', shirt: '#627fa2', sleeve: '#8aa5c1', skin: '#ddbd9d', glasses: true },
-    { hairstyle: 'bun', hair: '#654238', shirt: '#a46b62', sleeve: '#c28b7d', skin: '#d4a581', glasses: false },
-    { hairstyle: 'bob', hair: '#302f3a', shirt: '#b39b5c', sleeve: '#d2bd80', skin: '#e5c8a5', glasses: false },
-    { hairstyle: 'crop', hair: '#9a9c9c', shirt: '#627d6e', sleeve: '#8ca58e', skin: '#bd9479', glasses: true },
-    { hairstyle: 'wavy', hair: '#624c3c', shirt: '#8c719a', sleeve: '#af92b7', skin: '#d7b292', glasses: true },
-    { hairstyle: 'parted', hair: '#a27754', shirt: '#d1c3a3', sleeve: '#e4d8bd', skin: '#b88e73', glasses: false },
-    { hairstyle: 'bun', hair: '#3c414b', shirt: '#9c5364', sleeve: '#bf7c89', skin: '#e1bf9c', glasses: true },
-    { hairstyle: 'crop', hair: '#443731', shirt: '#577e8c', sleeve: '#85a7ae', skin: '#c69c7e', glasses: false },
-] satisfies OfficeAppearance[];
+const HAIRSTYLES = ['parted', 'bun', 'bob', 'crop', 'wavy'] satisfies HairStyle[];
+const HAIR_COLORS = ['#343c48', '#654238', '#302f3a', '#9a9c9c', '#624c3c', '#a27754', '#3c414b', '#443731'];
+const SKIN_COLORS = ['#e5c8a5', '#ddbd9d', '#d4a581', '#c69c7e', '#b88e73', '#8f654f'];
+const SHIRTS = [
+    { shirt: '#627fa2', sleeve: '#8aa5c1' },
+    { shirt: '#a46b62', sleeve: '#c28b7d' },
+    { shirt: '#b39b5c', sleeve: '#d2bd80' },
+    { shirt: '#627d6e', sleeve: '#8ca58e' },
+    { shirt: '#8c719a', sleeve: '#af92b7' },
+    { shirt: '#d1c3a3', sleeve: '#e4d8bd' },
+    { shirt: '#9c5364', sleeve: '#bf7c89' },
+    { shirt: '#577e8c', sleeve: '#85a7ae' },
+];
+
+function officeAppearance(seed: number, officeIndex: number, seatIndex: number): OfficeAppearance {
+    const worker = officeIndex * 2 + seatIndex + 1;
+    const roll = (trait: number) => {
+        let value = seed ^ Math.imul(worker, 0x9e3779b1) ^ trait;
+        value = Math.imul(value ^ value >>> 16, 0x85ebca6b);
+        value = Math.imul(value ^ value >>> 13, 0xc2b2ae35);
+        return (value ^ value >>> 16) >>> 0;
+    };
+    return {
+        hairstyle: HAIRSTYLES[roll(1) % HAIRSTYLES.length],
+        hair: HAIR_COLORS[roll(2) % HAIR_COLORS.length],
+        ...SHIRTS[roll(3) % SHIRTS.length],
+        skin: SKIN_COLORS[roll(4) % SKIN_COLORS.length],
+        glasses: roll(5) % 2 === 0,
+    };
+}
 const HAIR_SHAPES: Record<HairStyle, Vector[]> = {
     parted: [[-15,-4],[-16,-11],[-10,-19],[1,-22],[12,-16],[16,-9],[5,-13],[-7,-5],[-10,4],[-14,1]],
     bun: [[-15,-4],[-16,-11],[-10,-19],[1,-22],[12,-16],[16,-9],[5,-13],[-7,-5],[-10,4],[-14,1]],
@@ -127,7 +147,7 @@ function typingWorker(ctx: RenderCtx, x: number, y: number, look: OfficeAppearan
     ctx.rect(x - 21, y - 39, 11, 37, '#556673');
     ctx.polygon([[x-13,y-42],[x+3,y-44],[x+10,y-30],[x+7,y-1],[x-13,y-1]], shirt);
     ctx.polygon([[x-12,y-39],[x-5,y-40],[x-3,y-1],[x-13,y-1]], sleeve);
-    ctx.polygon([[x-5,y-51],[x+6,y-51],[x+8,y-42],[x+1,y-38],[x-5,y-43]], '#b99a80');
+    ctx.polygon([[x-5,y-51],[x+6,y-51],[x+8,y-42],[x+1,y-38],[x-5,y-43]], skin);
     head(ctx, x, y - 58, 1, look.hair, look.hairstyle, look.glasses, skin);
     ctx.rect(x - 29, y, 74, 7, '#a7a18e');
     ctx.rod(x-3,y-34,x+6,y-14,8,sleeve);
@@ -215,9 +235,9 @@ export function drawBuilding(ctx: RenderCtx) {
         const x = office.x;
         ctx.rect(x - 110, 174, 220, 181, '#617983');
         ctx.rect(x - 105, 180, 210, 170, '#839895');
-        typingWorker(ctx, x - 65, 340, OFFICE_STAFF[officeIndex * 2 % OFFICE_STAFF.length]);
-        typingWorker(ctx, x + 32, 340, OFFICE_STAFF[(officeIndex * 2 + 1) % OFFICE_STAFF.length]);
-        ctx.rect(x - 105, 180, 210, 170, '#6d8b99a0');
+        typingWorker(ctx, x - 65, 340, officeAppearance(c.appearanceSeed, officeIndex, 0));
+        typingWorker(ctx, x + 32, 340, officeAppearance(c.appearanceSeed, officeIndex, 1));
+        ctx.rect(x - 105, 180, 210, 170, '#6d8b9970');
         ctx.rod(x, 175, x, 355, 5, '#849a9e');
         ctx.polygon([[x - 98, 184], [x - 75, 184], [x + 55, 347], [x + 32, 347]], '#edf4e719');
         if (office.life > 0) bubble(ctx, TYPING_SOUNDS[office.phrase], x + office.offset.x, 174 + office.offset.y, 156, false, Math.min(.78, office.life * 2), false);

@@ -1,5 +1,6 @@
 import { createGame, type Game, type GameState } from './game/game';
 import { LEVEL, FIXED_STEP } from './game/level';
+import { STAGE_TWO } from './game/stage2';
 import { STAGE_THREE, fanStrength } from './game/stage3';
 import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
@@ -187,6 +188,24 @@ function extinguisherSpray(): PreviewScene {
         [{ at: 0, label: 'Spray' }, { at: .16, label: 'Recoil' }, { at: .32, label: 'Plume ends' }, { at: .6, label: 'Landing' }], frames);
 }
 
+function officeTyping(): PreviewScene {
+    const game = createGame();
+    game.startStage(2);
+    const base = game.getSnapshot();
+    const state = { ...base, player: { ...base.player, x: STAGE_TWO.length } };
+    const effects = createEffects().snapshot();
+    return {
+        id: 'office-typing',
+        label: 'Office · Window typing',
+        duration: 1,
+        focusX: STAGE_TWO.offices[1],
+        markers: [{ at: 0, label: 'Ready' }, { at: .25, label: 'Hand raised' }, { at: .5, label: 'Key press' }],
+        sample(time) {
+            return { state: { ...state, time: Math.max(0, Math.min(1, time)) }, effects };
+        },
+    };
+}
+
 export const previewScenes: readonly PreviewScene[] = [
-    cleanerRecovery(), copierVolley(), fanRide(), headImpact(), extinguisherSpray(),
+    cleanerRecovery(), copierVolley(), fanRide(), headImpact(), extinguisherSpray(), officeTyping(),
 ];

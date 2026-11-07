@@ -42,6 +42,16 @@ function render(state, locale, width) {
     return { labels, svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="510" data-player-x="${state.player.x}" data-time="${state.time}" data-cam="${ctx.cam}"><defs>${defs}</defs>${shapes}</svg>` };
 }
 
+test('window workers keep their appearance while typing and vary with the stage seed', () => {
+    const game = createGame();
+    game.startStage(2);
+    const base = game.getSnapshot();
+    const first = { ...base, corridor: { ...base.corridor, appearanceSeed: 314159 } };
+    const second = { ...base, corridor: { ...base.corridor, appearanceSeed: 271828 } };
+    assert.equal(render(first, 'en', 1000).svg, render(first, 'en', 1000).svg);
+    assert.notEqual(render(first, 'en', 1000).svg, render(second, 'en', 1000).svg);
+});
+
 test('corridor and meeting render finite vector paths in both languages and narrow views', async () => {
     const game = createGame(); game.startStage(2);
     assert.ok(!render(game.getSnapshot(), 'en', 1000).labels.some(({ text }) => text === '↓ Enter'));
