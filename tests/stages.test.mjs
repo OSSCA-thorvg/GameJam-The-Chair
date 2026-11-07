@@ -8,6 +8,7 @@ const dt = 1 / 120;
 
 function drive(game, stop = state => state.mode !== 'play') {
     const seen = { cabinet: false, elevator: false, recovery: false, checkpoints: new Set() };
+    let liftReady = false;
     for (let i = 0; i < 120 * 60; i++) {
         const state = game.getSnapshot();
         const p = state.player;
@@ -24,6 +25,10 @@ function drive(game, stop = state => state.mode !== 'play') {
         } else {
             if (correction < -.4) keys.push('q');
             else if (correction > .4) keys.push('e');
+        }
+        if (p.x > 2520 && p.x < 2650 && !liftReady) {
+            liftReady = state.time % 8 > 7;
+            if (!liftReady) keys.splice(0, keys.length, 'brake');
         }
         game.setInput(...keys);
         if (state.ground && ((p.x > 460 && p.x < 670) || (p.x > 2160 && p.x < 2370))) game.jump();
@@ -133,4 +138,86 @@ test('each revolving-door collision costs 20 focus and repeated hits cause game 
     game.reset();
     assert.equal(game.getSnapshot().focus, 100);
     assert.equal(game.getSnapshot().doorHits, 0);
+});
+
+test('forward input alone keeps the opening chair pair rolling beyond its old blockage', () => {
+    const game = createGame();
+    game.startStage(2);
+    game.setInput('right');
+    let crossed = false;
+    for (let i = 0; i < 120 * 8; i++) {
+        game.step(dt);
+        game.drainEvents();
+        const state = game.getSnapshot();
+        if (state.player.x > 650) { crossed = true; break; }
+        assert.equal(state.mode, 'play');
+    }
+    assert.ok(crossed, 'pushing chairs must not pin the player around x485');
+    const state = game.getSnapshot();
+    assert.ok(state.furniture[0].x > 700);
+    assert.ok(state.furniture[1].x > state.furniture[0].x);
+});
+
+test('stationary and forward jumps can land safely in both starter practice areas', () => {
+    for (const stage of [1, 2]) {
+        for (const input of [[], ['right']]) {
+            const game = createGame();
+            game.startStage(stage);
+            for (let i = 0; i < 12; i++) game.step(dt);
+            game.setInput(...input);
+            game.jump();
+            let airborne = false;
+            let landed = false;
+            for (let i = 0; i < 180; i++) {
+                game.step(dt);
+                game.drainEvents();
+                const state = game.getSnapshot();
+                assert.equal(state.mode, 'play', `stage ${stage}, input ${input}`);
+                airborne ||= !state.ground;
+                if (airborne && state.ground) { landed = true; break; }
+            }
+            assert.ok(landed);
+            assert.ok(game.getSnapshot().tutorialAssist);
+        }
+    }
+});
+
+test('office bin retries restore a dry, focused chair at the safe approach flag', () => {
+    const game = createGame();
+    game.startStage(1);
+    game.setInput('right');
+    for (let i = 0; i < 120 * 20 && game.getSnapshot().mode === 'play'; i++) {
+        game.step(dt);
+        game.drainEvents();
+    }
+    const failed = game.getSnapshot();
+    assert.equal(failed.lossReason, 'bin');
+    assert.equal(failed.officeCheckpoint, true);
+    game.reset();
+    const retry = game.getSnapshot();
+    assert.equal(retry.player.x, 1400);
+    assert.equal(retry.focus, 100);
+    assert.equal(retry.soaked, false);
+    assert.equal(retry.cleaningSpilled, false);
+    assert.equal(retry.actualSpeed, 0);
+    game.startStage(1);
+    assert.equal(game.getSnapshot().officeCheckpoint, false);
+    assert.equal(game.getSnapshot().player.x, 100);
+});
+
+test('speed telemetry settles to zero against a stationary cabinet despite wheel effort', () => {
+    const game = createGame();
+    game.startStage(2);
+    drive(game, state => state.player.x > 2050);
+    game.setInput('right');
+    for (let i = 0; i < 120 * 8; i++) { game.step(dt); game.drainEvents(); }
+    const before = game.getSnapshot();
+    for (let i = 0; i < 120; i++) { game.step(dt); game.drainEvents(); }
+    const after = game.getSnapshot();
+    assert.equal(after.mode, 'play');
+    assert.ok(Math.abs(after.player.x - before.player.x) < .1);
+    assert.ok(after.player.vx > 10);
+    assert.ok(after.actualSpeed < .1);
+    game.pause();
+    assert.equal(game.getSnapshot().actualSpeed, 0);
 });

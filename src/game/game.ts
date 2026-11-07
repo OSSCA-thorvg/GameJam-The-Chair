@@ -1,10 +1,12 @@
-import { STAGE_TWO, createFurniture, elevatorAt, doorAt, type StageId } from './stage2';
+import { STAGE_TWO, createFurniture, elevatorAt, doorAt, chairFloorAt, type StageId } from './stage2';
 import { LEVEL, RULES, FIXED_STEP } from './level';
 import type { Point, Player, Snapshot, Person, Paper, Input, GameEvent, DeepReadonly } from './types';
 export function createGame(initialDeaths = 0) {
     const F = LEVEL.floor;
     let stage: StageId = 1;
     let checkpoint = 0;
+    let officeCheckpoint = false;
+    let actualSpeed = 0;
     let furniture = createFurniture();
     let elevator = elevatorAt(0);
     let LEN: number = LEVEL.length;
@@ -81,8 +83,9 @@ export function createGame(initialDeaths = 0) {
     }
     function reset() {
         build();
-        const spawn = stage === 2 ? STAGE_TWO.checkpoints[checkpoint] : { x: 100, y: F - 28 };
+        const spawn = stage === 2 ? STAGE_TWO.checkpoints[checkpoint] : { x: officeCheckpoint ? 1400 : 100, y: F - 28 };
         p = { ...spawn, vx: 0, vy: 0, a: 0, w: 0 };
+        actualSpeed = 0;
         keys.clear();
         ground = false;
         coyote = 0;
@@ -419,6 +422,9 @@ export function createGame(initialDeaths = 0) {
         }
         const tilt = (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0) + (was ? 0 : dir);
         p.w += tilt * (was ? 4.3 : 6.4) * dt;
+        if (p.x < 300) {
+            p.w += (-Math.sin(p.a) * 20 - p.w * 7) * dt;
+        }
         if (was && dir) {
             p.vx += dir * (slip ? 110 : 305) * dt;
         }
@@ -458,7 +464,10 @@ export function createGame(initialDeaths = 0) {
                 }
                 item.x += item.vx * dt;
                 item.vx *= Math.exp(-3 * dt);
-                item.x = clamp(item.x, item.kind === 'cabinet' ? 2050 : 280, item.kind === 'cabinet' ? 2295 : 600);
+                item.x = clamp(item.x, item.kind === 'cabinet' ? 2050 : 40, item.kind === 'cabinet' ? 2295 : LEN - 40);
+                if (item.kind === 'chair') {
+                    item.y = chairFloorAt(item.x);
+                }
             }
             for (let i = 0; i < furniture.length; i++) {
                 for (let j = i + 1; j < furniture.length; j++) {
@@ -555,6 +564,11 @@ export function createGame(initialDeaths = 0) {
             p.x = 40;
             p.vx = Math.max(0, p.vx);
         }
+        actualSpeed += (Math.abs(p.x - prev) / dt - actualSpeed) * (1 - Math.exp(-dt / .12));
+        if (stage === 1 && !officeCheckpoint && ground && p.x >= 1400 && p.x < bin.a - 70 && Math.abs(p.y - (F - 28)) < 20) {
+            officeCheckpoint = true;
+            events.push({ type: 'cue', id: 'checkpoint' });
+        }
         if (ground && dir && Math.abs(p.vx) > 95 && rollCooldown === 0) {
             events.push({ type: 'cue', id: 'rolling' });
             rollCooldown = 9;
@@ -621,9 +635,12 @@ export function createGame(initialDeaths = 0) {
     }
     build();
     function getSnapshot() {
+        const predictedAngle = Math.atan2(Math.sin(p.a), Math.cos(p.a)) + p.w * .2;
+        const balanceHint: 'q' | 'e' | null = mode === 'play' && Math.abs(predictedAngle) > .18 ? (predictedAngle > 0 ? 'q' : 'e') : null;
         // Detached data: even untyped renderers cannot mutate the live simulation.
         return structuredClone({
             game: stage === 1 ? 'office-stage-one' : 'building-stage-two',
+            officeCheckpoint, actualSpeed: mode === 'play' ? actualSpeed : 0, tutorialAssist: mode === 'play' && p.x < 300, balanceHint,
             stage, checkpoint, furniture, elevator, door: doorAt(t), level: { length: LEN, goal: GOAL },
             mode, focus, focusClock, focusLossTime, focusNotice, lossReason,
             player: p, ground, slip, dirty, inBin, binAge, time, deaths, bursts, paperHits, binFalls,
@@ -663,6 +680,7 @@ export function createGame(initialDeaths = 0) {
         startStage(id: StageId) {
             stage = id;
             checkpoint = 0;
+            officeCheckpoint = false;
             LEN = stage === 1 ? LEVEL.length : STAGE_TWO.length;
             GOAL = stage === 1 ? LEVEL.goal : STAGE_TWO.goal;
             reset();

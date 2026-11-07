@@ -22,3 +22,14 @@ export function doorAt(time: number) {
     const angle = time * Math.PI * 2 / STAGE_TWO.door.period;
     return { ...STAGE_TWO.door, angle, open: Math.abs(Math.cos(angle)) < STAGE_TWO.door.clearance };
 }
+
+export function chairFloorAt(x: number) {
+    if (x <= 1020) return 420;
+    if (x < 1400) return 420 + (x - 1020) * 80 / 380;
+    if (x <= 1580) return 500;
+    if (x < 1900) return 500 - (x - 1580) * 80 / 320;
+    if (x < 2350) return 420;
+    if (x <= 2850) return 500;
+    if (x < 3400) return 500 - (x - 2850) * 190 / 550;
+    return 310;
+}
