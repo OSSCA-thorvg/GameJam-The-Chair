@@ -6,6 +6,7 @@ import type { EffectsState } from './effects';
 import { createRenderCtx } from './context';
 import { drawWorld } from './scene/world';
 import { drawBuilding } from './scene/building';
+import { drawRooftop } from './scene/rooftop';
 import { paint } from './paint';
 
 export function createRenderer(root: HTMLElement) {
@@ -91,7 +92,9 @@ function setup(
         lastTime = t;
         lg.setTransform(ctx.dpr, 0, 0, ctx.dpr, 0, 0);
         lg.clearRect(0, 0, ctx.W, ctx.H);
-        if (next.stage === 2) {
+        if (next.stage === 3) {
+            drawRooftop(ctx);
+        } else if (next.stage === 2) {
             drawBuilding(ctx);
         } else {
             drawWorld(ctx);

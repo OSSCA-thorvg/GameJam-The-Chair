@@ -273,6 +273,36 @@ test('starter jump completes one contextual lesson and emits its reward once', (
     assert.equal(game.getSnapshot().lessons.braked, true);
 });
 
+test('spray on stage three gives upward recoil, consumes ammo, and reloads on ground', () => {
+    const game = createGame();
+    game.startStage(3);
+    for (let i = 0; i < 60; i++) game.step(dt);
+    const before = game.getSnapshot();
+    assert.equal(before.spray.ammo, 4);
+    game.spray();
+    game.step(dt);
+    const afterBurst = game.getSnapshot();
+    assert.equal(afterBurst.spray.ammo, 3);
+    assert.ok(afterBurst.player.vy < before.player.vy, 'recoil must push the chair upward');
+    for (let i = 0; i < 200; i++) game.step(dt);
+    assert.ok(game.getSnapshot().spray.ammo > 3, 'ammo regenerates while grounded');
+});
+
+test('fire extinguisher refuses to spray with empty tank', () => {
+    const game = createGame();
+    game.startStage(3);
+    for (let i = 0; i < 60; i++) game.step(dt);
+    for (let shot = 0; shot < 4; shot++) {
+        game.spray();
+        for (let i = 0; i < 48; i++) game.step(dt);
+    }
+    assert.equal(game.getSnapshot().spray.ammo, 0);
+    game.drainEvents();
+    game.spray();
+    const events = game.drainEvents();
+    assert.ok(events.some(e => e.type === 'cue' && e.id === 'spray-empty'));
+});
+
 test('copier previews its shot and its first paper batch is safe', () => {
     const game = createGame();
     game.startStage(1);

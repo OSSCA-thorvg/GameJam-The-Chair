@@ -12,7 +12,13 @@ export type GameCore = {
     GOAL: number;
     checkpoint: number;
     officeCheckpoint: boolean;
-    lessons: { moved: boolean; jumped: boolean; braked: boolean; binJumped: boolean };
+    lessons: { moved: boolean; jumped: boolean; braked: boolean; binJumped: boolean; sprayed: boolean };
+    sprayAmmo: number;
+    sprayCooldown: number;
+    sprayCharge: number;
+    sprayBurst: number;
+    sprayDir: { x: number; y: number };
+    onFan: boolean;
     deaths: number;
 
     mode: string;
@@ -81,7 +87,13 @@ export function createCore(initialDeaths: number): GameCore {
         GOAL: LEVEL.goal,
         checkpoint: 0,
         officeCheckpoint: false,
-        lessons: { moved: false, jumped: false, braked: false, binJumped: false },
+        lessons: { moved: false, jumped: false, braked: false, binJumped: false, sprayed: false },
+        sprayAmmo: 4,
+        sprayCooldown: 0,
+        sprayCharge: 0,
+        sprayBurst: 0,
+        sprayDir: { x: 0, y: 1 },
+        onFan: false,
         deaths: initialDeaths,
 
         mode: 'intro',

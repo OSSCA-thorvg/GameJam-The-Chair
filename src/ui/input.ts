@@ -42,10 +42,12 @@ export function bindInput(root: HTMLElement, game: Game) {
     button('[data-start]', () => {
         const state = game.getSnapshot();
         if (state.mode === 'won' && state.stage === 1) game.startStage(2);
+        else if (state.mode === 'won' && state.stage === 2) game.startStage(3);
         else game.reset();
     });
     button('[data-stage="1"]', () => game.startStage(1));
     button('[data-stage="2"]', () => game.startStage(2));
+    button('[data-stage="3"]', () => game.startStage(3));
     button('[data-reset]', game.restart);
     button('[data-pause]', togglePause);
     button('[data-resume]', togglePause);
@@ -80,10 +82,11 @@ export function bindInput(root: HTMLElement, game: Game) {
         }
         if (state.mode !== 'play') return;
         const k = km[e.key];
-        if (k || e.code === 'Space' || e.key === 'ArrowUp') {
+        if (k || e.code === 'Space' || e.key === 'ArrowUp' || e.key === 'f' || e.key === 'F') {
             e.preventDefault();
             if (k) game.press(k);
             if (!e.repeat && (e.code === 'Space' || e.key === 'ArrowUp')) game.jump();
+            if (!e.repeat && (e.key === 'f' || e.key === 'F')) game.spray();
         }
     }, options);
     window.addEventListener('keyup', e => {
@@ -105,6 +108,7 @@ export function bindInput(root: HTMLElement, game: Game) {
         for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, () => game.release(key), options);
     });
     root.querySelector<HTMLElement>('[data-jump]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.jump(); }, options);
+    root.querySelector<HTMLElement>('[data-spray]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.spray(); }, options);
     const observer = new MutationObserver(() => {
         if ((game.getSnapshot().mode === 'pause') !== menuOpen || (!!panel && !panel.hidden) !== panelOpen) syncMenu();
     });
