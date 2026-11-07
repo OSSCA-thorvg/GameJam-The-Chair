@@ -170,6 +170,133 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         rod(x + 70, F - 125, x + 70, F - 105, 5, C.steel);
         rect(x + 40, F - 112, 63, 5, '#526274');
     }
+    const cleanerMotionStart = 1.55;
+    const cleanerMotionEnd = 3.55;
+    const bucketGripTime = 2.4;
+    const bucketUprightTime = 2.9;
+    function easeBetween(value: number, start: number, end: number) {
+        const progress = clamp((value - start) / (end - start), 0, 1);
+        return progress * progress * (3 - 2 * progress);
+    }
+    function bucketAngle() {
+        const age = state.bucketAge;
+        const fall = clamp(age / .42, 0, 1);
+        const lift = easeBetween(age, bucketGripTime, bucketUprightTime);
+        return cleaning.splashDir * fall * (1 - lift) * 1.25;
+    }
+    function cleanerHead(x = 0, y = 0, facing = 1) {
+        const headPart = (points: Vector[], fill: string) =>
+            polygon(points.map(([px, py]) => [x + facing * px, y + py]), fill);
+        headPart([[-10, -105], [1, -97], [11, -104], [15, -97], [6, -91], [0, -97], [-5, -89], [-13, -98]], '#a5b3b9');
+        headPart([[-8, -115], [7, -115], [9, -103], [0, -98], [-8, -103]], '#bb9b7c');
+        headPart([[-13, -144], [2, -149], [17, -140], [20, -128], [24, -123], [18, -121], [14, -109], [-5, -111], [-13, -121]], '#e5c6a2');
+        headPart([[-18, -138], [-14, -151], [-5, -150], [5, -157], [18, -145], [11, -141], [1, -145], [-6, -135], [-11, -139], [-13, -124], [-18, -129]], '#424d5c');
+        headPart([[13, -131], [16, -131], [16, -127], [13, -127]], '#4b5059');
+    }
+    function cleanerMop() {
+        polygon([[18, -86], [22, -88], [79, -4], [74, -2]], '#808c7b');
+        polygon([[70, -8], [79, -11], [91, -3], [87, 1], [64, 1]], '#b1ad8e');
+    }
+    function recoveringCleaner(n: DeepReadonly<Person>) {
+        const age = state.bucketAge;
+        const side = cleaning.splashDir;
+        const start = side < 0 ? cleanerMotionStart : 1.78;
+        const end = side < 0 ? cleanerMotionEnd : 3.4;
+        const returnTime = bucketUprightTime;
+        const bend = easeBetween(age, 2.05, bucketGripTime) *
+            (1 - easeBetween(age, bucketGripTime, bucketUprightTime));
+        const lift = easeBetween(age, bucketGripTime, bucketUprightTime);
+        // Split the longer crossing into two footfalls, alternating which foot moves.
+        const crossing = side < 0;
+        const frontStep = crossing
+            ? (easeBetween(age, start, 1.83) + easeBetween(age, 1.99, 2.19)) / 2
+            : easeBetween(age, start, 2.16);
+        const rearStep = crossing
+            ? (easeBetween(age, 1.74, 2.02) + easeBetween(age, 2.11, 2.32)) / 2
+            : easeBetween(age, start + .19, 2.32);
+        const frontBack = crossing
+            ? (easeBetween(age, 3.02, 3.23) + easeBetween(age, 3.34, end)) / 2
+            : easeBetween(age, returnTime + .09, end);
+        const rearBack = crossing
+            ? (easeBetween(age, returnTime, 3.09) + easeBetween(age, 3.21, 3.44)) / 2
+            : easeBetween(age, returnTime, end - .09);
+        const frontStance = frontStep * (1 - frontBack);
+        const rearStance = rearStep * (1 - rearBack);
+        const stance = (frontStance + rearStance) / 2;
+
+        // Approach from the side of the fallen handle so the arm stays within reach.
+        const footY = F - 17;
+        const distance = cleaning.x + (side > 0 ? 91 : -80) - n.x;
+        const step = distance * stance;
+        const hipX = n.x + step;
+        const hipY = footY - 42 + 11 * bend;
+        const shoulderX = hipX - side * (26 * bend + 42 * lift * stance);
+        const shoulderY = hipY - 46 + 8 * bend;
+        const frontFootX = n.x - 13 + (distance - 14) * frontStance;
+        const rearFootX = n.x + 13 + (distance + 11) * rearStance;
+        const footfall = crossing ? TAU : Math.PI;
+        const footLift = (out: number, back: number) =>
+            5 * (Math.abs(Math.sin(footfall * out)) + Math.abs(Math.sin(footfall * back)));
+        const frontFootY = footY - 3 - footLift(frontStep, frontBack);
+        const rearFootY = footY - 3 - footLift(rearStep, rearBack);
+        const frontKneeX = frontFootX + 4 - 3 * bend;
+        const rearKneeX = rearFootX - 4 - 5 * bend;
+        const kneeY = footY - 23 + 5 * bend;
+
+        ellipse(hipX, footY, 27 + 7 * stance, 2.5, '#515c6d62');
+        ox = n.x;
+        oy = footY;
+        localScale = .85;
+        cleanerMop();
+        ox = oy = 0;
+        localScale = 1;
+
+        rod(hipX + 7, hipY, rearKneeX, kneeY, 10, '#485867');
+        rod(rearKneeX, kneeY, rearFootX, rearFootY, 8, '#485867');
+        ellipse(rearKneeX, kneeY, 4, 4, '#485867');
+        polygon([[rearFootX - 4, rearFootY - 3], [rearFootX + 4, rearFootY - 3],
+            [rearFootX + 9, rearFootY + 2], [rearFootX - 7, rearFootY + 2]], '#3c4753');
+        rod(hipX - 7, hipY, frontKneeX, kneeY, 11, '#536373');
+        rod(frontKneeX, kneeY, frontFootX, frontFootY, 9, '#536373');
+        ellipse(frontKneeX, kneeY, 4.5, 4.5, '#536373');
+        polygon([[frontFootX - 4, frontFootY - 3], [frontFootX + 4, frontFootY - 3],
+            [frontFootX + 5, frontFootY + 2], [frontFootX - 10, frontFootY + 2]], '#3c4753');
+
+        polygon([[shoulderX - 13, shoulderY], [shoulderX + 11, shoulderY - 4],
+            [hipX + 12, hipY + 3], [hipX - 12, hipY + 5],
+            [shoulderX - 16, shoulderY + 12]], '#79909f');
+        polygon([[shoulderX - 13, shoulderY], [shoulderX - 6, shoulderY - 1],
+            [hipX - 5, hipY + 4], [hipX - 12, hipY + 5],
+            [shoulderX - 16, shoulderY + 12]], '#899eaa');
+
+        const angle = bucketAngle();
+        const handleX = side * (-18 + 36 * lift);
+        const gripX = cleaning.x + handleX * Math.cos(angle) + 66 * Math.sin(angle);
+        const gripY = F - 3 + handleX * Math.sin(angle) - 66 * Math.cos(angle);
+        const reach = easeBetween(age, 2.13, bucketGripTime) * (1 - easeBetween(age, bucketUprightTime, 3.07));
+        const restX = n.x + 32 + step;
+        const restY = footY - 55;
+        const handX = restX + (gripX - restX) * reach;
+        const handY = restY + (gripY - restY) * reach;
+        const sleeveX = shoulderX + 7 - (7 + 5 * side) * reach;
+        const sleeveY = shoulderY + 9;
+        const elbowX = sleeveX + (handX - sleeveX) * .46 + 7 * side * reach;
+        const elbowY = sleeveY + (handY - sleeveY) * .53 + 6;
+        rod(sleeveX, sleeveY, elbowX, elbowY, 9, '#79909f');
+        ellipse(elbowX, elbowY, 5, 4, '#a5b3b9');
+        rod(elbowX, elbowY, handX, handY, 6, '#e0be9c');
+        ellipse(handX, handY, 4, 3.4, '#e0be9c');
+
+        const turnBack = side < 0 ? 1.99 : 3.16;
+        const turn = easeBetween(age, start, start + .17) *
+            (1 - easeBetween(age, turnBack, turnBack + .22));
+        ox = shoulderX - 8 * side * stance;
+        oy = shoulderY + 87;
+        localScale = .85;
+        cleanerHead(0, 0, 1 - 2 * turn);
+        ox = oy = 0;
+        localScale = 1;
+    }
     function person(n: DeepReadonly<Person>) {
         ox = n.x;
         oy = F - 17;
@@ -201,13 +328,8 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
                 polygon([[7, -8], [18, -8], [26, -3], [26, -1], [8, -1]], '#3c4753');
                 polygon([[-17, -99], [-2, -107], [17, -102], [24, -86], [14, -78], [16, -47], [-17, -45], [-22, -78], [-27, -85]], '#79909f');
                 polygon([[-17, -99], [-8, -104], [-7, -48], [-17, -45], [-22, -78], [-27, -85]], '#899eaa');
-                polygon([[-10, -105], [1, -97], [11, -104], [15, -97], [6, -91], [0, -97], [-5, -89], [-13, -98]], '#a5b3b9');
-                polygon([[-8, -115], [7, -115], [9, -103], [0, -98], [-8, -103]], '#bb9b7c');
-                polygon([[-13, -144], [2, -149], [17, -140], [20, -128], [24, -123], [18, -121], [14, -109], [-5, -111], [-13, -121]], '#e5c6a2');
-                polygon([[-18, -138], [-14, -151], [-5, -150], [5, -157], [18, -145], [11, -141], [1, -145], [-6, -135], [-11, -139], [-13, -124], [-18, -129]], '#424d5c');
-                polygon([[13, -131], [16, -131], [16, -127], [13, -127]], '#4b5059');
-                polygon([[18, -86], [22, -88], [79, -4], [74, -2]], '#808c7b');
-                polygon([[70, -8], [79, -11], [91, -3], [87, 1], [64, 1]], '#b1ad8e');
+                cleanerHead();
+                cleanerMop();
                 polygon([[17, -81], [26, -66], [38, -70], [42, -64], [26, -55], [19, -57], [9, -73]], '#e0be9c');
                 polygon([[10, -78], [20, -85], [24, -78], [14, -70]], '#a9b8c0');
                 break;
@@ -271,11 +393,14 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
             }
         }
         // The wheeled bucket tips as the chair approaches.
-        const tip = cleaning.spilled ? Math.min(1, cleaning.age / .42) : 0;
-        ellipse(cleaning.x - tip * 20, F + 1, 28 + tip * 5, 3, '#515c6d48');
+        const { bucketAge } = state;
+        const angle = bucketAngle();
+        const tip = Math.abs(angle) / 1.25;
+        const side = cleaning.splashDir;
+        ellipse(cleaning.x + side * tip * 20, F + 1, 28 + tip * 5, 3, '#515c6d48');
         ox = cleaning.x;
         oy = F - 3;
-        rotation = -tip * 1.25;
+        rotation = angle;
         polygon([[-23, -50], [20, -50], [15, -7], [-18, -7]], '#c0a775');
         ellipse(-2, -50, 22, 6, '#647260');
         rod(-24, -46, -19, -66, 3, '#7d8790');
@@ -286,12 +411,11 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
         ellipse(15, 2, 5, 5, '#555f66');
         rect(-11, -36, 19, 13, '#eee1b5');
         ox = oy = rotation = 0;
-        if (cleaning.spilled && cleaning.age < 1.1) {
-            const u = clamp(cleaning.age / 1.1, 0, 1);
+        if (bucketAge < 1.1) {
+            const u = clamp(bucketAge / 1.1, 0, 1);
             const reach = Math.sin(Math.min(1, u * 2) * Math.PI / 2);
             const fade = Math.sin(u * Math.PI);
-            const side = cleaning.splashDir;
-            ox = cleaning.x - 10;
+            ox = cleaning.x + side * 10;
             oy = F - 24;
             // Two overlapping curved sheets retain the muddy, hand-cut palette.
             for (let i = 0; i < 2; i++) {
@@ -623,12 +747,25 @@ function setup(root: HTMLElement, base: HTMLCanvasElement, cn: HTMLCanvasElement
             desk(x);
             plant(x + (x === 110 ? 295 : 205));
         }
+        let cleaner: DeepReadonly<Person> | undefined;
         for (const n of people) {
             if (n.x > left && n.x < right) {
-                person(n);
+                const movingCleaner = n.id === 'cleaner' && cleaning.spilled && (
+                    cleaning.splashDir < 0
+                        ? state.bucketAge > cleanerMotionStart && state.bucketAge < cleanerMotionEnd
+                        : state.bucketAge > 1.78 && state.bucketAge < 3.4
+                );
+                if (movingCleaner) {
+                    cleaner = n;
+                } else {
+                    person(n);
+                }
             }
         }
         cleaningDraw();
+        if (cleaner) {
+            recoveringCleaner(cleaner);
+        }
         const x = copier.x;
         ellipse(x + 3, F - 20, 61, 4.2, '#515c6d56');
         rect(x - 56, F - 108, 112, 88, '#c6c9bf');
