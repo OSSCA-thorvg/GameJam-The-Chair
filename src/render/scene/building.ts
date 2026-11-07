@@ -27,15 +27,48 @@ function bubble(ctx: RenderCtx, text: Message, x: number, y: number, width: numb
 }
 type WorkerRole = 'facilitator' | 'jacket' | 'vest';
 
-function head(ctx: RenderCtx, x: number, y: number, facing: number, hair: string, tied = false) {
+type HairStyle = 'parted' | 'bun' | 'bob' | 'crop' | 'wavy';
+type OfficeAppearance = {
+    hairstyle: HairStyle;
+    hair: string;
+    shirt: string;
+    sleeve: string;
+    skin: string;
+    glasses: boolean;
+};
+const OFFICE_STAFF = [
+    { hairstyle: 'parted', hair: '#343c48', shirt: '#627fa2', sleeve: '#8aa5c1', skin: '#ddbd9d', glasses: true },
+    { hairstyle: 'bun', hair: '#654238', shirt: '#a46b62', sleeve: '#c28b7d', skin: '#d4a581', glasses: false },
+    { hairstyle: 'bob', hair: '#302f3a', shirt: '#b39b5c', sleeve: '#d2bd80', skin: '#e5c8a5', glasses: false },
+    { hairstyle: 'crop', hair: '#9a9c9c', shirt: '#627d6e', sleeve: '#8ca58e', skin: '#bd9479', glasses: true },
+    { hairstyle: 'wavy', hair: '#624c3c', shirt: '#8c719a', sleeve: '#af92b7', skin: '#d7b292', glasses: true },
+    { hairstyle: 'parted', hair: '#a27754', shirt: '#d1c3a3', sleeve: '#e4d8bd', skin: '#b88e73', glasses: false },
+    { hairstyle: 'bun', hair: '#3c414b', shirt: '#9c5364', sleeve: '#bf7c89', skin: '#e1bf9c', glasses: true },
+    { hairstyle: 'crop', hair: '#443731', shirt: '#577e8c', sleeve: '#85a7ae', skin: '#c69c7e', glasses: false },
+] satisfies OfficeAppearance[];
+const HAIR_SHAPES: Record<HairStyle, Vector[]> = {
+    parted: [[-15,-4],[-16,-11],[-10,-19],[1,-22],[12,-16],[16,-9],[5,-13],[-7,-5],[-10,4],[-14,1]],
+    bun: [[-15,-4],[-16,-11],[-10,-19],[1,-22],[12,-16],[16,-9],[5,-13],[-7,-5],[-10,4],[-14,1]],
+    bob: [[-16,15],[-18,-6],[-13,-19],[0,-22],[12,-17],[17,-7],[8,-10],[-3,-12],[-6,4],[-6,17]],
+    crop: [[-14,1],[-15,-10],[-9,-17],[5,-18],[12,-13],[14,-8],[4,-9],[-8,-7],[-10,3]],
+    wavy: [[-16,1],[-18,-9],[-13,-18],[-6,-16],[0,-23],[6,-18],[13,-19],[17,-9],[7,-12],[3,-8],[-3,-12],[-8,-3],[-10,5]],
+};
+
+function head(ctx: RenderCtx, x: number, y: number, facing: number, hair: string, hairstyle: HairStyle = 'parted', glasses = false, skin = '#ddbd9d') {
     const shape = (points: Vector[], color: string) =>
         ctx.polygon(points.map(([px, py]) => [x + facing * px, y + py]), color);
-    if (tied) ctx.ellipse(x - facing * 13, y + 6, 8, 9, hair);
+    if (hairstyle === 'bun') ctx.ellipse(x - facing * 13, y + 6, 8, 9, hair);
+    if (hairstyle === 'bob') shape([[-17,-10],[-8,-13],[-4,16],[-16,17]], hair);
     shape([[-11, -13], [6, -16], [12, -8], [14, -1], [17, 1], [13, 3],
-        [11, 11], [0, 15], [-10, 10], [-13, 1]], '#ddbd9d');
-    shape([[-15, -4], [-16, -11], [-10, -19], [1, -22], [12, -16],
-        [16, -9], [5, -13], [-7, -5], [-10, 4], [-14, 1]], hair);
+        [11, 11], [0, 15], [-10, 10], [-13, 1]], skin);
+    shape(HAIR_SHAPES[hairstyle], hair);
     shape([[7, -2], [11, -2], [11, 0], [7, 0]], '#4c4951');
+    if (glasses) {
+        shape([[3,-6],[14,-5],[14,3],[3,3]], '#bfd9da70');
+        for (const [ax, ay, bx, by] of [[-8,-5,3,-4],[3,-6,14,-5],[14,-5,14,3],[14,3,3,3],[3,3,3,-6]]) {
+            ctx.rod(x + facing * ax, y + ay, x + facing * bx, y + by, 1.7, '#374958');
+        }
+    }
 }
 
 function worker(ctx: RenderCtx, x: number, y: number, role: WorkerRole, facing = 1, palm?: Vector) {
@@ -57,7 +90,7 @@ function worker(ctx: RenderCtx, x: number, y: number, role: WorkerRole, facing =
     shape([[-17,-84],[-8,-90],[-5,hem],[-17,hem],[-15,-63],[-23,-68]], light);
     shape([[-9,-89],[11,-89],[2,-67]], '#e8e3d3');
     shape([[-6,-98],[7,-98],[9,-89],[1,-84],[-6,-90]], '#b99a80');
-    head(ctx, x, y - 105, facing, hair, facilitator);
+    head(ctx, x, y - 105, facing, hair, facilitator ? 'bun' : 'parted');
 
     if (facilitator) {
         shape([[-13,-63],[12,-65],[16,-42],[-9,-39]], '#b1a17d');
@@ -88,19 +121,18 @@ function worker(ctx: RenderCtx, x: number, y: number, role: WorkerRole, facing =
     }
 }
 
-function typingWorker(ctx: RenderCtx, x: number, y: number, tied: boolean) {
-    const shirt = tied ? '#8d746f' : '#728b9a';
-    const sleeve = tied ? '#a38a82' : '#8ca1ad';
-    const tap = Math.sin(ctx.t * 16 + (tied ? 1.7 : 0)) * 1.4;
+function typingWorker(ctx: RenderCtx, x: number, y: number, look: OfficeAppearance) {
+    const { shirt, sleeve, skin } = look;
+    const tap = Math.sin(ctx.t * 16 + x * .07) * 1.4;
     ctx.rect(x - 21, y - 39, 11, 37, '#556673');
     ctx.polygon([[x-13,y-42],[x+3,y-44],[x+10,y-30],[x+7,y-1],[x-13,y-1]], shirt);
     ctx.polygon([[x-12,y-39],[x-5,y-40],[x-3,y-1],[x-13,y-1]], sleeve);
     ctx.polygon([[x-5,y-51],[x+6,y-51],[x+8,y-42],[x+1,y-38],[x-5,y-43]], '#b99a80');
-    head(ctx, x, y - 58, 1, tied ? '#4f414d' : '#424b5a', tied);
+    head(ctx, x, y - 58, 1, look.hair, look.hairstyle, look.glasses, skin);
     ctx.rect(x - 29, y, 74, 7, '#a7a18e');
     ctx.rod(x-3,y-34,x+6,y-14,8,sleeve);
-    ctx.rod(x+6,y-14,x+24,y-5+tap,5,'#ddbd9d');
-    ctx.ellipse(x+26,y-4+tap,4,2.5,'#ddbd9d');
+    ctx.rod(x+6,y-14,x+24,y-5+tap,5,skin);
+    ctx.ellipse(x+26,y-4+tap,4,2.5,skin);
     ctx.rect(x + 17, y - 3, 17, 3, '#455665');
     ctx.polygon([[x+30,y-35],[x+46,y-36],[x+44,y-14],[x+28,y-13]], '#526674');
     ctx.rod(x+36,y-14,x+36,y-3,3,'#526674');
@@ -179,12 +211,12 @@ export function drawBuilding(ctx: RenderCtx) {
     ctx.rod(cam, 422, cam + VW, 422, 4, '#586f75');
     for (let x = Math.floor(cam / 120) * 120; x < cam + VW; x += 120) ctx.rod(x, 428, x + 100, 520, 1, '#a7b2aa');
     if (c.room.kind === 'meeting') { room(ctx); return; }
-    for (const office of c.offices) {
+    for (const [officeIndex, office] of c.offices.entries()) {
         const x = office.x;
         ctx.rect(x - 110, 174, 220, 181, '#617983');
         ctx.rect(x - 105, 180, 210, 170, '#839895');
-        typingWorker(ctx, x - 65, 269, false);
-        typingWorker(ctx, x + 32, 269, true);
+        typingWorker(ctx, x - 65, 340, OFFICE_STAFF[officeIndex * 2 % OFFICE_STAFF.length]);
+        typingWorker(ctx, x + 32, 340, OFFICE_STAFF[(officeIndex * 2 + 1) % OFFICE_STAFF.length]);
         ctx.rect(x - 105, 180, 210, 170, '#6d8b99a0');
         ctx.rod(x, 175, x, 355, 5, '#849a9e');
         ctx.polygon([[x - 98, 184], [x - 75, 184], [x + 55, 347], [x + 32, 347]], '#edf4e719');
