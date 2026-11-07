@@ -43,7 +43,7 @@ export function createHud(root: HTMLElement) {
         hidden('[data-pause-menu]', !paused);
         q('[data-pause]')?.setAttribute('aria-expanded', String(paused));
         hidden('[data-stage-label]', !active || state.time > 2.2);
-        text('[data-stage-label]', state.stage === 1 ? '01 사무실' : state.stage === 2 ? '02 건물 내부' : '03 기계실·옥상');
+        text('[data-stage-label]', state.stage === 1 ? '01 사무실' : state.stage === 2 ? '02 건물 내부' : '03 Rooftop · 기계실·옥상');
         hidden('[data-focus-intro]', !active || !focusIntroduced || state.time > introduceUntil);
         style('[data-focus-fill]', 'width', focus + '%');
         style('[data-focus-trail]', 'width', focus + '%');
