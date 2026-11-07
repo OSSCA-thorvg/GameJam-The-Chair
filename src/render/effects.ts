@@ -35,6 +35,8 @@ export function createEffects() {
     let paperFace = 0;
     let glare = 0;
     let copierFlash = 0;
+    let practiceBurst = 0;
+    let saveFlash = 0;
     function receive(event: GameEvent) {
         if (event.type === 'reset') {
             specks = [];
@@ -43,11 +45,17 @@ export function createEffects() {
             paperFace = 0;
             glare = 0;
             copierFlash = 0;
+            practiceBurst = 0;
+            saveFlash = 0;
         }
         if (event.type === 'volley') {
             copierFlash = EFFECT_STYLE.copierFlashDuration;
         }
+        if (event.type === 'cue' && event.id === 'practice-cleared') practiceBurst = 1.3;
+        if (event.type === 'cue' && event.id === 'checkpoint') saveFlash = 1.5;
         if (event.type === 'tick') {
+            practiceBurst = Math.max(0, practiceBurst - event.dt);
+            saveFlash = Math.max(0, saveFlash - event.dt);
             copierFlash = Math.max(0, copierFlash - event.dt);
             paperFace = Math.max(0, paperFace - event.dt);
             glare = Math.max(0, glare - event.dt);
@@ -103,6 +111,6 @@ export function createEffects() {
             specks.push({ x: event.x, y: F - 2, vx: event.vx, vy: -45, a: 0, life: .35, color: EFFECT_STYLE.speckColor });
         }
     }
-    return { receive, snapshot: () => ({ specks, waterDrops, waterRipples, paperFace, glare, copierFlash }) };
+    return { receive, snapshot: () => ({ specks, waterDrops, waterRipples, paperFace, glare, copierFlash, practiceBurst, saveFlash }) };
 }
 export type EffectsState = ReturnType<ReturnType<typeof createEffects>['snapshot']>;

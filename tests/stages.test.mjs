@@ -250,3 +250,43 @@ test('jumping across the office flag still saves the safe retry location', () =>
     game.reset();
     assert.equal(game.getSnapshot().player.x, 1400);
 });
+
+test('starter jump completes one contextual lesson and emits its reward once', () => {
+    const game = createGame();
+    game.startStage(1);
+    let rewards = 0;
+    for (let jump = 0; jump < 2; jump++) {
+        for (let i = 0; i < 12; i++) game.step(dt);
+        game.jump();
+        for (let i = 0; i < 180; i++) {
+            game.step(dt);
+            rewards += game.drainEvents().filter(e => e.type === 'cue' && e.id === 'practice-cleared').length;
+        }
+    }
+    assert.equal(game.getSnapshot().lessons.jumped, true);
+    assert.equal(rewards, 1);
+    game.setInput('right');
+    for (let i = 0; i < 100; i++) game.step(dt);
+    assert.equal(game.getSnapshot().lessons.moved, true);
+    game.setInput('brake');
+    for (let i = 0; i < 100; i++) game.step(dt);
+    assert.equal(game.getSnapshot().lessons.braked, true);
+});
+
+test('copier previews its shot and its first paper batch is safe', () => {
+    const game = createGame();
+    game.startStage(1);
+    game.setInput('right');
+    for (let i = 0; i < 1000 && game.getSnapshot().copier.burst === 0; i++) game.step(dt);
+    let state = game.getSnapshot();
+    assert.equal(state.copier.burst, 3);
+    assert.equal(state.papers.length, 0);
+    for (let i = 0; i < 60; i++) game.step(dt);
+    assert.equal(game.getSnapshot().papers.length, 0, 'rollers precede the first shot');
+    for (let i = 0; i < 60 && game.getSnapshot().bursts === 0; i++) game.step(dt);
+    state = game.getSnapshot();
+    assert.equal(state.bursts, 1);
+    assert.ok(state.papers.every(paper => paper.safe));
+    for (let i = 0; i < 60 && game.getSnapshot().bursts < 2; i++) game.step(dt);
+    assert.ok(game.getSnapshot().papers.some(paper => !paper.safe), 'later shots retain the hazard');
+});

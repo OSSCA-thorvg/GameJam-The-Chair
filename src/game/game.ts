@@ -54,6 +54,7 @@ export function createGame(initialDeaths = 0) {
     let people: Person[] = [];
     let solids: {
         p: Point[];
+        practice?: true;
     }[] = [];
     let soaked = false;
     let lightPenaltyRemaining = 0;
@@ -510,6 +511,16 @@ export function createGame(initialDeaths = 0) {
                     events.push({ type: 'cue', id: 'checkpoint' });
                 }
             }
+        }
+        solids = solids.filter(ob => !ob.practice);
+        if (!lessons.jumped) {
+            const pile = LEVEL.practicePaper;
+            solids.push({ p: [
+                { x: pile.x - pile.width / 2, y: F },
+                { x: pile.x - 3, y: F - pile.height },
+                { x: pile.x + 3, y: F - pile.height },
+                { x: pile.x + pile.width / 2, y: F }
+            ], practice: true });
         }
         ground = false;
         let c = Math.cos(p.a);
