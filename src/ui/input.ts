@@ -51,7 +51,6 @@ export function bindInput(root: HTMLElement, game: Game) {
         });
     }
     button('[data-reset]', game.restart);
-    button('[data-meeting]', game.interact);
     button('[data-pause]', togglePause);
     button('[data-resume]', togglePause);
     window.addEventListener('keydown', e => {
@@ -84,12 +83,16 @@ export function bindInput(root: HTMLElement, game: Game) {
             return;
         }
         if (state.mode !== 'play') return;
+        if (e.key === 'ArrowDown' && state.stage === 2) {
+            e.preventDefault();
+            if (!e.repeat) game.interact();
+            return;
+        }
         const k = km[e.key];
         if (k || e.code === 'Space' || e.key === 'ArrowUp' || e.key === 'f' || e.key === 'F') {
             e.preventDefault();
             if (k) game.press(k);
-            if (!e.repeat && e.key === 'ArrowUp' && (state.canEnterMeeting || state.corridor.room.kind === 'meeting')) game.interact();
-            else if (!e.repeat && (e.code === 'Space' || e.key === 'ArrowUp')) game.jump();
+            if (!e.repeat && (e.code === 'Space' || e.key === 'ArrowUp')) game.jump();
             if (!e.repeat && (e.key === 'f' || e.key === 'F')) game.spray();
         }
     }, options);
@@ -112,6 +115,7 @@ export function bindInput(root: HTMLElement, game: Game) {
         for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, () => game.release(key), options);
     });
     root.querySelector<HTMLElement>('[data-jump]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.jump(); }, options);
+    root.querySelector<HTMLElement>('[data-interact]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.interact(); }, options);
     root.querySelector<HTMLElement>('[data-spray]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.spray(); }, options);
     const observer = new MutationObserver(() => {
         if ((game.getSnapshot().mode === 'pause') !== menuOpen || (!!panel && !panel.hidden) !== panelOpen) syncMenu();

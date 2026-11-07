@@ -25,7 +25,7 @@ Clear each stage to continue to the next. The pause menu lists cleared stages fo
 
 Use Left/Right or A/D to move, Space/Up to jump, and Q/E to balance. F sprays the extinguisher once equipped in stage 3. P pauses.
 
-Near the stage 2 meeting door, press Up or select **Enter meeting room**. Press Up or select **Leave meeting room** to leave early. At the badge scanner, release the movement keys and wait for approval.
+Near the stage 2 meeting door, press Down to enter. Press Down again to leave early. Touch controls use the same down arrow. At the badge scanner, release the movement keys and wait for approval.
 
 Stages 1 and 2 start with a safe jump practice area. R retries from the last flag: before the trash bin in stage 1, or the last checkpoint in stage 2. Retries restore full focus and a dry chair. Selecting a stage starts it from the beginning.
 

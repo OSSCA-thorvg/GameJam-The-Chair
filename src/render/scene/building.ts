@@ -206,9 +206,6 @@ export function drawBuilding(ctx: RenderCtx) {
         chair(ctx, item.x, item.y);
         if (item.cheer > 0) bubble(ctx, (['Woohoo! Freedom!', 'Clocking out!', 'Bye-bye, overtime!'] satisfies Message[])[i], item.x, 285 - (i % 2) * 60, 185, true, Math.min(1, item.cheer * 2));
     });
-    if (state.canEnterMeeting) {
-        ctx.label('↑', mx + 92, 306 + Math.sin(ctx.t * 4) * 5, 28, '#fff2bd');
-    }
     const sx = STAGE_TWO.scanner;
     ctx.rect(sx - 200, 426, 153, 30, '#ded5a3');
     ctx.label(c.scanner.approved ? '✓' : 'Ⅱ', sx - 123, 448, 23, '#667f70');

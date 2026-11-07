@@ -54,8 +54,8 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         q('[data-focus-meter]')?.setAttribute('aria-valuenow', String(focus));
         text('[data-focus]', focus + '%');
         text('[data-status]', feedback.status);
-        hidden('[data-meeting]', !active || (state.corridor.room.kind !== 'meeting' && !state.canEnterMeeting));
-        text('[data-meeting]', state.corridor.room.kind === 'meeting' ? t('Leave meeting room') : t('Enter meeting room'));
+        hidden('[data-interact]', state.stage !== 2);
+        hidden('[data-meeting-help]', state.stage !== 2);
         hidden('[data-spray-help]', !state.hasExtinguisher);
         hidden('[data-spray]', !state.hasExtinguisher);
         hidden('[data-stage-menu]', state.completedStage === 0);
