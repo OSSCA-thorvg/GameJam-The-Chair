@@ -49,7 +49,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
         const office = c.offices.find(office => office.nearby && office.cooldown === 0);
         if (office) {
             office.phrase = (office.phrase + 1 + Math.floor(Math.random() * (TYPING_SOUNDS.length - 1))) % TYPING_SOUNDS.length;
-            office.offset = { x: (Math.random() - .5) * 80, y: -20 - Math.random() * 45 };
+            office.offset = { x: (Math.random() - .5) * 140, y: 22 + Math.random() * 132 };
             office.life = 1.5;
             office.cooldown = 4.5;
             c.typingCooldown = office.life + .3;
