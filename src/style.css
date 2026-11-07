@@ -12,3 +12,4 @@ html{color-scheme:light dark}body{margin:0;padding:24px;background:light-dark(#f
 #chair-office-one .npc-bubble{white-space:normal;width:max-content;max-width:calc(100% - 20px);z-index:4}#chair-office-one .npc-bubble small{display:block;font-size:10px;color:#77705e}#chair-office-one .npc-bubble:after{left:var(--tail-x,50%);transform:translateX(-50%)}
 
 #chair-office-one [data-locale][aria-pressed="true"]{background:#e8bc7c;color:#242b35}#chair-office-one [data-rider]{white-space:normal;width:max-content;text-align:center}
+

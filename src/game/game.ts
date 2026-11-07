@@ -1,14 +1,15 @@
-import { STAGE_TWO, createFurniture, elevatorAt, doorAt, chairFloorAt, type StageId } from './stage2';
+import { STAGE_TWO, createFurniture, createCorridor, type StageId } from './stage2';
 import { STAGE_THREE, fanStrength } from './stage3';
 import { LEVEL, RULES, FIXED_STEP } from './level';
 import type { Input, DeepReadonly } from './types';
 import { clamp, polyRect, contact } from './geometry';
 import { createCore, snapshot } from './core';
-import { focusHit, focusBlocked, focusStep, advanceFocusLoss } from './systems/focus';
+import { focusBlocked, focusStep, advanceFocusLoss } from './systems/focus';
 import { shoot, particlesStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
 import { monitorPhase, monitorStep } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
+import { canEnterMeeting, interactMeeting, leaveMeeting, meetingStep, corridorStep } from './systems/corridor';
 import { binEnter } from './systems/bin';
 
 export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId = 0) {
@@ -26,7 +27,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         if (s.stage === 2) {
             s.solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
             s.people = [];
-            s.furniture = createFurniture();
+            s.furniture = createFurniture(s.checkpoint);
             return;
         }
         s.solids = [
@@ -57,7 +58,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         s.escapeQueued = false;
         s.time = 0;
         s.t = 0;
-        s.elevator = elevatorAt(0);
+        s.corridor = createCorridor(s.checkpoint);
         s.acc = 0;
         s.dirty = false;
         s.inBin = false;
@@ -102,7 +103,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
     }
 
     function jump() {
-        if (s.mode !== 'play') return;
+        if (s.mode !== 'play' || s.corridor.room.kind === 'meeting') return;
         s.jumpQ = .14;
     }
 
@@ -159,6 +160,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             s.sprayCharge = 0;
         }
         s.events.push({ type: 'tick', dt });
+        if (s.stage === 2 && meetingStep(s, dt)) return;
         if (s.stage === 1 && Math.abs(s.p.x - s.copier.x) < 180 && s.copier.cool === 0 && s.copier.burst === 0) {
             s.copier.dir = s.p.x < s.copier.x ? -1 : 1;
             s.volley++;
@@ -245,53 +247,8 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             }
         }
         if (s.stage === 2) {
-            const oldElevator = s.elevator;
-            s.elevator = elevatorAt(s.t);
-            if (was && Math.abs(p.y + 28 - oldElevator.y) < 12 && p.x > oldElevator.x - 15 && p.x < oldElevator.x + oldElevator.width + 15) {
-                p.x += s.elevator.x - oldElevator.x;
-            }
-            for (const item of s.furniture) {
-                const reach = item.width / 2 + 44;
-                if (Math.abs(p.x - item.x) < reach && p.y + 20 > item.y - item.height && p.y - 45 < item.y) {
-                    const side = p.x < item.x ? -1 : 1;
-                    item.vx += p.vx * dt * 8;
-                    p.vx *= Math.exp(-2 * dt);
-                    p.x = item.x + side * reach;
-                }
-                item.x += item.vx * dt;
-                item.vx *= Math.exp(-3 * dt);
-                item.x = clamp(item.x, item.kind === 'cabinet' ? 2050 : 40, item.kind === 'cabinet' ? 2295 : s.LEN - 40);
-                if (item.kind === 'chair') {
-                    item.y = chairFloorAt(item.x);
-                }
-            }
-            for (let i = 0; i < s.furniture.length; i++) {
-                for (let j = i + 1; j < s.furniture.length; j++) {
-                    const a = s.furniture[i];
-                    const b = s.furniture[j];
-                    const overlap = (a.width + b.width) / 2 - Math.abs(a.x - b.x);
-                    if (overlap > 0 && a.kind === b.kind) {
-                        const sign = a.x < b.x ? -1 : 1;
-                        a.x += sign * overlap / 2;
-                        b.x -= sign * overlap / 2;
-                        a.vx = b.vx = (a.vx + b.vx) / 2;
-                    }
-                }
-            }
-            s.solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
-            for (const item of s.furniture) {
-                s.solids.push({ p: polyRect(item.x - item.width / 2, item.y - item.height, item.width, item.height) });
-            }
-            s.solids.push({ p: polyRect(s.elevator.x, s.elevator.y, s.elevator.width, s.elevator.height) });
-            const door = doorAt(s.t);
-            if (!door.open && Math.abs(p.x - door.x) < 47 && p.y > 260) {
-                const side = prev < door.x ? -1 : 1;
-                p.x = door.x + side * 48;
-                p.vx = side * 70;
-                p.w *= .5;
-                focusHit(s, 'door', ++s.doorHits);
-                if (s.mode !== 'play') return;
-            }
+            corridorStep(s, dt, prev);
+            s.solids = STAGE_TWO.terrain.map(poly => ({ p: poly.map(v => ({ ...v })) }));
             for (let i = s.checkpoint + 1; i < STAGE_TWO.checkpoints.length; i++) {
                 const mark = STAGE_TWO.checkpoints[i];
                 if (p.x >= mark.x && Math.abs(p.y - mark.y) < 65) {
@@ -431,8 +388,8 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             hasExtinguisher: s.stage === 3,
             checkpoint: s.checkpoint,
             furniture: s.furniture,
-            elevator: s.elevator,
-            door: doorAt(s.t),
+            corridor: s.corridor,
+            canEnterMeeting: canEnterMeeting(s),
             level: { length: s.LEN, goal: s.GOAL },
             mode: s.mode,
             focus: s.focus,
@@ -492,6 +449,8 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
     return {
         reset,
         jump,
+        interact: () => interactMeeting(s),
+        leaveMeeting: () => { if (s.mode === 'play') leaveMeeting(s); },
         spray,
         pause,
         step,
