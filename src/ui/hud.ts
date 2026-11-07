@@ -43,7 +43,7 @@ export function createHud(root: HTMLElement) {
         hidden('[data-pause-menu]', !paused);
         q('[data-pause]')?.setAttribute('aria-expanded', String(paused));
         hidden('[data-stage-label]', !active || state.time > 2.2);
-        text('[data-stage-label]', state.stage === 1 ? '01 사무실' : '02 건물 내부');
+        text('[data-stage-label]', state.stage === 1 ? '01 사무실' : state.stage === 2 ? '02 건물 내부' : '03 Rooftop · 기계실·옥상');
         hidden('[data-focus-intro]', !active || !focusIntroduced || state.time > introduceUntil);
         style('[data-focus-fill]', 'width', focus + '%');
         style('[data-focus-trail]', 'width', focus + '%');
@@ -103,6 +103,11 @@ export function createHud(root: HTMLElement) {
                 suggested = 'brake';
                 cueX = 980;
                 cueY = 365;
+            } else if (state.stage === 3 && !lessons.sprayed && p.x > 500 && p.x < 900) {
+                cue = touch ? '💨' : 'F';
+                suggested = 'spray';
+                cueX = 700;
+                cueY = 365;
             }
         }
         hidden('[data-balance]', !cue);
@@ -113,6 +118,7 @@ export function createHud(root: HTMLElement) {
             q(`[data-key="${key}"]`)?.classList.toggle('suggested', active && suggested === key);
         }
         q('[data-jump]')?.classList.toggle('suggested', active && suggested === 'jump');
+        q('[data-spray]')?.classList.toggle('suggested', active && suggested === 'spray');
         hidden('[data-rider]', !active || !feedback.reaction || !!cue);
         if (feedback.reaction) {
             text('[data-quote]', feedback.reaction.text);

@@ -1,5 +1,5 @@
 import type { Point } from './types';
-export type StageId = 1 | 2;
+export type StageId = 1 | 2 | 3;
 export type Furniture = { kind: 'chair' | 'cabinet'; x: number; y: number; width: number; height: number; vx: number };
 export const STAGE_TWO = {
     length: 3700, goal: 3520,

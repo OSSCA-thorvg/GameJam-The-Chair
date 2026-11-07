@@ -59,9 +59,12 @@ export function createFeedback() {
             case 'focus-game-over':
                 overlay('집중도 소진', '앗, 여기가 어디지?');
                 break;
+            case 'spray-empty':
+                status = 'Extinguisher empty · 소화기 비었음.';
+                break;
             case 'stage-clear':
-                status = state.stage === 1 ? '사무실 탈출.' : '기계실 도착.';
-                overlay('', state.stage === 1 ? '퇴근 처리 중…' : '출장 처리 완료.', '', state.stage === 1 ? '다음' : '다시');
+                status = state.stage === 1 ? '사무실 탈출.' : state.stage === 2 ? '기계실 도착.' : 'Rooftop cleared · 옥상 탈출.';
+                overlay('', state.stage === 1 ? '퇴근 처리 중…' : state.stage === 2 ? '출장 처리 완료.' : 'Officially resigned · 정식 퇴사 처리됨.', '', state.stage === 3 ? 'Retry · 다시' : '다음');
                 break;
         }
     }

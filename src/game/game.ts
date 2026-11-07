@@ -1,4 +1,5 @@
 import { STAGE_TWO, createFurniture, elevatorAt, doorAt, chairFloorAt, type StageId } from './stage2';
+import { STAGE_THREE, fanStrength } from './stage3';
 import { LEVEL, RULES, FIXED_STEP } from './level';
 import type { Input, DeepReadonly } from './types';
 import { clamp, polyRect, contact } from './geometry';
@@ -15,6 +16,12 @@ export function createGame(initialDeaths = 0) {
     const s = createCore(initialDeaths);
 
     function build() {
+        if (s.stage === 3) {
+            s.solids = STAGE_THREE.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
+            s.people = [];
+            s.furniture = [];
+            return;
+        }
         if (s.stage === 2) {
             s.solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
             s.people = [];
@@ -34,9 +41,11 @@ export function createGame(initialDeaths = 0) {
 
     function reset() {
         build();
-        const spawn = s.stage === 2
-            ? STAGE_TWO.checkpoints[s.checkpoint]
-            : { x: s.officeCheckpoint ? 1400 : 100, y: F - 28 };
+        const spawn = s.stage === 3
+            ? STAGE_THREE.checkpoints[s.checkpoint]
+            : s.stage === 2
+                ? STAGE_TWO.checkpoints[s.checkpoint]
+                : { x: s.officeCheckpoint ? 1400 : 100, y: F - 28 };
         s.p = { ...spawn, vx: 0, vy: 0, a: 0, w: 0 };
         s.actualSpeed = 0;
         s.practiceJump = false;
@@ -80,6 +89,12 @@ export function createGame(initialDeaths = 0) {
         s.doorHits = 0;
         s.lightCooldown = 0;
         Object.assign(s.copier, { cool: 0, burst: 0, next: 0 });
+        s.sprayAmmo = 4;
+        s.sprayCooldown = 0;
+        s.sprayCharge = 0;
+        s.sprayBurst = 0;
+        s.sprayDir = { x: 0, y: 1 };
+        s.onFan = false;
         s.mode = 'play';
         s.events.length = 0;
         s.events.push({ type: 'reset' });
@@ -88,6 +103,28 @@ export function createGame(initialDeaths = 0) {
     function jump() {
         if (s.mode !== 'play') return;
         s.jumpQ = .14;
+    }
+
+    function spray() {
+        if (s.mode !== 'play') return;
+        if (s.sprayCooldown > 0) return;
+        if (s.sprayAmmo <= 0) {
+            s.events.push({ type: 'cue', id: 'spray-empty' });
+            return;
+        }
+        const dx = (s.keys.has('right') ? 1 : 0) - (s.keys.has('left') ? 1 : 0);
+        const dy = s.keys.has('brake') ? -1 : 1;
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = dx / len;
+        const ny = dy / len;
+        s.sprayDir = { x: nx, y: ny };
+        s.p.vx -= nx * 220;
+        s.p.vy -= ny * 260;
+        s.sprayAmmo--;
+        s.sprayCooldown = .35;
+        s.sprayBurst = .32;
+        s.lessons.sprayed = true;
+        s.events.push({ type: 'cue', id: 'spray' });
     }
 
     function pause() {
@@ -111,6 +148,17 @@ export function createGame(initialDeaths = 0) {
         s.slipCooldown = Math.max(0, s.slipCooldown - dt);
         s.lightPenaltyRemaining = Math.max(0, s.lightPenaltyRemaining - dt);
         s.lightCooldown = Math.max(0, s.lightCooldown - dt);
+        s.sprayCooldown = Math.max(0, s.sprayCooldown - dt);
+        s.sprayBurst = Math.max(0, s.sprayBurst - dt);
+        if (s.ground && s.sprayAmmo < 4) {
+            s.sprayCharge += dt;
+            if (s.sprayCharge >= .7) {
+                s.sprayAmmo++;
+                s.sprayCharge = 0;
+            }
+        } else if (!s.ground) {
+            s.sprayCharge = 0;
+        }
         s.events.push({ type: 'tick', dt });
         if (s.stage === 1 && Math.abs(s.p.x - s.copier.x) < 180 && s.copier.cool === 0 && s.copier.burst === 0) {
             s.copier.dir = s.p.x < s.copier.x ? -1 : 1;
@@ -181,6 +229,25 @@ export function createGame(initialDeaths = 0) {
         if (s.stage === 1 && s.binCooldown === 0 && p.x > s.bin.a + 25 && p.x < s.bin.b - 25 && p.y + 28 >= s.bin.rim && p.vy >= 0) {
             binEnter(s);
             return;
+        }
+        if (s.stage === 3) {
+            s.solids = STAGE_THREE.terrain.map(poly => ({ p: poly.map(v => ({ ...v })) }));
+            s.onFan = false;
+            for (const fan of STAGE_THREE.fans) {
+                const str = fanStrength(fan, s.t);
+                if (str > 60 && p.x > fan.x - fan.width / 2 && p.x < fan.x + fan.width / 2 && p.y > fan.y - fan.height && p.y < fan.y + 40) {
+                    p.vy -= str * dt;
+                    p.w += (p.x - fan.x) / fan.width * 2.4 * dt;
+                    s.onFan = true;
+                }
+            }
+            for (let i = s.checkpoint + 1; i < STAGE_THREE.checkpoints.length; i++) {
+                const mark = STAGE_THREE.checkpoints[i];
+                if (p.x >= mark.x && Math.abs(p.y - mark.y) < 65) {
+                    s.checkpoint = i;
+                    s.events.push({ type: 'cue', id: 'checkpoint' });
+                }
+            }
         }
         if (s.stage === 2) {
             const oldElevator = s.elevator;
@@ -338,7 +405,7 @@ export function createGame(initialDeaths = 0) {
             s.events.push({ type: 'speck', x: p.x - 15, vx: -p.vx * .2 });
         }
         if (p.y > F + 250) {
-            if (s.stage === 2) {
+            if (s.stage === 2 || s.stage === 3) {
                 s.deaths++;
                 reset();
                 return;
@@ -359,7 +426,10 @@ export function createGame(initialDeaths = 0) {
         const predictedAngle = Math.atan2(Math.sin(s.p.a), Math.cos(s.p.a)) + s.p.w * .2;
         const balanceHint: 'q' | 'e' | null = s.mode === 'play' && Math.abs(predictedAngle) > .18 ? (predictedAngle > 0 ? 'q' : 'e') : null;
         return structuredClone({
-            game: s.stage === 1 ? 'office-stage-one' : 'building-stage-two',
+            game: s.stage === 1 ? 'office-stage-one' : s.stage === 2 ? 'building-stage-two' : 'rooftop-stage-three',
+            fans: s.stage === 3 ? STAGE_THREE.fans.map(f => ({ ...f, active: fanStrength(f, s.t) > 60, power: fanStrength(f, s.t) })) : [],
+            spray: { ammo: s.sprayAmmo, burst: s.sprayBurst, cooldown: s.sprayCooldown, dir: s.sprayDir },
+            onFan: s.onFan,
             lessons: s.lessons,
             officeCheckpoint: s.officeCheckpoint,
             actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
@@ -429,6 +499,7 @@ export function createGame(initialDeaths = 0) {
     return {
         reset,
         jump,
+        spray,
         pause,
         step,
         advance,
@@ -436,9 +507,9 @@ export function createGame(initialDeaths = 0) {
             s.stage = id;
             s.checkpoint = 0;
             s.officeCheckpoint = false;
-            s.lessons = { moved: false, jumped: false, braked: false, binJumped: false };
-            s.LEN = s.stage === 1 ? LEVEL.length : STAGE_TWO.length;
-            s.GOAL = s.stage === 1 ? LEVEL.goal : STAGE_TWO.goal;
+            s.lessons = { moved: false, jumped: false, braked: false, binJumped: false, sprayed: false };
+            s.LEN = s.stage === 1 ? LEVEL.length : s.stage === 2 ? STAGE_TWO.length : STAGE_THREE.length;
+            s.GOAL = s.stage === 1 ? LEVEL.goal : s.stage === 2 ? STAGE_TWO.goal : STAGE_THREE.goal;
             reset();
         },
         restart() {
