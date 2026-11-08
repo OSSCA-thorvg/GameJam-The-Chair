@@ -7,6 +7,7 @@ import { createCore, snapshot } from './core';
 import { focusBlocked, focusStep, advanceFocusLoss } from './systems/focus';
 import { shoot, particlesStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
+import { geyserStep } from './systems/geyser';
 import { monitorPhase, monitorStep } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
 import { canEnterMeeting, interactMeeting, leaveMeeting, meetingStep, corridorStep } from './systems/corridor';
@@ -58,6 +59,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         s.escapeQueued = false;
         s.time = 0;
         s.t = 0;
+        if (s.stage === 1) s.skylineSeed = Math.floor(Math.random() * 0x100000000);
         s.corridor = createCorridor(s.checkpoint);
         s.acc = 0;
         s.dirty = false;
@@ -164,9 +166,9 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         if (s.stage === 1 && Math.abs(s.p.x - s.copier.x) < 180 && s.copier.cool === 0 && s.copier.burst === 0) {
             s.copier.dir = s.p.x < s.copier.x ? -1 : 1;
             s.volley++;
-            s.copier.burst = 3;
+            s.copier.burst = 4;
             s.copier.next = .75;
-            s.copier.cool = 4.6;
+            s.copier.cool = 3.2;
         }
         if (s.copier.burst > 0) {
             s.copier.next -= dt;
@@ -180,6 +182,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         if (s.mode !== 'play') return;
         if (s.stage === 1) {
             cleaningStep(s, dt);
+            geyserStep(s, dt);
         }
         if (s.mode !== 'play') return;
 
@@ -197,7 +200,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         }
         if (s.jumpQ > 0 && s.coyote > 0) {
             if (p.x < 300) s.practiceJump = true;
-            p.vy = -350;
+            p.vy = -380;
             p.w -= dir * .12;
             s.ground = false;
             s.coyote = 0;
@@ -214,7 +217,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         } else if (!was && dir) {
             p.vx += dir * 55 * dt;
         }
-        p.vy += 800 * dt;
+        p.vy += 950 * dt;
         p.vx *= Math.exp(-(was ? (s.slip ? .015 : .55) : .09) * dt);
         p.w *= Math.exp(-(was ? (s.slip ? .9 : 1.8) : .75) * dt);
         p.vx = clamp(p.vx, -315, 315);
@@ -248,7 +251,6 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         }
         if (s.stage === 2) {
             corridorStep(s, dt, prev);
-            s.solids = STAGE_TWO.terrain.map(poly => ({ p: poly.map(v => ({ ...v })) }));
             for (let i = s.checkpoint + 1; i < STAGE_TWO.checkpoints.length; i++) {
                 const mark = STAGE_TWO.checkpoints[i];
                 if (p.x >= mark.x && Math.abs(p.y - mark.y) < 65) {
@@ -381,6 +383,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             onFan: s.onFan,
             lessons: s.lessons,
             officeCheckpoint: s.officeCheckpoint,
+            skylineSeed: s.skylineSeed,
             actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
             tutorialAssist: s.mode === 'play' && s.p.x < 300,
             stage: s.stage,
@@ -417,7 +420,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             cleaning: s.cleaning,
             lightHits: s.lightHits,
             doorHits: s.doorHits,
-            monitor: { ...s.monitor, ...monitorPhase(s) },
+            monitors: LEVEL.monitors.map(monitor => ({ ...monitor, ...monitorPhase(monitor, s.t) })),
             papers: s.papers,
             people: s.people,
             solids: s.solids,

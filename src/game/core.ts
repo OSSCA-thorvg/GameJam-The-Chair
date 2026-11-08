@@ -12,6 +12,7 @@ export type GameCore = {
     GOAL: number;
     checkpoint: number;
     officeCheckpoint: boolean;
+    skylineSeed: number;
     lessons: { moved: boolean; jumped: boolean };
     sprayAmmo: number;
     sprayCooldown: number;
@@ -35,7 +36,6 @@ export type GameCore = {
 
     furniture: Furniture[];
     corridor: Corridor;
-    readonly monitor: { wall: number; period: number };
     copier: { x: number; cool: number; burst: number; next: number; dir: number };
     cleaning: { x: number; a: number; b: number; spilled: boolean; age: number; followup: boolean; splashDir: number };
     bucket: { age: number; armed: boolean; spills: number };
@@ -87,6 +87,7 @@ export function createCore(initialDeaths: number): GameCore {
         GOAL: LEVEL.goal,
         checkpoint: 0,
         officeCheckpoint: false,
+        skylineSeed: Math.floor(Math.random() * 0x100000000),
         lessons: { moved: false, jumped: false },
         sprayAmmo: 4,
         sprayCooldown: 0,
@@ -110,7 +111,6 @@ export function createCore(initialDeaths: number): GameCore {
 
         furniture: createFurniture(),
         corridor: createCorridor(),
-        monitor: { ...LEVEL.monitor },
         copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 },
         cleaning: { ...LEVEL.cleaning, spilled: false, age: 0, followup: false, splashDir: 0 },
         bucket: { age: RULES.bucketReset, armed: true, spills: 0 },

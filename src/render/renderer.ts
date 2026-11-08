@@ -56,7 +56,7 @@ function setup(
     observer.observe(base);
     size();
 
-    function draw(next: GameState, effects: EffectsState) {
+    function draw(next: GameState, effects: EffectsState, camera?: number) {
         ctx.locale = getLocale();
         ctx.state = next;
         ctx.LEN = next.level.length;
@@ -71,7 +71,7 @@ function setup(
         ctx.soaked = next.soaked;
         ctx.dirty = next.dirty;
         ctx.t = next.time;
-        ctx.monitor = { ...next.monitor, ...ART.monitor };
+        ctx.monitors = next.monitors.map((monitor, index) => ({ ...monitor, ...ART.monitors[index] }));
         ctx.bin = { ...next.bin, bottom: ART.binBottom };
         ctx.copier = { ...next.copier, flash: effects.copierFlash };
         ctx.waterDrops = effects.waterDrops;
@@ -88,8 +88,11 @@ function setup(
             ctx.cam = 0;
             ctx.wheel = 0;
         }
-        if (ctx.mode === 'play') {
-            ctx.cam += (ctx.clamp(ctx.p.x - ctx.VW * .35, 0, Math.max(0, ctx.LEN - ctx.VW)) - ctx.cam) * Math.min(1, dt * 7);
+        if (camera !== undefined) {
+            ctx.cam = ctx.clamp(camera, 0, Math.max(0, ctx.LEN - ctx.VW));
+        } else if (ctx.mode === 'play') {
+            const focusX = ctx.p.x - ctx.VW * .35;
+            ctx.cam += (ctx.clamp(focusX, 0, Math.max(0, ctx.LEN - ctx.VW)) - ctx.cam) * Math.min(1, dt * 7);
             ctx.wheel += ctx.p.vx * dt / 8;
         }
         lastTime = t;
@@ -118,10 +121,11 @@ function setup(
             renderer = 'canvas2d';
         }
     }
-    void initRenderer();
+    const ready = initRenderer();
 
     return {
         draw,
+        ready,
         info: () => ({ renderer, renderError, commands: ctx.commands.length }),
         destroy() {
             observer.disconnect();

@@ -16,6 +16,8 @@ npm run dev
 
 Open http://127.0.0.1:5173/.
 
+To inspect the cleaner, copier, fan, head impact, or extinguisher animation, open http://127.0.0.1:5173/preview.html while the development server is running. Choose a scene, drag the time slider, step one frame at a time, or play the loop. The URL keeps the selected scene and time across reloads.
+
 ## Play
 
 Clear each stage to continue to the next. The pause menu lists cleared stages for replay and saves your progress in this browser.

@@ -9,6 +9,12 @@ docs/
 .vscode/
 .mcp.json
 
+# Downloaded agent skills (not tracked)
+skills/
+.claude/
+.cursor/
+.cline/
+
 # Playwright generated artifacts
 .playwright-mcp/
 playwright-report/

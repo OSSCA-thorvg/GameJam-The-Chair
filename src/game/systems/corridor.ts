@@ -1,6 +1,5 @@
 import type { GameCore } from '../core';
 import { STAGE_TWO, TYPING_SOUNDS } from '../stage2';
-import { focusHit } from './focus';
 
 export function canEnterMeeting(s: GameCore) {
     return s.stage === 2 && s.mode === 'play' && s.corridor.room.kind === 'corridor'
@@ -99,7 +98,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
             p.vx = Math.min(0, p.vx);
         }
     }
-    if (c.lift.kind === 'waiting' && p.x > STAGE_TWO.lift - 650) c.lift = { kind: 'arriving', age: 0 };
+    if (c.lift.kind === 'waiting' && p.x > STAGE_TWO.lift - 500) c.lift = { kind: 'arriving', age: 0 };
     if (c.lift.kind === 'arriving') {
         c.lift.age += dt;
         if (c.lift.age >= 1.2) {
@@ -111,11 +110,18 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
         if (c.lift.age >= 4) c.lift = { kind: 'departed' };
     }
     if (c.cart) {
-        c.cart.x -= 220 * dt;
-        if (!c.cart.hit && Math.abs(p.x - c.cart.x) < 60 && p.y + 28 > 363) {
-            c.cart.hit = true;
-            p.vx = -90;
-            focusHit(s, 'cart', ++c.cartHits);
+        const cartSpeed = 280;
+        c.cart.x -= cartSpeed * dt;
+        const touching = p.x < c.cart.x && c.cart.x - p.x < 48 && p.y > 348;
+        if (touching) {
+            p.x = c.cart.x - 48;
+            p.vx = Math.min(p.vx, -cartSpeed);
+            p.w += (Math.random() - .5) * 4 * dt * 60;
+            if (!c.cart.hit) {
+                c.cart.hit = true;
+                c.cartHits++;
+                s.events.push({ type: 'cue', id: 'light-hit' });
+            }
         }
         if (c.cart.x < STAGE_TWO.lift - 650) c.cart = null;
     }
