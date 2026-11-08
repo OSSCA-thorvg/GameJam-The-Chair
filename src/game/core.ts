@@ -36,7 +36,6 @@ export type GameCore = {
 
     furniture: Furniture[];
     corridor: Corridor;
-    readonly monitor: { wall: number; period: number };
     copier: { x: number; cool: number; burst: number; next: number; dir: number };
     cleaning: { x: number; a: number; b: number; spilled: boolean; age: number; followup: boolean; splashDir: number };
     bucket: { age: number; armed: boolean; spills: number };
@@ -112,7 +111,6 @@ export function createCore(initialDeaths: number): GameCore {
 
         furniture: createFurniture(),
         corridor: createCorridor(),
-        monitor: { ...LEVEL.monitor },
         copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 },
         cleaning: { ...LEVEL.cleaning, spilled: false, age: 0, followup: false, splashDir: 0 },
         bucket: { age: RULES.bucketReset, armed: true, spills: 0 },

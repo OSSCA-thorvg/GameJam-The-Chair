@@ -419,7 +419,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             cleaning: s.cleaning,
             lightHits: s.lightHits,
             doorHits: s.doorHits,
-            monitor: { ...s.monitor, ...monitorPhase(s) },
+            monitors: LEVEL.monitors.map(monitor => ({ ...monitor, ...monitorPhase(monitor, s.t) })),
             papers: s.papers,
             people: s.people,
             solids: s.solids,

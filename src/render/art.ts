@@ -2,7 +2,11 @@
 // Keep artwork aligned with the fixed gameplay colliders; use debugCollisions to inspect them.
 export const ART = {
     palette: { ink: '#292d38', wall: '#adb3c1', floor: '#b9bbc0', paper: '#f4ecd7', wood: '#d7ad72', steel: '#9098a3', skin: '#e4cba6', shirt: '#f1eee4' },
-    monitor: { desk: 2210, x: 2281, y: 275 },
+    monitors: [
+        { desk: 2210, x: 2281, y: 275 },
+        { desk: 2630, x: 2701, y: 275 },
+        { desk: 3050, x: 3121, y: 275 },
+    ],
     binBottom: 520,
     player: { offsetX: 0, offsetY: 0, scale: 1 },
     debugCollisions: false

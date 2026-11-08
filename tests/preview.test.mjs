@@ -24,6 +24,17 @@ test('cleaner preview seeks backward to the same pose and splash', () => {
     assert.equal(scene.sample(scene.duration + 1).state.bucketAge, scene.duration);
 });
 
+test('monitor preview shows the warning, beam, and cooldown phases', () => {
+    const scene = previewScenes.find(scene => scene.id === 'monitor-light');
+    assert.ok(scene);
+    const warning = scene.sample(.4).state.monitors[0];
+    const beam = scene.sample(1.2).state.monitors[0];
+    const cooldown = scene.sample(2.4).state.monitors[0];
+    assert.equal(warning.warning, true);
+    assert.equal(beam.active, true);
+    assert.equal(cooldown.active, false);
+});
+
 test('copier preview plays the real three-shot volley and seeks deterministically', () => {
     const scene = previewScenes.find(scene => scene.id === 'copier-volley');
     assert.ok(scene);

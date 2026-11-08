@@ -4,6 +4,7 @@ import { STAGE_TWO } from './game/stage2';
 import { STAGE_THREE, fanStrength } from './game/stage3';
 import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
+import { monitorPhase } from './game/systems/monitor';
 
 export type PreviewScene = {
     id: string;
@@ -76,6 +77,38 @@ function cleanerRecovery(): PreviewScene {
                     ground: true,
                 },
                 effects: frames[Math.min(frames.length - 1, Math.round(at / FRAME_TIME))],
+            };
+        },
+    };
+}
+
+function monitorLight(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const monitor = LEVEL.monitors[0];
+    return {
+        id: 'monitor-light',
+        label: 'Monitor · Light beam',
+        duration: monitor.period,
+        focusX: monitor.wall,
+        markers: [
+            { at: 0, label: 'Warning' },
+            { at: .9, label: 'Beam on' },
+            { at: 2.1, label: 'Beam off' },
+        ],
+        sample(time) {
+            const at = Math.max(0, Math.min(monitor.period, time));
+            return {
+                state: {
+                    ...base,
+                    mode: 'play',
+                    time: at,
+                    player: { ...base.player, x: monitor.wall - 125 },
+                    monitors: base.monitors.map(spec => ({ ...spec, ...monitorPhase(spec, at) })),
+                },
+                effects,
             };
         },
     };
@@ -207,5 +240,5 @@ function officeTyping(): PreviewScene {
 }
 
 export const previewScenes: readonly PreviewScene[] = [
-    cleanerRecovery(), copierVolley(), fanRide(), headImpact(), extinguisherSpray(), officeTyping(),
+    cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), extinguisherSpray(), officeTyping(),
 ];

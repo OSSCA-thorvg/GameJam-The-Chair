@@ -8,7 +8,6 @@ import { createRenderCtx } from './context';
 import { drawWorld } from './scene/world';
 import { drawBuilding } from './scene/building';
 import { drawRooftop } from './scene/rooftop';
-import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './scene/cleaning';
 import { paint } from './paint';
 
 export function createRenderer(root: HTMLElement, getLocale: () => Locale = () => 'en') {
@@ -72,7 +71,7 @@ function setup(
         ctx.soaked = next.soaked;
         ctx.dirty = next.dirty;
         ctx.t = next.time;
-        ctx.monitor = { ...next.monitor, ...ART.monitor };
+        ctx.monitors = next.monitors.map((monitor, index) => ({ ...monitor, ...ART.monitors[index] }));
         ctx.bin = { ...next.bin, bottom: ART.binBottom };
         ctx.copier = { ...next.copier, flash: effects.copierFlash };
         ctx.waterDrops = effects.waterDrops;
@@ -92,12 +91,7 @@ function setup(
         if (camera !== undefined) {
             ctx.cam = ctx.clamp(camera, 0, Math.max(0, ctx.LEN - ctx.VW));
         } else if (ctx.mode === 'play') {
-            const recovery = next.cleaning.spilled && next.bucketAge >= CLEANER_RECOVERY_START && next.bucketAge < CLEANER_RECOVERY_END
-                ? next.people.find((person) => person.id === 'cleaner')
-                : undefined;
-            const focusX = recovery
-                ? (next.player.x + (next.cleaning.x + recovery.x) / 2) / 2 - ctx.VW / 2
-                : ctx.p.x - ctx.VW * .35;
+            const focusX = ctx.p.x - ctx.VW * .35;
             ctx.cam += (ctx.clamp(focusX, 0, Math.max(0, ctx.LEN - ctx.VW)) - ctx.cam) * Math.min(1, dt * 7);
             ctx.wheel += ctx.p.vx * dt / 8;
         }

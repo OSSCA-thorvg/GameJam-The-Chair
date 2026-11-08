@@ -35,7 +35,7 @@ export type RenderCtx = {
     state: GameState;
     p: GameState['player'];
     mode: string;
-    monitor: GameState['monitor'] & typeof ART.monitor;
+    monitors: (GameState['monitors'][number] & typeof ART.monitors[number])[];
     cleaning: GameState['cleaning'];
     bin: GameState['bin'] & { bottom: number };
     copier: GameState['copier'] & { flash: number };
@@ -70,7 +70,6 @@ export type RenderCtx = {
     ellipse(x: number, y: number, rx: number, ry: number, c: string): void;
     rod(x: number, y: number, xx: number, yy: number, w: number, c: string): void;
     label(text: string, x: number, y: number, size?: number, color?: string, align?: CanvasTextAlign): void;
-    monitorPhase(): GameState['monitor'];
 };
 
 export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderingContext2D): RenderCtx {
@@ -100,7 +99,7 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         state: null as unknown as GameState,
         p: null as unknown as GameState['player'],
         mode: '',
-        monitor: null as unknown as GameState['monitor'] & typeof ART.monitor,
+        monitors: [] as RenderCtx['monitors'],
         cleaning: null as unknown as GameState['cleaning'],
         bin: null as unknown as GameState['bin'] & { bottom: number },
         copier: null as unknown as GameState['copier'] & { flash: number },
@@ -185,7 +184,6 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         ctx.lg.textAlign = align;
         ctx.lg.fillText(text, (x - ctx.cam) * ctx.scale, (y + ctx.vertical) * ctx.scale);
     };
-    ctx.monitorPhase = () => ctx.state.monitor;
 
     return ctx;
 }

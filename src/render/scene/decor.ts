@@ -20,7 +20,16 @@ export function desk(ctx: RenderCtx, x: number) {
     ctx.rod(x + 10, F - 95, x + 10, F - 25, 6, C.steel);
     ctx.rod(x + 128, F - 95, x + 128, F - 25, 6, C.steel);
     ctx.rect(x + 45, F - 165, 53, 40, '#495569');
-    ctx.rect(x + 50, F - 160, 43, 30, x === ctx.monitor.desk ? (ctx.monitorPhase().active ? '#fff4bb' : ctx.monitorPhase().warning ? '#e9c98e' : '#9db6c4') : '#9db6c4');
+    const phase = ctx.monitors.find(monitor => monitor.desk === x);
+    const screenColor = phase?.active ? '#fff4bb' : phase?.warning ? '#e9c98e' : '#9db6c4';
+    ctx.rect(x + 50, F - 160, 43, 30, screenColor);
+    const flicker = .78 + .22 * Math.sin(ctx.t * 7 + x * .013);
+    const glowColor = phase?.active ? '#fff4bb' : phase?.warning ? '#e9c98e' : '#9ec3d8';
+    ctx.gradientPolygon(
+        [[x + 32, F - 158], [x + 111, F - 158], [x + 128, F - 108], [x + 15, F - 108]],
+        ctx.gradientFill(x + 71, F - 160, x + 71, F - 108, [[0, glowColor], [1, glowColor + '00']], flicker * (phase?.active ? .55 : .3))
+    );
+    ctx.rect(x + 52, F - 158, 39, 2, ctx.tint('#ffffff', flicker * .35));
     ctx.rod(x + 70, F - 125, x + 70, F - 105, 5, C.steel);
     ctx.rect(x + 40, F - 112, 63, 5, '#526274');
 }
