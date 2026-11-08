@@ -56,6 +56,19 @@ test('stage2 completes through chair dispatch, stationary scan and elevator cart
     assert.equal(state.cleaningSpilled, false);
 });
 
+test('cart shove remains recoverable when random draws are high', () => {
+    const random = Math.random;
+    Math.random = () => .99;
+    try {
+        const game = createGame(); game.startStage(2);
+        const { state, seen } = drive(game);
+        assert.ok(seen.cartHit);
+        assert.equal(state.mode, 'won');
+    } finally {
+        Math.random = random;
+    }
+});
+
 test('jumping over the cart also leads to the exit without losing focus', () => {
     const game = createGame(); game.startStage(2);
     const { state, seen } = drive(game, undefined, { dodge: true });

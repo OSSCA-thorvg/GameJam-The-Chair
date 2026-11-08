@@ -116,10 +116,10 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
         if (touching) {
             p.x = c.cart.x - 48;
             p.vx = Math.min(p.vx, -cartSpeed);
-            p.w += (Math.random() - .5) * 4 * dt * 60;
             if (!c.cart.hit) {
                 c.cart.hit = true;
                 c.cartHits++;
+                p.w -= .25;
                 s.events.push({ type: 'cue', id: 'light-hit' });
             }
         }
