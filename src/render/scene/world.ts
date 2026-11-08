@@ -40,7 +40,8 @@ export function drawWorld(ctx: RenderCtx) {
         ctx.rect(x + 24, 87, 183, 179, '#202940');
         for (let j = 0; j < 4; j++) {
             const bx = x + 30 + j * 42;
-            const h = 60 + (i * 23 + j * 31 + 300) % 80;
+            const mixed = Math.imul(state.skylineSeed ^ i, 0x45d9f3b) ^ Math.imul(j + 1, 0x119de1f3);
+            const h = 55 + ((mixed ^ (mixed >>> 16)) >>> 0) % 101;
             ctx.rect(bx, 260 - h, 32, h, '#425069');
             for (let k = 0; k < 3; k++) {
                 const flickers = j === ((i % 4) + 4) % 4 && k === 1;

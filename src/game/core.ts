@@ -12,6 +12,7 @@ export type GameCore = {
     GOAL: number;
     checkpoint: number;
     officeCheckpoint: boolean;
+    skylineSeed: number;
     lessons: { moved: boolean; jumped: boolean };
     sprayAmmo: number;
     sprayCooldown: number;
@@ -87,6 +88,7 @@ export function createCore(initialDeaths: number): GameCore {
         GOAL: LEVEL.goal,
         checkpoint: 0,
         officeCheckpoint: false,
+        skylineSeed: Math.floor(Math.random() * 0x100000000),
         lessons: { moved: false, jumped: false },
         sprayAmmo: 4,
         sprayCooldown: 0,

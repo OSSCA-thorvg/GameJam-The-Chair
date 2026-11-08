@@ -58,6 +58,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         s.escapeQueued = false;
         s.time = 0;
         s.t = 0;
+        if (s.stage === 1) s.skylineSeed = Math.floor(Math.random() * 0x100000000);
         s.corridor = createCorridor(s.checkpoint);
         s.acc = 0;
         s.dirty = false;
@@ -381,6 +382,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             onFan: s.onFan,
             lessons: s.lessons,
             officeCheckpoint: s.officeCheckpoint,
+            skylineSeed: s.skylineSeed,
             actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
             tutorialAssist: s.mode === 'play' && s.p.x < 300,
             stage: s.stage,
