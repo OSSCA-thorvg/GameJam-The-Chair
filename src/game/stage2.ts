@@ -5,13 +5,15 @@ export const TYPING_SOUNDS = ['tap… tap…', 't-t-t-tap…', 'tak… tap…', 
 export type StageId = 1 | 2 | 3;
 export type Furniture = { kind: 'chair'; x: number; y: number; width: number; height: number; vx: number; released: boolean; cheer: number };
 export const STAGE_TWO = {
-    length: 3100, goal: 2880,
+    length: 4000, goal: 3780,
     meeting: 620,
     scanner: 1450,
-    lift: 2350,
-    offices: [220, 1030, 1840, 2670],
-    checkpoints: [{ x: 100, y: 392 }, { x: 1100, y: 392 }, { x: 1660, y: 392 }, { x: 2600, y: 392 }],
-    terrain: [[{ x: -400, y: 420 }, { x: 3500, y: 420 }, { x: 3500, y: 800 }, { x: -400, y: 800 }]] satisfies Point[][],
+    lift: 3250,
+    offices: [220, 1030, 1840, 2370, 3100],
+    checkpoints: [{ x: 100, y: 392 }, { x: 1300, y: 392 }, { x: 2200, y: 392 }, { x: 3400, y: 392 }],
+    terrain: [
+        [{ x: -400, y: 420 }, { x: 4400, y: 420 }, { x: 4400, y: 800 }, { x: -400, y: 800 }],
+    ] satisfies Point[][],
 };
 export type Corridor = {
     appearanceSeed: number;

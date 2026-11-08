@@ -7,6 +7,8 @@ import { monitorDraw } from './monitor';
 import { player, debugCollisions } from './player';
 import { EFFECT_STYLE } from '../art';
 import type { Vector } from '../types';
+import { LEVEL } from '../../game/level';
+import { geyserPhase } from '../../game/systems/geyser';
 
 export function drawWorld(ctx: RenderCtx) {
     const F = ctx.F;
@@ -119,6 +121,40 @@ export function drawWorld(ctx: RenderCtx) {
         ctx.ox = ctx.oy = ctx.rotation = 0;
     }
     monitorDraw(ctx);
+    for (const g of LEVEL.geysers) {
+        if (g.x < left - 80 || g.x > right + 80) continue;
+        const phase = geyserPhase(g, t);
+        ctx.rect(g.x - 32, F - 2, 64, 6, '#3a414c');
+        for (let i = 0; i < 5; i++) ctx.rect(g.x - 28 + i * 12, F + 1, 8, 2, '#1e232c');
+        ctx.rect(g.x - 34, F - 6, 68, 5, '#5a6372');
+        if (phase.kind === 'warning') {
+            const charge = 1 - phase.remaining / .8;
+            const shake = Math.sin(t * 42) * charge * 2;
+            ctx.rect(g.x - 30 + shake, F - 12, 60, 6, ctx.tint('#f1d36a', .4 + charge * .5));
+            for (let i = 0; i < 4; i++) {
+                ctx.rect(g.x - 22 + i * 12 + shake, F - 10 - charge * 6, 8, 3 + charge * 4, ctx.tint('#fbe59a', .3 + charge * .6));
+            }
+            ctx.ellipse(g.x, F + 10, 42 + charge * 18, 4, ctx.tint('#f1d36a', charge * .5));
+        } else if (phase.kind === 'burst') {
+            const u = phase.age / .4;
+            const envelope = Math.min(1, phase.age / .08, phase.remaining / .12);
+            const topY = F - 40 - Math.min(u, 1) * 150;
+            for (let i = 0; i < 9; i++) {
+                const sway = Math.sin(t * 9 + i * 1.3) * 10;
+                const stripX = g.x - 24 + i * 6 + sway;
+                const stripTop = topY + i * 4 - (i % 2) * 8;
+                ctx.rect(stripX, stripTop, 4, F - stripTop - 2, ctx.tint('#f5f3e8', envelope));
+                ctx.rect(stripX, stripTop, 4, 3, ctx.tint('#c9c4b1', envelope));
+            }
+            for (let i = 0; i < 6; i++) {
+                const spin = t * 6 + i * 1.7;
+                const ox = Math.sin(spin) * 32;
+                const oy = topY - 12 - (i * 11) % 36;
+                ctx.polygon([[g.x + ox - 8, oy], [g.x + ox + 8, oy - 3], [g.x + ox + 7, oy + 7], [g.x + ox - 7, oy + 8]], ctx.tint('#efeadb', envelope * .9));
+            }
+            ctx.rect(g.x - 36, F - 10, 72, 10, ctx.tint('#e5deca', envelope * .5));
+        }
+    }
     practiceFloor(ctx);
     checkpointFlag(ctx, 1400, F, state.officeCheckpoint);
     for (let x = 1490; x < 1545; x += 18) {

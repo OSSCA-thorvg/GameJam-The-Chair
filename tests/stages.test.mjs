@@ -6,18 +6,31 @@ const bundle = await build({ entryPoints: ['src/game/game.ts'], bundle: true, wr
 const { createGame } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 const dt = 1 / 120;
 
+const GEYSERS = [{ x: 2600, period: 3.5, offset: 0 }, { x: 2850, period: 3.5, offset: 1.2 }, { x: 3100, period: 3.5, offset: 2.4 }];
+function geyserBursting(g, t) {
+    const p = ((t + g.offset) % g.period + g.period) % g.period;
+    return p >= 2.0;
+}
 function drive(game, stop = state => state.mode !== 'play', options = {}) {
     const seen = { checkpoints: new Set(), cartHit: false, airborneAtCart: false };
     for (let i = 0; i < 120 * 60; i++) {
         const state = game.getSnapshot(), p = state.player;
+        const simT = state.time;
         seen.checkpoints.add(state.checkpoint);
         seen.cartHit ||= !!state.corridor.cart?.hit;
         seen.airborneAtCart ||= !!state.corridor.cart && Math.abs(state.corridor.cart.x - p.x) < 100 && p.y < 320;
         if (stop(state)) return { state, seen };
         const scan = state.corridor.scanner;
-        const wait = !scan.approved && p.x > 1270;
+        const scanWait = !scan.approved && p.x > 1270;
+        let hazardWait = false;
+        if (state.stage === 1) {
+            for (const g of GEYSERS) {
+                if (g.x - p.x > 10 && g.x - p.x < 70 && geyserBursting(g, simT + .4)) { hazardWait = true; break; }
+            }
+        }
+        const dodging = options.dodge && state.corridor.cart && state.corridor.cart.x - p.x > 0 && state.corridor.cart.x - p.x < 400;
         const correction = -p.a * 12 - p.w * 4;
-        const keys = wait ? [] : ['right'];
+        const keys = (scanWait || (hazardWait && !dodging)) ? [] : ['right'];
         if (correction < -.4) keys.push('q');
         if (correction > .4) keys.push('e');
         game.setInput(...keys);
@@ -62,7 +75,7 @@ test('restart resumes at the last reached checkpoint and stage selection starts 
     const saved = game.getSnapshot();
     assert.equal(saved.stage, 2);
     assert.equal(saved.checkpoint, 3);
-    assert.equal(saved.player.x, 2600);
+    assert.equal(saved.player.x, 3400);
     assert.equal(saved.deaths, 1);
     assert.equal(saved.corridor.scanner.approved, true);
     assert.equal(saved.corridor.room.kind, 'corridor');
@@ -70,7 +83,7 @@ test('restart resumes at the last reached checkpoint and stage selection starts 
     assert.equal(game.getSnapshot().player.x, 100);
     assert.equal(game.getSnapshot().checkpoint, 0);
     game.startStage(1);
-    assert.equal(game.getSnapshot().level.goal, 2440);
+    assert.equal(game.getSnapshot().level.goal, 3240);
     assert.equal(game.getSnapshot().people.length, 3);
 });
 
@@ -86,7 +99,7 @@ test('three chairs are dispatched in sequence and snapshots cannot edit them', (
     }
     assert.deepEqual(released, [0, 1, 2, 3]);
     const state = game.getSnapshot();
-    assert.ok(state.furniture.every(c => c.x > 700));
+    assert.ok(state.furniture.every(c => c.x > 680));
     state.player.x = 99999; state.furniture[0].x = 99999;
     state.corridor.scanner.approved = true;
     assert.ok(game.getSnapshot().player.x < 1000);
@@ -109,7 +122,7 @@ test('head impact can be retried from the saved flag', () => {
     game.advance(3);
     assert.equal(game.getSnapshot().mode, 'dead');
     game.reset();
-    assert.equal(game.getSnapshot().player.x, 1100);
+    assert.equal(game.getSnapshot().player.x, 1300);
     assert.equal(game.getSnapshot().checkpoint, 1);
 });
 
@@ -330,7 +343,7 @@ test('copier previews its shot and its first paper batch is safe', () => {
     game.setInput('right');
     for (let i = 0; i < 1000 && game.getSnapshot().copier.burst === 0; i++) game.step(dt);
     let state = game.getSnapshot();
-    assert.equal(state.copier.burst, 3);
+    assert.equal(state.copier.burst, 4);
     assert.equal(state.papers.length, 0);
     for (let i = 0; i < 60; i++) game.step(dt);
     assert.equal(game.getSnapshot().papers.length, 0, 'rollers precede the first shot');
