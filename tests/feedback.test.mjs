@@ -8,6 +8,8 @@ async function load(entry) {
 }
 const { createGame } = await load('src/game/game.ts');
 const { createFeedback } = await load('src/ui/feedback.ts');
+const { createCore } = await load('src/game/core.ts');
+const { monitorStep } = await load('src/game/systems/monitor.ts');
 
 test('head failures retain the short cause and joke without control hints', () => {
     const feedback = createFeedback(() => 'ko');
@@ -79,9 +81,9 @@ test('monitor and accident responses retain the original speaker and line', () =
     const state = createGame().getSnapshot();
     const feedback = createFeedback(() => 'ko');
     feedback.receive({ type: 'cue', id: 'light-hit' }, state);
-    feedback.receive({ type: 'cue', id: 'light-comment' }, state);
+    feedback.receive({ type: 'cue', id: 'light-comment', monitorIndex: 0 }, state);
     assert.equal(feedback.snapshot().reaction.text, '눈부셔… 실적 칸이 안 보여!');
-    assert.deepEqual(feedback.snapshot().speech, { text: '밝은 미래가 보이죠?', name: '옆자리 동료', x: 2300, life: 3.4 });
+    assert.deepEqual(feedback.snapshot().speech, { text: '밝은 미래가 보이죠?', name: '옆자리 동료', x: 2281, life: 3.4 });
     for (const [id, name] of [['head-comment', '박 과장'], ['bin-comment', '총무팀']]) {
         feedback.receive({ type: 'cue', id }, state);
         assert.equal(feedback.snapshot().speech.text, '산재 처리는…');
@@ -89,11 +91,28 @@ test('monitor and accident responses retain the original speaker and line', () =
     }
 });
 
+test('the monitor that hit the rider owns the speech bubble', () => {
+    const state = createGame().getSnapshot();
+    for (const [index, time, wall, speakerX] of [[1, 2.3, 2560, 2701], [2, .1, 2980, 3121]]) {
+        const core = createCore(0);
+        core.mode = 'play';
+        core.t = time;
+        core.p.x = wall;
+        core.p.y = 392;
+        monitorStep(core, 1 / 120, wall - 10);
+        const cue = core.events.find(event => event.type === 'cue' && event.id === 'light-comment');
+        assert.deepEqual(cue, { type: 'cue', id: 'light-comment', monitorIndex: index });
+        const feedback = createFeedback();
+        feedback.receive(cue, state);
+        assert.equal(feedback.snapshot().speech.x, speakerX);
+    }
+});
+
 test('dialogue expires, resets and stays out of later stages', () => {
     const game = createGame();
     const state = game.getSnapshot();
     const feedback = createFeedback(() => 'ko');
-    const cue = { type: 'cue', id: 'light-comment' };
+    const cue = { type: 'cue', id: 'light-comment', monitorIndex: 0 };
     feedback.receive(cue, state);
     feedback.receive({ type: 'tick', dt: 3.5 }, state);
     assert.equal(feedback.snapshot().speech, null);

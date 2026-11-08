@@ -38,8 +38,13 @@ export type DeepReadonly<T> = T extends object ? {
 export type CueId = 'practice-cleared' | 'checkpoint' | 'head-hit' | 'head-comment' | 'head-game-over' | 'first-volley' | 'paper-hit' | 'water-spilled' | 'water-comment' | 'water-followup' | 'bin-fall' | 'bin-comment' | 'bin-game-over' | 'focus-lost' | 'focus-game-over' | 'slipping' | 'rolling' | 'reverse-comment' | 'person-comment' | 'stage-clear' | 'light-hit' | 'light-comment' | 'spray' | 'spray-empty' | 'fan-ride';
 export type GameEvent = {
     type: 'cue';
-    id: CueId;
+    id: Exclude<CueId, 'light-comment'>;
     person?: Person;
+} | {
+    type: 'cue';
+    id: 'light-comment';
+    monitorIndex: number;
+    person?: never;
 } | {
     type: 'reset';
 } | {
