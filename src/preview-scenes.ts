@@ -60,9 +60,11 @@ function cleanerRecovery(): PreviewScene {
         markers: [
             { at: 0, label: 'Spill' },
             { at: CLEANER_RECOVERY_START, label: 'Turn' },
-            { at: 2.4, label: 'Pick up' },
-            { at: 2.9, label: 'Lift' },
-            { at: 3.35, label: 'Retreat' },
+            { at: 1.93, label: 'Mop falls' },
+            { at: 2.4, label: 'Pick up bucket' },
+            { at: 2.9, label: 'Lift bucket' },
+            { at: 3.03, label: 'Walk back' },
+            { at: 3.9, label: 'Pick up mop' },
         ],
         sample(time) {
             const at = Math.max(0, Math.min(CLEANER_RECOVERY_END, time));
