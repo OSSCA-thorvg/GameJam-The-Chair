@@ -83,8 +83,8 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         }
         previousMode = mode;
         hidden('[data-stats]', mode !== 'won');
-        text('[data-stats-text]', `${t('Focus')} ${focus}% · ${t('Paper')} ${state.paperHits} · ${t('Bin')} ${state.binFalls} · ${t('Light')} ${state.lightHits} · ${state.stage === 2 ? t('Cart') : t('Door')} ${state.stage === 2 ? state.corridor.cartHits : state.doorHits}`);
-        hidden('[data-rider]', !active || !feedback.reaction);
+        text('[data-stats-text]', `${t('Focus')} ${focus}% · ${t('Paper')} ${state.paperHits} · ${t('Bin')} ${state.binFalls} · ${t('Light')} ${state.lightHits}${state.stage === 2 ? '' : ` · ${t('Door')} ${state.doorHits}`}`);
+        hidden('[data-rider]', !active || state.stage === 2 || !feedback.reaction);
         if (feedback.reaction) {
             text('[data-quote]', feedback.reaction.text);
             const halfWidth = (q('[data-rider]')?.offsetWidth ?? 0) / 2 + 10;

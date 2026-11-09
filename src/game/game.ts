@@ -1,4 +1,4 @@
-import { STAGE_TWO, createFurniture, createCorridor, paperPilePolygon, type StageId } from './stage2';
+import { STAGE_TWO, createFurniture, createCorridor, type StageId } from './stage2';
 import { STAGE_THREE, fanStrength } from './stage3';
 import { LEVEL, RULES, FIXED_STEP } from './level';
 import type { Input, DeepReadonly } from './types';
@@ -10,7 +10,7 @@ import { cleaningStep } from './systems/cleaning';
 import { geyserStep } from './systems/geyser';
 import { monitorPhase, monitorStep } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
-import { canEnterMeeting, interactMeeting, leaveMeeting, meetingStep, corridorStep, landInConvoy } from './systems/corridor';
+import { canEnterMeeting, interactMeeting, leaveMeeting, meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
 import { binEnter } from './systems/bin';
 
 export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId = 0) {
@@ -26,10 +26,9 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             return;
         }
         if (s.stage === 2) {
-            s.solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }))
-                .concat(s.corridor.paperPiles.map(pile => ({ p: paperPilePolygon(pile) })));
+            s.solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
             s.people = [];
-            s.furniture = createFurniture(s.checkpoint, s.corridor.paperPiles);
+            s.furniture = createFurniture(s.checkpoint);
             return;
         }
         s.solids = [
@@ -164,6 +163,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         }
         s.events.push({ type: 'tick', dt });
         if (s.stage === 2 && meetingStep(s, dt)) return;
+        if (s.stage === 2 && liftRideStep(s, dt)) return;
         if (s.stage === 1 && (s.volley > 0 || Math.abs(s.p.x - s.copier.x) < 350) && s.copier.cool === 0 && s.copier.burst === 0) {
             s.copier.dir = s.p.x < s.copier.x ? -1 : 1;
             s.volley++;
@@ -209,6 +209,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             s.jumpQ = 0;
         }
         const convoyJump = s.stage === 2 && s.corridor.convoy === 'airborne' && !s.ground;
+        const expressJump = convoyJump && s.corridor.pace === 'express';
         const dir = s.stage === 2 && s.corridor.convoy === 'carried' ? 0 : inputDir;
         const balancing = s.keys.has('q') || s.keys.has('e');
         const tilt = (s.keys.has('e') ? 1 : 0) - (s.keys.has('q') ? 1 : 0) + (was || balancing ? 0 : dir);
@@ -217,7 +218,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             p.w += (-Math.sin(p.a) * 20 - p.w * 7) * dt;
         }
         if (convoyJump && dir) {
-            p.vx += dir * 1200 * dt;
+            p.vx += dir * (expressJump ? 1400 : 1200) * dt;
         } else if (was && dir) {
             p.vx += dir * (s.slip ? 110 : 305) * dt;
         } else if (!was && dir) {
@@ -226,7 +227,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         p.vy += 950 * dt;
         p.vx *= Math.exp(-(convoyJump ? 0 : was ? (s.slip ? .015 : .55) : .09) * dt);
         p.w *= Math.exp(-(was ? (s.slip ? .9 : 1.8) : .75) * dt);
-        const horizontalLimit = convoyJump ? 700 : 315;
+        const horizontalLimit = expressJump ? 760 : convoyJump ? 700 : 315;
         p.vx = clamp(p.vx, -horizontalLimit, horizontalLimit);
         p.vy = clamp(p.vy, -500, 850);
         p.w = clamp(p.w, -5.8, 5.8);

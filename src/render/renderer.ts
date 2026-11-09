@@ -98,6 +98,7 @@ function setup(
         lastTime = t;
         lg.setTransform(ctx.dpr, 0, 0, ctx.dpr, 0, 0);
         lg.clearRect(0, 0, ctx.W, ctx.H);
+        ctx.foregroundActors = [];
         if (next.stage === 3) {
             drawRooftop(ctx);
         } else if (next.stage === 2) {

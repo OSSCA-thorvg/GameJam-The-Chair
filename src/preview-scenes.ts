@@ -1,5 +1,4 @@
 import { createGame, type Game, type GameState } from './game/game';
-import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_TWO } from './game/stage2';
 import { STAGE_THREE, fanStrength } from './game/stage3';
@@ -201,75 +200,6 @@ function headImpact(): PreviewScene {
         [{ at: 0, label: 'Impact' }, { at: .5, label: 'Rewind' }, { at: 1.4, label: 'Collision' }, { at: 1.8, label: 'End' }], frames);
 }
 
-function cartShove(): PreviewScene {
-    const game = createGame();
-    game.startStage(2);
-    game.drainEvents();
-    const steer = (state: GameState) => {
-        const correction = -state.player.a * 12 - state.player.w * 4;
-        const keys: Input[] = ['right'];
-        if (correction < -.4) keys.push('q');
-        if (correction > .4) keys.push('e');
-        game.setInput(...keys);
-    };
-    let ready = false;
-    for (let i = 0; i < 120 * 30; i++) {
-        const state = game.getSnapshot();
-        if (state.mode !== 'play') break;
-        const gap = state.corridor.cart ? state.corridor.cart.x - state.player.x : undefined;
-        if (gap !== undefined && gap > 0 && gap < 240) { ready = true; break; }
-        steer(state);
-        game.step(FIXED_STEP);
-        game.drainEvents();
-    }
-    if (!ready) throw new Error('Cart preview could not reach the cart.');
-    const start = game.getSnapshot();
-    const cart = start.corridor.cart;
-    if (!cart) throw new Error('Cart preview lost the cart.');
-    const effects = createEffects();
-    const frames = [capture(game, effects)];
-    let hitAt = 0;
-    for (let i = 1; i <= 120; i++) {
-        const state = game.getSnapshot();
-        steer(state);
-        stepGame(game, effects);
-        const next = game.getSnapshot();
-        if (hitAt === 0 && next.corridor.cartHits > 0) hitAt = i * FRAME_TIME;
-        frames.push(capture(game, effects, next));
-    }
-    if (hitAt === 0) throw new Error('Cart preview did not show a collision.');
-    return recordedScene('cart-shove', 'Corridor · Cart shove', (start.player.x + cart.x) / 2,
-        [{ at: 0, label: 'Approach' }, { at: hitAt, label: 'Cart contact' }, { at: 1.5, label: 'Recover' }], frames);
-}
-
-function paperCorridor(): PreviewScene {
-    const game = createGame();
-    game.startStage(2);
-    game.drainEvents();
-    const steer = (state: GameState) => {
-        const correction = -state.player.a * 12 - state.player.w * 4;
-        const keys: Input[] = ['right'];
-        if (correction < -.4) keys.push('q');
-        if (correction > .4) keys.push('e');
-        game.setInput(...keys);
-    };
-    for (let i = 0; i < 120 * 25 && game.getSnapshot().player.x < 2250; i++) {
-        steer(game.getSnapshot());
-        game.step(FIXED_STEP);
-        game.drainEvents();
-    }
-    if (game.getSnapshot().player.x < 2250) throw new Error('Paper corridor preview could not reach the document piles.');
-    const effects = createEffects();
-    const frames = [capture(game, effects)];
-    for (let i = 0; i < 360; i++) {
-        steer(game.getSnapshot());
-        stepGame(game, effects);
-        frames.push(capture(game, effects));
-    }
-    return recordedScene('paper-corridor', 'Corridor · Document bumps', 2700,
-        [{ at: 0, label: 'Approach' }, { at: 1, label: 'First pile' }, { at: 3, label: 'Bumpy ride' }, { at: 5, label: 'Delivery cart' }], frames);
-}
-
 function extinguisherSpray(): PreviewScene {
     const game = createGame();
     game.startStage(3);
@@ -312,5 +242,5 @@ function officeTyping(): PreviewScene {
 }
 
 export const previewScenes: readonly PreviewScene[] = [
-    cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), cartShove(), paperCorridor(), extinguisherSpray(), officeTyping(),
+    cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), extinguisherSpray(), officeTyping(),
 ];
