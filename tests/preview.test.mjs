@@ -85,6 +85,18 @@ test('cart preview shows a shove and recovery', () => {
     assert.equal(scene.sample(scene.duration).state.mode, 'play');
 });
 
+test('document bump preview follows the live stage-two route', () => {
+    const scene = previewScenes.find(scene => scene.id === 'paper-corridor');
+    assert.ok(scene);
+    const start = scene.sample(0).state;
+    const later = scene.sample(3).state;
+    assert.equal(start.stage, 2);
+    assert.ok(start.player.x < start.corridor.paperPiles[0].x);
+    assert.ok(later.player.x > start.player.x);
+    assert.ok(later.furniture.some(chair => chair.y < 420));
+    assert.deepEqual(scene.sample(3).state, later);
+});
+
 test('extinguisher preview keeps the spray plume and recoil in sync', () => {
     const scene = previewScenes.find(scene => scene.id === 'extinguisher-spray');
     assert.ok(scene);

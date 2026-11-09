@@ -1,5 +1,5 @@
 import type { GameCore } from '../core';
-import { STAGE_TWO, TYPING_SOUNDS, CHAIR_DEPARTURE, chairChatLine } from '../stage2';
+import { STAGE_TWO, TYPING_SOUNDS, CHAIR_DEPARTURE, chairChatLine, paperSurfaceY } from '../stage2';
 
 function insideConvoy(s: GameCore) {
     return s.p.y > 360 && s.p.x > s.furniture[2].x + 28 && s.p.x < s.furniture[0].x - 28;
@@ -101,6 +101,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
             const speed = Math.max(-300, Math.min(300, (target - chair.x) * 4));
             chair.vx += (speed - chair.vx) * (1 - Math.exp(-8 * dt));
             chair.x += chair.vx * dt;
+            chair.y = paperSurfaceY(c.paperPiles, chair.x);
             continue;
         }
         const target = front.x - index * 130;
@@ -113,6 +114,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
             chair.x += side * (58 - Math.abs(p.x - chair.x)) * (1 - Math.exp(-14 * dt));
         }
         if (index > 0 && s.furniture[index - 1].released) chair.x = Math.min(chair.x, s.furniture[index - 1].x - 80);
+        chair.y = paperSurfaceY(c.paperPiles, chair.x);
     }
     if (c.convoy === 'carried') {
         p.x = Math.max(back.x + 29, Math.min(front.x - 29, previousX + front.x - frontX));
@@ -139,7 +141,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
         c.lift.age += dt;
         if (c.lift.age >= 1.2) {
             c.lift = { kind: 'open', age: 0 };
-            c.cart = { x: STAGE_TWO.lift, hit: false };
+            c.cart = { x: STAGE_TWO.lift, y: paperSurfaceY(c.paperPiles, STAGE_TWO.lift), hit: false };
         }
     } else if (c.departure.kind === 'none' && c.lift.kind === 'open') {
         c.lift.age += dt;
@@ -153,7 +155,8 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
     if (c.cart) {
         const cartSpeed = 280;
         c.cart.x -= cartSpeed * dt;
-        const touching = p.x < c.cart.x && c.cart.x - p.x < 48 && p.y > 348;
+        c.cart.y = paperSurfaceY(c.paperPiles, c.cart.x);
+        const touching = p.x < c.cart.x && c.cart.x - p.x < 48 && p.y > c.cart.y - 72;
         if (touching) {
             c.convoy = 'free';
             p.x = c.cart.x - 48;

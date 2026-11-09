@@ -242,6 +242,34 @@ function cartShove(): PreviewScene {
         [{ at: 0, label: 'Approach' }, { at: hitAt, label: 'Cart contact' }, { at: 1.5, label: 'Recover' }], frames);
 }
 
+function paperCorridor(): PreviewScene {
+    const game = createGame();
+    game.startStage(2);
+    game.drainEvents();
+    const steer = (state: GameState) => {
+        const correction = -state.player.a * 12 - state.player.w * 4;
+        const keys: Input[] = ['right'];
+        if (correction < -.4) keys.push('q');
+        if (correction > .4) keys.push('e');
+        game.setInput(...keys);
+    };
+    for (let i = 0; i < 120 * 25 && game.getSnapshot().player.x < 2250; i++) {
+        steer(game.getSnapshot());
+        game.step(FIXED_STEP);
+        game.drainEvents();
+    }
+    if (game.getSnapshot().player.x < 2250) throw new Error('Paper corridor preview could not reach the document piles.');
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    for (let i = 0; i < 360; i++) {
+        steer(game.getSnapshot());
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene('paper-corridor', 'Corridor · Document bumps', 2700,
+        [{ at: 0, label: 'Approach' }, { at: 1, label: 'First pile' }, { at: 3, label: 'Bumpy ride' }, { at: 5, label: 'Delivery cart' }], frames);
+}
+
 function extinguisherSpray(): PreviewScene {
     const game = createGame();
     game.startStage(3);
@@ -284,5 +312,5 @@ function officeTyping(): PreviewScene {
 }
 
 export const previewScenes: readonly PreviewScene[] = [
-    cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), cartShove(), extinguisherSpray(), officeTyping(),
+    cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), cartShove(), paperCorridor(), extinguisherSpray(), officeTyping(),
 ];
