@@ -134,7 +134,7 @@ function copierVolley(): PreviewScene {
         frames.push(capture(game, effects));
     }
     return recordedScene('copier-volley', 'Copier · Paper volley', game.getSnapshot().copier.x,
-        [{ at: 0, label: 'Ready' }, { at: .75, label: 'First shot' }, { at: .95, label: 'Second shot' }, { at: 1.15, label: 'Third shot' }, { at: 2, label: 'Paper flight' }], frames);
+        [{ at: 0, label: 'Ready' }, { at: .75, label: 'First shot' }, { at: .95, label: 'Second shot' }, { at: 1.15, label: 'Third shot' }, { at: 2.25, label: 'Fires again' }], frames);
 }
 
 function fanRide(): PreviewScene {

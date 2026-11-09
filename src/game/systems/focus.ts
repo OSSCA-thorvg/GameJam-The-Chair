@@ -10,12 +10,12 @@ export function focusBlocked(s: GameCore) {
     return s.paperPenaltyRemaining > 0 || s.lightPenaltyRemaining > 0 || waterExposureActive(s);
 }
 
-export function focusHit(s: GameCore, kind: 'paper' | 'water' | 'light' | 'door' | 'cart', id: number) {
+export function focusHit(s: GameCore, kind: 'paper' | 'water' | 'light' | 'door' | 'cart', id: number, damage = 30) {
     if (s.mode !== 'play') return;
     const token = kind + ':' + id;
     if (s.focusEvents.has(token)) return;
     s.focusEvents.add(token);
-    s.focus = Math.max(0, s.focus - 30);
+    s.focus = Math.max(0, s.focus - damage);
     s.focusClock = 0;
     s.focusNotice = { kind, life: 1.7 };
     if (s.focus === 0) {
