@@ -8,7 +8,7 @@ export const STAGE_TWO = {
     length: 4000, goal: 3780,
     meeting: 620,
     lift: 3250,
-    offices: [220, 1030, 1840, 2370, 3100],
+    offices: [220, 1030, 1840, 2370],
     checkpoints: [{ x: 100, y: 392 }, { x: 1300, y: 392 }, { x: 2200, y: 392 }, { x: 3400, y: 392 }],
     terrain: [
         [{ x: -400, y: 420 }, { x: 4400, y: 420 }, { x: 4400, y: 800 }, { x: -400, y: 800 }],
