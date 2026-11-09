@@ -102,9 +102,15 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
                 reaction = null;
                 status = "Focus depleted.";
                 break;
-            case 'focus-game-over':
-                overlay("Focus depleted", "Wait, where am I?");
+            case 'focus-game-over': {
+                const focusMsgs: Message[] = [
+                    "...Why am I even here?",
+                    "Wait, where even is this?",
+                    "Wait, how far did I go?"
+                ];
+                overlay("Focus depleted", focusMsgs[Math.floor(Math.random() * focusMsgs.length)]);
                 break;
+            }
             case 'spray-empty':
                 status = "Extinguisher empty.";
                 break;
