@@ -38,7 +38,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         ];
         s.people = [
             { id: 'manager', x: 320, said: false },
-            { id: 'cleaner', x: 1000, said: false },
+            { id: 'cleaner', x: LEVEL.cleaning.x + 55, said: false },
             { id: 'admin', x: 1810, said: false },
         ];
     }
@@ -164,12 +164,12 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         }
         s.events.push({ type: 'tick', dt });
         if (s.stage === 2 && meetingStep(s, dt)) return;
-        if (s.stage === 1 && Math.abs(s.p.x - s.copier.x) < 180 && s.copier.cool === 0 && s.copier.burst === 0) {
+        if (s.stage === 1 && (s.volley > 0 || Math.abs(s.p.x - s.copier.x) < 350) && s.copier.cool === 0 && s.copier.burst === 0) {
             s.copier.dir = s.p.x < s.copier.x ? -1 : 1;
             s.volley++;
             s.copier.burst = 4;
             s.copier.next = .75;
-            s.copier.cool = 3.2;
+            s.copier.cool = 1.45;
         }
         if (s.copier.burst > 0) {
             s.copier.next -= dt;
