@@ -1,29 +1,29 @@
 <div id="chair-office-one">
 <div class="scene" data-scene>
-<canvas data-base aria-label="Chair escape game. Controls are in the pause menu." data-i18n-aria="Chair escape game. Controls are in the pause menu."></canvas><canvas data-tvg id="chair-office-one-tvg" aria-hidden="true" hidden></canvas><canvas class="labels" data-labels aria-hidden="true"></canvas>
+<canvas data-base aria-label="Chair escape game. Controls are in the pause menu." data-i18n-aria="menu.canvasAria"></canvas><canvas data-tvg id="chair-office-one-tvg" aria-hidden="true" hidden></canvas><canvas class="labels" data-labels aria-hidden="true"></canvas>
 <div class="focus-hud" data-play-hud hidden>
 <svg class="laptop-icon" viewBox="0 0 28 22" aria-hidden="true"><path d="M5 2h18v14H5zM1 18h26l-2 3H3z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-<div class="focus-track" role="progressbar" aria-label="Focus" data-i18n-aria="Focus" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" data-focus-meter><i data-focus-trail></i><i data-focus-fill></i></div>
-<span class="focus-intro" data-focus-intro hidden data-i18n="Focus">Focus</span>
+<div class="focus-track" role="progressbar" aria-label="Focus" data-i18n-aria="hud.focus" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" data-focus-meter><i data-focus-trail></i><i data-focus-fill></i></div>
+<span class="focus-intro" data-focus-intro hidden data-i18n="hud.focus">Focus</span>
 </div>
-<button class="pause-button" data-pause aria-label="Pause menu" data-i18n-aria="Pause menu" aria-haspopup="dialog" aria-expanded="false" hidden>Ⅱ</button>
+<button class="pause-button" data-pause aria-label="Pause menu" data-i18n-aria="menu.pauseMenu" aria-haspopup="dialog" aria-expanded="false" hidden>Ⅱ</button>
 <div class="stage-entry" data-stage-label hidden></div>
 <div class="bubble" data-rider hidden><span data-quote></span></div>
 <div class="bubble npc-bubble" data-npc hidden><small data-name></small><span data-line></span></div>
 <div class="overlay" data-overlay role="dialog" aria-modal="true" aria-labelledby="chair-panel-title"><div class="modal">
-<small data-kicker hidden></small><h1 id="chair-panel-title" data-title>THE CHAIR</h1><p data-desc data-i18n="Business as usual.">Business as usual.</p><button class="start" data-start data-i18n="Start">Start</button>
-<details class="stats" data-stats hidden><summary data-i18n="Records">Records</summary><p data-stats-text></p></details>
+<small data-kicker hidden></small><h1 id="chair-panel-title" data-title>THE CHAIR</h1><p data-desc data-i18n="intro.desc">Business as usual.</p><button class="start" data-start data-i18n="button.start">Start</button>
+<details class="stats" data-stats hidden><summary data-i18n="button.records">Records</summary><p data-stats-text></p></details>
 </div></div>
 <div class="overlay pause-overlay" data-pause-menu role="dialog" aria-modal="true" aria-labelledby="chair-pause-title" hidden><div class="modal pause-modal">
 <div class="menu-actions" role="group" aria-label="Language / 언어"><button data-locale="en" lang="en">English</button><button data-locale="ko" lang="ko">한국어</button></div>
-<h2 id="chair-pause-title" data-i18n="Paused">Paused</h2><div class="menu-actions"><button class="start" data-resume data-i18n="Resume">Resume</button><button data-reset data-i18n="Retry">Retry</button></div>
-<details><summary data-i18n="Controls">Controls</summary><dl class="key-list"><div><dt>← → / A D</dt><dd data-i18n="Move">Move</dd></div><div><dt>↑ / Space</dt><dd data-i18n="Jump">Jump</dd></div><div data-meeting-help hidden><dt>↓</dt><dd data-i18n="Enter or leave meeting room">Enter or leave meeting room</dd></div><div data-spray-help hidden><dt>F</dt><dd data-i18n="Spray extinguisher">Spray extinguisher</dd></div><div><dt>P / Esc</dt><dd data-i18n="Pause">Pause</dd></div><div><dt>R</dt><dd data-i18n="Restart">Restart</dd></div></dl><p><span data-i18n="Focus">Focus</span> <b data-focus>100%</b> · <span data-i18n="Each distraction: −20%. Recover +1% every 2 seconds without distractions.">Each distraction: −20%. Recover +1% every 2 seconds without distractions.</span></p><p data-i18n="Restarting at a flag restores full focus and dries you off.">Restarting at a flag restores full focus and dries you off.</p></details>
-<details data-stage-menu hidden><summary data-i18n="Stages">Stages</summary><div class="menu-actions"><button hidden data-stage="1" data-i18n="01 Office">01 Office</button><button hidden data-stage="2" data-i18n="02 Inside the building">02 Inside the building</button><button hidden data-stage="3" data-i18n="03 Mechanical room &amp; rooftop">03 Mechanical room &amp; rooftop</button></div></details>
+<h2 id="chair-pause-title" data-i18n="menu.paused">Paused</h2><div class="menu-actions"><button class="start" data-resume data-i18n="button.resume">Resume</button><button data-reset data-i18n="button.retry">Retry</button></div>
+<details><summary data-i18n="menu.controls">Controls</summary><dl class="key-list"><div><dt>← → / A D</dt><dd data-i18n="menu.move">Move</dd></div><div><dt>↑ / Space</dt><dd data-i18n="menu.jump">Jump</dd></div><div data-meeting-help hidden><dt>↓</dt><dd data-i18n="interact.meeting">Enter or leave meeting room</dd></div><div data-spray-help hidden><dt>F</dt><dd data-i18n="menu.sprayExtinguisher">Spray extinguisher</dd></div><div><dt>P / Esc</dt><dd data-i18n="menu.pause">Pause</dd></div><div><dt>R</dt><dd data-i18n="menu.restart">Restart</dd></div></dl><p><span data-i18n="hud.focus">Focus</span> <b data-focus>100%</b> · <span data-i18n="menu.focusRule">Each distraction: −20%. Recover +1% every 2 seconds without distractions.</span></p><p data-i18n="menu.restartRule">Restarting at a flag restores full focus and dries you off.</p></details>
+<details data-stage-menu hidden><summary data-i18n="menu.stages">Stages</summary><div class="menu-actions"><button hidden data-stage="1" data-i18n="stageLabel.stage1">01 Office</button><button hidden data-stage="2" data-i18n="stageLabel.stage2">02 Inside the building</button><button hidden data-stage="3" data-i18n="stageLabel.stage3">03 Mechanical room &amp; rooftop</button></div></details>
 </div></div>
 </div>
-<div class="drive-controls" aria-label="Touch controls" data-i18n-aria="Touch controls">
-<div class="move-controls"><button data-key="left" aria-label="Reverse" data-i18n-aria="Reverse">←</button><button data-key="right" aria-label="Forward" data-i18n-aria="Forward">→</button></div>
-<div class="action-controls"><button data-interact hidden aria-label="Enter or leave meeting room" data-i18n-aria="Enter or leave meeting room">↓</button><button data-jump aria-label="Jump" data-i18n-aria="Jump">↑</button><button data-spray hidden aria-label="Spray extinguisher" data-i18n-aria="Spray extinguisher">💨</button><span class="balance-controls" role="group" aria-label="Balance controls" data-i18n-aria="Balance controls"><button data-key="q" aria-label="Lean left" data-i18n-aria="Lean left">↶</button><button data-key="e" aria-label="Lean right" data-i18n-aria="Lean right">↷</button></span></div>
+<div class="drive-controls" aria-label="Touch controls" data-i18n-aria="menu.touchControls">
+<div class="move-controls"><button data-key="left" aria-label="Reverse" data-i18n-aria="menu.reverse">←</button><button data-key="right" aria-label="Forward" data-i18n-aria="menu.forward">→</button></div>
+<div class="action-controls"><button data-interact hidden aria-label="Enter or leave meeting room" data-i18n-aria="interact.meeting">↓</button><button data-jump aria-label="Jump" data-i18n-aria="menu.jump">↑</button><button data-spray hidden aria-label="Spray extinguisher" data-i18n-aria="menu.sprayExtinguisher">💨</button><span class="balance-controls" role="group" aria-label="Balance controls" data-i18n-aria="menu.balanceControls"><button data-key="q" aria-label="Lean left" data-i18n-aria="menu.leanLeft">↶</button><button data-key="e" aria-label="Lean right" data-i18n-aria="menu.leanRight">↷</button></span></div>
 </div>
 <div class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-status></div>
 </div>

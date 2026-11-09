@@ -24,7 +24,7 @@ try {
 function applyLocale() {
     document.documentElement.lang = locale;
     root.lang = locale;
-    document.title = `The Chair · ${translate('Business as usual.', locale)}`;
+    document.title = `The Chair · ${translate('intro.desc', locale)}`;
     for (const element of root.querySelectorAll<HTMLElement>('[data-i18n]')) {
         const message = element.dataset.i18n;
         if (message !== undefined && isMessage(message)) element.textContent = translate(message, locale);

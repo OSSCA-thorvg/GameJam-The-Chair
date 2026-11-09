@@ -4,14 +4,19 @@ import type { Reaction, Speech } from './types';
 import type { GameState } from '../game/game';
 import { ART } from '../render/art';
 const NPC_COPY = {
-    manager: { name: "Manager Park", text: "Leaving already?" },
-    cleaner: { name: "Kim", text: "Watch the mop bucket!" },
-    admin: { name: "Admin", text: "Please sort your trash." }
+    manager: { name: 'person.manager', text: 'npc.manager.leave' },
+    cleaner: { name: 'person.kim',     text: 'npc.cleaner.mop' },
+    admin:   { name: 'person.admin',   text: 'npc.admin.sort' }
 } satisfies Record<string, { name: Message; text: Message }>;
+const STAGE_CLEAR: Record<1 | 2 | 3, { status: Message; title: Message; button: Message }> = {
+    1: { status: 'status.stage1Clear', title: 'panel.stage1Title', button: 'button.next' },
+    2: { status: 'status.stage2Clear', title: 'panel.stage2Title', button: 'button.next' },
+    3: { status: 'status.stage3Clear', title: 'panel.stage3Title', button: 'button.retryStage' },
+};
 export function createFeedback(getLocale: () => Locale = () => 'en') {
     let reaction: (Omit<Reaction, 'text'> & { text: Message }) | null = null;
     let speech: (Omit<Speech, 'text' | 'name'> & { text: Message; name: Message }) | null = null;
-    let status: Message = '';
+    let status: Message = 'empty';
     let waterRemarked = false;
     let panel: { k: Message; title: Message; desc: string; button: Message } | null = null;
     function say(text: Message) {
@@ -20,7 +25,7 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
     function npc(text: Message, name: Message, x: number) {
         speech = { text, name, x, life: 3.4 };
     }
-    function overlay(k: Message, title: Message, desc = '', button: Message = 'Retry') {
+    function overlay(k: Message, title: Message, desc = '', button: Message = 'button.retry') {
         reaction = null;
         panel = { k, title, desc, button };
     }
@@ -30,7 +35,7 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
             speech = null;
             panel = null;
             waterRemarked = false;
-            status = state.stage === 2 || state.officeCheckpoint ? "Starting from checkpoint." : "Starting.";
+            status = state.stage === 2 || state.officeCheckpoint ? 'status.startingCheckpoint' : 'status.starting';
         }
         if (event.type === 'tick' && reaction && (reaction.life -= event.dt) <= 0) {
             reaction = null;
@@ -46,75 +51,77 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
                     if (person && !speech) npc(NPC_COPY[person.id].text, NPC_COPY[person.id].name, person.x);
                     break;
                 case 'reverse-comment':
-                    if (person) npc("Back to work already?", NPC_COPY[person.id].name, person.x);
+                    if (person) npc('npc.return', NPC_COPY[person.id].name, person.x);
                     break;
                 case 'water-comment':
-                    npc("Hey! I was cleaning…", NPC_COPY.cleaner.name, 1000);
+                    npc('npc.cleaner.spill', NPC_COPY.cleaner.name, 1000);
                     break;
                 case 'head-comment':
-                    npc("About that workplace injury claim…", NPC_COPY.manager.name, 320);
+                    npc('npc.manager.injury', NPC_COPY.manager.name, 320);
                     break;
                 case 'bin-comment':
-                    npc("About that workplace injury claim…", NPC_COPY.admin.name, 1810);
+                    npc('npc.admin.injury', NPC_COPY.admin.name, 1810);
                     break;
                 case 'light-comment':
-                    npc("A bright future, right?", "Coworker", ART.monitors[event.monitorIndex].x);
+                    npc('npc.coworker.bright', 'person.coworker', ART.monitors[event.monitorIndex].x);
                     break;
                 case 'first-volley':
-                    say("Why is this report printing into my face…");
+                    say('player.firstVolley');
                     break;
                 case 'paper-hit':
-                    say("Those are my monthly results…");
+                    say('player.paperHit');
                     break;
                 case 'light-hit':
-                    say("Too bright… I can't see my numbers!");
+                    say('player.lightHit');
                     break;
             }
         }
         switch (event.id) {
             case 'practice-cleared':
-                say("Approved");
+                say('player.approved');
                 break;
             case 'checkpoint':
-                status = "Checkpoint saved.";
+                status = 'status.checkpoint';
                 break;
             case 'water-spilled':
                 if (!waterRemarked) {
-                    say("My laptop?!");
+                    say('player.laptop');
                     waterRemarked = true;
                 }
                 break;
             case 'head-hit':
                 reaction = null;
-                status = "Head impact.";
+                status = 'status.headImpact';
                 break;
             case 'head-game-over':
-                overlay("Head impact", "Your head clocked out first.");
+                overlay('panel.headKicker', 'panel.headTitle');
                 break;
             case 'bin-fall':
                 reaction = null;
-                status = "Trash bin fall.";
+                status = 'status.binFall';
                 break;
             case 'bin-game-over':
-                overlay("Trash bin fall", "Recycled along with your work.");
+                overlay('panel.binKicker', 'panel.binTitle');
                 break;
             case 'lift-game-over':
-                overlay("Forced clock-out", "The mechanical room stayed upstairs.");
+                overlay('panel.liftKicker', 'panel.liftTitle');
                 break;
             case 'focus-lost':
                 reaction = null;
-                status = "Focus depleted.";
+                status = 'status.focusLost';
                 break;
             case 'focus-game-over':
-                overlay("Focus depleted", "Wait, where am I?");
+                overlay('panel.focusKicker', 'panel.focusTitle');
                 break;
             case 'spray-empty':
-                status = "Extinguisher empty.";
+                status = 'status.sprayEmpty';
                 break;
-            case 'stage-clear':
-                status = state.stage === 1 ? "Office escaped." : state.stage === 2 ? "Mechanical room reached." : "Rooftop cleared.";
-                overlay('', state.stage === 1 ? "Clocking out…" : state.stage === 2 ? "Business trip complete." : "Officially resigned.", '', state.stage === 3 ? "Retry stage" : "Next");
+            case 'stage-clear': {
+                const clear = STAGE_CLEAR[state.stage];
+                status = clear.status;
+                overlay('empty', clear.title, '', clear.button);
                 break;
+            }
         }
     }
     function snapshot() {

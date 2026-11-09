@@ -45,7 +45,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         hidden('[data-pause-menu]', !paused);
         q('[data-pause]')?.setAttribute('aria-expanded', String(paused));
         hidden('[data-stage-label]', !active || state.time > 2.2);
-        text('[data-stage-label]', state.stage === 1 ? t('01 Office') : state.stage === 2 ? t('02 Inside the building') : t('03 Mechanical room & rooftop'));
+        text('[data-stage-label]', t(state.stage === 1 ? 'stageLabel.stage1' : state.stage === 2 ? 'stageLabel.stage2' : 'stageLabel.stage3'));
         hidden('[data-focus-intro]', !active || !focusIntroduced || state.time > introduceUntil);
         style('[data-focus-fill]', 'width', focus + '%');
         style('[data-focus-trail]', 'width', focus + '%');
@@ -66,8 +66,8 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         hidden('[data-overlay]', mode !== 'intro' && !panel);
         if (mode === 'intro') {
             text('[data-title]', 'THE CHAIR');
-            text('[data-desc]', t('Business as usual.'));
-            text('[data-start]', t('Start'));
+            text('[data-desc]', t('intro.desc'));
+            text('[data-start]', t('button.start'));
             hidden('[data-kicker]', true);
         } else if (panel) {
             text('[data-kicker]', panel.k);
@@ -83,7 +83,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         }
         previousMode = mode;
         hidden('[data-stats]', mode !== 'won');
-        text('[data-stats-text]', `${t('Focus')} ${focus}% · ${t('Paper')} ${state.paperHits} · ${t('Bin')} ${state.binFalls} · ${t('Light')} ${state.lightHits}${state.stage === 2 ? '' : ` · ${t('Door')} ${state.doorHits}`}`);
+        text('[data-stats-text]', `${t('hud.focus')} ${focus}% · ${t('stats.paper')} ${state.paperHits} · ${t('stats.bin')} ${state.binFalls} · ${t('stats.light')} ${state.lightHits}${state.stage === 2 ? '' : ` · ${t('stats.door')} ${state.doorHits}`}`);
         hidden('[data-rider]', !active || state.stage === 2 || !feedback.reaction);
         if (feedback.reaction) {
             text('[data-quote]', feedback.reaction.text);
