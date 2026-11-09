@@ -38,7 +38,7 @@ function applyLocale() {
     }
 }
 applyLocale();
-showStartupSplash(() => locale);
+showStartupSplash(root, () => locale);
 for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) {
     button.addEventListener('click', () => {
         const selected = button.dataset.locale;

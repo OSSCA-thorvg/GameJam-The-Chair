@@ -54,20 +54,18 @@ export function createSplashPlayer(element: HTMLCanvasElement) {
     };
 }
 
-export function showStartupSplash(getLocale: () => 'en' | 'ko') {
+export function showStartupSplash(root: HTMLElement, getLocale: () => 'en' | 'ko') {
+    const scene = root.querySelector<HTMLElement>('.scene');
+    if (!scene) throw new Error('Game scene is unavailable.');
     const screen = document.createElement('div');
     screen.className = 'startup-splash';
-    screen.setAttribute('role', 'dialog');
-    screen.setAttribute('aria-modal', 'true');
-    screen.setAttribute('aria-label', 'Powered by ThorVG');
+    screen.setAttribute('role', 'button');
+    screen.setAttribute('tabindex', '0');
+    screen.setAttribute('aria-label', getLocale() === 'ko' ? 'ThorVG 시작 화면 건너뛰기' : 'Skip ThorVG splash');
     const canvas = document.createElement('canvas');
     canvas.setAttribute('aria-hidden', 'true');
-    const skip = document.createElement('button');
-    skip.type = 'button';
-    skip.className = 'startup-splash-skip';
-    skip.textContent = getLocale() === 'ko' ? '건너뛰기' : 'Skip';
-    screen.append(canvas, skip);
-    document.body.append(screen);
+    screen.append(canvas);
+    scene.append(screen);
     const player = createSplashPlayer(canvas);
     let started: number | null = null;
     let frameId = 0;
@@ -78,9 +76,9 @@ export function showStartupSplash(getLocale: () => 'en' | 'ko') {
         cancelAnimationFrame(frameId);
         player.destroy();
         screen.remove();
-        document.querySelector<HTMLButtonElement>('[data-start]')?.focus();
+        root.querySelector<HTMLButtonElement>('[data-start]')?.focus();
     };
-    skip.addEventListener('click', finish);
+    screen.addEventListener('click', finish);
     screen.addEventListener('keydown', event => {
         if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -92,7 +90,7 @@ export function showStartupSplash(getLocale: () => 'en' | 'ko') {
             event.stopPropagation();
         }
     });
-    skip.focus();
+    screen.focus();
     function tick(ms: number) {
         if (closed) return;
         started ??= ms;
