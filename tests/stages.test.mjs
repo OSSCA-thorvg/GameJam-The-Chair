@@ -353,6 +353,25 @@ test('copier previews its shot and its first paper batch is safe', () => {
     assert.ok(game.getSnapshot().papers.some(paper => !paper.safe), 'later shots retain the hazard');
 });
 
+test('holding right runs into the copier papers while the copier keeps firing', () => {
+    const game = createGame();
+    game.startStage(1);
+    const start = game.getSnapshot();
+    assert.ok(start.copier.x - start.player.x >= 600);
+    game.setInput('right');
+    let firstHitX;
+    for (let i = 0; i < 120 * 6 && game.getSnapshot().mode === 'play'; i++) {
+        game.step(dt);
+        const state = game.getSnapshot();
+        if (firstHitX === undefined && state.paperHits > 0) firstHitX = state.player.x;
+        if (state.player.x > state.copier.x + 350 && state.bursts >= 8) break;
+    }
+    const state = game.getSnapshot();
+    assert.ok(firstHitX !== undefined && firstHitX < state.copier.x, 'the rider must meet hazardous paper before passing the copier');
+    assert.ok(state.player.x > state.copier.x + 350);
+    assert.ok(state.bursts >= 8, 'the copier must fire another volley after the rider leaves its trigger range');
+});
+
 
 test('extinguisher becomes available in stage three and cannot be used in earlier stages', () => {
     const game = createGame();

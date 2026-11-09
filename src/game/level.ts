@@ -9,7 +9,7 @@ export const LEVEL = Object.freeze({
         Object.freeze({ wall: 2560, period: 3.5, offset: 2.1 }),
         Object.freeze({ wall: 2980, period: 3.5, offset: 1.0 }),
     ]),
-    copier: Object.freeze({ x: 550 }),
+    copier: Object.freeze({ x: 750 }),
     cleaning: Object.freeze({ x: 945, a: 885, b: 1210 }),
     bin: Object.freeze({ x: 1660, a: 1580, b: 1740, rim: 402 }),
     geysers: Object.freeze([
