@@ -241,7 +241,7 @@ function room(ctx: RenderCtx) {
     ctx.rect(ctx.cam, 60, ctx.VW, 360, '#c3c8bd');
     ctx.rect(x - 220, 100, 420, 145, '#617975');
     ctx.rect(x - 208, 112, 396, 121, '#f0ecd9');
-    ctx.label(translate('Meeting: when should this meeting end?', ctx.locale), x - 10, 148, 16, '#48605d');
+    ctx.label(translate('building.meetingPrompt', ctx.locale), x - 10, 148, 16, '#48605d');
     for (let i = 0; i < 3; i++) {
         ctx.rod(x - 180, 177 + i * 16, x + 65 - i * 32, 177 + i * 16, 3, '#9ba9a0');
     }
@@ -257,7 +257,7 @@ function room(ctx: RenderCtx) {
     const pushing = Math.max(0, scene.age - 4.6) * 100;
     worker(ctx, x - 156 + pushing, 420, 'facilitator', 1,
         scene.age > 4.6 ? [ctx.p.x - 31, ctx.p.y - 61] : undefined);
-    const line: Message = scene.age < 2.4 ? 'The chairs have gone home.' : scene.age < 3.5 ? 'People, please stay for the next agenda.' : 'Oh, one more chair! You may leave!';
+    const line: Message = scene.age < 2.4 ? 'building.chairsGone' : scene.age < 3.5 ? 'building.stayNext' : 'building.oneMoreChair';
     bubble(ctx, line, x, 75, 440);
     const actorStart = ctx.commands.length;
     player(ctx);
@@ -299,14 +299,14 @@ export function drawBuilding(ctx: RenderCtx) {
     const opening = Math.min(1, c.dispatchAge / .5);
     ctx.rect(mx - 64 + opening * 112, 190, 126 * (1 - opening), 225, '#d8d6bf');
     ctx.rect(mx - 70, 147, 140, 25, '#e1d7bb');
-    ctx.label(translate('Meeting extended', ctx.locale), mx, 164, 13, '#4f6268');
+    ctx.label(translate('building.meetingExtended', ctx.locale), mx, 164, 13, '#4f6268');
     const pushPhase = c.dispatchStarted && c.dispatchAge < 3.5 ? Math.sin(Math.max(0, c.dispatchAge - .35) * Math.PI / .9) ** 2 : 0;
     worker(ctx, mx - 57 + pushPhase * 10, 420, 'facilitator', 1,
         pushPhase > 0 ? [mx - 18 + pushPhase * 9, 344 - pushPhase * 11] : undefined);
-    if (c.dispatchStarted && c.dispatchAge < 1.5) bubble(ctx, 'Meeting extended. Chairs may leave.', mx + 40, 103, 310);
+    if (c.dispatchStarted && c.dispatchAge < 1.5) bubble(ctx, 'building.dispatchNotice', mx + 40, 103, 310);
     if (state.canEnterMeeting) {
         ctx.rect(mx - 57, 216, 114, 32, '#263a45e8');
-        ctx.label(translate('↓ Enter', ctx.locale), mx, 238, 16, '#f6eddc');
+        ctx.label(translate('interact.enter', ctx.locale), mx, 238, 16, '#f6eddc');
     }
     const lx = STAGE_TWO.lift;
     const departure = c.departure;
@@ -367,7 +367,7 @@ export function drawBuilding(ctx: RenderCtx) {
     }
     state.furniture.forEach((item, i) => {
         if (!item.released) return;
-        if (departure.kind === 'none' && item.cheer > 0 && c.chat.kind === 'waiting') bubble(ctx, (['Woohoo! Freedom!', 'Clocking out!', 'Bye-bye, overtime!'] satisfies Message[])[i], item.x, 285 - (i % 2) * 60, 185, true, Math.min(1, item.cheer * 2));
+        if (departure.kind === 'none' && item.cheer > 0 && c.chat.kind === 'waiting') bubble(ctx, (['cheer.freedom', 'cheer.clockingOut', 'cheer.overtime'] satisfies Message[])[i], item.x, 285 - (i % 2) * 60, 185, true, Math.min(1, item.cheer * 2));
     });
     state.furniture.forEach((item, i) => {
         if (!item.released || departure.kind === 'gone' || departure.kind === 'lost') return;

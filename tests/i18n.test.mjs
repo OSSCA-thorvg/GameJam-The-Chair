@@ -10,6 +10,7 @@ async function load(entry) {
 const { resolveLocale, translate, isMessage } = await load('src/i18n.ts');
 const { createFeedback } = await load('src/ui/feedback.ts');
 const { createGame } = await load('src/game/game.ts');
+const { CHAIR_CHAT, CHAIR_DEPARTURE_LINES } = await load('src/game/stage2.ts');
 
 test('language detection respects supported browser preferences and falls back to English', () => {
     assert.equal(resolveLocale(['ko-KR', 'en-US']), 'ko');
@@ -56,9 +57,26 @@ test('English is the default and failure panels change language while already di
     assert.equal(feedback.snapshot().panel.button, '다시');
 });
 
+test('new lift dialogue and forced clock-out remain localized through message IDs', () => {
+    assert.deepEqual(CHAIR_CHAT.rush.map(line => translate(line.text, 'en')), [
+        'Late! Hold on to your humans!',
+        'The rookie is coming too!',
+        'No brakes till clock-out!',
+    ]);
+    assert.equal(translate(CHAIR_DEPARTURE_LINES.companions[0].text, 'ko'), '잘 굴러왔네, 신입.');
+    assert.equal(translate(CHAIR_DEPARTURE_LINES.abduction[0].text, 'ko'), '신입! 사람도 같이 퇴근이야!');
+    let locale = 'en';
+    const feedback = createFeedback(() => locale);
+    feedback.receive({ type: 'cue', id: 'lift-game-over' }, createGame().getSnapshot());
+    assert.equal(feedback.snapshot().panel.title, 'The mechanical room stayed upstairs.');
+    locale = 'ko';
+    assert.equal(feedback.snapshot().panel.k, '강제 퇴근');
+    assert.equal(feedback.snapshot().panel.title, '기계실은 위에 남았습니다.');
+});
+
 test('printer sound and every localized menu attribute have both languages', async () => {
-    assert.equal(translate('PTUI! PTUI!!', 'en'), 'PTUI! PTUI!!');
-    assert.equal(translate('PTUI! PTUI!!', 'ko'), '퉤! 퉷!!');
+    assert.equal(translate('copier.printer', 'en'), 'PTUI! PTUI!!');
+    assert.equal(translate('copier.printer', 'ko'), '퉤! 퉷!!');
     const markup = await readFile('src/scene.html', 'utf8');
     for (const [, encoded] of markup.matchAll(/data-i18n(?:-aria)?="([^"]+)"/g)) {
         const message = encoded.replaceAll('&amp;', '&').replaceAll('&#x27;', "'").replaceAll('&quot;', '"').replaceAll('&gt;', '>').replaceAll('&lt;', '<');
