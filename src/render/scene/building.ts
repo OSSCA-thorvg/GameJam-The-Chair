@@ -186,8 +186,12 @@ function pictogram(ctx: RenderCtx, x: number, kind: 'exit' | 'lift') {
         ctx.rod(x + 3, 141, x + 26, 141, 4, '#e2eee0');
         ctx.polygon([[x + 18, 132], [x + 29, 141], [x + 18, 150]], '#e2eee0');
     } else {
-        ctx.ellipse(x - 13, 137, 3, 3, '#e2eee0');
-        ctx.rod(x - 13, 141, x - 13, 152, 3, '#e2eee0');
+        ctx.rect(x - 18, 134, 3, 11, '#e2eee0');
+        ctx.rect(x - 18, 143, 10, 3, '#e2eee0');
+        ctx.rod(x - 13, 146, x - 13, 150, 2, '#e2eee0');
+        ctx.rod(x - 17, 150, x - 9, 150, 2, '#e2eee0');
+        ctx.ellipse(x - 16, 153, 1.5, 1.5, '#e2eee0');
+        ctx.ellipse(x - 10, 153, 1.5, 1.5, '#e2eee0');
         ctx.polygon([[x + 5, 137], [x + 13, 127], [x + 21, 137]], '#e2eee0');
         ctx.polygon([[x + 5, 146], [x + 13, 156], [x + 21, 146]], '#e2eee0');
     }
@@ -333,7 +337,7 @@ export function drawBuilding(ctx: RenderCtx) {
         if (localAge < interval - .35) {
             const left = ctx.cam + 180, right = ctx.cam + ctx.VW - 180;
             const x = Math.max(left, Math.min(right, speaker.x));
-            if (speaker.x > ctx.cam - 60 && speaker.x < ctx.cam + ctx.VW + 60) {
+            if (c.chat.kind === 'dismissed' || (speaker.x > ctx.cam - 60 && speaker.x < ctx.cam + ctx.VW + 60)) {
                 bubble(ctx, line.text, x, 242, 350, c.chat.kind === 'wary', Math.min(1, localAge * 6, (interval - .35 - localAge) * 5));
             }
         }
