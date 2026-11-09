@@ -21,7 +21,7 @@ export function monitorStep(s: GameCore, _dt: number, previousX: number) {
         if (!m.active) continue;
         if (s.p.x + 35 > spec.wall - 8 && s.p.x - 35 < spec.wall + 22) {
             const side = previousX < spec.wall ? -1 : 1;
-            s.p.x = spec.wall + side * 45;
+            s.p.x = side < 0 ? spec.wall - 45 : spec.wall + 65;
             s.p.vx = side * 65;
             s.p.w *= .45;
             s.lightPenaltyRemaining = RULES.lightPenalty;
