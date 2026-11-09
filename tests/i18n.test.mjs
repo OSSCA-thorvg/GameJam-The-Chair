@@ -25,7 +25,7 @@ test('switching language translates an active conversation without restarting or
     const state = game.getSnapshot();
     const feedback = createFeedback(() => locale);
     feedback.receive({ type: 'cue', id: 'light-hit' }, state);
-    feedback.receive({ type: 'cue', id: 'light-comment' }, state);
+    feedback.receive({ type: 'cue', id: 'light-comment', monitorIndex: 0 }, state);
     feedback.receive({ type: 'tick', dt: .5 }, state);
     const before = feedback.snapshot();
     locale = 'en';

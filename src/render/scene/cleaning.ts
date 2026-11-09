@@ -4,14 +4,12 @@ import type { RenderCtx } from '../context';
 
 type CleanerControls = {
     approach: number;
-    frontStep: number;
-    rearStep: number;
-    frontLift: number;
-    rearLift: number;
     hipDrop: number;
     lean: number;
     turn: number;
     grip: number;
+    mopGrip: number;
+    mopFall: number;
     bucketTilt: number;
     bucketLift: number;
     retreat: number;
@@ -30,29 +28,33 @@ type CleanerPose = {
 };
 
 export const CLEANER_RECOVERY_START = 1.35;
-export const CLEANER_RECOVERY_END = 3.55;
+export const CLEANER_RECOVERY_END = 4.45;
 
 const RESTING_CLEANER: CleanerControls = {
-    approach: 0, frontStep: 0, rearStep: 0, frontLift: 0, rearLift: 0,
-    hipDrop: 0, lean: 0, turn: 0, grip: 0, bucketTilt: 1, bucketLift: 0, retreat: 0,
+    approach: 0, hipDrop: 0, lean: 0, turn: 0, grip: 0,
+    mopGrip: 1, mopFall: 0, bucketTilt: 1, bucketLift: 0, retreat: 0,
 };
 const CLEANER_BEATS: readonly CleanerBeat[] = [
     { at: .9, pose: RESTING_CLEANER },
     { at: CLEANER_RECOVERY_START, pose: RESTING_CLEANER },
     { at: 1.55, pose: { ...RESTING_CLEANER, turn: 1 } },
-    { at: 1.68, pose: { ...RESTING_CLEANER, turn: 1, approach: .2, frontStep: .5, frontLift: 1, hipDrop: .15 } },
-    { at: 1.8, pose: { ...RESTING_CLEANER, turn: 1, approach: .45, frontStep: 1, hipDrop: .3 } },
-    { at: 1.93, pose: { ...RESTING_CLEANER, turn: 1, approach: .75, frontStep: 1, rearStep: .5, rearLift: 1, hipDrop: .2 } },
-    { at: 2.05, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, frontStep: 1, rearStep: 1, hipDrop: .1 } },
-    { at: 2.23, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, frontStep: 1, rearStep: 1, lean: .1 } },
-    { at: 2.4, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, frontStep: 1, rearStep: 1, hipDrop: 1, lean: 1, grip: 1 } },
-    { at: 2.65, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, frontStep: 1, rearStep: 1, hipDrop: .45, lean: .45, grip: 1, bucketTilt: .5, bucketLift: 8 } },
-    { at: 2.9, pose: { ...RESTING_CLEANER, approach: 1, frontStep: 1, rearStep: 1, grip: 1, bucketTilt: 0 } },
-    { at: 3.03, pose: { ...RESTING_CLEANER, approach: 1, frontStep: 1, rearStep: 1, bucketTilt: 0 } },
-    { at: 3.12, pose: { ...RESTING_CLEANER, approach: 1, frontStep: .5, rearStep: 1, frontLift: 1, hipDrop: .15, bucketTilt: 0, retreat: .25 } },
-    { at: 3.2, pose: { ...RESTING_CLEANER, approach: 1, rearStep: 1, hipDrop: .3, bucketTilt: 0, retreat: .5 } },
-    { at: 3.27, pose: { ...RESTING_CLEANER, approach: 1, rearStep: .5, rearLift: 1, hipDrop: .15, bucketTilt: 0, retreat: .75 } },
-    { at: 3.35, pose: { ...RESTING_CLEANER, approach: 1, bucketTilt: 0, retreat: 1 } },
+    { at: 1.68, pose: { ...RESTING_CLEANER, turn: 1, approach: .2, mopGrip: 0, mopFall: .12 } },
+    { at: 1.8, pose: { ...RESTING_CLEANER, turn: 1, approach: .45, mopGrip: 0, mopFall: .55 } },
+    { at: 1.93, pose: { ...RESTING_CLEANER, turn: 1, approach: .75, mopGrip: 0, mopFall: 1 } },
+    { at: 2.05, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, mopGrip: 0, mopFall: 1 } },
+    { at: 2.23, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, mopGrip: 0, mopFall: 1, lean: .1 } },
+    { at: 2.4, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, mopGrip: 0, mopFall: 1, hipDrop: 1, lean: 1, grip: 1 } },
+    { at: 2.65, pose: { ...RESTING_CLEANER, turn: 1, approach: 1, mopGrip: 0, mopFall: 1, hipDrop: .45, lean: .45, grip: 1, bucketTilt: .5, bucketLift: 8 } },
+    { at: 2.9, pose: { ...RESTING_CLEANER, approach: 1, mopGrip: 0, mopFall: 1, grip: 1, bucketTilt: 0 } },
+    { at: 3.03, pose: { ...RESTING_CLEANER, approach: 1, mopGrip: 0, mopFall: 1, bucketTilt: 0 } },
+    { at: 3.12, pose: { ...RESTING_CLEANER, approach: 1, mopGrip: 0, mopFall: 1, bucketTilt: 0, retreat: .2 } },
+    { at: 3.2, pose: { ...RESTING_CLEANER, approach: 1, mopGrip: 0, mopFall: 1, bucketTilt: 0, retreat: .45 } },
+    { at: 3.27, pose: { ...RESTING_CLEANER, approach: 1, mopGrip: 0, mopFall: 1, bucketTilt: 0, retreat: .75 } },
+    { at: 3.4, pose: { ...RESTING_CLEANER, approach: 1, mopGrip: 0, mopFall: 1, bucketTilt: 0, retreat: 1 } },
+    { at: 3.7, pose: { ...RESTING_CLEANER, approach: 1, mopGrip: 0, mopFall: 1, bucketTilt: 0, retreat: 1, hipDrop: .9, lean: .5 } },
+    { at: 3.9, pose: { ...RESTING_CLEANER, approach: 1, mopFall: 1, bucketTilt: 0, retreat: 1, hipDrop: 1, lean: .5 } },
+    { at: 4.25, pose: { ...RESTING_CLEANER, approach: 1, bucketTilt: 0, retreat: 1, hipDrop: .2 } },
+    { at: CLEANER_RECOVERY_END, pose: { ...RESTING_CLEANER, approach: 1, bucketTilt: 0, retreat: 1 } },
 ];
 
 function mix(a: number, b: number, amount: number) {
@@ -71,14 +73,12 @@ function sampleCleaner(age: number): CleanerControls {
             const b = next.pose;
             return {
                 approach: mix(a.approach, b.approach, amount),
-                frontStep: mix(a.frontStep, b.frontStep, amount),
-                rearStep: mix(a.rearStep, b.rearStep, amount),
-                frontLift: mix(a.frontLift, b.frontLift, amount),
-                rearLift: mix(a.rearLift, b.rearLift, amount),
                 hipDrop: mix(a.hipDrop, b.hipDrop, amount),
                 lean: mix(a.lean, b.lean, amount),
                 turn: mix(a.turn, b.turn, amount),
                 grip: mix(a.grip, b.grip, amount),
+                mopGrip: mix(a.mopGrip, b.mopGrip, amount),
+                mopFall: mix(a.mopFall, b.mopFall, amount),
                 bucketTilt: mix(a.bucketTilt, b.bucketTilt, amount),
                 bucketLift: mix(a.bucketLift, b.bucketLift, amount),
                 retreat: mix(a.retreat, b.retreat, amount),
@@ -110,16 +110,30 @@ function cleanerHead(ctx: RenderCtx, x = 0, y = 0, facing = 1) {
     headPart([[13, -131], [16, -131], [16, -127], [13, -127]], '#4b5059');
 }
 
-function cleanerMop(ctx: RenderCtx) {
-    ctx.polygon([[18, -86], [22, -88], [79, -4], [74, -2]], '#808c7b');
-    ctx.polygon([[70, -8], [79, -11], [91, -3], [87, 1], [64, 1]], '#b1ad8e');
+function mopHandle(ctx: RenderCtx, n: DeepReadonly<Person>, fall: number): Vector {
+    const angle = -fall * 1.02;
+    const x = (20 - 76) * .85;
+    const y = -86 * .85;
+    return [n.x + 76 * .85 + x * Math.cos(angle) - y * Math.sin(angle),
+        ctx.F - 17 + x * Math.sin(angle) + y * Math.cos(angle)];
+}
+
+function cleanerMop(ctx: RenderCtx, n: DeepReadonly<Person>, fall: number) {
+    ctx.ox = n.x + 76 * .85;
+    ctx.oy = ctx.F - 17;
+    ctx.rotation = -fall * 1.02;
+    ctx.localScale = .85;
+    ctx.polygon([[-58, -86], [-54, -88], [3, -4], [-2, -2]], '#808c7b');
+    ctx.polygon([[-6, -8], [3, -11], [15, -3], [11, 1], [-12, 1]], '#b1ad8e');
+    ctx.ox = ctx.oy = ctx.rotation = 0;
+    ctx.localScale = 1;
 }
 
 export function person(ctx: RenderCtx, n: DeepReadonly<Person>) {
     if (n.id === 'cleaner') {
         const motion = sampleCleaner(0);
         const pose = cleanerPose(ctx, n, motion, bucketPose(ctx, motion));
-        drawCleanerBody(ctx, n, pose);
+        drawCleanerBody(ctx, n, pose, motion);
         drawArm(ctx, pose.frontArm, true);
         return;
     }
@@ -189,8 +203,17 @@ function cleanerPose(ctx: RenderCtx, n: DeepReadonly<Person>, motion: CleanerCon
     const footY = ctx.F - 20;
     const targetX = ctx.cleaning.x - toward * 20;
     const hipX = mix(n.x, targetX, motion.approach * (1 - motion.retreat));
-    const frontFoot: Vector = [mix(n.x + toward * 11, targetX + toward * 13, motion.frontStep), footY - motion.frontLift * 9];
-    const rearFoot: Vector = [mix(n.x - toward * 11, targetX - toward * 13, motion.rearStep), footY - motion.rearLift * 9];
+    const step = (progress: number) => ctx.clamp(progress, 0, 1);
+    const frontOut = step(motion.approach * 2);
+    const rearOut = step(motion.approach * 2 - 1);
+    const rearBack = step(motion.retreat * 2);
+    const frontBack = step(motion.retreat * 2 - 1);
+    const frontX = mix(mix(n.x + toward * 11, targetX + toward * 13, frontOut), n.x + toward * 11, frontBack);
+    const rearX = mix(mix(n.x - toward * 11, targetX - toward * 13, rearOut), n.x - toward * 11, rearBack);
+    const frontLift = Math.max(Math.sin(frontOut * Math.PI) * (1 - motion.retreat), Math.sin(frontBack * Math.PI));
+    const rearLift = Math.max(Math.sin(rearOut * Math.PI) * (1 - motion.retreat), Math.sin(rearBack * Math.PI));
+    const frontFoot: Vector = [frontX, footY - frontLift * 9];
+    const rearFoot: Vector = [rearX, footY - rearLift * 9];
     let hipY = ctx.F - 59 + motion.hipDrop * 18;
     for (const [foot, offset] of [[frontFoot, toward * 6], [rearFoot, -toward * 6]] satisfies [Vector, number][]) {
         const reach = Math.sqrt(Math.max(1, 43 * 43 - (foot[0] - hipX - offset) ** 2));
@@ -202,11 +225,13 @@ function cleanerPose(ctx: RenderCtx, n: DeepReadonly<Person>, motion: CleanerCon
     const rearHip: Vector = [hipX - toward * 6, hipY];
     const restHand: Vector = [hipX + 32 * (1 - motion.turn) * (1 - motion.retreat) + toward * 14 * motion.turn + 13 * motion.retreat,
         shoulder[1] + 32 + 6 * motion.retreat];
+    const bucketHand: Vector = [mix(restHand[0], bucket.frontGrip[0], motion.grip), mix(restHand[1], bucket.frontGrip[1], motion.grip)];
+    const mopHand = mopHandle(ctx, n, motion.mopFall);
     return {
         hip: [hipX, hipY], shoulder, facing: mix(1, toward, motion.turn),
         frontLeg: { root: frontHip, joint: kneeBetween(frontHip, frontFoot, toward), end: frontFoot },
         rearLeg: { root: rearHip, joint: kneeBetween(rearHip, rearFoot, toward), end: rearFoot },
-        frontArm: armPose([shoulder[0] + 7, shoulder[1] + 8], restHand, bucket.frontGrip, motion.grip, toward),
+        frontArm: armPose([shoulder[0] + 7, shoulder[1] + 8], bucketHand, mopHand, motion.mopGrip, toward),
         rearArm: armPose([shoulder[0] - 8, shoulder[1] + 8], [hipX - 11, shoulder[1] + 37], bucket.rearGrip, motion.grip, -toward),
     };
 }
@@ -228,14 +253,9 @@ function drawLeg(ctx: RenderCtx, leg: LimbPose, near: boolean, facing: number) {
     ctx.polygon([[-6, -3], [4, -3], [10, 2], [-7, 2]].map(([px, py]) => [x + px * direction, y + py]), '#3c4753');
 }
 
-function drawCleanerBody(ctx: RenderCtx, n: DeepReadonly<Person>, pose: CleanerPose) {
+function drawCleanerBody(ctx: RenderCtx, n: DeepReadonly<Person>, pose: CleanerPose, motion: CleanerControls) {
     ctx.ellipse(pose.hip[0], ctx.F - 17, 28, 2.5, '#515c6d62');
-    ctx.ox = n.x;
-    ctx.oy = ctx.F - 17;
-    ctx.localScale = .85;
-    cleanerMop(ctx);
-    ctx.ox = ctx.oy = 0;
-    ctx.localScale = 1;
+    cleanerMop(ctx, n, motion.mopFall);
     drawArm(ctx, pose.rearArm, false);
     drawLeg(ctx, pose.rearLeg, false, pose.facing);
     drawLeg(ctx, pose.frontLeg, true, pose.facing);
@@ -288,7 +308,7 @@ export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
     const tip = Math.abs(angle) / 1.25;
     const side = cleaning.splashDir;
     ctx.ellipse(cleaning.x + side * tip * 20, F + 1, 28 + tip * 5, 3, '#515c6d48');
-    if (cleaner && pose) drawCleanerBody(ctx, cleaner, pose);
+    if (cleaner && pose) drawCleanerBody(ctx, cleaner, pose, motion);
     ctx.ox = bucket.origin[0];
     ctx.oy = bucket.origin[1];
     ctx.rotation = angle;

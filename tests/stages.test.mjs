@@ -20,8 +20,6 @@ function drive(game, stop = state => state.mode !== 'play', options = {}) {
         seen.cartHit ||= !!state.corridor.cart?.hit;
         seen.airborneAtCart ||= !!state.corridor.cart && Math.abs(state.corridor.cart.x - p.x) < 100 && p.y < 320;
         if (stop(state)) return { state, seen };
-        const scan = state.corridor.scanner;
-        const scanWait = !scan.approved && p.x > 1270;
         let hazardWait = false;
         if (state.stage === 1) {
             for (const g of GEYSERS) {
@@ -30,7 +28,7 @@ function drive(game, stop = state => state.mode !== 'play', options = {}) {
         }
         const dodging = options.dodge && state.corridor.cart && state.corridor.cart.x - p.x > 0 && state.corridor.cart.x - p.x < 400;
         const correction = -p.a * 12 - p.w * 4;
-        const keys = (scanWait || (hazardWait && !dodging)) ? [] : ['right'];
+        const keys = (hazardWait && !dodging) ? [] : ['right'];
         if (correction < -.4) keys.push('q');
         if (correction > .4) keys.push('e');
         game.setInput(...keys);
@@ -41,7 +39,7 @@ function drive(game, stop = state => state.mode !== 'play', options = {}) {
     assert.fail('Route did not finish within 60 simulated seconds');
 }
 
-test('stage2 completes through chair dispatch, stationary scan and elevator cart', () => {
+test('stage2 completes through chair dispatch and elevator cart', () => {
     const game = createGame(); game.startStage(2);
     const { state, seen } = drive(game);
     assert.equal(state.mode, 'won');
@@ -49,11 +47,46 @@ test('stage2 completes through chair dispatch, stationary scan and elevator cart
     assert.equal(state.deaths, 0);
     assert.equal(state.checkpoint, 3);
     assert.deepEqual([...seen.checkpoints], [0, 1, 2, 3]);
-    assert.ok(state.corridor.scanner.approved);
     assert.ok(state.furniture.every(chair => chair.released));
     assert.ok(seen.cartHit, 'one cart collision remains recoverable');
     assert.equal(state.bursts, 0);
     assert.equal(state.cleaningSpilled, false);
+});
+
+test('document piles lift the rider, chairs, and delivery cart without blocking the route', () => {
+    const random = Math.random;
+    Math.random = () => .4;
+    let game;
+    try { game = createGame(); game.startStage(2); } finally { Math.random = random; }
+    const piles = game.getSnapshot().corridor.paperPiles;
+    assert.equal(piles.length, 5);
+    assert.ok(piles.every(pile => pile.x - pile.halfWidth > 2200 && pile.x + pile.halfWidth < 3250));
+    const lowest = { rider: 420, chair: 420, cart: 420 };
+    const { state } = drive(game, snapshot => {
+        const rider = snapshot.player;
+        if (rider.x > 2250 && rider.x < 3200 && snapshot.ground) lowest.rider = Math.min(lowest.rider, rider.y + 28);
+        for (const chair of snapshot.furniture) if (chair.x > 2250 && chair.x < 3200) lowest.chair = Math.min(lowest.chair, chair.y);
+        const cart = snapshot.corridor.cart;
+        if (cart && cart.x > 2250 && cart.x < 3200) lowest.cart = Math.min(lowest.cart, cart.y);
+        return snapshot.mode !== 'play';
+    });
+    assert.equal(state.mode, 'won');
+    assert.ok(lowest.rider < 415, `rider never climbed a pile: ${lowest.rider}`);
+    assert.ok(lowest.chair < 415, `chairs never climbed a pile: ${lowest.chair}`);
+    assert.ok(lowest.cart < 415, `cart never climbed a pile: ${lowest.cart}`);
+});
+
+test('cart shove remains recoverable when random draws are high', () => {
+    const random = Math.random;
+    Math.random = () => .99;
+    try {
+        const game = createGame(); game.startStage(2);
+        const { state, seen } = drive(game);
+        assert.ok(seen.cartHit);
+        assert.equal(state.mode, 'won');
+    } finally {
+        Math.random = random;
+    }
 });
 
 test('jumping over the cart also leads to the exit without losing focus', () => {
@@ -77,7 +110,7 @@ test('restart resumes at the last reached checkpoint and stage selection starts 
     assert.equal(saved.checkpoint, 3);
     assert.equal(saved.player.x, 3400);
     assert.equal(saved.deaths, 1);
-    assert.equal(saved.corridor.scanner.approved, true);
+    assert.equal(saved.corridor.departure.kind, 'gone');
     assert.equal(saved.corridor.room.kind, 'corridor');
     game.startStage(2);
     assert.equal(game.getSnapshot().player.x, 100);
@@ -101,10 +134,10 @@ test('three chairs are dispatched in sequence and snapshots cannot edit them', (
     const state = game.getSnapshot();
     assert.ok(state.furniture.every(c => c.x > 680));
     state.player.x = 99999; state.furniture[0].x = 99999;
-    state.corridor.scanner.approved = true;
+    state.corridor.cartHits = 999;
     assert.ok(game.getSnapshot().player.x < 1000);
     assert.ok(game.getSnapshot().furniture[0].x < 2000);
-    assert.equal(game.getSnapshot().corridor.scanner.approved, false);
+    assert.equal(game.getSnapshot().corridor.cartHits, 0);
 });
 
 
@@ -134,30 +167,6 @@ test('stage1 still emits copier hazards after switching back from stage2', () =>
     for (let i = 0; i < 360; i++) { game.step(dt); game.drainEvents(); }
     assert.ok(game.getSnapshot().bursts > 0);
 });
-
-test('scanner requires released movement keys and cannot be jumped or pushed through', () => {
-    const game = createGame(); game.startStage(2);
-    game.setInput('right');
-    for (let i = 0; i < 1800; i++) { game.step(dt); game.drainEvents(); }
-    const stopped = game.getSnapshot();
-    assert.equal(stopped.mode, 'play');
-    assert.equal(stopped.corridor.scanner.approved, false);
-    assert.ok(stopped.player.x <= 1399);
-    game.jump();
-    for (let i = 0; i < 180; i++) {
-        const p = game.getSnapshot().player;
-        const correction = -p.a * 12 - p.w * 4;
-        game.setInput('right', ...(correction < -.4 ? ['q'] : correction > .4 ? ['e'] : []));
-        game.step(dt); game.drainEvents();
-    }
-    assert.equal(game.getSnapshot().mode, 'play');
-    assert.ok(game.getSnapshot().player.x <= 1399);
-    game.setInput();
-    for (let i = 0; i < 240; i++) { game.step(dt); game.drainEvents(); }
-    assert.equal(game.getSnapshot().corridor.scanner.approved, true);
-    assert.equal(game.getSnapshot().focus, 100);
-});
-
 
 test('optional meeting scene returns the rider automatically and can be left early', () => {
     for (const early of [false, true]) {
@@ -247,17 +256,6 @@ test('office bin retries restore a dry, focused chair at the safe approach flag'
     assert.equal(game.getSnapshot().officeCheckpoint, false);
     assert.equal(game.getSnapshot().player.x, 100);
 });
-
-test('speed telemetry settles to zero against the badge gate despite wheel effort', () => {
-    const game = createGame(); game.startStage(2);
-    game.setInput('right');
-    for (let i = 0; i < 1800; i++) { game.step(dt); game.drainEvents(); }
-    const state = game.getSnapshot();
-    assert.equal(state.mode, 'play');
-    assert.ok(state.actualSpeed < .1);
-    assert.equal(state.corridor.scanner.approved, false);
-});
-
 
 test('airborne Q/E correction works while holding the opposite movement key', () => {
     for (const [input, sign] of [[['right', 'q'], -1], [['left', 'e'], 1]]) {

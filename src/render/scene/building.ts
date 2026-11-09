@@ -1,5 +1,5 @@
 import { translate, type Message } from '../../i18n';
-import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES, chairChatLine } from '../../game/stage2';
+import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES, chairChatLine, paperPilePolygon } from '../../game/stage2';
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
 import { practiceFloor, checkpointFlag } from './decor';
@@ -242,6 +242,18 @@ export function drawBuilding(ctx: RenderCtx) {
     ctx.rod(cam, 422, cam + VW, 422, 4, '#586f75');
     for (let x = Math.floor(cam / 120) * 120; x < cam + VW; x += 120) ctx.rod(x, 428, x + 100, 520, 1, '#a7b2aa');
     if (c.room.kind === 'meeting') { room(ctx); return; }
+    for (const pile of c.paperPiles) {
+        if (pile.x + pile.halfWidth < cam || pile.x - pile.halfWidth > cam + VW) continue;
+        const shape = paperPilePolygon(pile).map(point => [point.x, point.y] as Vector);
+        ctx.gradientPolygon(shape, ctx.gradientFill(pile.x, 420 - pile.height, pile.x, 420,
+            [[0, '#faf5e7'], [1, '#c8bda9']]));
+        ctx.rod(pile.x - pile.halfWidth * .39, 420 - pile.height + 1,
+            pile.x + pile.halfWidth * .39, 420 - pile.height + 1, 1, '#9e9a8e');
+        ctx.rod(pile.x - pile.halfWidth * .68, 419 - pile.height * .53,
+            pile.x + pile.halfWidth * .57, 419 - pile.height * .53, 1, '#e7dfce');
+        ctx.rod(pile.x - pile.halfWidth * .18, 422 - pile.height,
+            pile.x + pile.halfWidth * .19, 422 - pile.height, 1, '#b0afa1');
+    }
     for (const [officeIndex, office] of c.offices.entries()) {
         const x = office.x;
         ctx.rect(x - 110, 174, 220, 181, '#617983');
@@ -282,10 +294,11 @@ export function drawBuilding(ctx: RenderCtx) {
     }
     if (c.cart) {
         const x = c.cart.x;
-        ctx.rod(x - 50, 412, x + 50, 412, 5, '#546a77');
-        ctx.rod(x + 46, 412, x + 46, 354, 5, '#546a77');
-        for (let i = 0; i < 9; i++) ctx.rect(x - 39 + Math.sin(i * 3) * 3, 403 - i * 5, 70, 4, i % 2 ? '#e7e0ca' : '#f8f4e4');
-        for (const dx of [-33, 33]) ctx.ellipse(x + dx, 416, 6, 6, '#384c59');
+        const y = c.cart.y;
+        ctx.rod(x - 50, y - 8, x + 50, y - 8, 5, '#546a77');
+        ctx.rod(x + 46, y - 8, x + 46, y - 66, 5, '#546a77');
+        for (let i = 0; i < 9; i++) ctx.rect(x - 39 + Math.sin(i * 3) * 3, y - 17 - i * 5, 70, 4, i % 2 ? '#e7e0ca' : '#f8f4e4');
+        for (const dx of [-33, 33]) ctx.ellipse(x + dx, y - 4, 6, 6, '#384c59');
         if (departure.kind === 'none' && c.lift.kind === 'open' && c.lift.age < 2) bubble(ctx, 'Overtime arriving first.', lx - 35, 219, 230);
         if (departure.kind === 'none' && c.cart.hit) bubble(ctx, 'Urgent delivery!', x, 304, 170, true);
     }

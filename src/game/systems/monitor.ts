@@ -32,7 +32,7 @@ export function monitorStep(s: GameCore, _dt: number, previousX: number) {
                 focusHit(s, 'light', i * 1000 + Math.floor(s.t / spec.period));
                 if (s.mode !== 'play') return;
                 s.events.push({ type: 'cue', id: 'light-hit' });
-                s.events.push({ type: 'cue', id: 'light-comment' });
+                s.events.push({ type: 'cue', id: 'light-comment', monitorIndex: i });
             }
             return;
         }

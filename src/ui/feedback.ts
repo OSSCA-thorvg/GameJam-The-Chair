@@ -2,6 +2,7 @@ import { translate, type Locale, type Message } from '../i18n';
 import type { GameEvent } from '../game/types';
 import type { Reaction, Speech } from './types';
 import type { GameState } from '../game/game';
+import { ART } from '../render/art';
 const NPC_COPY = {
     manager: { name: "Manager Park", text: "Leaving already?" },
     cleaner: { name: "Kim", text: "Watch the mop bucket!" },
@@ -57,7 +58,7 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
                     npc("About that workplace injury claim…", NPC_COPY.admin.name, 1810);
                     break;
                 case 'light-comment':
-                    npc("A bright future, right?", "Coworker", 2300);
+                    npc("A bright future, right?", "Coworker", ART.monitors[event.monitorIndex].x);
                     break;
                 case 'first-volley':
                     say("Why is this report printing into my face…");

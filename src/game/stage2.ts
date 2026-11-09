@@ -4,6 +4,7 @@ import type { Message } from '../i18n';
 export const TYPING_SOUNDS = ['tap… tap…', 't-t-t-tap…', 'tak… tap…', 'tap-tap-tap!', 'tick… tick-tap…'] satisfies Message[];
 export type StageId = 1 | 2 | 3;
 export type Furniture = { kind: 'chair'; x: number; y: number; width: number; height: number; vx: number; released: boolean; cheer: number };
+export type PaperPile = { x: number; halfWidth: number; height: number };
 export const STAGE_TWO = {
     length: 4000, goal: 3780,
     meeting: 620,
@@ -14,6 +15,31 @@ export const STAGE_TWO = {
         [{ x: -400, y: 420 }, { x: 4400, y: 420 }, { x: 4400, y: 800 }, { x: -400, y: 800 }],
     ] satisfies Point[][],
 };
+export function makePaperPiles(seed: number): PaperPile[] {
+    let value = seed >>> 0;
+    const random = () => ((value = (Math.imul(value, 1664525) + 1013904223) >>> 0) / 0x100000000);
+    return Array.from({ length: 5 }, (_, i) => ({
+        x: 2340 + i * 175 + (random() - .5) * 50,
+        halfWidth: 60 + random() * 10,
+        height: (i === 0 ? 6 : 8) + random() * 3,
+    }));
+}
+export function paperPilePolygon(pile: PaperPile): Point[] {
+    const { x, halfWidth: w, height: h } = pile;
+    return [{ x: x - w, y: 420 }, { x: x - w * .4, y: 420 - h },
+        { x: x + w * .4, y: 420 - h }, { x: x + w, y: 420 }];
+}
+export function paperSurfaceY(piles: readonly PaperPile[], x: number): number {
+    let rise = 0;
+    for (const pile of piles) {
+        const distance = Math.abs(x - pile.x);
+        if (distance >= pile.halfWidth) continue;
+        const shoulder = pile.halfWidth * .4;
+        const factor = distance <= shoulder ? 1 : (pile.halfWidth - distance) / (pile.halfWidth - shoulder);
+        rise = Math.max(rise, pile.height * factor);
+    }
+    return 420 - rise;
+}
 export type ChairChat = { kind: 'waiting' } | { kind: 'gossip' | 'wary' | 'dismissed' | 'realizing' | 'welcoming' | 'companions'; age: number };
 export const CHAIR_CHAT = {
     gossip: [
@@ -92,6 +118,7 @@ export const CHAIR_DEPARTURE_LINES = {
 } satisfies Record<ChairDepartureReason, { speaker: 0 | 1 | 2; text: Message }[]>;
 export type Corridor = {
     appearanceSeed: number;
+    paperPiles: readonly PaperPile[];
     room: { kind: 'corridor' } | { kind: 'meeting'; age: number; returnX: number };
     meetingVisited: boolean;
     dispatchAge: number;
@@ -101,13 +128,15 @@ export type Corridor = {
     departure: ChairDeparture;
     lift: { kind: 'waiting' } | { kind: 'arriving'; age: number } | { kind: 'open'; age: number } | { kind: 'departed' };
     cartHits: number;
-    cart: { x: number; hit: boolean } | null;
+    cart: { x: number; y: number; hit: boolean } | null;
     typingCooldown: number;
     offices: { x: number; life: number; cooldown: number; nearby: boolean; phrase: number; offset: Point }[];
 };
 export function createCorridor(checkpoint = 0): Corridor {
+    const appearanceSeed = Math.floor(Math.random() * 0x100000000);
     return {
-        appearanceSeed: Math.floor(Math.random() * 0x100000000),
+        appearanceSeed,
+        paperPiles: makePaperPiles(appearanceSeed),
         room: { kind: 'corridor' }, meetingVisited: false,
         dispatchStarted: checkpoint > 0, dispatchAge: checkpoint > 0 ? 10 : 0,
         chat: { kind: 'waiting' },
@@ -118,7 +147,10 @@ export function createCorridor(checkpoint = 0): Corridor {
         offices: STAGE_TWO.offices.map(x => ({ x, life: 0, cooldown: 0, nearby: false, phrase: 0, offset: { x: 0, y: 0 } })),
     };
 }
-export function createFurniture(checkpoint = 0): Furniture[] {
+export function createFurniture(checkpoint = 0, piles: readonly PaperPile[] = []): Furniture[] {
     const front = checkpoint > 0 ? STAGE_TWO.checkpoints[checkpoint].x + 190 : STAGE_TWO.meeting + 12;
-    return [0, 1, 2].map(i => ({ kind: 'chair', x: checkpoint > 0 ? front - i * 130 : front, y: 420, width: 48, height: 40, vx: checkpoint > 0 ? 185 : 0, released: checkpoint > 0, cheer: 0 }));
+    return [0, 1, 2].map(i => {
+        const x = checkpoint > 0 ? front - i * 130 : front;
+        return { kind: 'chair', x, y: paperSurfaceY(piles, x), width: 48, height: 40, vx: checkpoint > 0 ? 185 : 0, released: checkpoint > 0, cheer: 0 };
+    });
 }
