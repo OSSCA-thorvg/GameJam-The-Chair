@@ -257,6 +257,30 @@ test('office bin retries restore a dry, focused chair at the safe approach flag'
     assert.equal(game.getSnapshot().player.x, 100);
 });
 
+test('the office flag restores focus when first reached after a distraction', () => {
+    const game = createGame();
+    game.startStage(1);
+    game.setInput('right');
+    let focusLostBeforeFlag = false;
+    for (let i = 0; i < 120 * 20 && !game.getSnapshot().officeCheckpoint; i++) {
+        game.step(dt);
+        const state = game.getSnapshot();
+        if (state.focus < 100) focusLostBeforeFlag = true;
+        assert.equal(state.mode, 'play');
+    }
+    assert.equal(focusLostBeforeFlag, true);
+    assert.equal(game.getSnapshot().officeCheckpoint, true);
+    assert.equal(game.getSnapshot().focus, 100);
+
+    game.setInput('left');
+    for (let i = 0; i < 120 * 20 && game.getSnapshot().player.x > 750; i++) game.step(dt);
+    assert.ok(game.getSnapshot().focus < 100);
+    game.setInput('right');
+    for (let i = 0; i < 120 * 20 && game.getSnapshot().player.x < 1450; i++) game.step(dt);
+    assert.equal(game.getSnapshot().mode, 'play');
+    assert.ok(game.getSnapshot().focus < 100, 'crossing the saved flag again must not refill focus');
+});
+
 test('airborne Q/E correction works while holding the opposite movement key', () => {
     for (const [input, sign] of [[['right', 'q'], -1], [['left', 'e'], 1]]) {
         const game = createGame();
