@@ -53,6 +53,29 @@ test('stage2 completes through chair dispatch and elevator cart', () => {
     assert.equal(state.cleaningSpilled, false);
 });
 
+test('document piles lift the rider, chairs, and delivery cart without blocking the route', () => {
+    const random = Math.random;
+    Math.random = () => .4;
+    let game;
+    try { game = createGame(); game.startStage(2); } finally { Math.random = random; }
+    const piles = game.getSnapshot().corridor.paperPiles;
+    assert.equal(piles.length, 5);
+    assert.ok(piles.every(pile => pile.x - pile.halfWidth > 2200 && pile.x + pile.halfWidth < 3250));
+    const lowest = { rider: 420, chair: 420, cart: 420 };
+    const { state } = drive(game, snapshot => {
+        const rider = snapshot.player;
+        if (rider.x > 2250 && rider.x < 3200 && snapshot.ground) lowest.rider = Math.min(lowest.rider, rider.y + 28);
+        for (const chair of snapshot.furniture) if (chair.x > 2250 && chair.x < 3200) lowest.chair = Math.min(lowest.chair, chair.y);
+        const cart = snapshot.corridor.cart;
+        if (cart && cart.x > 2250 && cart.x < 3200) lowest.cart = Math.min(lowest.cart, cart.y);
+        return snapshot.mode !== 'play';
+    });
+    assert.equal(state.mode, 'won');
+    assert.ok(lowest.rider < 415, `rider never climbed a pile: ${lowest.rider}`);
+    assert.ok(lowest.chair < 415, `chairs never climbed a pile: ${lowest.chair}`);
+    assert.ok(lowest.cart < 415, `cart never climbed a pile: ${lowest.cart}`);
+});
+
 test('cart shove remains recoverable when random draws are high', () => {
     const random = Math.random;
     Math.random = () => .99;

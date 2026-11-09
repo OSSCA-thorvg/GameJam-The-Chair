@@ -1,4 +1,4 @@
-import { STAGE_TWO, createFurniture, createCorridor, type StageId } from './stage2';
+import { STAGE_TWO, createFurniture, createCorridor, paperPilePolygon, type StageId } from './stage2';
 import { STAGE_THREE, fanStrength } from './stage3';
 import { LEVEL, RULES, FIXED_STEP } from './level';
 import type { Input, DeepReadonly } from './types';
@@ -26,9 +26,10 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             return;
         }
         if (s.stage === 2) {
-            s.solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
+            s.solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }))
+                .concat(s.corridor.paperPiles.map(pile => ({ p: paperPilePolygon(pile) })));
             s.people = [];
-            s.furniture = createFurniture(s.checkpoint);
+            s.furniture = createFurniture(s.checkpoint, s.corridor.paperPiles);
             return;
         }
         s.solids = [
@@ -43,6 +44,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
     }
 
     function reset() {
+        s.corridor = createCorridor(s.checkpoint);
         build();
         const spawn = s.stage === 3
             ? STAGE_THREE.checkpoints[s.checkpoint]
@@ -60,7 +62,6 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         s.time = 0;
         s.t = 0;
         if (s.stage === 1) s.skylineSeed = Math.floor(Math.random() * 0x100000000);
-        s.corridor = createCorridor(s.checkpoint);
         s.acc = 0;
         s.dirty = false;
         s.inBin = false;
