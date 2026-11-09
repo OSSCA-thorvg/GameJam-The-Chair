@@ -31,6 +31,7 @@ export type RenderCtx = {
     localScale: number;
 
     commands: DrawCommand[];
+    foregroundActors: DrawCommand[];
 
     state: GameState;
     p: GameState['player'];
@@ -96,6 +97,7 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         rotation: 0,
         localScale: 1,
         commands: [] as DrawCommand[],
+        foregroundActors: [],
         state: null as unknown as GameState,
         p: null as unknown as GameState['player'],
         mode: '',

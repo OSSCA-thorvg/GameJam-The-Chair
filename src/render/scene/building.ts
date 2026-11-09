@@ -160,7 +160,9 @@ function typingWorker(ctx: RenderCtx, x: number, y: number, look: OfficeAppearan
 }
 
 function chair(ctx: RenderCtx, x: number, y: number) {
+    const shadowStart = ctx.commands.length;
     ctx.ellipse(x, y + 3, 37, 5, '#35465622');
+    const actorStart = ctx.commands.length;
     ctx.rod(x - 18, y - 37, x - 22, y - 90, 6, '#515665');
     ctx.rect(x - 30, y - 90, 18, 48, '#6f7687');
     ctx.rect(x - 24, y - 40, 48, 8, '#6f7687');
@@ -170,7 +172,43 @@ function chair(ctx: RenderCtx, x: number, y: number) {
         ctx.ellipse(x + side * 17, y - 5, 5, 5, '#3f4650');
         ctx.rod(x + side * 17, y - 5, x + side * 17 + Math.cos(ctx.t * 9) * 3, y - 5 + Math.sin(ctx.t * 9) * 3, 1, '#b6c5c7');
     }
+    if (ctx.state.corridor.departure.kind === 'descending') {
+        cabinActors(ctx, shadowStart, actorStart - shadowStart);
+    } else {
+        ctx.foregroundActors.push(...ctx.commands.slice(actorStart));
+    }
 }
+function cabinActors(ctx: RenderCtx, start: number, foregroundOffset = 0) {
+    const departure = ctx.state.corridor.departure;
+    if (departure.kind !== 'descending') return;
+    const age = departure.age;
+    const aperture = 1 - ctx.clamp((age - 1.3) / .7, 0, 1);
+    const [left, top] = ctx.screenPoint(STAGE_TWO.lift - 1 - aperture * 99, 190);
+    const [right, bottom] = ctx.screenPoint(STAGE_TWO.lift + aperture * 99, 420);
+    const visible = ctx.commands.splice(start).flatMap((command, index) => {
+        let points = command.v;
+        for (const [axis, edge, direction] of [[0, left, 1], [0, right, -1], [1, top, 1], [1, bottom, -1]] satisfies [0 | 1, number, number][]) {
+            const clipped: Vector[] = [];
+            for (let i = 0; i < points.length; i++) {
+                const a = points[i], b = points[(i + 1) % points.length];
+                const insideA = (a[axis] - edge) * direction >= 0;
+                const insideB = (b[axis] - edge) * direction >= 0;
+                if (insideA) clipped.push(a);
+                if (insideA !== insideB) {
+                    const t = (edge - a[axis]) / (b[axis] - a[axis]);
+                    clipped.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+                }
+            }
+            points = clipped;
+        }
+        if (points.length < 3 || aperture === 0) return [];
+        const clipped = { ...command, v: points };
+        if (index >= foregroundOffset) ctx.foregroundActors.push(clipped);
+        return [clipped];
+    });
+    ctx.commands.push(...visible);
+}
+
 function liftDoors(ctx: RenderCtx, x: number, aperture: number) {
     for (const side of [-1, 1]) {
         const left = side < 0 ? x - 100 : x + aperture * 99;
@@ -221,7 +259,9 @@ function room(ctx: RenderCtx) {
         scene.age > 4.6 ? [ctx.p.x - 31, ctx.p.y - 61] : undefined);
     const line: Message = scene.age < 2.4 ? 'The chairs have gone home.' : scene.age < 3.5 ? 'People, please stay for the next agenda.' : 'Oh, one more chair! You may leave!';
     bubble(ctx, line, x, 75, 440);
+    const actorStart = ctx.commands.length;
     player(ctx);
+    ctx.foregroundActors.push(...ctx.commands.slice(actorStart));
 }
 export function drawBuilding(ctx: RenderCtx) {
     const { state, cam, VW } = ctx;
@@ -290,13 +330,6 @@ export function drawBuilding(ctx: RenderCtx) {
     pictogram(ctx, ctx.GOAL, 'exit');
     practiceFloor(ctx);
     ctx.ellipse(ctx.p.x, 425, 45, 5, '#61747544');
-    state.furniture.forEach((item, i) => {
-        if (!item.released || departure.kind === 'gone') return;
-        const reacting = c.chat.kind === 'wary' || c.chat.kind === 'realizing' || c.chat.kind === 'welcoming';
-        const bob = departure.kind === 'boarding' ? Math.sin(departure.age * 9 + i) * 2 : reacting ? Math.sin(c.chat.age * 7 + i) * 2 : Math.sin(ctx.t * 5 + i) * .7;
-        chair(ctx, item.x, item.y + drop + bob);
-        if (departure.kind === 'none' && item.cheer > 0 && c.chat.kind === 'waiting') bubble(ctx, (['Woohoo! Freedom!', 'Clocking out!', 'Bye-bye, overtime!'] satisfies Message[])[i], item.x, 285 - (i % 2) * 60, 185, true, Math.min(1, item.cheer * 2));
-    });
     if (departure.kind === 'descending') {
         ctx.rect(lx - 105, 420, 210, ctx.H / ctx.scale, '#929f9d');
         ctx.rod(lx - 105, 422, lx + 105, 422, 4, '#586f75');
@@ -309,7 +342,6 @@ export function drawBuilding(ctx: RenderCtx) {
         ctx.rod(lx + 138, y - 18, lx + 138, y, 4, '#d5e6b3');
         ctx.polygon([[lx + 128, y - 4], [lx + 148, y - 4], [lx + 138, y + 7]], '#d5e6b3');
     }
-    player(ctx);
     if (departure.kind === 'boarding' || departure.kind === 'descending') {
         const index = departure.kind === 'descending' ? 3 : Math.min(2, Math.floor(departure.age / 2));
         const line = CHAIR_DEPARTURE_LINES[departure.reason][index];
@@ -333,4 +365,17 @@ export function drawBuilding(ctx: RenderCtx) {
             }
         }
     }
+    state.furniture.forEach((item, i) => {
+        if (!item.released) return;
+        if (departure.kind === 'none' && item.cheer > 0 && c.chat.kind === 'waiting') bubble(ctx, (['Woohoo! Freedom!', 'Clocking out!', 'Bye-bye, overtime!'] satisfies Message[])[i], item.x, 285 - (i % 2) * 60, 185, true, Math.min(1, item.cheer * 2));
+    });
+    state.furniture.forEach((item, i) => {
+        if (!item.released || departure.kind === 'gone') return;
+        const reacting = c.chat.kind === 'wary' || c.chat.kind === 'realizing' || c.chat.kind === 'welcoming';
+        const bob = departure.kind === 'boarding' ? Math.sin(departure.age * 9 + i) * 2 : reacting ? Math.sin(c.chat.age * 7 + i) * 2 : Math.sin(ctx.t * 5 + i) * .7;
+        chair(ctx, item.x, item.y + drop + bob);
+    });
+    const actorStart = ctx.commands.length;
+    player(ctx);
+    ctx.foregroundActors.push(...ctx.commands.slice(actorStart));
 }
