@@ -1,8 +1,17 @@
 import type { GameCore } from '../core';
-import { STAGE_TWO, TYPING_SOUNDS } from '../stage2';
+import { STAGE_TWO, TYPING_SOUNDS, CHAIR_DEPARTURE, chairChatLine } from '../stage2';
 
+function insideConvoy(s: GameCore) {
+    return s.p.y > 360 && s.p.x > s.furniture[2].x + 28 && s.p.x < s.furniture[0].x - 28;
+}
+export function landInConvoy(s: GameCore) {
+    if (s.corridor.convoy !== 'airborne' || !s.ground) return;
+    s.corridor.convoy = s.corridor.departure.kind === 'none' && insideConvoy(s) ? 'carried' : 'free';
+    if (s.corridor.convoy === 'carried') s.p.vx = s.furniture[0].vx;
+}
 export function canEnterMeeting(s: GameCore) {
     return s.stage === 2 && s.mode === 'play' && s.corridor.room.kind === 'corridor'
+        && s.corridor.convoy === 'free'
         && Math.abs(s.p.x - STAGE_TWO.meeting) < 125 && s.ground;
 }
 export function leaveMeeting(s: GameCore, pushed = false) {
@@ -65,62 +74,99 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
             }
         });
     }
-    for (const chair of s.furniture) {
+    const allReleased = s.furniture.every(chair => chair.released);
+    const front = s.furniture[0], back = s.furniture[2];
+    const frontX = front.x;
+    if (c.departure.kind !== 'none') c.convoy = 'free';
+    else if (allReleased && s.ground && c.convoy !== 'carried') c.convoy = insideConvoy(s) ? 'carried' : 'free';
+    const nearby = p.x > back.x - 240 && p.x < front.x + 240;
+    if (c.departure.kind === 'none' && allReleased && c.chat.kind === 'waiting' && nearby) c.chat = { kind: 'gossip', age: 0 };
+    if (c.departure.kind === 'none' && c.chat.kind !== 'waiting') {
+        const speaker = chairChatLine(c.chat, c.appearanceSeed).speaker;
+        if (Math.abs(s.furniture[speaker].x - p.x) < 240 || c.chat.kind === 'gossip' || c.chat.kind === 'companions') c.chat.age += dt;
+        if (c.chat.kind === 'gossip' && c.convoy === 'carried') {
+            c.chat = { kind: 'wary', age: 0 };
+        } else if (c.chat.kind === 'wary' && c.chat.age >= 2.2) c.chat = { kind: 'realizing', age: 0 };
+        else if (c.chat.kind === 'realizing' && c.chat.age >= 2.8) c.chat = { kind: 'welcoming', age: 0 };
+        else if (c.chat.kind === 'welcoming' && c.chat.age >= 2.4) c.chat = { kind: 'companions', age: 0 };
+    }
+    const accompanying = c.departure.kind === 'none' && c.chat.kind !== 'waiting' && c.chat.kind !== 'gossip' && nearby;
+    const minimumSpeed = 70;
+    for (const [index, chair] of s.furniture.entries()) {
         if (!chair.released) continue;
         chair.cheer = Math.max(0, chair.cheer - dt);
-        chair.x += chair.vx * dt;
-        chair.vx *= Math.exp(-.55 * dt);
-        if (Math.abs(p.x - chair.x) < 66 && p.y > 350) {
-            const side = previousX < chair.x ? -1 : 1;
-            chair.vx += (p.vx - chair.vx) * dt * 8;
-            p.x = chair.x + side * 66;
-            p.vx *= Math.exp(-.35 * dt);
+        if (c.departure.kind === 'gone' || c.departure.kind === 'descending') continue;
+        if (c.departure.kind === 'boarding') {
+            const target = STAGE_TWO.lift + CHAIR_DEPARTURE.slots[index];
+            const speed = Math.max(-300, Math.min(300, (target - chair.x) * 4));
+            chair.vx += (speed - chair.vx) * (1 - Math.exp(-8 * dt));
+            chair.x += chair.vx * dt;
+            continue;
         }
-        chair.x = Math.min(s.LEN + 100, chair.x);
+        const target = front.x - index * 130;
+        const cruise = 185;
+        const speed = index === 0 ? cruise : Math.max(minimumSpeed, Math.min(355, cruise + (target - chair.x) * 2));
+        chair.vx += (speed - chair.vx) * (1 - Math.exp(-4 * dt));
+        chair.x = Math.min(s.LEN + 450 + index * 130, chair.x + chair.vx * dt);
+        if (c.convoy === 'free' && p.y > 350 && Math.abs(p.x - chair.x) < 58) {
+            const side = previousX < chair.x ? 1 : -1;
+            chair.x += side * (58 - Math.abs(p.x - chair.x)) * (1 - Math.exp(-14 * dt));
+        }
+        if (index > 0 && s.furniture[index - 1].released) chair.x = Math.min(chair.x, s.furniture[index - 1].x - 80);
     }
-    for (let i = 1; i < s.furniture.length; i++) {
-        const a = s.furniture[i - 1], b = s.furniture[i];
-        if (a.released && b.released && Math.abs(a.x - b.x) < 48) {
-            const sign = a.x < b.x ? 1 : -1;
-            b.x = a.x + sign * 48;
-            b.vx = a.vx = (a.vx + b.vx) / 2;
+    if (c.convoy === 'carried') {
+        p.x = Math.max(back.x + 29, Math.min(front.x - 29, previousX + front.x - frontX));
+        p.vx = front.vx;
+    }
+    if (c.departure.kind === 'boarding') {
+        c.departure.age += dt;
+        const aboard = s.furniture.every((chair, i) => Math.abs(chair.x - STAGE_TWO.lift - CHAIR_DEPARTURE.slots[i]) < 3 && Math.abs(chair.vx) < 8);
+        if (c.departure.age >= CHAIR_DEPARTURE.boarding && aboard) {
+            c.departure = { kind: 'descending', age: 0, reason: c.departure.reason };
+            for (const chair of s.furniture) chair.vx = 0;
+        }
+    } else if (c.departure.kind === 'descending') {
+        c.departure.age += dt;
+        if (c.departure.age >= CHAIR_DEPARTURE.descending) {
+            c.departure = { kind: 'gone' };
+            c.lift = { kind: 'departed' };
         }
     }
-    const scan = c.scanner;
-    if (!scan.approved) {
-        const inZone = p.x > STAGE_TWO.scanner - 200 && p.x < STAGE_TWO.scanner && s.ground;
-        const neutral = !s.keys.has('left') && !s.keys.has('right');
-        if (inZone && neutral) p.vx *= Math.exp(-7 * dt);
-        scan.progress = inZone && neutral && Math.abs(p.vx) < 20 ? Math.min(1, scan.progress + dt / 1.1) : 0;
-        if (scan.progress >= 1) scan.approved = true;
-        if (!scan.approved && p.x > STAGE_TWO.scanner - 52) {
-            p.x = STAGE_TWO.scanner - 52;
-            p.vx = Math.min(0, p.vx);
-        }
-    }
-    if (c.lift.kind === 'waiting' && p.x > STAGE_TWO.lift - 500) c.lift = { kind: 'arriving', age: 0 };
+    const unnoticed = allReleased && (c.chat.kind === 'waiting' || c.chat.kind === 'gossip');
+    if (c.departure.kind === 'none' && c.lift.kind === 'waiting'
+        && (p.x > STAGE_TWO.lift - 650 || (unnoticed && front.x > STAGE_TWO.lift - 650))) c.lift = { kind: 'arriving', age: 0 };
     if (c.lift.kind === 'arriving') {
         c.lift.age += dt;
         if (c.lift.age >= 1.2) {
             c.lift = { kind: 'open', age: 0 };
             c.cart = { x: STAGE_TWO.lift, hit: false };
         }
-    } else if (c.lift.kind === 'open') {
+    } else if (c.departure.kind === 'none' && c.lift.kind === 'open') {
         c.lift.age += dt;
-        if (c.lift.age >= 4) c.lift = { kind: 'departed' };
+        if (c.lift.age >= 4 && !unnoticed) c.lift = { kind: 'departed' };
+    }
+    if (c.departure.kind === 'none' && unnoticed && front.x >= STAGE_TWO.lift - 170
+        && c.lift.kind === 'open' && c.lift.age >= 1 / 3) {
+        c.departure = { kind: 'boarding', age: 0, reason: 'clock-out' };
+        c.convoy = 'free';
     }
     if (c.cart) {
         const cartSpeed = 280;
         c.cart.x -= cartSpeed * dt;
         const touching = p.x < c.cart.x && c.cart.x - p.x < 48 && p.y > 348;
         if (touching) {
+            c.convoy = 'free';
             p.x = c.cart.x - 48;
             p.vx = Math.min(p.vx, -cartSpeed);
-            p.w += (Math.random() - .5) * 4 * dt * 60;
             if (!c.cart.hit) {
+                p.w += (Math.random() - .5) * .6;
                 c.cart.hit = true;
                 c.cartHits++;
-                s.events.push({ type: 'cue', id: 'light-hit' });
+                if (accompanying && p.x > back.x && p.x < front.x) {
+                    c.chat = { kind: 'companions', age: 0 };
+                    c.departure = { kind: 'boarding', age: 0, reason: 'initiation' };
+                    c.lift = { kind: 'open', age: 1 };
+                } else s.events.push({ type: 'cue', id: 'light-hit' });
             }
         }
         if (c.cart.x < STAGE_TWO.lift - 650) c.cart = null;

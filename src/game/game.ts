@@ -10,7 +10,7 @@ import { cleaningStep } from './systems/cleaning';
 import { geyserStep } from './systems/geyser';
 import { monitorPhase, monitorStep } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
-import { canEnterMeeting, interactMeeting, leaveMeeting, meetingStep, corridorStep } from './systems/corridor';
+import { canEnterMeeting, interactMeeting, leaveMeeting, meetingStep, corridorStep, landInConvoy } from './systems/corridor';
 import { binEnter } from './systems/bin';
 
 export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId = 0) {
@@ -188,7 +188,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
 
         const p = s.p;
         const was = s.ground;
-        const dir = (s.keys.has('right') ? 1 : 0) - (s.keys.has('left') ? 1 : 0);
+        const inputDir = (s.keys.has('right') ? 1 : 0) - (s.keys.has('left') ? 1 : 0);
         const prev = p.x;
         s.coyote = s.ground ? .1 : Math.max(0, s.coyote - dt);
         s.jumpQ = Math.max(0, s.jumpQ - dt);
@@ -201,26 +201,32 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         if (s.jumpQ > 0 && s.coyote > 0) {
             if (p.x < 300) s.practiceJump = true;
             p.vy = -380;
-            p.w -= dir * .12;
+            p.w -= inputDir * .12;
             s.ground = false;
+            if (s.stage === 2 && s.corridor.convoy === 'carried') s.corridor.convoy = 'airborne';
             s.coyote = 0;
             s.jumpQ = 0;
         }
+        const convoyJump = s.stage === 2 && s.corridor.convoy === 'airborne' && !s.ground;
+        const dir = s.stage === 2 && s.corridor.convoy === 'carried' ? 0 : inputDir;
         const balancing = s.keys.has('q') || s.keys.has('e');
         const tilt = (s.keys.has('e') ? 1 : 0) - (s.keys.has('q') ? 1 : 0) + (was || balancing ? 0 : dir);
         p.w += tilt * (was ? 4.3 : 6.4) * dt;
         if (p.x < 300) {
             p.w += (-Math.sin(p.a) * 20 - p.w * 7) * dt;
         }
-        if (was && dir) {
+        if (convoyJump && dir) {
+            p.vx += dir * 1200 * dt;
+        } else if (was && dir) {
             p.vx += dir * (s.slip ? 110 : 305) * dt;
         } else if (!was && dir) {
             p.vx += dir * 55 * dt;
         }
         p.vy += 950 * dt;
-        p.vx *= Math.exp(-(was ? (s.slip ? .015 : .55) : .09) * dt);
+        p.vx *= Math.exp(-(convoyJump ? 0 : was ? (s.slip ? .015 : .55) : .09) * dt);
         p.w *= Math.exp(-(was ? (s.slip ? .9 : 1.8) : .75) * dt);
-        p.vx = clamp(p.vx, -315, 315);
+        const horizontalLimit = convoyJump ? 700 : 315;
+        p.vx = clamp(p.vx, -horizontalLimit, horizontalLimit);
         p.vy = clamp(p.vy, -500, 850);
         p.w = clamp(p.w, -5.8, 5.8);
         p.x += p.vx * dt;
@@ -314,6 +320,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
                 }
             }
         }
+        if (s.stage === 2) landInConvoy(s);
         if (s.stage === 1) {
             monitorStep(s, dt, prev);
         }

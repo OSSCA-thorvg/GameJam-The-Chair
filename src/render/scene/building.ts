@@ -1,12 +1,12 @@
 import { translate, type Message } from '../../i18n';
-import { STAGE_TWO, TYPING_SOUNDS } from '../../game/stage2';
+import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES, chairChatLine } from '../../game/stage2';
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
 import { practiceFloor, checkpointFlag } from './decor';
 import { player } from './player';
 
-function bubble(ctx: RenderCtx, text: Message, x: number, y: number, width: number, spiky = false, alpha = 1, tail = true) {
-    const fill = ctx.tint(spiky ? '#fff1b2' : '#f7f4e9', alpha);
+function bubble(ctx: RenderCtx, text: Message, x: number, y: number, width: number, spiky = false, alpha = 1, tail: boolean | 'right' = true) {
+    const fill = ctx.tint(spiky ? '#fff1b2' : '#e2e8df', alpha);
     if (spiky) {
         const points: Vector[] = [];
         for (let i = 0; i < 32; i++) {
@@ -22,7 +22,7 @@ function bubble(ctx: RenderCtx, text: Message, x: number, y: number, width: numb
             [x - width / 2, y - 22, x - width / 2, y - 22, x - width / 2 + 12, y - 22],
         ], ctx.gradientFill(x, y - 22, x, y + 22, [[0, '#ffffff'], [1, '#e2e8df']], alpha));
     }
-    if (tail) ctx.polygon([[x - 8, y + 20], [x + 9, y + 20], [x - 10, y + 36]], fill);
+    if (tail) ctx.polygon([[x - 8, y + 20], [x + 9, y + 20], [x + (tail === 'right' ? 18 : -10), y + 36]], fill);
     ctx.label(translate(text, ctx.locale), x, y + 5, 13, ctx.tint('#344955', alpha));
 }
 type WorkerRole = 'facilitator' | 'jacket' | 'vest';
@@ -171,6 +171,13 @@ function chair(ctx: RenderCtx, x: number, y: number) {
         ctx.rod(x + side * 17, y - 5, x + side * 17 + Math.cos(ctx.t * 9) * 3, y - 5 + Math.sin(ctx.t * 9) * 3, 1, '#b6c5c7');
     }
 }
+function liftDoors(ctx: RenderCtx, x: number, aperture: number) {
+    for (const side of [-1, 1]) {
+        const left = side < 0 ? x - 100 : x + aperture * 99;
+        ctx.gradientPolygon([[left, 190], [left + (1 - aperture) * 99, 190], [left + (1 - aperture) * 99, 419], [left, 419]],
+            ctx.gradientFill(left, 0, left + 99, 0, [[0, '#9eb1b2'], [.5, '#c2ceca'], [1, '#879da3']]));
+    }
+}
 function pictogram(ctx: RenderCtx, x: number, kind: 'exit' | 'lift') {
     ctx.rect(x - 36, 120, 72, 43, '#557f78');
     ctx.rect(x - 23, 127, 19, 29, '#d5e6da');
@@ -240,7 +247,7 @@ export function drawBuilding(ctx: RenderCtx) {
         ctx.rect(x - 105, 180, 210, 170, '#6d8b9970');
         ctx.rod(x, 175, x, 355, 5, '#849a9e');
         ctx.polygon([[x - 98, 184], [x - 75, 184], [x + 55, 347], [x + 32, 347]], '#edf4e719');
-        if (office.life > 0) bubble(ctx, TYPING_SOUNDS[office.phrase], x + office.offset.x, 174 + office.offset.y, 156, false, Math.min(.78, office.life * 2), false);
+        if ((c.departure.kind === 'none' || c.departure.kind === 'gone') && office.life > 0) bubble(ctx, TYPING_SOUNDS[office.phrase], x + office.offset.x, 174 + office.offset.y, 156, false, Math.min(.78, office.life * 2), false);
     }
     const mx = STAGE_TWO.meeting;
     ctx.rect(mx - 78, 180, 156, 240, '#687f80');
@@ -257,29 +264,13 @@ export function drawBuilding(ctx: RenderCtx) {
         ctx.rect(mx - 57, 216, 114, 32, '#263a45e8');
         ctx.label(translate('↓ Enter', ctx.locale), mx, 238, 16, '#f6eddc');
     }
-    state.furniture.forEach((item, i) => {
-        if (!item.released) return;
-        chair(ctx, item.x, item.y);
-        if (item.cheer > 0) bubble(ctx, (['Woohoo! Freedom!', 'Clocking out!', 'Bye-bye, overtime!'] satisfies Message[])[i], item.x, 285 - (i % 2) * 60, 185, true, Math.min(1, item.cheer * 2));
-    });
-    const sx = STAGE_TWO.scanner;
-    ctx.rect(sx - 200, 426, 153, 30, '#ded5a3');
-    ctx.label(c.scanner.approved ? '✓' : 'Ⅱ', sx - 123, 448, 23, '#667f70');
-    ctx.rect(sx - 10, 278, 30, 142, '#687f82');
-    ctx.rect(sx - 6, 286, 22, 43, '#344e5d');
-    ctx.ellipse(sx + 5, 297, 5, 5, c.scanner.approved ? '#bce2b2' : '#ebbc79');
-    ctx.rect(sx - 4, 317, 18 * c.scanner.progress, 5, '#c7e2ba');
-    ctx.rod(sx + 5, 349, sx + 5 - Math.cos(c.scanner.approved ? Math.PI / 2 : 0) * 65, 349 - (c.scanner.approved ? 65 : 0), 8, '#dfd5ae');
-    if (Math.abs(ctx.p.x - sx) < 240) bubble(ctx, c.scanner.approved ? 'Employee undetected. One chair approved.' : 'Release the arrows. Hold still.', sx - 70, 215, 320);
     const lx = STAGE_TWO.lift;
+    const departure = c.departure;
+    const drop = departure.kind === 'descending' ? Math.min(1, departure.age / CHAIR_DEPARTURE.descending) * 165 : 0;
     ctx.rect(lx - 115, 175, 230, 245, '#536b77');
-    ctx.rect(lx - 105, 185, 210, 235, '#354d5b');
-    const aperture = c.lift.kind === 'open' ? Math.min(1, c.lift.age * 3) : 0;
-    for (const side of [-1, 1]) {
-        const left = side < 0 ? lx - 100 : lx + aperture * 99;
-        ctx.gradientPolygon([[left, 190], [left + (1 - aperture) * 99, 190], [left + (1 - aperture) * 99, 419], [left, 419]],
-            ctx.gradientFill(left, 0, left + 99, 0, [[0, '#9eb1b2'], [.5, '#c2ceca'], [1, '#879da3']]));
-    }
+    ctx.rect(lx - 105, 185, 210, 235, '#263b48');
+    ctx.rect(lx - 100, 185 + drop, 200, 235 - drop, '#354d5b');
+    if (departure.kind !== 'descending') liftDoors(ctx, lx, c.lift.kind === 'open' ? Math.min(1, c.lift.age * 3) : 0);
     pictogram(ctx, lx, 'lift');
     if (c.lift.kind === 'arriving') {
         ctx.ellipse(lx + 138, 277, 7, 7, Math.sin(ctx.t * 8) > 0 ? '#f2d191' : '#aa9475');
@@ -291,8 +282,8 @@ export function drawBuilding(ctx: RenderCtx) {
         ctx.rod(x + 46, 412, x + 46, 354, 5, '#546a77');
         for (let i = 0; i < 9; i++) ctx.rect(x - 39 + Math.sin(i * 3) * 3, 403 - i * 5, 70, 4, i % 2 ? '#e7e0ca' : '#f8f4e4');
         for (const dx of [-33, 33]) ctx.ellipse(x + dx, 416, 6, 6, '#384c59');
-        if (c.lift.kind === 'open' && c.lift.age < 2) bubble(ctx, 'Overtime arriving first.', lx - 35, 219, 230);
-        if (c.cart.hit) bubble(ctx, 'Urgent delivery!', x, 304, 170, true);
+        if (departure.kind === 'none' && c.lift.kind === 'open' && c.lift.age < 2) bubble(ctx, 'Overtime arriving first.', lx - 35, 219, 230);
+        if (departure.kind === 'none' && c.cart.hit) bubble(ctx, 'Urgent delivery!', x, 304, 170, true);
     }
     for (let i = 1; i < STAGE_TWO.checkpoints.length; i++) {
         const mark = STAGE_TWO.checkpoints[i];
@@ -304,5 +295,47 @@ export function drawBuilding(ctx: RenderCtx) {
     pictogram(ctx, ctx.GOAL, 'exit');
     practiceFloor(ctx);
     ctx.ellipse(ctx.p.x, 425, 45, 5, '#61747544');
+    state.furniture.forEach((item, i) => {
+        if (!item.released || departure.kind === 'gone') return;
+        const reacting = c.chat.kind === 'wary' || c.chat.kind === 'realizing' || c.chat.kind === 'welcoming';
+        const bob = departure.kind === 'boarding' ? Math.sin(departure.age * 9 + i) * 2 : reacting ? Math.sin(c.chat.age * 7 + i) * 2 : Math.sin(ctx.t * 5 + i) * .7;
+        chair(ctx, item.x, item.y + drop + bob);
+        if (departure.kind === 'none' && item.cheer > 0 && c.chat.kind === 'waiting') bubble(ctx, (['Woohoo! Freedom!', 'Clocking out!', 'Bye-bye, overtime!'] satisfies Message[])[i], item.x, 285 - (i % 2) * 60, 185, true, Math.min(1, item.cheer * 2));
+    });
+    if (departure.kind === 'descending') {
+        ctx.rect(lx - 105, 420, 210, ctx.H / ctx.scale, '#929f9d');
+        ctx.rod(lx - 105, 422, lx + 105, 422, 4, '#586f75');
+        for (let x = Math.floor((lx - 205) / 120) * 120; x < lx + 105; x += 120) {
+            const a = Math.max(x, lx - 105), b = Math.min(x + 100, lx + 105);
+            if (a < b) ctx.rod(a, 428 + (a - x) * .92, b, 428 + (b - x) * .92, 1, '#a7b2aa');
+        }
+        liftDoors(ctx, lx, 1 - Math.max(0, Math.min(1, (departure.age - 1.3) / .7)));
+        const y = 268 + departure.age / CHAIR_DEPARTURE.descending * 25;
+        ctx.rod(lx + 138, y - 18, lx + 138, y, 4, '#d5e6b3');
+        ctx.polygon([[lx + 128, y - 4], [lx + 148, y - 4], [lx + 138, y + 7]], '#d5e6b3');
+    }
     player(ctx);
+    if (departure.kind === 'boarding' || departure.kind === 'descending') {
+        const index = departure.kind === 'descending' ? 3 : Math.min(2, Math.floor(departure.age / 2));
+        const line = CHAIR_DEPARTURE_LINES[departure.reason][index];
+        const speaker = state.furniture[line.speaker];
+        const localAge = departure.kind === 'descending' ? departure.age : departure.age - index * 2;
+        const x = Math.max(ctx.cam + 180, Math.min(ctx.cam + ctx.VW - 180, speaker.x));
+        const fade = departure.kind === 'descending' ? Math.min(1, (CHAIR_DEPARTURE.descending - departure.age) * 4) : 1;
+        if (departure.reason === 'initiation' || (speaker.x > ctx.cam - 60 && speaker.x < ctx.cam + ctx.VW + 60)) {
+            bubble(ctx, line.text, x, 242 + Math.min(drop, 38), 350, false, Math.min(1, localAge * 6) * fade, 'right');
+        }
+    } else if (departure.kind === 'none' && c.chat.kind !== 'waiting') {
+        const interval = CHAIR_CHAT_INTERVAL[c.chat.kind];
+        const line = chairChatLine(c.chat, c.appearanceSeed);
+        const speaker = state.furniture[line.speaker];
+        const localAge = c.chat.age % interval;
+        if (localAge < interval - .35) {
+            const left = ctx.cam + 180, right = ctx.cam + ctx.VW - 180;
+            const x = Math.max(left, Math.min(right, speaker.x));
+            if (speaker.x > ctx.cam - 60 && speaker.x < ctx.cam + ctx.VW + 60) {
+                bubble(ctx, line.text, x, 242, 350, c.chat.kind === 'wary', Math.min(1, localAge * 6, (interval - .35 - localAge) * 5));
+            }
+        }
+    }
 }
