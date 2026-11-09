@@ -1,5 +1,5 @@
 import type { GameCore } from '../core';
-import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine, paperSurfaceY } from '../stage2';
+import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine } from '../stage2';
 
 function insideConvoy(s: GameCore) {
     return s.p.y > 360 && s.p.x > s.furniture[2].x + 28 && s.p.x < s.furniture[0].x - 28;
@@ -89,7 +89,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
             const speed = Math.max(-300, Math.min(300, (target - chair.x) * 4));
             chair.vx += (speed - chair.vx) * (1 - Math.exp(-8 * dt));
             chair.x += chair.vx * dt;
-            chair.y = paperSurfaceY(c.paperPiles, chair.x);
+            chair.y = 420;
             continue;
         }
         const target = front.x - index * 130;
@@ -102,7 +102,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
             chair.x += side * (58 - Math.abs(p.x - chair.x)) * (1 - Math.exp(-14 * dt));
         }
         if (index > 0 && s.furniture[index - 1].released) chair.x = Math.min(chair.x, s.furniture[index - 1].x - 80);
-        chair.y = paperSurfaceY(c.paperPiles, chair.x);
+        chair.y = 420;
     }
     if (c.convoy === 'carried') {
         p.x = Math.max(back.x + 29, Math.min(front.x - 29, previousX + front.x - frontX));
@@ -125,7 +125,6 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
         else if (c.chat.kind === 'welcoming' && c.chat.age >= 2.4) c.chat = { kind: 'companions', age: 0 };
     }
     const recognized = c.chat.kind === 'wary' || c.chat.kind === 'realizing' || c.chat.kind === 'welcoming' || c.chat.kind === 'companions';
-    const accompanying = c.departure.kind === 'none' && recognized && nearby;
     if (c.departure.kind === 'boarding') {
         c.departure.age += dt;
         const aboard = s.furniture.every((chair, i) => Math.abs(chair.x - STAGE_TWO.lift - CHAIR_DEPARTURE.slots[i]) < 3 && Math.abs(chair.vx) < 8);
@@ -140,43 +139,17 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
             c.lift = { kind: 'departed' };
         }
     }
-    const unnoticed = allReleased && !recognized;
     if (c.departure.kind === 'none' && c.lift.kind === 'waiting'
-        && (p.x > STAGE_TWO.lift - 650 || (unnoticed && front.x > STAGE_TWO.lift - 650))) c.lift = { kind: 'arriving', age: 0 };
+        && (p.x > STAGE_TWO.lift - 650 || (allReleased && front.x > STAGE_TWO.lift - 650))) c.lift = { kind: 'arriving', age: 0 };
     if (c.lift.kind === 'arriving') {
         c.lift.age += dt;
-        if (c.lift.age >= 1.2) {
-            c.lift = { kind: 'open', age: 0 };
-            c.cart = { x: STAGE_TWO.lift, y: paperSurfaceY(c.paperPiles, STAGE_TWO.lift), hit: false };
-        }
+        if (c.lift.age >= 1.2) c.lift = { kind: 'open', age: 0 };
     } else if (c.departure.kind === 'none' && c.lift.kind === 'open') {
         c.lift.age += dt;
-        if (c.lift.age >= 4 && !unnoticed) c.lift = { kind: 'departed' };
     }
-    if (c.departure.kind === 'none' && unnoticed && front.x >= STAGE_TWO.lift - 170
+    if (c.departure.kind === 'none' && allReleased && front.x >= STAGE_TWO.lift - 170
         && c.lift.kind === 'open' && c.lift.age >= 1 / 3) {
-        c.departure = { kind: 'boarding', age: 0, reason: 'clock-out' };
+        c.departure = { kind: 'boarding', age: 0, reason: recognized ? 'companions' : 'clock-out' };
         c.convoy = 'free';
-    }
-    if (c.cart) {
-        const cartSpeed = 280;
-        c.cart.x -= cartSpeed * dt;
-        c.cart.y = paperSurfaceY(c.paperPiles, c.cart.x);
-        const touching = p.x < c.cart.x && c.cart.x - p.x < 48 && p.y > c.cart.y - 72;
-        if (touching) {
-            c.convoy = 'free';
-            p.x = c.cart.x - 48;
-            p.vx = Math.min(p.vx, -cartSpeed);
-            if (!c.cart.hit) {
-                p.w -= .25;
-                c.cart.hit = true;
-                c.cartHits++;
-                if (accompanying && p.x > back.x && p.x < front.x) {
-                    c.chat = { kind: 'companions', age: 0 };
-                    c.departure = { kind: 'boarding', age: 0, reason: 'initiation' };
-                    c.lift = { kind: 'open', age: 1 };
-                } else s.events.push({ type: 'cue', id: 'light-hit' });
-            }
-        }
     }
 }

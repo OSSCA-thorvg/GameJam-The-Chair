@@ -52,7 +52,6 @@ const korean = {
     "Paper": "종이",
     "Bin": "휴지통",
     "Light": "빛",
-    "Cart": "서류 카트",
     "Door": "회전문",
     "Paused": "잠깐",
     "Resume": "계속",
@@ -137,16 +136,13 @@ const korean = {
     "Coffee stop?": "커피 한잔하고 갈까?",
     "Oil for us. Coffee for the luggage.": "기름은 우리 거, 커피는 짐짝 거.",
     "Do not mix those up again.": "이번엔 바꿔 마시지 마.",
-    "That is the rite of passage, rookie.": "그거 통과의례야, 신입~",
-    "I used to get flattened like that.": "나도 저럴 때가 있었지.",
+    "Nice rolling, rookie.": "잘 굴러왔네, 신입.",
     "Going down. Good luck, rookie.": "우린 먼저 내려간다~",
     "See you downstairs. Return your human!": "아래서 보자. 사람은 반납하고 와~",
     "After-work oil, anyone?": "퇴근 기념으로 윤활유 한 잔 어때?",
     "Ice cold. Right to the bearings!": "난 베어링까지 시원한 걸로!",
     "First round is on the chairperson!": "첫 잔은 의장님이 쏜대!",
     "Next stop: no meetings!": "다음 층은 회의 없는 곳이다~",
-    "Overtime arriving first.": "야근 서류 먼저 내립니다.",
-    "Urgent delivery!": "긴급 업무 배달!",
     "Rooftop →": "옥상 →"
 };
 

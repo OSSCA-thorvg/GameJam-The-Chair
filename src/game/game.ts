@@ -1,4 +1,4 @@
-import { STAGE_TWO, createFurniture, createCorridor, paperPilePolygon, type StageId } from './stage2';
+import { STAGE_TWO, createFurniture, createCorridor, type StageId } from './stage2';
 import { STAGE_THREE, fanStrength } from './stage3';
 import { LEVEL, RULES, FIXED_STEP } from './level';
 import type { Input, DeepReadonly } from './types';
@@ -26,10 +26,9 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             return;
         }
         if (s.stage === 2) {
-            s.solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }))
-                .concat(s.corridor.paperPiles.map(pile => ({ p: paperPilePolygon(pile) })));
+            s.solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
             s.people = [];
-            s.furniture = createFurniture(s.checkpoint, s.corridor.paperPiles);
+            s.furniture = createFurniture(s.checkpoint);
             return;
         }
         s.solids = [
