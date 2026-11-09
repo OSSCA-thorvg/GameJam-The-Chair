@@ -2,13 +2,66 @@ import { LEVEL } from '../../game/level';
 import type { RenderCtx } from '../context';
 
 export function plant(ctx: RenderCtx, x: number) {
+    // Monstera deliciosa variegata: white pot, moss pole, big split variegated leaves.
     const F = ctx.F;
-    ctx.ellipse(x + 2, F - 10, 18, 2.8, '#515c6d40');
-    ctx.rect(x - 13, F - 40, 26, 30, '#ccc9b5');
-    for (let i = 0; i < 5; i++) {
-        ctx.rod(x, F - 40, x + (i - 2) * 12, F - 70 - Math.abs(i - 2) * 4, 3, '#6c8267');
-        ctx.polygon([[x + (i - 2) * 12, F - 70 - Math.abs(i - 2) * 4], [x + (i - 2) * 18 - 9, F - 98], [x + (i - 2) * 17 + 11, F - 85]], '#83966a');
-    }
+    // Shadow under pot.
+    ctx.ellipse(x + 2, F - 10, 20, 3.2, '#515c6d40');
+    // White ceramic pot with subtle rim and cream shadow.
+    ctx.rect(x - 14, F - 40, 28, 30, '#f2efe6');
+    ctx.rect(x - 14, F - 40, 28, 3, '#ffffff');
+    ctx.rect(x + 8, F - 37, 6, 25, '#dcd6c6');
+    // Soil line.
+    ctx.rect(x - 12, F - 42, 24, 3, '#4a3a2c');
+    // Moss pole rising from the pot.
+    ctx.rod(x - 1, F - 42, x - 1, F - 110, 6, '#6b5436');
+    ctx.rod(x - 1, F - 42, x - 1, F - 110, 3, '#4e3d26');
+    // Leaf palette: deep green with cream variegation.
+    const green = '#3f6b3a';
+    const greenHi = '#5a8a4a';
+    const cream = '#e8e4b8';
+    // Draw a leaf: elongated heart shape with fenestrations (splits) and a cream variegated patch.
+    const drawLeaf = (cx: number, cy: number, len: number, wid: number, angle: number, flip: number, base: string, hi: string) => {
+        const c = Math.cos(angle), s = Math.sin(angle);
+        const rot = (lx: number, ly: number): [number, number] => [cx + (lx * c - ly * flip * s), cy + (lx * s + ly * flip * c)];
+        // Main leaf blade (rounded diamond).
+        ctx.polygon([
+            rot(0, 0),
+            rot(len * .35, -wid),
+            rot(len * .7, -wid * .85),
+            rot(len, 0),
+            rot(len * .7, wid * .85),
+            rot(len * .35, wid),
+        ], base);
+        // Highlight / variegated cream splash near the mid-rib.
+        ctx.polygon([
+            rot(len * .25, -wid * .15),
+            rot(len * .55, -wid * .55),
+            rot(len * .7, -wid * .1),
+            rot(len * .55, wid * .25),
+            rot(len * .35, wid * .3),
+        ], hi);
+        ctx.polygon([
+            rot(len * .45, wid * .1),
+            rot(len * .65, wid * .5),
+            rot(len * .8, wid * .15),
+            rot(len * .6, -wid * .05),
+        ], cream);
+        // Fenestrations: cut two notches from leaf edge toward midrib using pot/background color.
+        const bg = '#a0a7b1';
+        ctx.polygon([rot(len * .4, -wid), rot(len * .5, -wid * .35), rot(len * .6, -wid)], bg);
+        ctx.polygon([rot(len * .45, wid), rot(len * .55, wid * .35), rot(len * .65, wid)], bg);
+        // Midrib.
+        ctx.rod(cx, cy, rot(len * .95, 0)[0], rot(len * .95, 0)[1], 1.2, '#2e4f2a');
+    };
+    // Six leaves arranged around the moss pole at different heights and angles.
+    drawLeaf(x - 1, F - 55, 26, 13, -2.5, 1, green, greenHi);
+    drawLeaf(x - 1, F - 60, 28, 14, -0.65, 1, green, greenHi);
+    drawLeaf(x - 1, F - 78, 30, 15, -2.3, 1, greenHi, cream);
+    drawLeaf(x - 1, F - 82, 30, 15, -0.85, 1, green, greenHi);
+    drawLeaf(x - 1, F - 100, 24, 12, -2.0, 1, green, greenHi);
+    drawLeaf(x - 1, F - 104, 26, 13, -1.15, 1, greenHi, cream);
+    // Top crown leaf pointing up.
+    drawLeaf(x - 1, F - 108, 20, 10, -1.57, 1, green, greenHi);
 }
 
 export function desk(ctx: RenderCtx, x: number) {
