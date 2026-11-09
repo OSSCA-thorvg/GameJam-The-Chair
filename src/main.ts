@@ -5,6 +5,7 @@ import { createRenderer } from './render/renderer';
 import { createFeedback } from './ui/feedback';
 import { createHud } from './ui/hud';
 import { bindInput } from './ui/input';
+import { showStartupSplash } from './ui/splash';
 import type { StageId } from './game/stage2';
 import type { Input } from './game/types';
 import markup from './scene.html?raw';
@@ -37,6 +38,7 @@ function applyLocale() {
     }
 }
 applyLocale();
+showStartupSplash(() => locale);
 for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) {
     button.addEventListener('click', () => {
         const selected = button.dataset.locale;

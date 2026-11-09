@@ -1,6 +1,6 @@
 import type { Locale } from '../i18n';
-import { init, type Canvas, type Shape, type ThorVGNamespace } from '@thorvg/webcanvas';
-import wasmUrl from '../../node_modules/@thorvg/webcanvas/dist/thorvg.wasm?url';
+import type { Canvas, Shape, ThorVGNamespace } from '@thorvg/webcanvas';
+import { loadThorvg } from './thorvg';
 import type { GameState } from '../game/game';
 import { ART } from './art';
 import type { EffectsState } from './effects';
@@ -112,7 +112,7 @@ function setup(
 
     async function initRenderer() {
         try {
-            TVG = await init({ renderer: 'sw', locateFile: () => wasmUrl });
+            TVG = await loadThorvg();
             if (!root.isConnected) return;
             tvg = new TVG.Canvas('#chair-office-one-tvg', { width: ctx.W, height: ctx.H });
             renderer = 'thorvg';

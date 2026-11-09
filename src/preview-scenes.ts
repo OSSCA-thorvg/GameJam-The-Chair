@@ -5,6 +5,7 @@ import { STAGE_THREE, fanStrength } from './game/stage3';
 import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/systems/monitor';
+import { SPLASH_DURATION } from './ui/splash-meta';
 
 export type PreviewScene = {
     id: string;
@@ -242,5 +243,11 @@ function officeTyping(): PreviewScene {
 }
 
 export const previewScenes: readonly PreviewScene[] = [
+    {
+        id: 'startup-splash', label: 'Intro · ThorVG splash', duration: SPLASH_DURATION,
+        focusX: 400,
+        markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
+        sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
+    },
     cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), extinguisherSpray(), officeTyping(),
 ];
