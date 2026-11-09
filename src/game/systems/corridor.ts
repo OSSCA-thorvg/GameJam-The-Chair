@@ -159,7 +159,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
             p.x = c.cart.x - 48;
             p.vx = Math.min(p.vx, -cartSpeed);
             if (!c.cart.hit) {
-                p.w += (Math.random() - .5) * .6;
+                p.w -= .25;
                 c.cart.hit = true;
                 c.cartHits++;
                 if (accompanying && p.x > back.x && p.x < front.x) {

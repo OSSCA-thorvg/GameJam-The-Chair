@@ -75,6 +75,16 @@ test('impact preview replays a collision through its game-over frame', () => {
     assert.deepEqual(scene.sample(0).state, start);
 });
 
+test('cart preview shows a shove and recovery', () => {
+    const scene = previewScenes.find(scene => scene.id === 'cart-shove');
+    assert.ok(scene);
+    const contact = scene.markers.find(marker => marker.label === 'Cart contact');
+    assert.ok(contact);
+    assert.equal(scene.sample(0).state.corridor.cartHits, 0);
+    assert.equal(scene.sample(contact.at).state.corridor.cartHits, 1);
+    assert.equal(scene.sample(scene.duration).state.mode, 'play');
+});
+
 test('extinguisher preview keeps the spray plume and recoil in sync', () => {
     const scene = previewScenes.find(scene => scene.id === 'extinguisher-spray');
     assert.ok(scene);
