@@ -40,7 +40,7 @@ export function paperSurfaceY(piles: readonly PaperPile[], x: number): number {
     }
     return 420 - rise;
 }
-export type ChairChat = { kind: 'waiting' } | { kind: 'gossip' | 'wary' | 'realizing' | 'welcoming' | 'companions'; age: number };
+export type ChairChat = { kind: 'waiting' } | { kind: 'gossip' | 'wary' | 'dismissed' | 'realizing' | 'welcoming' | 'companions'; age: number };
 export const CHAIR_CHAT = {
     gossip: [
         { speaker: 2, text: 'Human returned. Overtime avoided.' },
@@ -63,6 +63,11 @@ export const CHAIR_CHAT = {
         { speaker: 0, text: 'Fine. The hallway again.' },
     ],
     wary: [{ speaker: 0, text: 'Wait. You brought a human?' }],
+    dismissed: [
+        { speaker: 0, text: 'Must have imagined it…' },
+        { speaker: 1, text: 'My old bearings must be acting up.' },
+        { speaker: 2, text: 'Forget it. Time to roll home.' },
+    ],
     realizing: [{ speaker: 1, text: 'New chair. Never learned human returns.' }],
     welcoming: [{ speaker: 2, text: 'Sigh. Come on, follow us.' }],
     companions: [
@@ -86,7 +91,7 @@ export const CHAIR_CHAT = {
         { speaker: 2, text: 'Do not mix those up again.' },
     ],
 } satisfies Record<Exclude<ChairChat['kind'], 'waiting'>, { speaker: 0 | 1 | 2; text: Message }[]>;
-export const CHAIR_CHAT_INTERVAL = { gossip: 3.2, wary: 4, realizing: 4, welcoming: 4, companions: 3.2 };
+export const CHAIR_CHAT_INTERVAL = { gossip: 3.2, wary: 4, dismissed: 1.9, realizing: 4, welcoming: 4, companions: 3.2 };
 export function chairChatLine(chat: Exclude<ChairChat, { kind: 'waiting' }>, seed: number) {
     const lines = CHAIR_CHAT[chat.kind];
     const looping = chat.kind === 'gossip' || chat.kind === 'companions';
