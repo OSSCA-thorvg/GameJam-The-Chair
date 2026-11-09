@@ -98,6 +98,9 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
             case 'bin-game-over':
                 overlay("Trash bin fall", "Recycled along with your work.");
                 break;
+            case 'lift-game-over':
+                overlay("Forced clock-out", "The mechanical room stayed upstairs.");
+                break;
             case 'focus-lost':
                 reaction = null;
                 status = "Focus depleted.";

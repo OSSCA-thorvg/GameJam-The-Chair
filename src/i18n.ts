@@ -1,6 +1,15 @@
 export type Locale = 'en' | 'ko';
 
 const korean = {
+    "Late! Hold on to your humans!": "늦겠다! 사람 꽉 잡아!",
+    "The rookie is coming too!": "신입도 같이 탄다!",
+    "No brakes till clock-out!": "퇴근 전엔 브레이크 없다!",
+    "Rookie! Your human clocks out too!": "신입! 사람도 같이 퇴근이야!",
+    "Load the human. Sort it out downstairs!": "사람도 일단 싣고 내려!",
+    "Doors closing! Mind the employee!": "문 닫는다~ 직원 끼임 주의!",
+    "Congratulations! See you at work tomorrow!": "축 퇴근! 내일부터 다시 출근~",
+    "Forced clock-out": "강제 퇴근",
+    "The mechanical room stayed upstairs.": "기계실은 위에 남았습니다.",
     "": "",
     "Manager Park": "박 과장",
     "Kim": "김 대리",

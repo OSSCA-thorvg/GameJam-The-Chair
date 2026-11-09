@@ -329,7 +329,7 @@ export function drawBuilding(ctx: RenderCtx) {
     ctx.rod(ctx.GOAL + 29, 299, ctx.GOAL + 29, 330, 4, '#5f797b');
     pictogram(ctx, ctx.GOAL, 'exit');
     practiceFloor(ctx);
-    ctx.ellipse(ctx.p.x, 425, 45, 5, '#61747544');
+    if (departure.kind !== 'lost' && !(departure.kind === 'descending' && departure.reason === 'abduction')) ctx.ellipse(ctx.p.x, 425, 45, 5, '#61747544');
     if (departure.kind === 'descending') {
         ctx.rect(lx - 105, 420, 210, ctx.H / ctx.scale, '#929f9d');
         ctx.rod(lx - 105, 422, lx + 105, 422, 4, '#586f75');
@@ -361,7 +361,7 @@ export function drawBuilding(ctx: RenderCtx) {
             const left = ctx.cam + 180, right = ctx.cam + ctx.VW - 180;
             const x = Math.max(left, Math.min(right, speaker.x));
             if (c.chat.kind === 'dismissed' || (speaker.x > ctx.cam - 60 && speaker.x < ctx.cam + ctx.VW + 60)) {
-                bubble(ctx, line.text, x, 242, 350, c.chat.kind === 'wary', Math.min(1, localAge * 6, (interval - .35 - localAge) * 5));
+                bubble(ctx, line.text, x, 242, 350, c.chat.kind === 'wary' || c.chat.kind === 'rush', Math.min(1, localAge * 6, (interval - .35 - localAge) * 5));
             }
         }
     }
@@ -370,12 +370,15 @@ export function drawBuilding(ctx: RenderCtx) {
         if (departure.kind === 'none' && item.cheer > 0 && c.chat.kind === 'waiting') bubble(ctx, (['Woohoo! Freedom!', 'Clocking out!', 'Bye-bye, overtime!'] satisfies Message[])[i], item.x, 285 - (i % 2) * 60, 185, true, Math.min(1, item.cheer * 2));
     });
     state.furniture.forEach((item, i) => {
-        if (!item.released || departure.kind === 'gone') return;
+        if (!item.released || departure.kind === 'gone' || departure.kind === 'lost') return;
         const reacting = c.chat.kind === 'wary' || c.chat.kind === 'realizing' || c.chat.kind === 'welcoming';
         const bob = departure.kind === 'boarding' ? Math.sin(departure.age * 9 + i) * 2 : reacting ? Math.sin(c.chat.age * 7 + i) * 2 : Math.sin(ctx.t * 5 + i) * .7;
         chair(ctx, item.x, item.y + drop + bob);
     });
-    const actorStart = ctx.commands.length;
-    player(ctx);
-    ctx.foregroundActors.push(...ctx.commands.slice(actorStart));
+    if (departure.kind !== 'lost') {
+        const actorStart = ctx.commands.length;
+        player(ctx);
+        if (departure.kind === 'descending' && departure.reason === 'abduction') cabinActors(ctx, actorStart);
+        else ctx.foregroundActors.push(...ctx.commands.slice(actorStart));
+    }
 }

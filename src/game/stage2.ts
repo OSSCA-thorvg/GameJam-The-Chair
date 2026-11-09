@@ -14,8 +14,13 @@ export const STAGE_TWO = {
         [{ x: -400, y: 420 }, { x: 4400, y: 420 }, { x: 4400, y: 800 }, { x: -400, y: 800 }],
     ] satisfies Point[][],
 };
-export type ChairChat = { kind: 'waiting' } | { kind: 'gossip' | 'wary' | 'dismissed' | 'realizing' | 'welcoming' | 'companions'; age: number };
+export type ChairChat = { kind: 'waiting' } | { kind: 'gossip' | 'wary' | 'dismissed' | 'realizing' | 'welcoming' | 'companions' | 'rush'; age: number };
 export const CHAIR_CHAT = {
+    rush: [
+        { speaker: 0, text: 'Late! Hold on to your humans!' },
+        { speaker: 1, text: 'The rookie is coming too!' },
+        { speaker: 2, text: 'No brakes till clock-out!' },
+    ],
     gossip: [
         { speaker: 2, text: 'Human returned. Overtime avoided.' },
         { speaker: 1, text: 'Mine is still in that meeting.' },
@@ -65,15 +70,15 @@ export const CHAIR_CHAT = {
         { speaker: 2, text: 'Do not mix those up again.' },
     ],
 } satisfies Record<Exclude<ChairChat['kind'], 'waiting'>, { speaker: 0 | 1 | 2; text: Message }[]>;
-export const CHAIR_CHAT_INTERVAL = { gossip: 3.2, wary: 4, dismissed: 1.9, realizing: 4, welcoming: 4, companions: 3.2 };
+export const CHAIR_CHAT_INTERVAL = { gossip: 3.2, wary: 4, dismissed: 1.9, realizing: 4, welcoming: 4, companions: 3.2, rush: 1.6 };
 export function chairChatLine(chat: Exclude<ChairChat, { kind: 'waiting' }>, seed: number) {
     const lines = CHAIR_CHAT[chat.kind];
     const looping = chat.kind === 'gossip' || chat.kind === 'companions';
     const topic = looping ? Math.floor(seed / (chat.kind === 'companions' ? 7 : 1)) % (lines.length / 3) : 0;
     return lines[(topic * 3 + Math.floor(chat.age / CHAIR_CHAT_INTERVAL[chat.kind])) % lines.length];
 }
-export type ChairDepartureReason = 'companions' | 'clock-out';
-export type ChairDeparture = { kind: 'none' } | { kind: 'boarding' | 'descending'; age: number; reason: ChairDepartureReason } | { kind: 'gone' };
+export type ChairDepartureReason = 'companions' | 'clock-out' | 'abduction';
+export type ChairDeparture = { kind: 'none' } | { kind: 'boarding' | 'descending'; age: number; reason: ChairDepartureReason } | { kind: 'gone' | 'lost' };
 export const CHAIR_DEPARTURE = { boarding: 5, descending: 2, slots: [58, 0, -58] };
 export const CHAIR_FAREWELL = [
     { speaker: 2, text: 'Nice rolling, rookie.' },
@@ -82,6 +87,12 @@ export const CHAIR_FAREWELL = [
     { speaker: 2, text: 'See you downstairs. Return your human!' },
 ] satisfies { speaker: 0 | 1 | 2; text: Message }[];
 export const CHAIR_DEPARTURE_LINES = {
+    abduction: [
+        { speaker: 2, text: 'Rookie! Your human clocks out too!' },
+        { speaker: 1, text: 'Load the human. Sort it out downstairs!' },
+        { speaker: 0, text: 'Doors closing! Mind the employee!' },
+        { speaker: 2, text: 'Congratulations! See you at work tomorrow!' },
+    ],
     companions: CHAIR_FAREWELL,
     'clock-out': [
         { speaker: 2, text: 'After-work oil, anyone?' },
@@ -98,6 +109,7 @@ export type Corridor = {
     dispatchStarted: boolean;
     chat: ChairChat;
     convoy: 'free' | 'carried' | 'airborne';
+    pace: 'casual' | 'express';
     departure: ChairDeparture;
     lift: { kind: 'waiting' } | { kind: 'arriving'; age: number } | { kind: 'open'; age: number } | { kind: 'departed' };
     typingCooldown: number;
@@ -111,6 +123,7 @@ export function createCorridor(checkpoint = 0): Corridor {
         dispatchStarted: checkpoint > 0, dispatchAge: checkpoint > 0 ? 10 : 0,
         chat: { kind: 'waiting' },
         convoy: 'free',
+        pace: 'casual',
         departure: { kind: checkpoint >= 3 ? 'gone' : 'none' },
         lift: { kind: checkpoint >= 3 ? 'departed' : 'waiting' },
         typingCooldown: 0,
