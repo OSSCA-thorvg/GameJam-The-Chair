@@ -253,6 +253,8 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
                 const mark = STAGE_THREE.checkpoints[i];
                 if (p.x >= mark.x && Math.abs(p.y - mark.y) < 65) {
                     s.checkpoint = i;
+                    s.focus = 100;
+                    s.focusClock = 0;
                     s.events.push({ type: 'cue', id: 'checkpoint' });
                 }
             }
@@ -263,6 +265,8 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
                 const mark = STAGE_TWO.checkpoints[i];
                 if (p.x >= mark.x && Math.abs(p.y - mark.y) < 65) {
                     s.checkpoint = i;
+                    s.focus = 100;
+                    s.focusClock = 0;
                     s.events.push({ type: 'cue', id: 'checkpoint' });
                 }
             }
@@ -343,6 +347,8 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         s.actualSpeed += (Math.abs(p.x - prev) / dt - s.actualSpeed) * (1 - Math.exp(-dt / .12));
         if (s.stage === 1 && !s.officeCheckpoint && p.x >= 1400 && p.x < s.bin.a - 25) {
             s.officeCheckpoint = true;
+            s.focus = 100;
+            s.focusClock = 0;
             s.events.push({ type: 'cue', id: 'checkpoint' });
         }
         if (s.ground && dir && Math.abs(p.vx) > 95 && s.rollCooldown === 0) {
