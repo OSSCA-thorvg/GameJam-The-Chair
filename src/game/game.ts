@@ -38,7 +38,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         ];
         s.people = [
             { id: 'manager', x: 320, said: false },
-            { id: 'cleaner', x: 1000, said: false },
+            { id: 'cleaner', x: LEVEL.cleaning.x + 55, said: false },
             { id: 'admin', x: 1810, said: false },
         ];
     }

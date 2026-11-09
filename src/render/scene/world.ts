@@ -76,7 +76,8 @@ export function drawWorld(ctx: RenderCtx) {
     for (let x = 110; x < GOAL; x += 420) {
         if (x < left - 200 || x > right) continue;
         desk(ctx, x);
-        plant(ctx, x + (x === 110 ? 295 : 205));
+        const plantX = x + (x === 110 ? 295 : 205);
+        plant(ctx, Math.abs(plantX - cleaning.x - 55) < 70 ? plantX + 90 : plantX);
     }
     let cleaner: DeepReadonly<Person> | undefined;
     for (const n of people) {

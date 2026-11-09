@@ -10,7 +10,7 @@ export const LEVEL = Object.freeze({
         Object.freeze({ wall: 2980, period: 3.5, offset: 1.0 }),
     ]),
     copier: Object.freeze({ x: 750 }),
-    cleaning: Object.freeze({ x: 945, a: 885, b: 1210 }),
+    cleaning: Object.freeze({ x: 1095, a: 1035, b: 1360 }),
     bin: Object.freeze({ x: 1660, a: 1580, b: 1740, rim: 402 }),
     geysers: Object.freeze([
         Object.freeze({ x: 2600, period: 3.5, offset: 0 }),
@@ -24,5 +24,5 @@ export const LEVEL = Object.freeze({
     ].map(part => Object.freeze(part)))
 });
 // Rule durations are independent from the visual effect durations in render/effects.ts.
-export const RULES = Object.freeze({ paperPenalty: 2.4, lightPenalty: 1.65, waterExposure: 1.3, bucketReset: 2.2 });
+export const RULES = Object.freeze({ paperPenalty: 2.4, copierFocusDamage: 15, lightPenalty: 1.65, waterExposure: 1.3, bucketReset: 2.2 });
 export const FIXED_STEP = 1 / 120;

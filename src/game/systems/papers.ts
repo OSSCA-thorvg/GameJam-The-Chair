@@ -47,7 +47,7 @@ export function particlesStep(s: GameCore, dt: number) {
         if (!z.safe && !z.hit && !z.landed && !s.inBin && Math.hypot(z.x - s.p.x, z.y - (s.p.y - 50)) < 48) {
             z.hit = true;
             s.paperHits++;
-            focusHit(s, 'paper', z.volley);
+            focusHit(s, 'paper', z.volley, RULES.copierFocusDamage);
             if (s.mode !== 'play') return;
             s.p.vx *= .88;
             s.p.w += z.vx * .0009;
