@@ -54,9 +54,7 @@ export function createSplashPlayer(element: HTMLCanvasElement) {
     };
 }
 
-export function showStartupSplash(root: HTMLElement, getLocale: () => 'en' | 'ko') {
-    const scene = root.querySelector<HTMLElement>('.scene');
-    if (!scene) throw new Error('Game scene is unavailable.');
+export function showStartupSplash(getLocale: () => 'en' | 'ko') {
     const screen = document.createElement('div');
     screen.className = 'startup-splash';
     screen.setAttribute('role', 'button');
@@ -65,7 +63,7 @@ export function showStartupSplash(root: HTMLElement, getLocale: () => 'en' | 'ko
     const canvas = document.createElement('canvas');
     canvas.setAttribute('aria-hidden', 'true');
     screen.append(canvas);
-    scene.append(screen);
+    document.body.append(screen);
     const player = createSplashPlayer(canvas);
     let started: number | null = null;
     let frameId = 0;
@@ -76,7 +74,7 @@ export function showStartupSplash(root: HTMLElement, getLocale: () => 'en' | 'ko
         cancelAnimationFrame(frameId);
         player.destroy();
         screen.remove();
-        root.querySelector<HTMLButtonElement>('[data-start]')?.focus();
+        document.querySelector<HTMLButtonElement>('[data-start]')?.focus();
     };
     screen.addEventListener('click', finish);
     screen.addEventListener('keydown', event => {
