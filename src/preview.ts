@@ -1,5 +1,6 @@
 import { createRenderer } from './render/renderer';
 import { previewScenes, type PreviewScene } from './preview-scenes';
+import { createSplashPlayer } from './ui/splash';
 import './style.css';
 import './preview.css';
 
@@ -11,6 +12,8 @@ const playButton = document.querySelector<HTMLButtonElement>('#play')!;
 const markers = document.querySelector<HTMLElement>('#markers')!;
 const backend = document.querySelector<HTMLElement>('#renderer')!;
 const renderer = createRenderer(root);
+const splashCanvas = document.querySelector<HTMLCanvasElement>('#splash-preview')!;
+const splash = createSplashPlayer(splashCanvas);
 
 for (const scene of previewScenes) select.add(new Option(scene.label, scene.id));
 const requested = new URLSearchParams(location.search).get('motion');
@@ -22,10 +25,16 @@ let previousFrame: number | null = null;
 let scheduledFrame: number | null = null;
 
 function render() {
-    const { state, effects } = scene.sample(time);
-    const width = root.querySelector('canvas')!.clientWidth;
-    const worldWidth = width < 520 ? 540 : Math.max(760, width);
-    renderer.draw(state, effects, scene.focusX - worldWidth / 2);
+    const isSplash = scene.id === 'startup-splash';
+    root.querySelector('.scene')?.classList.toggle('splash-scene', isSplash);
+    splashCanvas.hidden = !isSplash;
+    if (isSplash) splash.draw(time);
+    else {
+        const { state, effects } = scene.sample(time);
+        const width = root.querySelector('canvas')!.clientWidth;
+        const worldWidth = width < 520 ? 540 : Math.max(760, width);
+        renderer.draw(state, effects, scene.focusX - worldWidth / 2);
+    }
     slider.value = String(time);
     value.value = `${time.toFixed(2)} s`;
 }
@@ -100,9 +109,13 @@ playButton.addEventListener('click', () => {
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 const resize = new ResizeObserver(() => requestAnimationFrame(render));
 resize.observe(root);
-window.addEventListener('pagehide', () => { resize.disconnect(); renderer.destroy(); });
+window.addEventListener('pagehide', () => { resize.disconnect(); renderer.destroy(); splash.destroy(); });
 selectScene(scene, Number.isFinite(requestedTime) ? requestedTime : 0);
 void renderer.ready.then(() => {
     backend.textContent = renderer.info().renderer === 'thorvg' ? 'ThorVG' : 'Canvas 2D';
     render();
+});
+void splash.ready.then(render).catch(error => {
+    console.error('Splash preview unavailable', error);
+    splashCanvas.hidden = true;
 });

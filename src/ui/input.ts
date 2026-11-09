@@ -27,7 +27,7 @@ export function bindInput(root: HTMLElement, game: Game) {
             }
         }
         const visiblePanel = !!panel && !panel.hidden;
-        if (visiblePanel && !panelOpen && !paused) panel?.querySelector<HTMLButtonElement>('[data-start]')?.focus();
+        if (visiblePanel && !panelOpen && !paused && !document.querySelector?.('.startup-splash')) panel?.querySelector<HTMLButtonElement>('[data-start]')?.focus();
         if (!visiblePanel && panelOpen && panel?.contains(document.activeElement)) pauseButton?.focus();
         panelOpen = visiblePanel;
     }
@@ -55,6 +55,7 @@ export function bindInput(root: HTMLElement, game: Game) {
     button('[data-resume]', togglePause);
     window.addEventListener('keydown', e => {
         if (!root.isConnected || (e.target instanceof Element && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName))) return;
+        if (document.querySelector?.('.startup-splash')) return;
         const state = game.getSnapshot();
         if (e.key === 'Tab') {
             const dialog = state.mode === 'pause' ? menu : panel && !panel.hidden ? panel : null;
