@@ -1,7 +1,8 @@
 import type { Game } from '../game/game';
 import { bindControls } from './controls';
 // Menu buttons, dialog focus and pause syncing. Gameplay keys and touch controls live in ./controls.
-export function bindInput(root: HTMLElement, game: Game) {
+// `blocked` (e.g. while a replay plays) hides the pause menu and ignores every live-game control.
+export function bindInput(root: HTMLElement, game: Game, { blocked = () => false }: { blocked?: () => boolean } = {}) {
     const controller = new AbortController();
     const options = { signal: controller.signal };
     const menu = root.querySelector<HTMLElement>('[data-pause-menu]');
@@ -14,7 +15,7 @@ export function bindInput(root: HTMLElement, game: Game) {
         return [...container.querySelectorAll<HTMLElement>('button:not([disabled]), summary, [tabindex="0"]')].filter(el => el.getClientRects().length > 0);
     }
     function syncMenu() {
-        const paused = game.getSnapshot().mode === 'pause';
+        const paused = game.getSnapshot().mode === 'pause' && !blocked();
         if (menu) menu.hidden = !paused;
         pauseButton?.setAttribute('aria-expanded', String(paused));
         if (paused && !menuOpen) {
@@ -27,17 +28,18 @@ export function bindInput(root: HTMLElement, game: Game) {
             }
         }
         const visiblePanel = !!panel && !panel.hidden;
-        if (visiblePanel && !panelOpen && !paused && !document.querySelector?.('.startup-splash')) panel?.querySelector<HTMLButtonElement>('[data-start]')?.focus();
+        if (visiblePanel && !panelOpen && !paused && !blocked() && !document.querySelector?.('.startup-splash')) panel?.querySelector<HTMLButtonElement>('[data-start]')?.focus();
         if (!visiblePanel && panelOpen && panel?.contains(document.activeElement)) pauseButton?.focus();
         panelOpen = visiblePanel;
     }
     function togglePause() {
+        if (blocked()) return;
         if (game.getSnapshot().mode === 'play') returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : pauseButton;
         game.pause();
         syncMenu();
     }
     function button(selector: string, action: () => void) {
-        root.querySelector<HTMLElement>(selector)?.addEventListener('click', () => { action(); syncMenu(); }, options);
+        root.querySelector<HTMLElement>(selector)?.addEventListener('click', () => { if (blocked()) return; action(); syncMenu(); }, options);
     }
     button('[data-start]', () => {
         const state = game.getSnapshot();
@@ -53,7 +55,7 @@ export function bindInput(root: HTMLElement, game: Game) {
     button('[data-reset]', game.restart);
     button('[data-pause]', togglePause);
     button('[data-resume]', togglePause);
-    const accepting = () => root.isConnected && !document.querySelector?.('.startup-splash');
+    const accepting = () => root.isConnected && !blocked() && !document.querySelector?.('.startup-splash');
     window.addEventListener('keydown', e => {
         if (e.key !== 'Tab' || !accepting()) return;
         const state = game.getSnapshot();
@@ -76,9 +78,9 @@ export function bindInput(root: HTMLElement, game: Game) {
         if (document.hidden && game.getSnapshot().mode === 'play') togglePause();
     }, options);
     const observer = new MutationObserver(() => {
-        if ((game.getSnapshot().mode === 'pause') !== menuOpen || (!!panel && !panel.hidden) !== panelOpen) syncMenu();
+        if ((game.getSnapshot().mode === 'pause' && !blocked()) !== menuOpen || (!!panel && !panel.hidden) !== panelOpen) syncMenu();
     });
     observer.observe(root, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
     queueMicrotask(syncMenu);
-    return () => { controller.abort(); observer.disconnect(); };
+    return Object.assign(() => { controller.abort(); observer.disconnect(); }, { sync: syncMenu });
 }
