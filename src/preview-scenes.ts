@@ -1,6 +1,7 @@
 import { createGame, type Game, type GameState } from './game/game';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_TWO } from './game/stage2';
+import { ductTimings } from './game/stage3';
 import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/systems/monitor';
@@ -165,6 +166,19 @@ function headImpact(): PreviewScene {
         [{ at: 0, label: 'Impact' }, { at: .5, label: 'Rewind' }, { at: 1.4, label: 'Collision' }, { at: 1.8, label: 'End' }], frames);
 }
 
+function rooftopEntrance(): PreviewScene {
+    const game = createGame();
+    game.startStage(3);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    for (let i = 0; i < 168; i++) {
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene('rooftop-entrance', 'Rooftop · Hinged entrance', 400,
+        [{ at: 0, label: 'Closed' }, { at: .4, label: 'Door opens' }, { at: 1.1, label: 'Chair emerges' }, { at: 1.8, label: 'At the block' }, { at: 2.6, label: 'Door closed · Controls ready' }], frames);
+}
+
 function extinguisherSpray(): PreviewScene {
     const game = createGame();
     game.startStage(3);
@@ -192,6 +206,42 @@ function extinguisherSpray(): PreviewScene {
         [{ at: 0, label: 'Spray' }, { at: .16, label: 'Recoil' }, { at: .24, label: 'Plume ends' }, { at: .6, label: 'Landing' }], frames);
 }
 
+function cloudEntry(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    for (let i = 0; i < 120; i++) {
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene('cloud-entry', 'Sky · Stage 4 hovering start', 2380,
+        [{ at: 0, label: 'Arrival' }, { at: 1, label: 'Continuous spray · Hovering' }], frames);
+}
+
+function ductSneeze(repeat = false): PreviewScene {
+    const game = createGame();
+    game.startStage(3);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const kind = repeat ? 'repeat' : 'first';
+    const timing = ductTimings(kind);
+    return {
+        id: repeat ? 'duct-repeat' : 'duct-sneeze', label: repeat ? 'Rooftop · Gentle repeat wind' : 'Rooftop · First sneeze & gloves', duration: 2.2, focusX: 1510,
+        markers: [{ at: .05, label: 'Inhale' }, { at: timing.inhale + .02, label: 'Twitch' },
+            { at: timing.inhale + timing.twitch + .18, label: 'Sneeze' }, { at: repeat ? .8 : 2.1, label: repeat ? 'Wind fades' : 'Gloves settle' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(2.2, time));
+            const drift = Math.min(1, Math.max(0, at - timing.inhale - timing.twitch));
+            return { state: { ...base, time: at, hasExtinguisher: true, checkpoint: 2,
+                rooftopEntrance: { kind: 'ready' }, ductReaction: { kind: 'reacting', age: repeat ? 10 + at : at, shots: repeat ? 2 : 1, bursts: [{ kind, age: at }] },
+                spray: { ...base.spray, burst: at < timing.inhale ? .24 * (1 - at / timing.inhale) : 0, dir: { x: Math.SQRT1_2, y: Math.SQRT1_2 } },
+                player: { ...base.player, x: 1580 - drift * (repeat ? 65 : 145), y: 160 - Math.sin(drift * Math.PI) * 45, a: -.05 }, ground: false,
+            }, effects };
+        },
+    };
+}
+
 function officeTyping(): PreviewScene {
     const game = createGame();
     game.startStage(2);
@@ -217,5 +267,5 @@ export const previewScenes: readonly PreviewScene[] = [
         markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
-    cleanerRecovery(), monitorLight(), copierVolley(), headImpact(), extinguisherSpray(), officeTyping(),
+    cleanerRecovery(), monitorLight(), copierVolley(), headImpact(), rooftopEntrance(), extinguisherSpray(), ductSneeze(), ductSneeze(true), cloudEntry(), officeTyping(),
 ];

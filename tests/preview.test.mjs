@@ -100,3 +100,16 @@ test('office preview keeps one staff mix through the typing motion', () => {
     assert.equal(typing.corridor.appearanceSeed, start.corridor.appearanceSeed);
     assert.equal(typing.time, .25);
 });
+
+test('duct preview seeks between powder intake, twitch and sneeze', () => {
+    const scene = previewScenes.find(scene => scene.id === 'duct-sneeze');
+    assert.ok(scene);
+    assert.equal(scene.markers.length, 4);
+    assert.ok(scene.sample(.05).state.spray.burst > 0);
+    assert.equal(scene.sample(.52).state.spray.burst, 0);
+    assert.ok(scene.sample(1.1).state.ductReaction.age > .2);
+    assert.equal(scene.sample(1.1).state.hasExtinguisher, true);
+    const sneeze = scene.sample(1.1);
+    scene.sample(2.1);
+    assert.deepEqual(scene.sample(1.1), sneeze);
+});
