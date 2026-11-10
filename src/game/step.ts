@@ -3,14 +3,15 @@ import { rooftopStep, firstFlightStep, rooftopEntranceStep } from './systems/roo
 import { LEVEL, FIXED_STEP } from './level';
 import type { GameEvent, Mode } from './types';
 import { clamp, contact } from './geometry';
-import { resetAttempt, startStage, snapshot, type GameState } from './core';
+import { resetAttempt, startStage, snapshot, type GameState } from './state';
 import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages';
 import type { DeepReadonly, Point } from './types';
 import { applyCommand, spray, type Command } from './commands';
 import { focusStep, advanceFocusLoss } from './systems/focus';
 import { shoot, particlesStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
-import { geyserStep } from './systems/geyser';
+import { geyserHits } from './systems/geyser';
+import { applyGeyserHits } from './apply';
 import { monitorStep } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
 import { meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
@@ -110,7 +111,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     if (s.mode !== 'play') return;
     if (s.stage === 1) {
         cleaningStep(s, out, dt);
-        geyserStep(s, out, dt);
+        applyGeyserHits(s, out, geyserHits(s.p, s.time, s.rng.physics));
     }
     if (s.mode !== 'play') return;
 

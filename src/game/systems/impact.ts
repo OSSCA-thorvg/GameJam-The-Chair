@@ -1,4 +1,4 @@
-import { snapshot, type GameCore } from '../core';
+import { snapshot, type GameCore } from '../state';
 import type { Point, GameEvent } from '../types';
 
 export function fail(s: GameCore, out: GameEvent[], point: Point) {

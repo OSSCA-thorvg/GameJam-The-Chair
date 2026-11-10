@@ -8,7 +8,7 @@ async function load(entry) {
 }
 const { createGame } = await load('src/game/game.ts');
 const { createFeedback } = await load('src/ui/feedback.ts');
-const { createCore } = await load('src/game/core.ts');
+const { createCore } = await load('src/game/state.ts');
 const { monitorStep } = await load('src/game/systems/monitor.ts');
 
 test('head failures retain the short cause and joke without control hints', () => {

@@ -1,4 +1,4 @@
-import type { GameCore } from '../core';
+import type { GameCore } from '../state';
 import { STAGE_FOUR } from '../stage4';
 import { STAGES } from '../stages';
 

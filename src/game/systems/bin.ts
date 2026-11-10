@@ -1,5 +1,5 @@
 import { LEVEL } from '../level';
-import type { GameCore } from '../core';
+import type { GameCore } from '../state';
 import type { GameEvent } from '../types';
 
 export function binEnter(s: GameCore, out: GameEvent[]) {

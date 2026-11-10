@@ -1,4 +1,4 @@
-import type { GameCore } from '../core';
+import type { GameCore } from '../state';
 import type { GameEvent } from '../types';
 import { STAGE_THREE, ductTimings } from '../stage3';
 import { STAGE_FOUR } from '../stage4';

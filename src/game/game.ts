@@ -1,7 +1,7 @@
 import type { StageId } from './stage2';
 import { LEVEL, FIXED_STEP } from './level';
 import type { Input, DeepReadonly, GameEvent } from './types';
-import { createCore, serializeState, restoreState, type Progress } from './core';
+import { createCore, serializeState, restoreState, type Progress } from './state';
 import { applyCommand, type Command } from './commands';
 import { SIMULATED, stageSolids, stepGame } from './step';
 import { STAGES } from './stages';

@@ -1,8 +1,7 @@
 import { FOCUS_DAMAGE, LEVEL } from '../level';
-import type { GameCore } from '../core';
-import type { GameEvent } from '../types';
-import { focusHit } from './focus';
-import { random } from '../rng';
+import type { Point } from '../types';
+import type { FocusHit } from './focus';
+import { nextRandom } from '../rng';
 
 export type GeyserPhase = 'rest' | 'warning' | 'burst';
 export function geyserPhase(geyser: { period: number; offset: number }, t: number): { kind: GeyserPhase; age: number; remaining: number } {
@@ -12,19 +11,24 @@ export function geyserPhase(geyser: { period: number; offset: number }, t: numbe
     return { kind: 'burst', age: p - 3.1, remaining: geyser.period - p };
 }
 
-export function geyserStep(s: GameCore, out: GameEvent[], _dt: number) {
-    const p = s.p;
+export type GeyserHit = { push: number; spin: number; rng: number; focus: FocusHit };
+
+// Which geysers launch the chair this tick. Each hit carries the physics stream state after its spin draw.
+export function geyserHits(p: Readonly<Point>, time: number, rng: number): GeyserHit[] {
+    const hits: GeyserHit[] = [];
     for (let i = 0; i < LEVEL.geysers.length; i++) {
         const g = LEVEL.geysers[i];
-        const phase = geyserPhase(g, s.time);
-        if (phase.kind !== 'burst') continue;
+        if (geyserPhase(g, time).kind !== 'burst') continue;
         if (Math.abs(p.x - g.x) > 34) continue;
         if (p.y < LEVEL.floor - 160) continue;
-        p.vy = -520;
-        p.vx += (Math.sign(p.x - g.x) || 1) * 90;
-        p.w += (random(s.rng, 'physics') - .5) * 6;
-        focusHit(s, out, 'paper', 1000 + i * 100 + Math.floor(s.time / g.period), FOCUS_DAMAGE.paper);
-        if (s.mode !== 'play') return;
-        out.push({ type: 'cue', id: 'light-hit' });
+        const draw = nextRandom(rng);
+        rng = draw.state;
+        hits.push({
+            push: (Math.sign(p.x - g.x) || 1) * 90,
+            spin: (draw.value - .5) * 6,
+            rng,
+            focus: { kind: 'paper', id: 1000 + i * 100 + Math.floor(time / g.period), damage: FOCUS_DAMAGE.paper },
+        });
     }
+    return hits;
 }

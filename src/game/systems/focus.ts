@@ -1,5 +1,5 @@
 import { LEVEL, RULES } from '../level';
-import type { GameCore } from '../core';
+import type { GameCore } from '../state';
 import type { GameEvent } from '../types';
 
 export function waterExposureActive(s: GameCore) {
@@ -11,7 +11,11 @@ export function focusBlocked(s: GameCore) {
     return s.paperPenaltyRemaining > 0 || s.lightPenaltyRemaining > 0 || waterExposureActive(s);
 }
 
-export function focusHit(s: GameCore, out: GameEvent[], kind: 'paper' | 'water' | 'light' | 'door', id: number, damage: number) {
+export type FocusKind = 'paper' | 'water' | 'light' | 'door';
+// One distraction. The same kind and id only ever costs focus once per attempt.
+export type FocusHit = { kind: FocusKind; id: number; damage: number };
+
+export function focusHit(s: GameCore, out: GameEvent[], kind: FocusKind, id: number, damage: number) {
     if (s.mode !== 'play') return;
     const token = kind + ':' + id;
     if (s.focusEvents.includes(token)) return;

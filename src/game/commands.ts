@@ -1,4 +1,4 @@
-import { resetAttempt, startStage, type GameState } from './core';
+import { resetAttempt, startStage, type GameState } from './state';
 import type { StageId } from './stage2';
 import type { GameEvent, Input } from './types';
 import { ductSpray, rooftopLaunchShot } from './systems/rooftop';

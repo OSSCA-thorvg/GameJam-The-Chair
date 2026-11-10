@@ -1,4 +1,4 @@
-import type { GameCore } from '../core';
+import type { GameCore } from '../state';
 import type { GameEvent } from '../types';
 import { random } from '../rng';
 import { STAGES } from '../stages';
