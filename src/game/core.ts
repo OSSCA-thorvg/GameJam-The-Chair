@@ -1,4 +1,5 @@
 import { LEVEL, RULES } from './level';
+import type { DuctBurst } from './stage3';
 import { STAGE_TWO, createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
 import type { GameEvent, Input, Paper, Person, Player, Point, Snapshot } from './types';
 
@@ -17,6 +18,7 @@ export type GameCore = {
     hasExtinguisher: boolean;
     firstFlight: { kind: 'course'; verticalShots: number; lastShotAt: number } | { kind: 'flight'; age: number };
     rooftopEntrance: { kind: 'opening'; age: number } | { kind: 'ready' };
+    ductReaction: { kind: 'idle' } | { kind: 'reacting'; age: number; shots: number; bursts: DuctBurst[] } | { kind: 'done'; shots: number };
     sprayCooldown: number;
     sprayBurst: number;
     sprayDir: { x: number; y: number };
@@ -92,6 +94,7 @@ export function createCore(initialDeaths: number): GameCore {
         hasExtinguisher: false,
         firstFlight: { kind: 'course', verticalShots: 0, lastShotAt: -1 },
         rooftopEntrance: { kind: 'ready' },
+        ductReaction: { kind: 'idle' },
         sprayCooldown: 0,
         sprayBurst: 0,
         sprayDir: { x: 0, y: 1 },

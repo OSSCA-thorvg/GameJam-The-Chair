@@ -2,7 +2,7 @@ import { STAGE_TWO, createFurniture, createCorridor, type StageId } from './stag
 import { STAGE_THREE } from './stage3';
 import { STAGE_FOUR } from './stage4';
 import { skyStep } from './systems/sky';
-import { rooftopStep, firstFlightStep, rooftopEntranceStep, rooftopLaunchShot } from './systems/rooftop';
+import { rooftopStep, firstFlightStep, rooftopEntranceStep, rooftopLaunchShot, ductSpray } from './systems/rooftop';
 import { LEVEL, RULES, FIXED_STEP } from './level';
 import type { Input, DeepReadonly } from './types';
 import { clamp, polyRect, contact } from './geometry';
@@ -104,6 +104,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         Object.assign(s.copier, { cool: 0, burst: 0, next: 0 });
         s.hasExtinguisher = s.stage === 4 || (s.stage === 3 && s.checkpoint > 0);
         s.firstFlight = { kind: 'course', verticalShots: 0, lastShotAt: -1 };
+        s.ductReaction = { kind: 'idle' };
         s.rooftopEntrance = s.stage === 3 && s.checkpoint === 0 ? { kind: 'opening', age: 0 } : { kind: 'ready' };
         s.sprayCooldown = 0;
         s.sprayBurst = s.stage === 4 ? .24 : 0;
@@ -130,6 +131,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         s.sprayCooldown = .24;
         s.sprayBurst = .24;
         s.events.push({ type: 'cue', id: 'spray' });
+        ductSpray(s);
         rooftopLaunchShot(s, dx);
     }
 
@@ -400,6 +402,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             hasExtinguisher: s.hasExtinguisher,
             firstFlight: s.firstFlight,
             rooftopEntrance: s.rooftopEntrance,
+            ductReaction: s.ductReaction,
             checkpoint: s.checkpoint,
             furniture: s.furniture,
             corridor: s.corridor,

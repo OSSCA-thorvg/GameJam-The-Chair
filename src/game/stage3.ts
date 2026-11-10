@@ -33,3 +33,11 @@ export const STAGE_THREE = {
         { x: b.x + b.width, y: b.y + b.height }, { x: b.x, y: b.y + b.height },
     ]) satisfies Point[][],
 };
+
+export type DuctBurst = { kind: 'first' | 'repeat'; age: number };
+export function ductTimings(kind: DuctBurst['kind']) {
+    const d = STAGE_THREE.duct;
+    return kind === 'first'
+        ? { inhale: d.inhaleDuration, twitch: d.twitchDuration, sneeze: d.sneezeDuration }
+        : { inhale: d.repeatInhaleDuration, twitch: d.repeatTwitchDuration, sneeze: d.repeatSneezeDuration };
+}
