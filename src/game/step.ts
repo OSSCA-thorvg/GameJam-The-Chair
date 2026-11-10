@@ -8,9 +8,8 @@ import { applyCommand, spray, type Command } from './commands';
 import { copierStep, papersStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
 import { geyserHits } from './systems/geyser';
-import { applyBinFall, applyCleaning, applyCopier, applyFlight, applyGeyserHits, applyMonitorContact, applyPapers, applyRooftop, applyRooftopEntrance, applySky, applyFocusLoss, applyFocusRecovery, applyHeadHit, applyImpact } from './apply';
+import { applyBinFall, applyCleaning, applyCopier, applyFlight, applyGeyserHits, applyMonitorContact, applyPapers, applyRooftop, applyRooftopEntrance, applySky, applyFocusLoss, applyFocusRecovery, applyHeadHit, applyImpact, applyConvoyLanding, applyCorridor, applyLiftRide, applyMeeting } from './apply';
 import { monitorContact } from './systems/monitor';
-import { meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
 import { fallsIntoBin, fellOffFloor } from './systems/bin';
 
 // Modes in which fixed steps advance the game. Others wait for a command.
@@ -86,8 +85,8 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         applySky(s, dt);
         return;
     }
-    if (s.stage === 2 && meetingStep(s, dt)) return;
-    if (s.stage === 2 && liftRideStep(s, out, dt)) return;
+    if (s.stage === 2 && applyMeeting(s, dt)) return;
+    if (s.stage === 2 && applyLiftRide(s, out, dt)) return;
     applyCopier(s, out, copierStep(s.copier, s.volley, s.p.x, s.stage === 1, dt));
     applyPapers(s, out, papersStep(s.papers, s.p, s.inBin, dt), dt);
     if (s.mode !== 'play') return;
@@ -148,7 +147,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         applyBinFall(s, out);
         return;
     }
-    if (s.stage === 2) corridorStep(s, dt, prev);
+    if (s.stage === 2) applyCorridor(s, dt, prev);
     const solids = stageSolids(s);
     const parts = LEVEL.playerContacts;
     s.ground = false;
@@ -194,7 +193,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         }
     }
     if (s.stage === 3) applyRooftop(s, out, dt);
-    if (s.stage === 2) landInConvoy(s);
+    if (s.stage === 2) applyConvoyLanding(s);
     if (s.stage === 1) {
         applyMonitorContact(s, out, monitorContact(p, prev, s.time));
     }

@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 
 // Unit tests for pure system decisions: same input, same answer, no state writes.
 const bundle = await build({
-    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning'; export * from './src/game/systems/papers'; export * from './src/game/systems/rooftop'; export * from './src/game/systems/sky'; export * from './src/game/systems/focus'; export * from './src/game/systems/impact';`, resolveDir: process.cwd() },
+    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning'; export * from './src/game/systems/papers'; export * from './src/game/systems/rooftop'; export * from './src/game/systems/sky'; export * from './src/game/systems/focus'; export * from './src/game/systems/impact'; export * from './src/game/systems/corridor';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
 const sys = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
@@ -165,4 +165,32 @@ test('a head hit replays the last frames in slow motion, then holds', () => {
     assert.equal(half.done, false);
     assert.equal(sys.impactStep(impact, 42 / 120 / .25 + .36).done, true);
     assert.equal(impact.elapsed, 0, 'input untouched');
+});
+
+test('corridor decisions: convoy landing, lift ride, meeting and chatter use their own copies', () => {
+    const chairs = [0, 1, 2].map(i => ({ kind: 'chair', x: 1000 - i * 130, y: 420, width: 48, height: 40, vx: 185, released: true, cheer: 0 }));
+    const corridor = { convoy: 'airborne', departure: { kind: 'none' } };
+    assert.deepEqual(sys.convoyLanding(corridor, chairs, { x: 870, y: 392 }, true), { convoy: 'carried', vx: 185 });
+    assert.deepEqual(sys.convoyLanding(corridor, chairs, { x: 500, y: 392 }, true), { convoy: 'free', vx: null });
+    assert.equal(sys.convoyLanding(corridor, chairs, { x: 870, y: 392 }, false), null, 'still in the air');
+
+    assert.equal(sys.liftRide({ kind: 'descending', age: 0, reason: 'companions' }, .1), null, 'only a captive rider rides down');
+    const down = sys.liftRide({ kind: 'descending', age: 1.95, reason: 'abduction' }, .1);
+    assert.deepEqual([down.lost, down.departure.kind, down.y], [true, 'lost', 557]);
+
+    const meeting = sys.meetingStep({ kind: 'meeting', age: 5.99, returnX: 700 }, .02);
+    assert.equal(meeting.leave, true);
+    assert.deepEqual(sys.meetingExit(700, true), { x: 810, y: 392, vx: 180, vy: 0, a: 0, w: 0 });
+
+    const base = {
+        appearanceSeed: 1, room: { kind: 'corridor' }, meetingVisited: false, dispatchAge: 0, dispatchStarted: false,
+        chat: { kind: 'waiting' }, convoy: 'free', pace: 'casual', departure: { kind: 'none' }, lift: { kind: 'waiting' },
+        typingCooldown: 0, offices: [{ x: 220, life: 0, cooldown: 0, nearby: false, phrase: 0, offset: { x: 0, y: 0 } }],
+    };
+    const input = { corridor: base, furniture: chairs.map(chair => ({ ...chair, released: false })), p: { x: 230, y: 392, vx: 0, vy: 0, a: 0, w: 0 }, ground: true, steering: false, rng: 5, length: 4000 };
+    const r = sys.corridorStep(input, 1 / 120, 230);
+    assert.ok(r.corridor.offices[0].life > 0, 'a nearby office starts typing');
+    assert.notEqual(r.rng, 5, 'bubble placement uses the cosmetic stream');
+    assert.deepEqual(sys.corridorStep(input, 1 / 120, 230), r, 'deterministic');
+    assert.equal(base.offices[0].life, 0, 'input untouched');
 });

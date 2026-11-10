@@ -1,8 +1,7 @@
 import { resetAttempt, startStage, type GameState } from './state';
 import type { StageId } from './stage2';
 import type { GameEvent, Input } from './types';
-import { applyRooftopSpray } from './apply';
-import { interactMeeting, leaveMeeting } from './systems/corridor';
+import { applyInteract, applyLeaveMeeting, applyRooftopSpray } from './apply';
 
 // Every way the outside world changes the game. Recorded with the tick it arrived on.
 export type Command =
@@ -22,8 +21,8 @@ export function applyCommand(s: GameState, command: Command, out: GameEvent[]) {
         case 'keys': s.keys = [...command.keys]; return;
         case 'jump': jump(s); return;
         case 'spray': spray(s, out); return;
-        case 'interact': interactMeeting(s); return;
-        case 'leaveMeeting': if (s.mode === 'play') leaveMeeting(s); return;
+        case 'interact': applyInteract(s); return;
+        case 'leaveMeeting': if (s.mode === 'play') applyLeaveMeeting(s); return;
         case 'pause': pause(s); return;
         case 'reset': resetAttempt(s, out); return;
         case 'restart':

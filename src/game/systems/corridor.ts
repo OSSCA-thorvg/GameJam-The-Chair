@@ -1,76 +1,69 @@
-import type { GameCore } from '../state';
-import type { GameEvent } from '../types';
-import { random } from '../rng';
-import { STAGES } from '../stages';
-import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine } from '../stage2';
+import type { Player, Point } from '../types';
+import { nextRandom } from '../rng';
+import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine, type ChairDeparture, type Corridor, type Furniture } from '../stage2';
+import type { Mode } from '../types';
 
-function insideConvoy(s: GameCore) {
-    return s.p.y > 360 && s.p.x > s.furniture[2].x + 28 && s.p.x < s.furniture[0].x - 28;
+function insideConvoy(p: Readonly<Point>, furniture: readonly Readonly<Furniture>[]) {
+    return p.y > 360 && p.x > furniture[2].x + 28 && p.x < furniture[0].x - 28;
 }
-export function landInConvoy(s: GameCore) {
-    if (s.corridor.convoy !== 'airborne' || !s.ground) return;
-    const departure = s.corridor.departure;
+
+// Landing from a jump onto the moving chairs rides along; landing anywhere else frees the rider.
+export function convoyLanding(corridor: Readonly<Corridor>, furniture: readonly Readonly<Furniture>[], p: Readonly<Point>, ground: boolean): { convoy: Corridor['convoy']; vx: number | null } | null {
+    if (corridor.convoy !== 'airborne' || !ground) return null;
+    const departure = corridor.departure;
     const canCarry = departure.kind === 'none' || (departure.kind === 'boarding' && departure.reason === 'abduction');
-    s.corridor.convoy = canCarry && insideConvoy(s) ? 'carried' : 'free';
-    if (s.corridor.convoy === 'carried') s.p.vx = s.furniture[0].vx;
+    const convoy = canCarry && insideConvoy(p, furniture) ? 'carried' : 'free';
+    return { convoy, vx: convoy === 'carried' ? furniture[0].vx : null };
 }
-export function liftRideStep(s: GameCore, out: GameEvent[], dt: number) {
-    const departure = s.corridor.departure;
-    if (departure.kind !== 'descending' || departure.reason !== 'abduction') return false;
-    departure.age += dt;
-    s.p.y = 392 + Math.min(1, departure.age / CHAIR_DEPARTURE.descending) * 165;
-    s.p.vx = s.p.vy = s.p.w = s.p.a = 0;
-    s.ground = false;
-    s.actualSpeed = 0;
-    s.jumpQ = s.coyote = 0;
-    if (departure.age >= CHAIR_DEPARTURE.descending) {
-        s.corridor.departure = { kind: 'lost' };
-        s.corridor.lift = { kind: 'departed' };
-        s.corridor.convoy = 'free';
-        s.mode = 'dead';
-        s.lossReason = 'lift';
-        s.deaths++;
-        s.keys = [];
-        out.push({ type: 'cue', id: 'lift-game-over' });
-    }
-    return true;
+
+// A rider carried into the lift goes down with the chairs. `lost` once the doors close below.
+export function liftRide(departure: Readonly<ChairDeparture>, dt: number): { departure: ChairDeparture; y: number; lost: boolean } | null {
+    if (departure.kind !== 'descending' || departure.reason !== 'abduction') return null;
+    const age = departure.age + dt;
+    const lost = age >= CHAIR_DEPARTURE.descending;
+    return {
+        departure: lost ? { kind: 'lost' } : { ...departure, age },
+        y: 392 + Math.min(1, age / CHAIR_DEPARTURE.descending) * 165,
+        lost,
+    };
 }
-export function canEnterMeeting(s: GameCore) {
+
+export function canEnterMeeting(s: { stage: number; mode: Mode; corridor: Readonly<Corridor>; p: Readonly<Point>; ground: boolean }) {
     return s.stage === 2 && s.mode === 'play' && s.corridor.room.kind === 'corridor'
         && s.corridor.convoy === 'free'
         && Math.abs(s.p.x - STAGE_TWO.meeting) < 125 && s.ground;
 }
-export function leaveMeeting(s: GameCore, pushed = false) {
-    const room = s.corridor.room;
-    if (room.kind !== 'meeting') return;
-    s.p = { x: room.returnX + (pushed ? 110 : 0), y: 392, vx: pushed ? 180 : 0, vy: 0, a: 0, w: 0 };
-    s.corridor.room = { kind: 'corridor' };
-    s.keys = [];
-    s.jumpQ = 0;
-    s.ground = true;
-    s.actualSpeed = 0;
+
+export const MEETING_SEAT: Readonly<Player> = Object.freeze({ x: STAGE_TWO.meeting - 100, y: 392, vx: 0, vy: 0, a: 0, w: 0 });
+
+// Where the rider reappears in the corridor; pushed out when the meeting ends on its own.
+export function meetingExit(returnX: number, pushed: boolean): Player {
+    return { x: returnX + (pushed ? 110 : 0), y: 392, vx: pushed ? 180 : 0, vy: 0, a: 0, w: 0 };
 }
-export function interactMeeting(s: GameCore) {
-    if (s.mode !== 'play') return;
-    if (s.corridor.room.kind === 'meeting') { leaveMeeting(s); return; }
-    if (!canEnterMeeting(s)) return;
-    s.corridor.room = { kind: 'meeting', age: 0, returnX: s.p.x };
-    s.corridor.meetingVisited = true;
-    s.p = { x: STAGE_TWO.meeting - 100, y: 392, vx: 0, vy: 0, a: 0, w: 0 };
-    s.keys = [];
-    s.jumpQ = 0;
-    s.actualSpeed = 0;
+
+// The optional meeting plays out by itself, then shoves the rider back into the corridor.
+export function meetingStep(room: { kind: 'meeting'; age: number; returnX: number }, dt: number): { room: Corridor['room']; x: number; leave: boolean } {
+    const age = room.age + dt;
+    return { room: { ...room, age }, x: STAGE_TWO.meeting - 100 + Math.max(0, age - 4.6) * 100, leave: age >= 6 };
 }
-export function meetingStep(s: GameCore, dt: number) {
-    const room = s.corridor.room;
-    if (room.kind !== 'meeting') return false;
-    room.age += dt;
-    s.p.x = STAGE_TWO.meeting - 100 + Math.max(0, room.age - 4.6) * 100;
-    if (room.age >= 6) leaveMeeting(s, true);
-    return true;
-}
-export function corridorStep(s: GameCore, dt: number, previousX: number) {
-    const c = s.corridor, p = s.p;
+
+export type CorridorInput = { corridor: Readonly<Corridor>; furniture: readonly Readonly<Furniture>[]; p: Readonly<Player>; ground: boolean; steering: boolean; rng: number; length: number };
+export type CorridorResult = { corridor: Corridor; furniture: Furniture[]; p: Player; rng: number; stopRider: boolean };
+
+// The building corridor: typing bubbles, the chair convoy, its chatter and the lift ride.
+// Works on its own copies; the caller writes the result back.
+export function corridorStep(input: CorridorInput, dt: number, previousX: number): CorridorResult {
+    const c: Corridor = structuredClone(input.corridor) as Corridor;
+    const furniture: Furniture[] = input.furniture.map(chair => ({ ...chair }));
+    const p = { ...input.p };
+    const ground = input.ground;
+    let seed = input.rng;
+    let stopRider = false;
+    const random = () => {
+        const draw = nextRandom(seed);
+        seed = draw.state;
+        return draw.value;
+    };
     c.typingCooldown = Math.max(0, c.typingCooldown - dt);
     for (const office of c.offices) {
         office.life = Math.max(0, office.life - dt);
@@ -82,9 +75,9 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
     if (c.typingCooldown === 0 && !c.offices.some(office => office.life > 0)) {
         const office = c.offices.find(office => office.nearby && office.cooldown === 0);
         if (office) {
-            office.phrase = (office.phrase + 1 + Math.floor(random(s.rng, 'cosmetic') * (TYPING_SOUNDS.length - 1))) % TYPING_SOUNDS.length;
-            const offsetX = (random(s.rng, 'cosmetic') - .5) * 140;
-            office.offset = { x: offsetX, y: 22 + random(s.rng, 'cosmetic') * 132 };
+            office.phrase = (office.phrase + 1 + Math.floor(random() * (TYPING_SOUNDS.length - 1))) % TYPING_SOUNDS.length;
+            const offsetX = (random() - .5) * 140;
+            office.offset = { x: offsetX, y: 22 + random() * 132 };
             office.life = 1.5;
             office.cooldown = 4.5;
             c.typingCooldown = office.life + .3;
@@ -93,7 +86,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
     if (p.x > 320) c.dispatchStarted = true;
     if (c.dispatchStarted) {
         c.dispatchAge += dt;
-        s.furniture.forEach((chair, i) => {
+        furniture.forEach((chair, i) => {
             if (!chair.released && c.dispatchAge >= .7 + i * .9) {
                 chair.released = true;
                 chair.vx = 170 + i * 15;
@@ -101,21 +94,21 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
             }
         });
     }
-    const allReleased = s.furniture.every(chair => chair.released);
-    const front = s.furniture[0], back = s.furniture[2];
+    const allReleased = furniture.every(chair => chair.released);
+    const front = furniture[0], back = furniture[2];
     const frontX = front.x;
     const captiveBoarding = c.departure.kind === 'boarding' && c.departure.reason === 'abduction';
     if (c.departure.kind !== 'none' && !captiveBoarding) {
         if (c.convoy !== 'airborne') c.convoy = 'free';
-    } else if (allReleased && s.ground && c.convoy !== 'carried') c.convoy = insideConvoy(s) ? 'carried' : 'free';
+    } else if (allReleased && ground && c.convoy !== 'carried') c.convoy = insideConvoy(p, furniture) ? 'carried' : 'free';
     if (c.departure.kind === 'none' && c.convoy === 'carried' && c.pace === 'casual' && p.x >= STAGE_TWO.checkpoints[2].x) {
         c.pace = 'express';
         c.chat = { kind: 'rush', age: 0 };
-        for (const chair of s.furniture) chair.vx = 360;
+        for (const chair of furniture) chair.vx = 360;
         p.vx = 360;
     }
     const minimumSpeed = 70;
-    for (const [index, chair] of s.furniture.entries()) {
+    for (const [index, chair] of furniture.entries()) {
         if (!chair.released) continue;
         chair.cheer = Math.max(0, chair.cheer - dt);
         if (c.departure.kind === 'gone' || c.departure.kind === 'lost' || c.departure.kind === 'descending') continue;
@@ -131,15 +124,15 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
         const cruise = c.pace === 'express' ? 360 : 185;
         const speed = index === 0 ? cruise : Math.max(minimumSpeed, Math.min(cruise + 170, cruise + (target - chair.x) * 2));
         chair.vx += (speed - chair.vx) * (1 - Math.exp(-4 * dt));
-        chair.x = Math.min(STAGES[s.stage].length + 450 + index * 130, chair.x + chair.vx * dt);
+        chair.x = Math.min(input.length + 450 + index * 130, chair.x + chair.vx * dt);
         if (c.convoy === 'free' && p.y > 350 && Math.abs(p.x - chair.x) < 58) {
             const side = previousX < chair.x ? 1 : -1;
             chair.x += side * (58 - Math.abs(p.x - chair.x)) * (1 - Math.exp(-14 * dt));
         }
-        if (index > 0 && s.furniture[index - 1].released) chair.x = Math.min(chair.x, s.furniture[index - 1].x - 80);
+        if (index > 0 && furniture[index - 1].released) chair.x = Math.min(chair.x, furniture[index - 1].x - 80);
         chair.y = 420;
     }
-    const followsBoarding = captiveBoarding && c.convoy === 'airborne' && !s.keys.includes('left') && !s.keys.includes('right');
+    const followsBoarding = captiveBoarding && c.convoy === 'airborne' && !input.steering;
     if (c.convoy === 'carried' || followsBoarding) {
         p.x = Math.max(back.x + 29, Math.min(front.x - 29, previousX + front.x - frontX));
         p.vx = front.vx;
@@ -155,7 +148,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
             c.chat = { kind: 'dismissed', age: 0 };
         } else {
             const speaker = chairChatLine(c.chat, c.appearanceSeed).speaker;
-            if (Math.abs(s.furniture[speaker].x - p.x) < 240 || c.chat.kind === 'gossip' || c.chat.kind === 'companions' || c.chat.kind === 'dismissed' || c.chat.kind === 'rush') c.chat.age += dt;
+            if (Math.abs(furniture[speaker].x - p.x) < 240 || c.chat.kind === 'gossip' || c.chat.kind === 'companions' || c.chat.kind === 'dismissed' || c.chat.kind === 'rush') c.chat.age += dt;
         }
         if ((c.chat.kind === 'gossip' || c.chat.kind === 'dismissed') && c.convoy === 'carried') {
             c.chat = { kind: 'wary', age: 0 };
@@ -167,15 +160,15 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
     const recognized = c.chat.kind === 'wary' || c.chat.kind === 'realizing' || c.chat.kind === 'welcoming' || c.chat.kind === 'companions' || c.chat.kind === 'rush';
     if (c.departure.kind === 'boarding') {
         c.departure.age += dt;
-        const aboard = s.furniture.every((chair, i) => Math.abs(chair.x - STAGE_TWO.lift - CHAIR_DEPARTURE.slots[i]) < 3 && Math.abs(chair.vx) < 8);
-        const passengerReady = c.departure.reason !== 'abduction' || (s.ground && c.convoy === 'carried' && insideConvoy(s));
+        const aboard = furniture.every((chair, i) => Math.abs(chair.x - STAGE_TWO.lift - CHAIR_DEPARTURE.slots[i]) < 3 && Math.abs(chair.vx) < 8);
+        const passengerReady = c.departure.reason !== 'abduction' || (ground && c.convoy === 'carried' && insideConvoy(p, furniture));
         if (c.departure.age >= CHAIR_DEPARTURE.boarding && aboard && passengerReady) {
             c.departure = { kind: 'descending', age: 0, reason: c.departure.reason };
-            for (const chair of s.furniture) chair.vx = 0;
+            for (const chair of furniture) chair.vx = 0;
             if (c.departure.reason === 'abduction') {
                 p.y = 392;
                 p.vx = p.vy = p.a = p.w = 0;
-                s.jumpQ = s.coyote = 0;
+                stopRider = true;
             }
         }
     } else if (c.departure.kind === 'descending') {
@@ -199,4 +192,5 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
         c.departure = { kind: 'boarding', age: 0, reason: abducting ? 'abduction' : recognized ? 'companions' : 'clock-out' };
         if (!abducting) c.convoy = 'free';
     }
+    return { corridor: c, furniture, p, rng: seed, stopRider };
 }

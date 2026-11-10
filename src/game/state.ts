@@ -85,7 +85,6 @@ export type Attempt = {
 
 // Everything that decides how play continues. Plain JSON: save it and restore it to resume exactly.
 export type GameState = Progress & Attempt;
-export type GameCore = GameState;
 
 function createProgress(skylineSeed: number, deaths = 0, completedStage: 0 | StageId = 0): Progress {
     return {
@@ -171,7 +170,7 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
 
 export type CoreOptions = { seed: number; deaths?: number; completedStage?: 0 | StageId };
 
-export function createCore({ seed, deaths, completedStage }: CoreOptions): GameCore {
+export function createCore({ seed, deaths, completedStage }: CoreOptions): GameState {
     const rng = seedRng(seed);
     const progress = createProgress(randomUint32(rng, 'cosmetic'), deaths, completedStage);
     return { ...progress, ...createAttempt(progress, rng, 'intro') };
