@@ -45,7 +45,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         hidden('[data-pause-menu]', !paused);
         q('[data-pause]')?.setAttribute('aria-expanded', String(paused));
         hidden('[data-stage-label]', !active || state.time > 2.2);
-        text('[data-stage-label]', t(state.stage === 1 ? 'stageLabel.stage1' : state.stage === 2 ? 'stageLabel.stage2' : 'stageLabel.stage3'));
+        text('[data-stage-label]', t(state.stage === 1 ? 'stageLabel.stage1' : state.stage === 2 ? 'stageLabel.stage2' : state.stage === 3 ? 'stageLabel.stage3' : 'stageLabel.stage4'));
         hidden('[data-focus-intro]', !active || !focusIntroduced || state.time > introduceUntil);
         style('[data-focus-fill]', 'width', focus + '%');
         style('[data-focus-trail]', 'width', focus + '%');
@@ -56,11 +56,12 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         text('[data-status]', feedback.status);
         hidden('[data-interact]', state.stage !== 2);
         hidden('[data-meeting-help]', state.stage !== 2);
+        text('[data-jump-key]', state.stage >= 3 ? '↑' : '↑ / Space');
         hidden('[data-spray-help]', !state.hasExtinguisher);
         hidden('[data-spray]', !state.hasExtinguisher);
         hidden('[data-stage-menu]', state.completedStage === 0);
-        for (const stage of [1, 2, 3]) {
-            hidden(`[data-stage="${stage}"]`, stage > state.completedStage);
+        for (const stage of [1, 2, 3, 4]) {
+            hidden(`[data-stage="${stage}"]`, stage === 4 ? state.completedStage < 3 : stage > state.completedStage);
         }
         const panel = feedback.panel;
         hidden('[data-overlay]', mode !== 'intro' && !panel);

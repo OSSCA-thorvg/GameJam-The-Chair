@@ -1,41 +1,43 @@
 import type { Point } from './types';
-export type Fan = { x: number; y: number; width: number; period: number; phase: number; strength: number; height: number };
+
+const blocks = [
+    { id: 'room', x: -400, y: 420, width: 850, height: 380 },
+    { id: 'pipe', x: 280, y: 384, width: 48, height: 36 },
+    { id: 'lower', x: 450, y: 396, width: 1330, height: 404 },
+    { id: 'practice', x: 850, y: 286, width: 80, height: 110 },
+    { id: 'shaft-left', x: 1200, y: -650, width: 40, height: 910 },
+    { id: 'right-pad', x: 1510, y: 276, width: 270, height: 28 },
+    { id: 'left-pad', x: 1240, y: 136, width: 160, height: 28 },
+    { id: 'duct', x: 1510, y: -4, width: 270, height: 32 },
+    { id: 'upper', x: 1780, y: -144, width: 680, height: 944 },
+    { id: 'rail', x: 2440, y: -204, width: 20, height: 60 },
+];
+
 export const STAGE_THREE = {
-    length: 2800, goal: 2680,
+    length: 3320, goal: 2920,
+    entrance: { duration: 2.6, openDuration: .85, emergeAt: .55, emergeEnd: 1.8, closeAt: 1.95, closeDuration: .65, fromX: 100, toX: 235 },
+    pickup: { x: 600, y: 368 },
+    duct: { x: 1660, y: 226, frontReach: 170, frontHeight: 80, inhaleDuration: .12, twitchDuration: .08, sneezeDuration: 1.3, repeatInhaleDuration: .06, repeatTwitchDuration: .04, repeatSneezeDuration: .5, firstKnockback: 285, repeatKnockback: 120 },
+    edge: 2460,
+    launch: { left: 2230, right: 2440, shotWindow: .65 },
+    ceiling: -460,
+    blocks,
     checkpoints: [
         { x: 100, y: 392 },
-        { x: 820, y: 392 },
-        { x: 1540, y: 272 },
-        { x: 2180, y: 152 },
+        { x: 640, y: 368 },
+        { x: 1120, y: 368 },
+        { x: 1860, y: -172 },
     ],
-    terrain: [
-        // Safe practice floor (learn spray on flat ground).
-        [{ x: -400, y: 420 }, { x: 900, y: 420 }, { x: 900, y: 800 }, { x: -400, y: 800 }],
-        // Short gap then a rising platform you reach by spraying.
-        [{ x: 1020, y: 420 }, { x: 1400, y: 420 }, { x: 1400, y: 800 }, { x: 1020, y: 800 }],
-        // Vertical shaft wall (right side) and upper landing.
-        [{ x: 1500, y: 300 }, { x: 1900, y: 300 }, { x: 1900, y: 800 }, { x: 1500, y: 800 }],
-        // Rooftop deck reached by riding fan wind.
-        [{ x: 2000, y: 180 }, { x: 2800, y: 180 }, { x: 2800, y: 800 }, { x: 2000, y: 800 }],
-    ] satisfies Point[][],
-    fans: [
-        { x: 1710, y: 300, width: 160, period: 3.6, phase: 0, strength: 520, height: 300 },
-        { x: 1950, y: 180, width: 150, period: 2.8, phase: Math.PI, strength: 560, height: 420 },
-    ] satisfies Fan[]
+    terrain: blocks.map(b => [
+        { x: b.x, y: b.y }, { x: b.x + b.width, y: b.y },
+        { x: b.x + b.width, y: b.y + b.height }, { x: b.x, y: b.y + b.height },
+    ]) satisfies Point[][],
 };
-export function floorAt(x: number) {
-    if (x <= 900) return 420;
-    if (x < 1020) return 800;
-    if (x <= 1400) return 420;
-    if (x < 1500) return 800;
-    if (x <= 1900) return 300;
-    if (x < 2000) return 800;
-    return 180;
-}
-export function fanActive(fan: Fan, t: number) {
-    return Math.sin(t * Math.PI * 2 / fan.period + fan.phase) > .1;
-}
-export function fanStrength(fan: Fan, t: number) {
-    const s = Math.sin(t * Math.PI * 2 / fan.period + fan.phase);
-    return Math.max(0, s) * fan.strength;
+
+export type DuctBurst = { kind: 'first' | 'repeat'; age: number };
+export function ductTimings(kind: DuctBurst['kind']) {
+    const d = STAGE_THREE.duct;
+    return kind === 'first'
+        ? { inhale: d.inhaleDuration, twitch: d.twitchDuration, sneeze: d.sneezeDuration }
+        : { inhale: d.repeatInhaleDuration, twitch: d.repeatTwitchDuration, sneeze: d.repeatSneezeDuration };
 }

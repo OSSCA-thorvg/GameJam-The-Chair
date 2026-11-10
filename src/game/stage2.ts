@@ -2,7 +2,7 @@ import type { Point } from './types';
 import type { Message } from '../i18n';
 
 export const TYPING_SOUNDS = ['typing.1', 'typing.2', 'typing.3', 'typing.4', 'typing.5'] satisfies Message[];
-export type StageId = 1 | 2 | 3;
+export type StageId = 1 | 2 | 3 | 4;
 export type Furniture = { kind: 'chair'; x: number; y: number; width: number; height: number; vx: number; released: boolean; cheer: number };
 export const STAGE_TWO = {
     length: 4000, goal: 3780,

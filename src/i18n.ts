@@ -29,7 +29,7 @@ const messages = {
     'status.headImpact':         { en: 'Head impact.',                                                   ko: '머리 충돌.' },
     'status.binFall':            { en: 'Trash bin fall.',                                                ko: '휴지통 추락.' },
     'status.focusLost':          { en: 'Focus depleted.',                                                ko: '집중도 소진.' },
-    'status.sprayEmpty':         { en: 'Extinguisher empty.',                                            ko: 'Extinguisher empty · 소화기 비었음.' },
+    'status.extinguisherPickup': { en: 'Extinguisher attached. Hold Space.', ko: '소화기 장착. Space를 누르세요.' },
     'status.stage1Clear':        { en: 'Office escaped.',                                                ko: '사무실 탈출.' },
     'status.stage2Clear':        { en: 'Mechanical room reached.',                                       ko: '기계실 도착.' },
     'status.stage3Clear':        { en: 'Rooftop cleared.',                                               ko: 'Rooftop cleared · 옥상 탈출.' },
@@ -44,7 +44,7 @@ const messages = {
     'panel.liftTitle':          { en: 'The mechanical room stayed upstairs.', ko: '기계실은 위에 남았습니다.' },
     'panel.stage1Title':         { en: 'Clocking out…',                                                  ko: '퇴근 처리 중…' },
     'panel.stage2Title':         { en: 'Business trip complete.',                                        ko: '출장 처리 완료.' },
-    'panel.stage3Title':         { en: 'Officially resigned.',                                           ko: 'Officially resigned · 정식 퇴사 처리됨.' },
+    'panel.stage3Title':         { en: 'First flight.', ko: '첫 비행.' },
 
     'button.retry':              { en: 'Retry',                                                          ko: '다시' },
     'button.retryStage':         { en: 'Retry stage',                                                    ko: 'Retry · 다시' },
@@ -61,6 +61,7 @@ const messages = {
 
     'stageLabel.stage1':         { en: '01 Office',                                                      ko: '01 사무실' },
     'stageLabel.stage2':         { en: '02 Inside the building',                                         ko: '02 건물 내부' },
+    'stageLabel.stage4': { en: '04 Above the clouds', ko: '04 구름 위' },
     'stageLabel.stage3':         { en: '03 Mechanical room & rooftop',                                   ko: '03 Rooftop · 기계실·옥상' },
 
     'hud.focus':                 { en: 'Focus',                                                          ko: '집중도' },

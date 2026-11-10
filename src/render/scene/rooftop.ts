@@ -1,152 +1,44 @@
-import { translate } from '../../i18n';
 import { STAGE_THREE } from '../../game/stage3';
 import type { RenderCtx } from '../context';
 import { checkpointFlag } from './decor';
 import { player } from './player';
+import { sprayPlume } from './spray';
+import { ascentClouds } from './clouds';
+import { rooftopSky, rooftopWalls, rooftopPlatforms } from './rooftop-art';
+import { rooftopDuct } from './rooftop-duct';
 
 export function drawRooftop(ctx: RenderCtx) {
-    const C = ctx.C;
-    const VW = ctx.VW;
-    const H = ctx.H;
-    const scale = ctx.scale;
-    const cam = ctx.cam;
-    const vertical = ctx.vertical;
     const state = ctx.state;
-    const solids = ctx.solids;
     const p = ctx.p;
-    const GOAL = ctx.GOAL;
-    const t = ctx.t;
 
     ctx.commands = [];
     ctx.ox = ctx.oy = ctx.rotation = 0;
 
-    // Sky as a vertical ThorVG gradient fading into warm horizon haze.
-    const skyTop = -vertical;
-    const skyBottom = H / scale;
-    ctx.gradientPolygon(
-        [[cam, skyTop], [cam + VW, skyTop], [cam + VW, skyBottom], [cam, skyBottom]],
-        ctx.gradientFill(0, skyTop, 0, 300, [
-            [0, '#4f7aa2'],
-            [.55, '#8aa6bf'],
-            [.85, '#d4bc96'],
-            [1, '#b8a789'],
-        ])
-    );
+    rooftopSky(ctx);
+    rooftopWalls(ctx);
+    rooftopPlatforms(ctx);
+    rooftopDuct(ctx);
+    if (state.firstFlight.kind === 'flight') ascentClouds(ctx);
 
-    // Horizon haze band with its own gradient to blend distant skyline.
-    ctx.gradientPolygon(
-        [[cam, 120], [cam + VW, 120], [cam + VW, 300], [cam, 300]],
-        ctx.gradientFill(0, 120, 0, 300, [
-            [0, '#a2b8c7cc'],
-            [1, '#c7b89900'],
-        ])
-    );
-    for (let x = Math.floor(cam / 220) * 220; x < cam + VW + 220; x += 220) {
-        ctx.rect(x + 40, 110, 50, 170, '#6b7e8e');
-        ctx.rect(x + 100, 140, 70, 140, '#7b8e9e');
-        ctx.rect(x + 180, 90, 36, 190, '#5e707f');
+    // Empty entrance recess sits behind the hinged door and the existing player.
+    ctx.rect(46, 221, 159, 199, '#71869d');
+    ctx.rect(54, 229, 143, 191, '#23384f');
+    ctx.gradientPolygon([[61, 236], [190, 236], [190, 420], [61, 420]],
+        ctx.gradientFill(0, 236, 0, 420, [[0, '#1c2e45'], [1, '#445e78']]));
+    ctx.rod(62, 417, 195, 417, 5, '#b8b9ad');
+
+    // Pictograms introduce the controls where they are useful.
+    if (!state.hasExtinguisher) {
+        const pickup = STAGE_THREE.pickup;
+        ctx.rect(pickup.x - 17, pickup.y - 82, 34, 65, '#566477');
+        ctx.rect(pickup.x - 9, pickup.y - 74, 18, 43, '#b75f4a');
+        ctx.ellipse(pickup.x, pickup.y - 73, 9, 6, '#c7765c');
+        ctx.rect(pickup.x - 7, pickup.y - 60, 14, 12, '#eee5cd');
+        ctx.rod(pickup.x, pickup.y - 77, pickup.x, pickup.y - 84, 4, '#394657');
+        ctx.rod(pickup.x - 3, pickup.y - 84, pickup.x + 12, pickup.y - 84, 3, '#394657');
     }
-
-    // Floor polygons.
-    for (const ob of solids) ctx.polygon(ob.p.map(v => [v.x, v.y]), C.floor);
-
-    // Mechanical room sign (English primary, Korean secondary).
-    ctx.rect(300, 326, 180, 36, '#5e6b7d');
-    ctx.rect(304, 330, 172, 28, '#48525f');
-    ctx.label(translate('world.mechanical', ctx.locale), 390, 343, 12, '#f0eddc');
-
-    // Gap edge markers between first and second ground segment.
-    ctx.rod(900, 410, 900, 440, 5, '#c3b375');
-    ctx.rod(1020, 410, 1020, 440, 5, '#c3b375');
-
-    // Vertical shaft wall decoration.
-    ctx.rect(1500, 280, 400, 10, '#5a6471');
-    for (let x = 1510; x < 1890; x += 40) ctx.rect(x, 285, 8, 8, '#747d8b');
-
-    // Fan housings and animated blades.
-    for (const fan of STAGE_THREE.fans) {
-        const sine = Math.sin(t * Math.PI * 2 / fan.period + fan.phase);
-        const active = sine > .1;
-        const power = Math.max(0, sine);
-        const vents = fan.y;
-        const halfW = fan.width / 2;
-
-        // Metallic housing drawn with a vertical gradient for highlight + shadow.
-        ctx.gradientPolygon(
-            [[fan.x - halfW, vents - 8], [fan.x + halfW, vents - 8],
-             [fan.x + halfW, vents + 6], [fan.x - halfW, vents + 6]],
-            ctx.gradientFill(0, vents - 8, 0, vents + 6, [
-                [0, '#7a8694'],
-                [.4, '#525a69'],
-                [1, '#333a46'],
-            ])
-        );
-        // Inner grille strip.
-        ctx.gradientPolygon(
-            [[fan.x - halfW + 4, vents - 5], [fan.x + halfW - 4, vents - 5],
-             [fan.x + halfW - 4, vents + 3], [fan.x - halfW + 4, vents + 3]],
-            ctx.gradientFill(0, vents - 5, 0, vents + 3, [
-                [0, '#9aa4b2'],
-                [1, '#5a6471'],
-            ])
-        );
-
-        // Blades.
-        const angle = t * (active ? 18 : 4);
-        for (let i = 0; i < 3; i++) {
-            const a = angle + i * Math.PI * 2 / 3;
-            ctx.rod(fan.x - Math.cos(a) * 24, vents - 1 - Math.sin(a) * 8,
-                    fan.x + Math.cos(a) * 24, vents - 1 + Math.sin(a) * 8, 5, '#d4d0bc');
-        }
-        ctx.ellipse(fan.x, vents - 1, 6, 6, '#333845');
-
-        // Wind column above fan: cubic-bezier plume with transparent-top gradient.
-        if (power > .05) {
-            const h = fan.height * power;
-            const w = fan.width * .32;
-            const top = vents - 10 - h;
-            const base = vents - 10;
-            const sway = Math.sin(t * 3 + fan.phase) * w * .15;
-            ctx.effectPath(
-                [fan.x - w, base],
-                [
-                    [fan.x - w * 1.25, base - h * .35,
-                     fan.x - w * .9 + sway, base - h * .75,
-                     fan.x - w * .4 + sway, top],
-                    [fan.x + w * .4 + sway, top - h * .08,
-                     fan.x + w * .9 + sway, base - h * .75,
-                     fan.x + w, base],
-                    [fan.x + w * .4, base + 2,
-                     fan.x - w * .4, base + 2,
-                     fan.x - w, base],
-                ],
-                ctx.gradientFill(0, top, 0, base, [
-                    [0, '#eef3f500'],
-                    [.5, '#dce8ef60'],
-                    [1, '#f4f7fac0'],
-                ], .55 + power * .45)
-            );
-            // Curling airflow streaks inside the column.
-            for (let i = 0; i < 3; i++) {
-                const phase = (t * 1.8 + i / 3) % 1;
-                const y0 = base - phase * h;
-                const y1 = base - (phase + .18) * h;
-                const bend = Math.sin(t * 4 + i * 2 + fan.phase) * w * .5;
-                ctx.effectPath(
-                    [fan.x - w * .5 + sway, y0],
-                    [[fan.x - w * .2 + bend, y0 - h * .05,
-                      fan.x + w * .2 + bend, y1 + h * .05,
-                      fan.x + w * .5 + sway, y1]],
-                    ctx.gradientFill(fan.x - w, y0, fan.x + w, y1, [
-                        [0, '#ffffff00'],
-                        [.5, '#f4faffb0'],
-                        [1, '#ffffff00'],
-                    ], .4 + power * .5)
-                );
-            }
-            // Thin lip marking the vent mouth.
-            ctx.rod(fan.x - halfW + 10, vents - 14, fan.x + halfW - 10, vents - 14, 2, '#eef3f5');
-        }
+    if (p.x < 790) {
+        ctx.label('Space', STAGE_THREE.pickup.x, STAGE_THREE.pickup.y - 97, 20, '#f0dfb9');
     }
 
     // Checkpoint flags.
@@ -155,81 +47,46 @@ export function drawRooftop(ctx: RenderCtx) {
         checkpointFlag(ctx, mark.x, mark.y + 28, state.checkpoint >= i);
     }
 
-    // Goal: sky-door at rooftop.
-    ctx.rect(GOAL - 35, 55, 106, 130, '#4b586b');
-    // Door face with a vertical gradient (brighter top, cooler base).
-    ctx.gradientPolygon(
-        [[GOAL - 27, 63], [GOAL + 63, 63], [GOAL + 63, 178], [GOAL - 27, 178]],
-        ctx.gradientFill(0, 63, 0, 178, [
-            [0, '#e4edee'],
-            [.5, '#c4d2d6'],
-            [1, '#92a3ab'],
-        ])
-    );
-    ctx.rect(GOAL - 31, 28, 98, 32, '#718e7b');
-    ctx.label(translate('world.rooftop', ctx.locale), GOAL + 18, 42, 12, '#f0eddc');
+    if (p.x > 2100 && state.firstFlight.kind === 'course') {
+        ctx.label('Space × 3', 2350, -228, 18, '#ffe2a8');
+        for (let i = 0; i < 3; i++) ctx.ellipse(2330 + i * 20, -212, 4, 4,
+            i < state.firstFlight.verticalShots ? '#fff2ce' : '#778ba4');
+    }
 
     // Chair shadow and player.
-    ctx.ellipse(p.x, p.y + 35, 45, 5, '#91959c');
+    if (state.ground) ctx.ellipse(p.x, p.y + 28, 45, 5, '#414d6455');
+    const behindDoor = state.rooftopEntrance.kind === 'opening' && state.rooftopEntrance.age < STAGE_THREE.entrance.emergeEnd;
+    if (!behindDoor) entranceDoor(ctx);
     player(ctx);
+    if (behindDoor) entranceDoor(ctx);
 
-    // Spray plume: cubic-bezier cone with gradient fade along the direction.
-    const spray = state.spray;
-    if (spray.burst > 0) {
-        const dx = spray.dir.x;
-        const dy = spray.dir.y;
-        const age = spray.burst / .32;
-        const length = 95 * age;
-        const spread = 34 * age;
-        const nx = -dy;
-        const ny = dx;
-        const px = p.x;
-        const py = p.y - 10;
-        const tipX = px + dx * length;
-        const tipY = py + dy * length;
-        const rX = tipX + nx * spread;
-        const rY = tipY + ny * spread;
-        const lX = tipX - nx * spread;
-        const lY = tipY - ny * spread;
-        ctx.effectPath(
-            [px, py],
-            [
-                // Outer right side: fan out from tip to far-right.
-                [px + dx * length * .35 + nx * spread * .25,
-                 py + dy * length * .35 + ny * spread * .25,
-                 px + dx * length * .85 + nx * spread * .95,
-                 py + dy * length * .85 + ny * spread * .95,
-                 rX, rY],
-                // Far end arc across the plume.
-                [tipX + dx * 10, tipY + dy * 10,
-                 tipX + dx * 10, tipY + dy * 10,
-                 lX, lY],
-                // Outer left side back to origin.
-                [px + dx * length * .85 - nx * spread * .95,
-                 py + dy * length * .85 - ny * spread * .95,
-                 px + dx * length * .35 - nx * spread * .25,
-                 py + dy * length * .35 - ny * spread * .25,
-                 px, py],
-            ],
-            ctx.gradientFill(px, py, tipX, tipY, [
-                [0, '#fffbe8f0'],
-                [.5, '#f1ecd4a0'],
-                [1, '#e3dcc000'],
-            ], .4 + age * .6)
-        );
-        // Swirling droplet streak inside the plume for extra flow detail.
-        const swirl = Math.sin(t * 20) * spread * .4;
-        ctx.effectPath(
-            [px + dx * 8, py + dy * 8],
-            [[px + dx * length * .4 + nx * swirl,
-              py + dy * length * .4 + ny * swirl,
-              px + dx * length * .7 - nx * swirl,
-              py + dy * length * .7 - ny * swirl,
-              tipX - dx * 4, tipY - dy * 4]],
-            ctx.gradientFill(px, py, tipX, tipY, [
-                [0, '#ffffffe0'],
-                [1, '#ffffff00'],
-            ], .7 * age)
-        );
-    }
+
+    sprayPlume(ctx);
+}
+
+
+function entranceDoor(ctx: RenderCtx) {
+    const entrance = ctx.state.rooftopEntrance;
+    const timing = STAGE_THREE.entrance;
+    const age = entrance.kind === 'opening' ? entrance.age : timing.duration;
+    const closing = Math.max(0, Math.min(1, (age - timing.closeAt) / timing.closeDuration));
+    const progress = Math.min(1, age / timing.openDuration) * (1 - closing);
+    const eased = progress * progress * (3 - 2 * progress);
+    const angle = eased * Math.PI * .46;
+    const hingeX = 54, top = 229, bottom = 420;
+    const width = Math.cos(angle) * 143;
+    const depth = Math.sin(angle) * 32;
+    const edge = hingeX + width;
+    // The projecting edge follows the same hinge as the door face.
+    ctx.polygon([[hingeX, top], [edge, top + depth], [edge, bottom + depth], [hingeX, bottom]], '#aab2ba');
+    ctx.polygon([[edge, top + depth], [edge + 5, top + depth - 2], [edge + 5, bottom + depth - 2], [edge, bottom + depth]], '#626f80');
+    const panelX = hingeX + width * .12;
+    const panelRight = hingeX + width * .88;
+    ctx.polygon([[panelX, top + 18 + depth * .12], [panelRight, top + 18 + depth * .88],
+        [panelRight, bottom - 18 + depth * .88], [panelX, bottom - 18 + depth * .12]], '#8c99a9');
+    for (const y of [top + 27, bottom - 29]) ctx.rod(hingeX, y, hingeX, y + 15, 5, '#d1d1c6');
+    const handleX = hingeX + width * .8;
+    const handleY = top + 104 + depth * .8;
+    ctx.ellipse(handleX, handleY, 3, 4, '#4a576a');
+    ctx.rod(handleX, handleY, handleX - Math.max(4, width * .1), handleY, 3, '#e3d4ae');
 }

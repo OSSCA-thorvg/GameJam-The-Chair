@@ -113,10 +113,11 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
             case 'focus-game-over':
                 overlay('panel.focusKicker', 'panel.focusTitle');
                 break;
-            case 'spray-empty':
-                status = 'status.sprayEmpty';
+            case 'extinguisher-pickup':
+                status = 'status.extinguisherPickup';
                 break;
             case 'stage-clear': {
+                if (state.stage === 4) break;
                 const clear = STAGE_CLEAR[state.stage];
                 status = clear.status;
                 overlay('empty', clear.title, '', clear.button);

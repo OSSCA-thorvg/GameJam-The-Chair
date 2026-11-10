@@ -306,36 +306,6 @@ test('starter jump completes one contextual lesson and emits its reward once', (
     assert.equal(game.getSnapshot().lessons.moved, true);
 });
 
-test('spray on stage three gives upward recoil, consumes ammo, and reloads on ground', () => {
-    const game = createGame();
-    game.startStage(3);
-    for (let i = 0; i < 60; i++) game.step(dt);
-    const before = game.getSnapshot();
-    assert.equal(before.spray.ammo, 4);
-    game.spray();
-    game.step(dt);
-    const afterBurst = game.getSnapshot();
-    assert.equal(afterBurst.spray.ammo, 3);
-    assert.ok(afterBurst.player.vy < before.player.vy, 'recoil must push the chair upward');
-    for (let i = 0; i < 200; i++) game.step(dt);
-    assert.ok(game.getSnapshot().spray.ammo > 3, 'ammo regenerates while grounded');
-});
-
-test('fire extinguisher refuses to spray with empty tank', () => {
-    const game = createGame();
-    game.startStage(3);
-    for (let i = 0; i < 60; i++) game.step(dt);
-    for (let shot = 0; shot < 4; shot++) {
-        game.spray();
-        for (let i = 0; i < 48; i++) game.step(dt);
-    }
-    assert.equal(game.getSnapshot().spray.ammo, 0);
-    game.drainEvents();
-    game.spray();
-    const events = game.drainEvents();
-    assert.ok(events.some(e => e.type === 'cue' && e.id === 'spray-empty'));
-});
-
 test('copier previews its shot and its first paper batch is safe', () => {
     const game = createGame();
     game.startStage(1);
@@ -380,25 +350,6 @@ test('holding right runs into the copier papers while the copier keeps firing', 
     assert.ok(state.bursts >= 8, 'the copier must fire another volley after the rider leaves its trigger range');
 });
 
-
-test('extinguisher becomes available in stage three and cannot be used in earlier stages', () => {
-    const game = createGame();
-    for (const stage of [1, 2, 3, 1]) {
-        game.startStage(stage);
-        game.drainEvents();
-        const before = game.getSnapshot();
-        assert.equal(before.hasExtinguisher, stage === 3);
-        game.spray();
-        const after = game.getSnapshot();
-        if (stage === 3) {
-            assert.equal(after.spray.ammo, before.spray.ammo - 1);
-            assert.ok(game.drainEvents().some(event => event.type === 'cue' && event.id === 'spray'));
-        } else {
-            assert.deepEqual(after, before);
-            assert.deepEqual(game.drainEvents(), []);
-        }
-    }
-});
 
 test('cleared-stage history survives retries, stage changes and saved-game restoration', () => {
     const game = createGame(0, 1);

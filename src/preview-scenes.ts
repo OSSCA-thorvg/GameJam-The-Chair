@@ -1,7 +1,7 @@
 import { createGame, type Game, type GameState } from './game/game';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_TWO } from './game/stage2';
-import { STAGE_THREE, fanStrength } from './game/stage3';
+import { ductTimings } from './game/stage3';
 import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/systems/monitor';
@@ -180,41 +180,6 @@ function copierVolley(): PreviewScene {
         [{ at: 0, label: 'Ready' }, { at: .75, label: 'First shot' }, { at: .95, label: 'Second shot' }, { at: 1.15, label: 'Third shot' }, { at: 2.25, label: 'Fires again' }], frames);
 }
 
-function fanRide(): PreviewScene {
-    const game = createGame();
-    game.startStage(3);
-    const base = game.getSnapshot();
-    const fan = STAGE_THREE.fans[0];
-    const effects = createEffects().snapshot();
-    const floorY = fan.y - 28;
-    const duration = 2.3;
-    let y = floorY;
-    let vy = -440;
-    const frames: PreviewFrame[] = [];
-    for (let i = 0; i <= Math.round(duration / FRAME_TIME); i++) {
-        const at = i * FRAME_TIME;
-        const power = fanStrength(fan, at);
-        if (i > 0) {
-            vy += (800 - power) * FRAME_TIME;
-            y = Math.min(floorY, y + vy * FRAME_TIME);
-            if (y === floorY) vy = 0;
-        }
-        frames.push({
-            state: {
-                ...base,
-                time: at,
-                player: { ...base.player, x: fan.x, y, vy },
-                ground: y === floorY && vy === 0,
-                onFan: power > 60 && y < floorY,
-                fans: STAGE_THREE.fans.map(item => ({ ...item, active: fanStrength(item, at) > 60, power: fanStrength(item, at) })),
-            },
-            effects,
-        });
-    }
-    return recordedScene('fan-ride', 'Rooftop · Fan wind', fan.x,
-        [{ at: 0, label: 'Takeoff' }, { at: fan.period / 4, label: 'Peak wind' }, { at: fan.period / 2, label: 'Wind stops' }, { at: 1.9, label: 'Landing' }], frames);
-}
-
 function headImpact(): PreviewScene {
     const game = createGame();
     game.startStage(2);
@@ -241,6 +206,19 @@ function headImpact(): PreviewScene {
     }
     return recordedScene('head-impact', 'Chair · Head impact replay', focusX,
         [{ at: 0, label: 'Impact' }, { at: .5, label: 'Rewind' }, { at: 1.4, label: 'Collision' }, { at: 1.8, label: 'End' }], frames);
+}
+
+function rooftopEntrance(): PreviewScene {
+    const game = createGame();
+    game.startStage(3);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    for (let i = 0; i < 168; i++) {
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene('rooftop-entrance', 'Rooftop · Hinged entrance', 400,
+        [{ at: 0, label: 'Closed' }, { at: .4, label: 'Door opens' }, { at: 1.1, label: 'Chair emerges' }, { at: 1.8, label: 'At the block' }, { at: 2.6, label: 'Door closed · Controls ready' }], frames);
 }
 
 function focusLoss(): PreviewScene {
@@ -277,24 +255,64 @@ function focusLoss(): PreviewScene {
 function extinguisherSpray(): PreviewScene {
     const game = createGame();
     game.startStage(3);
+    // Reach the pickup through the real course before recording recoil.
+    for (let i = 0; i < 1440 && !game.getSnapshot().hasExtinguisher; i++) {
+        const state = game.getSnapshot();
+        game.setInput('right');
+        if (state.ground && ((state.player.x > 205 && state.player.x < 330) || (state.player.x > 370 && state.player.x < 450))) game.jump();
+        game.step(FIXED_STEP);
+    }
+    if (!game.getSnapshot().hasExtinguisher) throw new Error('Spray preview could not reach the extinguisher.');
     game.drainEvents();
     game.setInput('right');
     game.spray();
     game.setInput();
     const effects = createEffects();
     for (const event of game.drainEvents()) effects.receive(event);
-    const shift = 600;
-    const frame = () => {
-        const state = game.getSnapshot();
-        return capture(game, effects, { ...state, player: { ...state.player, x: state.player.x + shift } });
-    };
+    const frame = () => capture(game, effects);
     const frames = [frame()];
     for (let i = 0; i < 54; i++) {
         stepGame(game, effects);
         frames.push(frame());
     }
     return recordedScene('extinguisher-spray', 'Chair · Extinguisher recoil', 700,
-        [{ at: 0, label: 'Spray' }, { at: .16, label: 'Recoil' }, { at: .32, label: 'Plume ends' }, { at: .6, label: 'Landing' }], frames);
+        [{ at: 0, label: 'Spray' }, { at: .16, label: 'Recoil' }, { at: .24, label: 'Plume ends' }, { at: .6, label: 'Landing' }], frames);
+}
+
+function cloudEntry(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    for (let i = 0; i < 120; i++) {
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene('cloud-entry', 'Sky · Stage 4 hovering start', 2380,
+        [{ at: 0, label: 'Arrival' }, { at: 1, label: 'Continuous spray · Hovering' }], frames);
+}
+
+function ductSneeze(repeat = false): PreviewScene {
+    const game = createGame();
+    game.startStage(3);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const kind = repeat ? 'repeat' : 'first';
+    const timing = ductTimings(kind);
+    return {
+        id: repeat ? 'duct-repeat' : 'duct-sneeze', label: repeat ? 'Rooftop · Gentle repeat wind' : 'Rooftop · First sneeze & gloves', duration: 2.2, focusX: 1510,
+        markers: [{ at: .05, label: 'Inhale' }, { at: timing.inhale + .02, label: 'Twitch' },
+            { at: timing.inhale + timing.twitch + .18, label: 'Sneeze' }, { at: repeat ? .8 : 2.1, label: repeat ? 'Wind fades' : 'Gloves settle' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(2.2, time));
+            const drift = Math.min(1, Math.max(0, at - timing.inhale - timing.twitch));
+            return { state: { ...base, time: at, hasExtinguisher: true, checkpoint: 2,
+                rooftopEntrance: { kind: 'ready' }, ductReaction: { kind: 'reacting', age: repeat ? 10 + at : at, shots: repeat ? 2 : 1, bursts: [{ kind, age: at }] },
+                spray: { ...base.spray, burst: at < timing.inhale ? .24 * (1 - at / timing.inhale) : 0, dir: { x: Math.SQRT1_2, y: Math.SQRT1_2 } },
+                player: { ...base.player, x: 1580 - drift * (repeat ? 65 : 145), y: 160 - Math.sin(drift * Math.PI) * 45, a: -.05 }, ground: false,
+            }, effects };
+        },
+    };
 }
 
 function officeTyping(): PreviewScene {
@@ -322,5 +340,5 @@ export const previewScenes: readonly PreviewScene[] = [
         markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
-    bucketPour(), cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), focusLoss(), extinguisherSpray(), officeTyping(),
+    bucketPour(), cleanerRecovery(), monitorLight(), copierVolley(), headImpact(), focusLoss(), rooftopEntrance(), extinguisherSpray(), ductSneeze(), ductSneeze(true), cloudEntry(), officeTyping(),
 ];
