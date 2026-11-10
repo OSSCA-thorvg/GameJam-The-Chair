@@ -5,11 +5,10 @@ import { resetAttempt, startStage, snapshot, type GameState } from './state';
 import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages';
 import type { DeepReadonly, Point } from './types';
 import { applyCommand, spray, type Command } from './commands';
-import { focusStep, advanceFocusLoss } from './systems/focus';
 import { copierStep, papersStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
 import { geyserHits } from './systems/geyser';
-import { applyBinFall, applyCleaning, applyCopier, applyFlight, applyGeyserHits, applyMonitorContact, applyPapers, applyRooftop, applyRooftopEntrance, applySky } from './apply';
+import { applyBinFall, applyCleaning, applyCopier, applyFlight, applyGeyserHits, applyMonitorContact, applyPapers, applyRooftop, applyRooftopEntrance, applySky, applyFocusLoss, applyFocusRecovery } from './apply';
 import { monitorContact } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
 import { meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
@@ -29,7 +28,7 @@ export function stepGame(s: GameState, commands: readonly Command[] = []): GameE
     s.tick++;
     if (s.mode === 'play') playStep(s, out, FIXED_STEP);
     else if (s.mode === 'impact') impactStep(s, out, FIXED_STEP);
-    else advanceFocusLoss(s, out, FIXED_STEP);
+    else applyFocusLoss(s, out, FIXED_STEP);
     return out;
 }
 
@@ -203,7 +202,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     if (s.mode !== 'play') return;
     // The rooftop saves only once the extinguisher is in hand; picking it up is checkpoint 1.
     if (s.stage !== 3 || s.hasExtinguisher) reachCheckpoints(s, out);
-    focusStep(s, dt);
+    applyFocusRecovery(s, dt);
     if (s.ground) {
         p.w -= Math.sin(p.a) * dt;
     }

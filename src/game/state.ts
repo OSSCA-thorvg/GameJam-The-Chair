@@ -1,11 +1,11 @@
 import { LEVEL, RULES } from './level';
+import type { FocusNotice } from './systems/focus';
 import type { DuctReaction, FirstFlight, RooftopEntrance } from './systems/rooftop';
 import { STAGE_TWO, createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
 import { STAGES, stageSpawn } from './stages';
 import { randomUint32, seedRng, type Rng } from './rng';
 import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Point, Snapshot } from './types';
 
-export type FocusNotice = { kind: 'paper' | 'water' | 'light' | 'door'; life: number };
 export type Impact = { frames: Snapshot[]; elapsed: number; point: Point };
 
 // Survives a restart. Only stage selection and checkpoints change it.

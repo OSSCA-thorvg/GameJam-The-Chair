@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 
 // Unit tests for pure system decisions: same input, same answer, no state writes.
 const bundle = await build({
-    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning'; export * from './src/game/systems/papers'; export * from './src/game/systems/rooftop'; export * from './src/game/systems/sky';`, resolveDir: process.cwd() },
+    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning'; export * from './src/game/systems/papers'; export * from './src/game/systems/rooftop'; export * from './src/game/systems/sky'; export * from './src/game/systems/focus';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
 const sys = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
@@ -138,4 +138,19 @@ test('the sky drifts with input, stays inside the stage and hovers', () => {
         for (let i = 0; i < ticks; i++) r = sys.skyStep(r.p, direction, i / 120, 3400, 1 / 120);
         return r;
     }
+});
+
+test('each distraction costs focus once, and focus recovers only when undisturbed', () => {
+    const fresh = { focus: 100, focusClock: 1, focusEvents: [], focusNotice: null };
+    const hit = sys.focusAfterHit(fresh, { kind: 'paper', id: 2, damage: 30 });
+    assert.deepEqual(hit, { focus: 70, focusClock: 0, focusEvents: ['paper:2'], focusNotice: { kind: 'paper', life: 1.7 }, lost: false });
+    assert.equal(sys.focusAfterHit(hit, { kind: 'paper', id: 2, damage: 30 }), null, 'same volley again');
+    assert.equal(sys.focusAfterHit({ ...hit, focus: 20 }, { kind: 'light', id: 0, damage: 30 }).lost, true);
+    assert.equal(sys.focusRecovery({ ...hit, focusClock: 1.999 }, false, .01).focus, 71);
+    assert.deepEqual(sys.focusRecovery({ ...hit, focusClock: 1.999 }, true, .01).focus, 70, 'blocked');
+    assert.equal(sys.focusRecovery({ ...hit, focusNotice: { kind: 'paper', life: .005 } }, false, .01).focusNotice, null);
+    assert.deepEqual(sys.focusLossStep(1.69, .01).over, true);
+    const blocked = { paperPenaltyRemaining: 0, lightPenaltyRemaining: 0, bucket: { age: 5 }, p: { x: 0, y: 0 }, cleaning: { x: 1095 } };
+    assert.equal(sys.focusBlocked(blocked), false);
+    assert.equal(sys.focusBlocked({ ...blocked, lightPenaltyRemaining: .1 }), true);
 });

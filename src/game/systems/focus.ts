@@ -1,69 +1,44 @@
 import { waterExposure } from './cleaning';
-import type { GameCore } from '../state';
-import type { GameEvent } from '../types';
-
-export function waterExposureActive(s: GameCore) {
-    return waterExposure(s.bucket.age, s.p, s.cleaning.x);
-}
-
-export function focusBlocked(s: GameCore) {
-    return s.paperPenaltyRemaining > 0 || s.lightPenaltyRemaining > 0 || waterExposureActive(s);
-}
+import type { Point } from '../types';
 
 export type FocusKind = 'paper' | 'water' | 'light' | 'door';
 // One distraction. The same kind and id only ever costs focus once per attempt.
 export type FocusHit = { kind: FocusKind; id: number; damage: number };
+export type FocusNotice = { kind: FocusKind; life: number };
+export type Focus = { focus: number; focusClock: number; focusEvents: readonly string[]; focusNotice: FocusNotice | null };
 
-export function focusHit(s: GameCore, out: GameEvent[], kind: FocusKind, id: number, damage: number) {
-    if (s.mode !== 'play') return;
-    const token = kind + ':' + id;
-    if (s.focusEvents.includes(token)) return;
-    s.focusEvents.push(token);
-    s.focus = Math.max(0, s.focus - damage);
-    s.focusClock = 0;
-    s.focusNotice = { kind, life: 1.7 };
-    if (s.focus === 0) {
-        focusFailure(s, out);
-    }
+export const FOCUS_LOSS_DURATION = 1.7;
+
+// Focus does not recover while a distraction is still active.
+export function focusBlocked(s: { paperPenaltyRemaining: number; lightPenaltyRemaining: number; bucket: { age: number }; p: Readonly<Point>; cleaning: { x: number } }) {
+    return s.paperPenaltyRemaining > 0 || s.lightPenaltyRemaining > 0 || waterExposure(s.bucket.age, s.p, s.cleaning.x);
 }
 
-export function focusFailure(s: GameCore, out: GameEvent[]) {
-    if (s.mode !== 'play') return;
-    s.mode = 'focuslost';
-    s.lossReason = 'focus';
-    s.focusLossTime = 0;
-    s.focus = 0;
-    s.focusClock = 0;
-    s.deaths++;
-    s.keys = [];
-    out.push({ type: 'cue', id: 'focus-lost' });
+// Focus after a distraction, or null if this distraction already counted. `lost` means focus ran out.
+export function focusAfterHit(f: Readonly<Focus>, hit: FocusHit): (Focus & { lost: boolean }) | null {
+    const token = hit.kind + ':' + hit.id;
+    if (f.focusEvents.includes(token)) return null;
+    const focus = Math.max(0, f.focus - hit.damage);
+    return { focus, focusClock: 0, focusEvents: [...f.focusEvents, token], focusNotice: { kind: hit.kind, life: 1.7 }, lost: focus === 0 };
 }
 
-export function advanceFocusLoss(s: GameCore, out: GameEvent[], dt: number) {
-    if (s.mode !== 'focuslost') return;
-    s.focusLossTime += dt;
-    if (s.focusLossTime >= 1.7) {
-        s.mode = 'dead';
-        out.push({ type: 'cue', id: 'focus-game-over' });
+// Focus slowly returns, one point every two undisturbed seconds.
+export function focusRecovery(f: Readonly<Focus>, blocked: boolean, dt: number): Pick<Focus, 'focus' | 'focusClock' | 'focusNotice'> {
+    let focusNotice = f.focusNotice ? { ...f.focusNotice, life: f.focusNotice.life - dt } : null;
+    if (focusNotice && focusNotice.life <= 0) focusNotice = null;
+    if (blocked || f.focus >= 100) return { focus: f.focus, focusClock: 0, focusNotice };
+    let { focus, focusClock } = f;
+    focusClock += dt;
+    if (focusClock >= 2 - 1e-9) {
+        const amount = Math.floor((focusClock + 1e-9) / 2);
+        focus = Math.min(100, focus + amount);
+        focusClock = Math.max(0, focusClock - amount * 2);
     }
+    return { focus, focusClock, focusNotice };
 }
 
-export function focusStep(s: GameCore, dt: number) {
-    if (s.focusNotice && (s.focusNotice.life -= dt) <= 0) {
-        s.focusNotice = null;
-    }
-    if (focusBlocked(s)) {
-        s.focusClock = 0;
-        return;
-    }
-    if (s.focus >= 100) {
-        s.focusClock = 0;
-        return;
-    }
-    s.focusClock += dt;
-    if (s.focusClock >= 2 - 1e-9) {
-        const amount = Math.floor((s.focusClock + 1e-9) / 2);
-        s.focus = Math.min(100, s.focus + amount);
-        s.focusClock = Math.max(0, s.focusClock - amount * 2);
-    }
+// The rider stares at the distraction for a moment before the attempt ends.
+export function focusLossStep(time: number, dt: number) {
+    const next = time + dt;
+    return { time: next, over: next >= FOCUS_LOSS_DURATION };
 }
