@@ -1,8 +1,9 @@
 import { FOCUS_DAMAGE, LEVEL, RULES } from '../level';
 import type { GameCore } from '../core';
+import type { GameEvent } from '../types';
 import { focusHit } from './focus';
 
-export function shoot(s: GameCore) {
+export function shoot(s: GameCore, out: GameEvent[]) {
     const F = LEVEL.floor;
     const dir = s.copier.dir;
     for (let i = 0; i < 4; i++) {
@@ -21,13 +22,13 @@ export function shoot(s: GameCore) {
         });
     }
     s.bursts++;
-    s.events.push({ type: 'volley' });
+    out.push({ type: 'volley' });
     if (s.bursts === 1) {
-        s.events.push({ type: 'cue', id: 'first-volley' });
+        out.push({ type: 'cue', id: 'first-volley' });
     }
 }
 
-export function particlesStep(s: GameCore, dt: number) {
+export function particlesStep(s: GameCore, out: GameEvent[], dt: number) {
     const F = LEVEL.floor;
     for (const z of s.papers) {
         z.life -= dt;
@@ -47,14 +48,14 @@ export function particlesStep(s: GameCore, dt: number) {
         if (!z.safe && !z.hit && !z.landed && !s.inBin && Math.hypot(z.x - s.p.x, z.y - (s.p.y - 50)) < 48) {
             z.hit = true;
             s.paperHits++;
-            focusHit(s, 'paper', z.volley, FOCUS_DAMAGE.copier);
+            focusHit(s, out, 'paper', z.volley, FOCUS_DAMAGE.copier);
             if (s.mode !== 'play') return;
             s.p.vx *= .88;
             s.p.w += z.vx * .0009;
             s.paperPenaltyRemaining = RULES.paperPenalty;
-            s.events.push({ type: 'cue', id: 'paper-hit' });
+            out.push({ type: 'cue', id: 'paper-hit' });
         }
     }
     s.papers = s.papers.filter(z => z.life > 0).slice(-60);
-    s.events.push({ type: 'particles-step', dt });
+    out.push({ type: 'particles-step', dt });
 }

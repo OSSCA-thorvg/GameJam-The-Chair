@@ -1,7 +1,8 @@
 import { LEVEL } from '../level';
 import type { GameCore } from '../core';
+import type { GameEvent } from '../types';
 
-export function binEnter(s: GameCore) {
+export function binEnter(s: GameCore, out: GameEvent[]) {
     if (s.mode !== 'play') return;
     const F = LEVEL.floor;
     s.inBin = true;
@@ -15,7 +16,7 @@ export function binEnter(s: GameCore) {
     s.p.a = .1;
     s.keys = [];
     s.mode = 'dead';
-    s.events.push({ type: 'cue', id: 'bin-fall' });
-    s.events.push({ type: 'cue', id: 'bin-comment' });
-    s.events.push({ type: 'cue', id: 'bin-game-over' });
+    out.push({ type: 'cue', id: 'bin-fall' });
+    out.push({ type: 'cue', id: 'bin-comment' });
+    out.push({ type: 'cue', id: 'bin-game-over' });
 }

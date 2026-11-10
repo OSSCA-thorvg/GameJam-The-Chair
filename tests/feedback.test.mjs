@@ -96,11 +96,12 @@ test('the monitor that hit the rider owns the speech bubble', () => {
     for (const [index, time, wall, speakerX] of [[1, 2.3, 2560, 2701], [2, .1, 2980, 3121]]) {
         const core = createCore({ seed: 0 });
         core.mode = 'play';
-        core.t = time;
+        core.time = time;
         core.p.x = wall;
         core.p.y = 392;
-        monitorStep(core, 1 / 120, wall - 10);
-        const cue = core.events.find(event => event.type === 'cue' && event.id === 'light-comment');
+        const events = [];
+        monitorStep(core, events, 1 / 120, wall - 10);
+        const cue = events.find(event => event.type === 'cue' && event.id === 'light-comment');
         assert.deepEqual(cue, { type: 'cue', id: 'light-comment', monitorIndex: index });
         const feedback = createFeedback();
         feedback.receive(cue, state);

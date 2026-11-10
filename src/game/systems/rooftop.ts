@@ -1,4 +1,5 @@
 import type { GameCore } from '../core';
+import type { GameEvent } from '../types';
 import { STAGE_THREE, ductTimings } from '../stage3';
 import { STAGE_FOUR } from '../stage4';
 
@@ -22,14 +23,14 @@ export function rooftopEntranceStep(s: GameCore, dt: number) {
     return true;
 }
 
-export function rooftopStep(s: GameCore, dt: number) {
+export function rooftopStep(s: GameCore, out: GameEvent[], dt: number) {
     const p = s.p;
     ductReactionStep(s, dt);
     if (!s.hasExtinguisher && Math.abs(p.x - STAGE_THREE.pickup.x) < 55 && Math.abs(p.y - STAGE_THREE.pickup.y) < 75) {
         s.hasExtinguisher = true;
         s.checkpoint = 1;
-        s.events.push({ type: 'cue', id: 'extinguisher-pickup' });
-        s.events.push({ type: 'cue', id: 'checkpoint' });
+        out.push({ type: 'cue', id: 'extinguisher-pickup' });
+        out.push({ type: 'cue', id: 'checkpoint' });
     }
     // Save only on a real landing: flying past a flag must not skip the course.
     if (s.hasExtinguisher && s.ground) {
@@ -39,7 +40,7 @@ export function rooftopStep(s: GameCore, dt: number) {
                 s.checkpoint = i;
                 s.focus = 100;
                 s.focusClock = 0;
-                s.events.push({ type: 'cue', id: 'checkpoint' });
+                out.push({ type: 'cue', id: 'checkpoint' });
             }
         }
     }

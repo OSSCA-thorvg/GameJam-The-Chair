@@ -1,5 +1,6 @@
 import { FOCUS_DAMAGE, LEVEL, RULES } from '../level';
 import type { GameCore } from '../core';
+import type { GameEvent } from '../types';
 import { focusHit } from './focus';
 
 export type MonitorSpec = { wall: number; period: number; offset: number };
@@ -13,7 +14,7 @@ export function monitorPhase(m: MonitorSpec, t: number) {
     };
 }
 
-export function monitorStep(s: GameCore, _dt: number, previousX: number) {
+export function monitorStep(s: GameCore, out: GameEvent[], _dt: number, previousX: number) {
     if (s.p.y + 28 < 300) return;
     for (let i = 0; i < LEVEL.monitors.length; i++) {
         const spec = LEVEL.monitors[i];
@@ -25,14 +26,14 @@ export function monitorStep(s: GameCore, _dt: number, previousX: number) {
             s.p.vx = side * 65;
             s.p.w *= .45;
             s.lightPenaltyRemaining = RULES.lightPenalty;
-            s.events.push({ type: 'light-contact' });
+            out.push({ type: 'light-contact' });
             if (s.lightCooldown === 0) {
                 s.lightHits++;
                 s.lightCooldown = 1.4;
-                focusHit(s, 'light', i * 1000 + Math.floor(s.time / spec.period), FOCUS_DAMAGE.light);
+                focusHit(s, out, 'light', i * 1000 + Math.floor(s.time / spec.period), FOCUS_DAMAGE.light);
                 if (s.mode !== 'play') return;
-                s.events.push({ type: 'cue', id: 'light-hit' });
-                s.events.push({ type: 'cue', id: 'light-comment', monitorIndex: i });
+                out.push({ type: 'cue', id: 'light-hit' });
+                out.push({ type: 'cue', id: 'light-comment', monitorIndex: i });
             }
             return;
         }

@@ -1,4 +1,5 @@
 import type { GameCore } from '../core';
+import type { GameEvent } from '../types';
 import { random } from '../rng';
 import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine } from '../stage2';
 
@@ -12,7 +13,7 @@ export function landInConvoy(s: GameCore) {
     s.corridor.convoy = canCarry && insideConvoy(s) ? 'carried' : 'free';
     if (s.corridor.convoy === 'carried') s.p.vx = s.furniture[0].vx;
 }
-export function liftRideStep(s: GameCore, dt: number) {
+export function liftRideStep(s: GameCore, out: GameEvent[], dt: number) {
     const departure = s.corridor.departure;
     if (departure.kind !== 'descending' || departure.reason !== 'abduction') return false;
     departure.age += dt;
@@ -29,7 +30,7 @@ export function liftRideStep(s: GameCore, dt: number) {
         s.lossReason = 'lift';
         s.deaths++;
         s.keys = [];
-        s.events.push({ type: 'cue', id: 'lift-game-over' });
+        out.push({ type: 'cue', id: 'lift-game-over' });
     }
     return true;
 }

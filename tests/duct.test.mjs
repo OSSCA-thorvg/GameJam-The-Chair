@@ -8,7 +8,7 @@ function front() {
     s.p = { x: 1600, y: 226, vx: 0, vy: 0, a: 0, w: 0 };
     return s;
 }
-function tick(s, seconds) { for (let i = 0; i < Math.ceil(seconds * 120); i++) rooftopStep(s, 1 / 120); }
+function tick(s, seconds) { for (let i = 0; i < Math.ceil(seconds * 120); i++) rooftopStep(s, [], 1 / 120); }
 function palms(s) {
     const ctx = createRenderCtx({}, {}); Object.assign(ctx, { state: s }); rooftopDuct(ctx);
     return ctx.commands.filter(command => command.c === '#a18a45').map(command => command.v);

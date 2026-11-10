@@ -90,9 +90,9 @@ export type Attempt = {
     focusLossTime: number;
 };
 
+// Everything that decides how play continues. Plain JSON: save it and restore it to resume exactly.
 export type GameState = Progress & Attempt;
-// `events` is the outgoing cue buffer, not game state; it is never serialized.
-export type GameCore = GameState & { events: GameEvent[] };
+export type GameCore = GameState;
 
 function createProgress(skylineSeed: number, deaths = 0, completedStage: 0 | StageId = 0): Progress {
     return {
@@ -214,7 +214,7 @@ export type CoreOptions = { seed: number; deaths?: number; completedStage?: 0 | 
 export function createCore({ seed, deaths, completedStage }: CoreOptions): GameCore {
     const rng = seedRng(seed);
     const progress = createProgress(randomUint32(rng, 'cosmetic'), deaths, completedStage);
-    return { ...progress, ...createAttempt(progress, rng, 'intro'), events: [] };
+    return { ...progress, ...createAttempt(progress, rng, 'intro') };
 }
 
 export function progressOf(s: GameState): Progress {
@@ -223,34 +223,30 @@ export function progressOf(s: GameState): Progress {
 }
 
 // Starts a new attempt from the current progress. The core object keeps its identity.
-export function resetAttempt(s: GameCore) {
+export function resetAttempt(s: GameState, out: GameEvent[]) {
     // The office skyline changes on every office attempt; later stages keep theirs.
     if (s.stage === 1) s.skylineSeed = randomUint32(s.rng, 'cosmetic');
     Object.assign(s, createAttempt(progressOf(s), s.rng));
-    s.events.length = 0;
-    s.events.push({ type: 'reset' });
+    out.push({ type: 'reset' });
 }
 
-export function startStage(s: GameCore, id: StageId) {
+export function startStage(s: GameState, id: StageId, out: GameEvent[]) {
     s.stage = id;
     s.checkpoint = 0;
     s.officeCheckpoint = false;
     s.lessons = { moved: false, jumped: false };
-    resetAttempt(s);
+    resetAttempt(s, out);
 }
 
-export function serializeState(s: GameCore): string {
-    const { events: _events, ...state } = s;
-    return JSON.stringify(state);
+export function serializeState(s: GameState): string {
+    return JSON.stringify(s);
 }
 
-export function restoreState(s: GameCore, json: string) {
+// Replaces the contents of `s` in place so holders of the object see the restored state.
+export function restoreState(s: GameState, json: string) {
     const state = JSON.parse(json) as GameState;
-    for (const key of Object.keys(s) as (keyof GameCore)[]) {
-        if (key !== 'events') delete (s as Partial<GameCore>)[key];
-    }
+    for (const key of Object.keys(s) as (keyof GameState)[]) delete (s as Partial<GameState>)[key];
     Object.assign(s, state, { parts: LEVEL.playerContacts });
-    s.events.length = 0;
 }
 
 export function hasKey(s: GameState, input: Input) {

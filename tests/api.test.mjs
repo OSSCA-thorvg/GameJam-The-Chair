@@ -7,7 +7,7 @@ const PUBLIC_API = [
     'reset', 'restart', 'startStage', 'jump', 'spray', 'interact', 'leaveMeeting', 'pause',
     'setInput', 'press', 'release', 'clearInput',
     'step', 'advance', 'advanceImpact', 'advanceFocusLoss',
-    'getSnapshot', 'drainEvents',
+    'getSnapshot', 'drainEvents', 'send', 'serialize', 'restore',
 ];
 
 test('createGame keeps its public API', () => {

@@ -1,18 +1,18 @@
 import { snapshot, type GameCore } from '../core';
-import type { Point } from '../types';
+import type { Point, GameEvent } from '../types';
 
-export function fail(s: GameCore, point: Point) {
+export function fail(s: GameCore, out: GameEvent[], point: Point) {
     if (s.mode !== 'play' || s.inBin) return;
     s.deaths++;
     s.lossReason = 'head';
     s.keys = [];
     s.impact = { frames: s.history.slice(-42).concat(snapshot(s)), elapsed: 0, point };
     s.mode = 'impact';
-    s.events.push({ type: 'cue', id: 'head-hit' });
-    s.events.push({ type: 'cue', id: 'head-comment' });
+    out.push({ type: 'cue', id: 'head-hit' });
+    out.push({ type: 'cue', id: 'head-comment' });
 }
 
-export function impactStep(s: GameCore, dt: number) {
+export function impactStep(s: GameCore, out: GameEvent[], dt: number) {
     if (!s.impact) return;
     s.impact.elapsed += dt;
     const n = s.impact.frames.length - 1;
@@ -29,6 +29,6 @@ export function impactStep(s: GameCore, dt: number) {
     }
     if (s.impact.elapsed > n / 120 / .25 + .35) {
         s.mode = 'dead';
-        s.events.push({ type: 'cue', id: 'head-game-over' });
+        out.push({ type: 'cue', id: 'head-game-over' });
     }
 }

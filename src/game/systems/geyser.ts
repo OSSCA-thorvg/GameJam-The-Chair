@@ -1,5 +1,6 @@
 import { FOCUS_DAMAGE, LEVEL } from '../level';
 import type { GameCore } from '../core';
+import type { GameEvent } from '../types';
 import { focusHit } from './focus';
 import { random } from '../rng';
 
@@ -11,7 +12,7 @@ export function geyserPhase(geyser: { period: number; offset: number }, t: numbe
     return { kind: 'burst', age: p - 3.1, remaining: geyser.period - p };
 }
 
-export function geyserStep(s: GameCore, _dt: number) {
+export function geyserStep(s: GameCore, out: GameEvent[], _dt: number) {
     const p = s.p;
     for (let i = 0; i < LEVEL.geysers.length; i++) {
         const g = LEVEL.geysers[i];
@@ -22,8 +23,8 @@ export function geyserStep(s: GameCore, _dt: number) {
         p.vy = -520;
         p.vx += (Math.sign(p.x - g.x) || 1) * 90;
         p.w += (random(s.rng, 'physics') - .5) * 6;
-        focusHit(s, 'paper', 1000 + i * 100 + Math.floor(s.time / g.period), FOCUS_DAMAGE.paper);
+        focusHit(s, out, 'paper', 1000 + i * 100 + Math.floor(s.time / g.period), FOCUS_DAMAGE.paper);
         if (s.mode !== 'play') return;
-        s.events.push({ type: 'cue', id: 'light-hit' });
+        out.push({ type: 'cue', id: 'light-hit' });
     }
 }

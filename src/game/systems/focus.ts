@@ -1,5 +1,6 @@
 import { LEVEL, RULES } from '../level';
 import type { GameCore } from '../core';
+import type { GameEvent } from '../types';
 
 export function waterExposureActive(s: GameCore) {
     const F = LEVEL.floor;
@@ -10,7 +11,7 @@ export function focusBlocked(s: GameCore) {
     return s.paperPenaltyRemaining > 0 || s.lightPenaltyRemaining > 0 || waterExposureActive(s);
 }
 
-export function focusHit(s: GameCore, kind: 'paper' | 'water' | 'light' | 'door', id: number, damage: number) {
+export function focusHit(s: GameCore, out: GameEvent[], kind: 'paper' | 'water' | 'light' | 'door', id: number, damage: number) {
     if (s.mode !== 'play') return;
     const token = kind + ':' + id;
     if (s.focusEvents.includes(token)) return;
@@ -19,11 +20,11 @@ export function focusHit(s: GameCore, kind: 'paper' | 'water' | 'light' | 'door'
     s.focusClock = 0;
     s.focusNotice = { kind, life: 1.7 };
     if (s.focus === 0) {
-        focusFailure(s);
+        focusFailure(s, out);
     }
 }
 
-export function focusFailure(s: GameCore) {
+export function focusFailure(s: GameCore, out: GameEvent[]) {
     if (s.mode !== 'play') return;
     s.mode = 'focuslost';
     s.lossReason = 'focus';
@@ -32,15 +33,15 @@ export function focusFailure(s: GameCore) {
     s.focusClock = 0;
     s.deaths++;
     s.keys = [];
-    s.events.push({ type: 'cue', id: 'focus-lost' });
+    out.push({ type: 'cue', id: 'focus-lost' });
 }
 
-export function advanceFocusLoss(s: GameCore, dt: number) {
+export function advanceFocusLoss(s: GameCore, out: GameEvent[], dt: number) {
     if (s.mode !== 'focuslost') return;
     s.focusLossTime += dt;
     if (s.focusLossTime >= 1.7) {
         s.mode = 'dead';
-        s.events.push({ type: 'cue', id: 'focus-game-over' });
+        out.push({ type: 'cue', id: 'focus-game-over' });
     }
 }
 
