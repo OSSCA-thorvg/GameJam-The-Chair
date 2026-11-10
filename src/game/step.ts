@@ -1,5 +1,4 @@
 import { skyStep } from './systems/sky';
-import { rooftopStep, firstFlightStep, rooftopEntranceStep } from './systems/rooftop';
 import { LEVEL, FIXED_STEP } from './level';
 import type { GameEvent, Mode } from './types';
 import { clamp, contact } from './geometry';
@@ -11,7 +10,7 @@ import { focusStep, advanceFocusLoss } from './systems/focus';
 import { copierStep, papersStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
 import { geyserHits } from './systems/geyser';
-import { applyBinFall, applyCleaning, applyCopier, applyGeyserHits, applyMonitorContact, applyPapers } from './apply';
+import { applyBinFall, applyCleaning, applyCopier, applyFlight, applyGeyserHits, applyMonitorContact, applyPapers, applyRooftop, applyRooftopEntrance } from './apply';
 import { monitorContact } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
 import { meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
@@ -73,8 +72,8 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     if (s.keys.includes('spray')) spray(s, out);
     out.push({ type: 'tick', dt });
     if (s.stage === 3) {
-        if (rooftopEntranceStep(s, dt)) return;
-        const flight = firstFlightStep(s, dt);
+        if (applyRooftopEntrance(s, dt)) return;
+        const flight = applyFlight(s, dt);
         if (flight) {
             if (flight === 'arrived') {
                 if (s.completedStage < 3) s.completedStage = 3;
@@ -197,7 +196,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
             }
         }
     }
-    if (s.stage === 3) rooftopStep(s, out, dt);
+    if (s.stage === 3) applyRooftop(s, out, dt);
     if (s.stage === 2) landInConvoy(s);
     if (s.stage === 1) {
         applyMonitorContact(s, out, monitorContact(p, prev, s.time));

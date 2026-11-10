@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 
 // Unit tests for pure system decisions: same input, same answer, no state writes.
 const bundle = await build({
-    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning'; export * from './src/game/systems/papers';`, resolveDir: process.cwd() },
+    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning'; export * from './src/game/systems/papers'; export * from './src/game/systems/rooftop';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
 const sys = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
@@ -87,4 +87,42 @@ test('sheets that reach the rider are reported once, in order, without touching 
     assert.equal(sys.papersStep(r.papers, { x: 500, y: 392 }, false, 1 / 120).hits.length, 0);
     assert.equal(sys.papersStep(papers, { x: 500, y: 392 }, true, 1 / 120).hits.length, 0, 'safe inside the bin');
     assert.equal(sys.trimPapers([{ ...paper, life: -1 }, paper]).length, 1);
+});
+
+test('rooftop door scene rolls the chair out and hands over control when closed', () => {
+    const mid = sys.entranceStep({ kind: 'opening', age: 1 }, 1 / 120);
+    assert.equal(mid.done, false);
+    assert.ok(mid.pose.vx > 0 && mid.pose.x > 100 && mid.pose.x < 235);
+    const end = sys.entranceStep({ kind: 'opening', age: 2.6 }, 1 / 120);
+    assert.deepEqual([end.done, end.entrance.kind, end.pose.x, end.pose.vx], [true, 'ready', 235, 0]);
+});
+
+test('three quick downward sprays on the launch pad start the flight', () => {
+    const pad = { x: 2300, y: -172, vx: 40, vy: 0, a: 0, w: 1 };
+    let flight = { kind: 'course', verticalShots: 0, lastShotAt: -1 };
+    const times = [10, 10.3, 10.6];
+    let r;
+    for (const time of times) { r = sys.launchShot(flight, pad, time, 0); flight = r.firstFlight; }
+    assert.equal(r.takeoff, true);
+    assert.deepEqual([r.p.vx, r.p.vy, r.p.w], [0, -320, 0]);
+    assert.equal(sys.launchShot({ kind: 'course', verticalShots: 2, lastShotAt: 10 }, pad, 11, 0).firstFlight.verticalShots, 1, 'too slow restarts the count');
+    assert.equal(sys.launchShot({ kind: 'course', verticalShots: 2, lastShotAt: 10 }, pad, 10.2, 1).firstFlight.verticalShots, 0, 'sideways spray resets');
+    const climb = sys.flightStep({ kind: 'flight', age: 0 }, { ...pad, y: -1819, vy: -300 }, 1 / 120);
+    assert.equal(climb.arrived, true);
+});
+
+test('the duct sneezes back at a rider in front of it once the inhale ends', () => {
+    const p = { x: 1600, y: 226, vx: 0, vy: 0, a: 0, w: 0 };
+    const reacting = sys.ductSprayed({ kind: 'idle' }, p);
+    assert.equal(reacting.kind, 'reacting');
+    assert.equal(sys.ductSprayed({ kind: 'idle' }, { ...p, x: 1000 }).kind, 'idle', 'out of reach');
+    let input = { p, ground: true, hasExtinguisher: true, firstFlight: { kind: 'course', verticalShots: 0, lastShotAt: -1 }, ductReaction: reacting, time: 0 };
+    let knocked = false;
+    for (let i = 0; i < 30; i++) {
+        const r = sys.rooftopStep(input, 1 / 120);
+        knocked ||= r.p.vx < 0 && !r.ground;
+        input = { ...input, p: r.p, ground: r.ground, ductReaction: r.ductReaction };
+    }
+    assert.ok(knocked);
+    assert.equal(reacting.bursts[0].age, 0, 'input untouched');
 });

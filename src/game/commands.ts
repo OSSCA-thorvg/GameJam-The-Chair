@@ -1,7 +1,7 @@
 import { resetAttempt, startStage, type GameState } from './state';
 import type { StageId } from './stage2';
 import type { GameEvent, Input } from './types';
-import { ductSpray, rooftopLaunchShot } from './systems/rooftop';
+import { applyRooftopSpray } from './apply';
 import { interactMeeting, leaveMeeting } from './systems/corridor';
 
 // Every way the outside world changes the game. Recorded with the tick it arrived on.
@@ -51,8 +51,7 @@ export function spray(s: GameState, out: GameEvent[]) {
     s.sprayCooldown = .24;
     s.sprayBurst = .24;
     out.push({ type: 'cue', id: 'spray' });
-    ductSpray(s);
-    rooftopLaunchShot(s, dx);
+    applyRooftopSpray(s, dx);
 }
 
 function pause(s: GameState) {

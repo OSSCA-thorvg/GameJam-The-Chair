@@ -1,5 +1,5 @@
 import { LEVEL, RULES } from './level';
-import type { DuctBurst } from './stage3';
+import type { DuctReaction, FirstFlight, RooftopEntrance } from './systems/rooftop';
 import { STAGE_TWO, createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
 import { STAGES, stageSpawn } from './stages';
 import { randomUint32, seedRng, type Rng } from './rng';
@@ -25,9 +25,9 @@ export type Progress = {
 export type Attempt = {
     rng: Rng;
     hasExtinguisher: boolean;
-    firstFlight: { kind: 'course'; verticalShots: number; lastShotAt: number } | { kind: 'flight'; age: number };
-    rooftopEntrance: { kind: 'opening'; age: number } | { kind: 'ready' };
-    ductReaction: { kind: 'idle' } | { kind: 'reacting'; age: number; shots: number; bursts: DuctBurst[] } | { kind: 'done'; shots: number };
+    firstFlight: FirstFlight;
+    rooftopEntrance: RooftopEntrance;
+    ductReaction: DuctReaction;
     sprayCooldown: number;
     sprayBurst: number;
     sprayDir: { x: number; y: number };
