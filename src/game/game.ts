@@ -2,9 +2,9 @@ import { STAGE_TWO, type StageId } from './stage2';
 import { skyStep } from './systems/sky';
 import { rooftopStep, firstFlightStep, rooftopEntranceStep, rooftopLaunchShot, ductSpray } from './systems/rooftop';
 import { LEVEL, FIXED_STEP } from './level';
-import type { Input, DeepReadonly } from './types';
+import type { Input, DeepReadonly, Mode } from './types';
 import { clamp, contact } from './geometry';
-import { createCore, createProgress, resetAttempt, startStage as beginStage, serializeState, restoreState, snapshot, type Progress } from './core';
+import { createCore, resetAttempt, startStage as beginStage, serializeState, restoreState, snapshot, type Progress } from './core';
 import { focusBlocked, focusStep, advanceFocusLoss } from './systems/focus';
 import { shoot, particlesStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
@@ -14,11 +14,18 @@ import { fail, impactStep } from './systems/impact';
 import { canEnterMeeting, interactMeeting, leaveMeeting, meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
 import { binEnter } from './systems/bin';
 
-export type GameOptions = { progress?: Partial<Pick<Progress, 'deaths' | 'completedStage'>> };
+export type GameOptions = {
+    // Same seed, start and commands always produce the same run. The browser passes a random seed.
+    seed?: number;
+    progress?: Partial<Pick<Progress, 'deaths' | 'completedStage'>>;
+};
+
+// Modes in which fixed steps advance the game. Others wait for a command.
+const SIMULATED: readonly Mode[] = ['play', 'impact', 'focuslost'];
 
 export function createGame(options: GameOptions = {}) {
     const F = LEVEL.floor;
-    const s = createCore(createProgress(options.progress?.deaths, options.progress?.completedStage));
+    const s = createCore({ seed: options.seed ?? 0, deaths: options.progress?.deaths, completedStage: options.progress?.completedStage });
     // Real frame time waiting to become fixed steps. Shell-only: it never reaches game state.
     let acc = 0;
 
@@ -53,12 +60,19 @@ export function createGame(options: GameOptions = {}) {
         acc = 0;
     }
 
-    function step(dt: number) {
-        if (s.mode !== 'play') return;
+    // One fixed step in any mode. Every game advance goes through here.
+    function tick() {
+        if (!SIMULATED.includes(s.mode)) return;
+        s.tick++;
+        if (s.mode === 'play') playStep(FIXED_STEP);
+        else if (s.mode === 'impact') impactStep(s, FIXED_STEP);
+        else advanceFocusLoss(s, FIXED_STEP);
+    }
+
+    function playStep(dt: number) {
         s.history.push(snapshot(s));
         if (s.history.length > 60) s.history.shift();
         s.time += dt;
-        s.t += dt;
         s.copier.cool = Math.max(0, s.copier.cool - dt);
         s.binCooldown = Math.max(0, s.binCooldown - dt);
         s.paperPenaltyRemaining = Math.max(0, s.paperPenaltyRemaining - dt);
@@ -275,7 +289,7 @@ export function createGame(options: GameOptions = {}) {
                 s.events.push({ type: 'cue', id: 'person-comment', person: { ...n } });
             }
         }
-        if (s.slip && Math.abs(p.vx) > 90 && Math.floor(s.t * 30) !== Math.floor((s.t - dt) * 30)) {
+        if (s.slip && Math.abs(p.vx) > 90 && Math.floor(s.time * 30) !== Math.floor((s.time - dt) * 30)) {
             s.events.push({ type: 'speck', x: p.x - 15, vx: -p.vx * .2 });
         }
         if (p.y > F + 250) {
@@ -341,7 +355,7 @@ export function createGame(options: GameOptions = {}) {
             cleaning: s.cleaning,
             lightHits: s.lightHits,
             doorHits: s.doorHits,
-            monitors: LEVEL.monitors.map(monitor => ({ ...monitor, ...monitorPhase(monitor, s.t) })),
+            monitors: LEVEL.monitors.map(monitor => ({ ...monitor, ...monitorPhase(monitor, s.time) })),
             papers: s.papers,
             people: s.people,
             solids: s.solids,
@@ -353,20 +367,20 @@ export function createGame(options: GameOptions = {}) {
 
     function advance(dt: number) {
         if (!Number.isFinite(dt) || dt < 0) return;
-        if (s.mode === 'play') {
-            acc += dt;
-            while (acc >= FIXED_STEP) {
-                step(FIXED_STEP);
-                acc -= FIXED_STEP;
-                if (s.mode !== 'play') {
-                    acc = 0;
-                    break;
-                }
-            }
-        } else {
+        if (!SIMULATED.includes(s.mode)) {
             acc = 0;
-            if (s.mode === 'impact') impactStep(s, dt);
-            if (s.mode === 'focuslost') advanceFocusLoss(s, dt);
+            return;
+        }
+        acc += dt;
+        while (acc >= FIXED_STEP) {
+            const mode = s.mode;
+            tick();
+            acc -= FIXED_STEP;
+            // A new mode starts counting from the next frame, as before fixed ticks.
+            if (s.mode !== mode) {
+                acc = 0;
+                break;
+            }
         }
     }
 
@@ -385,7 +399,8 @@ export function createGame(options: GameOptions = {}) {
         leaveMeeting: () => { if (s.mode === 'play') leaveMeeting(s); },
         spray,
         pause,
-        step,
+        /** One fixed step (1/120 s). The argument is ignored and kept for older callers. */
+        step: (_dt?: number) => tick(),
         advance,
         startStage,
         restart() {
@@ -393,6 +408,7 @@ export function createGame(options: GameOptions = {}) {
             reset();
             acc = 0;
         },
+        // Preview-only scrubbing at arbitrary frame times. Never used by real play or replays.
         advanceImpact: (dt: number) => impactStep(s, dt),
         advanceFocusLoss: (dt: number) => advanceFocusLoss(s, dt),
         setInput(...input: Input[]) {

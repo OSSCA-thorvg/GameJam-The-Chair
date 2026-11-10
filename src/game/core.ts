@@ -3,6 +3,7 @@ import { STAGE_THREE, type DuctBurst } from './stage3';
 import { STAGE_FOUR } from './stage4';
 import { STAGE_TWO, createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
 import { polyRect } from './geometry';
+import { randomUint32, seedRng, type Rng } from './rng';
 import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Point, Snapshot } from './types';
 
 export type FocusNotice = { kind: 'paper' | 'water' | 'light' | 'door'; life: number };
@@ -18,10 +19,13 @@ export type Progress = {
     deaths: number;
     completedStage: 0 | StageId;
     skylineSeed: number;
+    // Fixed steps simulated since the game was created. Never resets, so recorded commands stay ordered.
+    tick: number;
 };
 
 // Rebuilt from Progress on every attempt.
 export type Attempt = {
+    rng: Rng;
     LEN: number;
     GOAL: number;
     hasExtinguisher: boolean;
@@ -38,8 +42,8 @@ export type Attempt = {
     ground: boolean;
     coyote: number;
     jumpQ: number;
+    // Seconds simulated in this attempt (fixed steps only).
     time: number;
-    t: number;
     practiceJump: boolean;
     actualSpeed: number;
 
@@ -90,7 +94,7 @@ export type GameState = Progress & Attempt;
 // `events` is the outgoing cue buffer, not game state; it is never serialized.
 export type GameCore = GameState & { events: GameEvent[] };
 
-export function createProgress(deaths = 0, completedStage: 0 | StageId = 0): Progress {
+function createProgress(skylineSeed: number, deaths = 0, completedStage: 0 | StageId = 0): Progress {
     return {
         stage: 1,
         checkpoint: 0,
@@ -98,7 +102,8 @@ export function createProgress(deaths = 0, completedStage: 0 | StageId = 0): Pro
         lessons: { moved: false, jumped: false },
         deaths,
         completedStage,
-        skylineSeed: Math.floor(Math.random() * 0x100000000),
+        skylineSeed,
+        tick: 0,
     };
 }
 
@@ -136,10 +141,13 @@ function spawnPoint(progress: Progress): Point {
     return { x: progress.officeCheckpoint ? 1400 : 100, y: LEVEL.floor - 28 };
 }
 
-export function createAttempt(progress: Progress, mode: Mode = 'play'): Attempt {
+export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'): Attempt {
     const { stage, checkpoint } = progress;
     const size = stageSize(stage);
+    const rng = { ...seed };
+    const appearanceSeed = randomUint32(rng, 'cosmetic');
     return {
+        rng,
         ...size,
         hasExtinguisher: stage === 4 || (stage === 3 && checkpoint > 0),
         firstFlight: { kind: 'course', verticalShots: 0, lastShotAt: -1 },
@@ -156,12 +164,11 @@ export function createAttempt(progress: Progress, mode: Mode = 'play'): Attempt 
         coyote: 0,
         jumpQ: 0,
         time: 0,
-        t: 0,
         practiceJump: false,
         actualSpeed: 0,
 
         ...stageLayout(progress, size.LEN),
-        corridor: createCorridor(checkpoint),
+        corridor: createCorridor(checkpoint, appearanceSeed),
         copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 },
         cleaning: { ...LEVEL.cleaning, spilled: false, age: 0, followup: false, splashDir: 0 },
         bucket: { age: RULES.bucketReset, armed: true, spills: 0 },
@@ -202,19 +209,24 @@ export function createAttempt(progress: Progress, mode: Mode = 'play'): Attempt 
     };
 }
 
-export function createCore(progress: Progress): GameCore {
-    return { ...progress, ...createAttempt(progress, 'intro'), events: [] };
+export type CoreOptions = { seed: number; deaths?: number; completedStage?: 0 | StageId };
+
+export function createCore({ seed, deaths, completedStage }: CoreOptions): GameCore {
+    const rng = seedRng(seed);
+    const progress = createProgress(randomUint32(rng, 'cosmetic'), deaths, completedStage);
+    return { ...progress, ...createAttempt(progress, rng, 'intro'), events: [] };
 }
 
 export function progressOf(s: GameState): Progress {
-    const { stage, checkpoint, officeCheckpoint, lessons, deaths, completedStage, skylineSeed } = s;
-    return { stage, checkpoint, officeCheckpoint, lessons, deaths, completedStage, skylineSeed };
+    const { stage, checkpoint, officeCheckpoint, lessons, deaths, completedStage, skylineSeed, tick } = s;
+    return { stage, checkpoint, officeCheckpoint, lessons, deaths, completedStage, skylineSeed, tick };
 }
 
 // Starts a new attempt from the current progress. The core object keeps its identity.
 export function resetAttempt(s: GameCore) {
-    if (s.stage === 1) s.skylineSeed = Math.floor(Math.random() * 0x100000000);
-    Object.assign(s, createAttempt(progressOf(s)));
+    // The office skyline changes on every office attempt; later stages keep theirs.
+    if (s.stage === 1) s.skylineSeed = randomUint32(s.rng, 'cosmetic');
+    Object.assign(s, createAttempt(progressOf(s), s.rng));
     s.events.length = 0;
     s.events.push({ type: 'reset' });
 }

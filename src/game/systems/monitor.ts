@@ -17,7 +17,7 @@ export function monitorStep(s: GameCore, _dt: number, previousX: number) {
     if (s.p.y + 28 < 300) return;
     for (let i = 0; i < LEVEL.monitors.length; i++) {
         const spec = LEVEL.monitors[i];
-        const m = monitorPhase(spec, s.t);
+        const m = monitorPhase(spec, s.time);
         if (!m.active) continue;
         if (s.p.x + 35 > spec.wall - 8 && s.p.x - 35 < spec.wall + 22) {
             const side = previousX < spec.wall ? -1 : 1;
@@ -29,7 +29,7 @@ export function monitorStep(s: GameCore, _dt: number, previousX: number) {
             if (s.lightCooldown === 0) {
                 s.lightHits++;
                 s.lightCooldown = 1.4;
-                focusHit(s, 'light', i * 1000 + Math.floor(s.t / spec.period), FOCUS_DAMAGE.light);
+                focusHit(s, 'light', i * 1000 + Math.floor(s.time / spec.period), FOCUS_DAMAGE.light);
                 if (s.mode !== 'play') return;
                 s.events.push({ type: 'cue', id: 'light-hit' });
                 s.events.push({ type: 'cue', id: 'light-comment', monitorIndex: i });

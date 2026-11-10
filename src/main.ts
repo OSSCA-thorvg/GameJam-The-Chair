@@ -61,7 +61,8 @@ try {
 }
 catch {
 }
-const game = createGame({ progress: { deaths: savedDeaths, completedStage: savedCompletedStage } });
+const seed = crypto.getRandomValues(new Uint32Array(1))[0];
+const game = createGame({ seed, progress: { deaths: savedDeaths, completedStage: savedCompletedStage } });
 const effects = createEffects();
 const feedback = createFeedback(() => locale);
 const unbind = bindInput(root, game);

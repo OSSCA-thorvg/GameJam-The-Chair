@@ -115,8 +115,7 @@ export type Corridor = {
     typingCooldown: number;
     offices: { x: number; life: number; cooldown: number; nearby: boolean; phrase: number; offset: Point }[];
 };
-export function createCorridor(checkpoint = 0): Corridor {
-    const appearanceSeed = Math.floor(Math.random() * 0x100000000);
+export function createCorridor(checkpoint: number, appearanceSeed: number): Corridor {
     return {
         appearanceSeed,
         room: { kind: 'corridor' }, meetingVisited: false,

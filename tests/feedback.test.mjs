@@ -94,7 +94,7 @@ test('monitor and accident responses retain the original speaker and line', () =
 test('the monitor that hit the rider owns the speech bubble', () => {
     const state = createGame().getSnapshot();
     for (const [index, time, wall, speakerX] of [[1, 2.3, 2560, 2701], [2, .1, 2980, 3121]]) {
-        const core = createCore(0);
+        const core = createCore({ seed: 0 });
         core.mode = 'play';
         core.t = time;
         core.p.x = wall;

@@ -1,6 +1,7 @@
 import { FOCUS_DAMAGE, LEVEL } from '../level';
 import type { GameCore } from '../core';
 import { focusHit } from './focus';
+import { random } from '../rng';
 
 export type GeyserPhase = 'rest' | 'warning' | 'burst';
 export function geyserPhase(geyser: { period: number; offset: number }, t: number): { kind: GeyserPhase; age: number; remaining: number } {
@@ -14,14 +15,14 @@ export function geyserStep(s: GameCore, _dt: number) {
     const p = s.p;
     for (let i = 0; i < LEVEL.geysers.length; i++) {
         const g = LEVEL.geysers[i];
-        const phase = geyserPhase(g, s.t);
+        const phase = geyserPhase(g, s.time);
         if (phase.kind !== 'burst') continue;
         if (Math.abs(p.x - g.x) > 34) continue;
         if (p.y < LEVEL.floor - 160) continue;
         p.vy = -520;
         p.vx += (Math.sign(p.x - g.x) || 1) * 90;
-        p.w += (Math.random() - .5) * 6;
-        focusHit(s, 'paper', 1000 + i * 100 + Math.floor(s.t / g.period), FOCUS_DAMAGE.paper);
+        p.w += (random(s.rng, 'physics') - .5) * 6;
+        focusHit(s, 'paper', 1000 + i * 100 + Math.floor(s.time / g.period), FOCUS_DAMAGE.paper);
         if (s.mode !== 'play') return;
         s.events.push({ type: 'cue', id: 'light-hit' });
     }

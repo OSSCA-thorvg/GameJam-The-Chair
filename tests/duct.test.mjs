@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 const bundle = await build({ stdin: { contents: `export {createCore} from './src/game/core'; export {ductSpray,rooftopStep} from './src/game/systems/rooftop'; export {createRenderCtx} from './src/render/context'; export {rooftopDuct} from './src/render/scene/rooftop-duct';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 const { createCore, ductSpray, rooftopStep, createRenderCtx, rooftopDuct } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 function front() {
-    const s = createCore(0); s.stage = 3; s.hasExtinguisher = true;
+    const s = createCore({ seed: 0 }); s.stage = 3; s.hasExtinguisher = true;
     s.p = { x: 1600, y: 226, vx: 0, vy: 0, a: 0, w: 0 };
     return s;
 }

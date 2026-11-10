@@ -1,4 +1,5 @@
 import type { GameCore } from '../core';
+import { random } from '../rng';
 import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine } from '../stage2';
 
 function insideConvoy(s: GameCore) {
@@ -79,8 +80,9 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
     if (c.typingCooldown === 0 && !c.offices.some(office => office.life > 0)) {
         const office = c.offices.find(office => office.nearby && office.cooldown === 0);
         if (office) {
-            office.phrase = (office.phrase + 1 + Math.floor(Math.random() * (TYPING_SOUNDS.length - 1))) % TYPING_SOUNDS.length;
-            office.offset = { x: (Math.random() - .5) * 140, y: 22 + Math.random() * 132 };
+            office.phrase = (office.phrase + 1 + Math.floor(random(s.rng, 'cosmetic') * (TYPING_SOUNDS.length - 1))) % TYPING_SOUNDS.length;
+            const offsetX = (random(s.rng, 'cosmetic') - .5) * 140;
+            office.offset = { x: offsetX, y: 22 + random(s.rng, 'cosmetic') * 132 };
             office.life = 1.5;
             office.cooldown = 4.5;
             c.typingCooldown = office.life + .3;

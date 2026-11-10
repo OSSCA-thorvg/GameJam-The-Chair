@@ -44,3 +44,39 @@ export function sampleCommands(ticks, { restartAt = Math.floor(ticks * .6), spra
     commands.push([restartAt, 'setInput', 'right']);
     return commands.sort((a, b) => a[0] - b[0]);
 }
+
+// Records the commands a state-aware policy issues, so a closed-loop run becomes a fixed command list.
+export function recordCommands(seed, start, ticks, policy) {
+    const game = begin(seed, start);
+    const commands = [];
+    const recorder = new Proxy(game, {
+        get: (target, method) => (...args) => { commands.push([tick, method, ...args]); return target[method](...args); },
+    });
+    let tick = 0;
+    for (; tick < ticks; tick++) {
+        policy(game.getSnapshot(), recorder);
+        game.step();
+        game.drainEvents();
+    }
+    return commands;
+}
+
+// Holds right, keeps the chair upright, hops the office bin and waits out monitor light.
+// Geysers are driven through on purpose so their random spin gets exercised.
+export function balancePolicy(state, game) {
+    const p = state.player;
+    let wait = false;
+    if (state.stage === 1) {
+        for (const m of state.monitors) {
+            const phase = ((state.time + .5 + m.offset) % m.period + m.period) % m.period;
+            if (m.wall - p.x > 40 && m.wall - p.x < 140 && (m.active || phase < 2.1)) wait = true;
+        }
+        if (state.ground && p.x > 1495 && p.x < 1575) game.jump();
+    }
+    const correction = -p.a * 12 - p.w * 4;
+    const keys = wait ? [] : ['right'];
+    if (correction < -.4) keys.push('q');
+    if (correction > .4) keys.push('e');
+    game.setInput(...keys);
+    if (state.mode === 'dead' || state.mode === 'won') game.reset();
+}
