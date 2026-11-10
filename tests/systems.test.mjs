@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 
 // Unit tests for pure system decisions: same input, same answer, no state writes.
 const bundle = await build({
-    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning';`, resolveDir: process.cwd() },
+    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning'; export * from './src/game/systems/papers';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
 const sys = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
@@ -56,4 +56,35 @@ test('the bucket tips once when approached, splashes nearby riders and must refi
     assert.equal(again.soak, null, 'one soak per spill');
     const far = sys.cleaningStep({ ...input, p: { x: 600, y: 392 } }, 1 / 120);
     assert.equal(far.splash, false);
+});
+
+test('the copier aims, waits, then fires a four-sheet burst; the first shot is harmless', () => {
+    const copier = { x: 750, cool: 0, burst: 0, next: 0, dir: -1 };
+    assert.equal(sys.copierStep(copier, 0, 200, true, 1 / 120).volley, 0, 'too far to notice');
+    assert.equal(sys.copierStep(copier, 0, 500, false, 1 / 120).volley, 0, 'only in the office');
+    let state = { copier, volley: 0 };
+    let shots = 0;
+    for (let i = 0; i < 200; i++) {
+        const r = sys.copierStep(state.copier, state.volley, 500, true, 1 / 120);
+        state = r;
+        if (r.fire) shots++;
+    }
+    assert.equal(state.volley, 1);
+    assert.equal(state.copier.dir, -1);
+    assert.equal(shots, 4);
+    const first = sys.paperShot(state.copier, 1, 0);
+    assert.equal(first.length, 4);
+    assert.ok(first.every(paper => paper.safe && paper.vx < 0));
+    assert.ok(sys.paperShot(state.copier, 1, 1).every(paper => !paper.safe));
+});
+
+test('sheets that reach the rider are reported once, in order, without touching the input', () => {
+    const paper = { x: 500, y: 342, vx: 0, vy: 0, a: 0, w: 0, life: 5, hit: false, landed: false, volley: 2, safe: false };
+    const papers = [paper, { ...paper, volley: 3 }, { ...paper, safe: true }];
+    const r = sys.papersStep(papers, { x: 500, y: 392 }, false, 1 / 120);
+    assert.deepEqual(r.hits.map(hit => [hit.index, hit.focus.id]), [[0, 2], [1, 3]]);
+    assert.equal(paper.hit, false);
+    assert.equal(sys.papersStep(r.papers, { x: 500, y: 392 }, false, 1 / 120).hits.length, 0);
+    assert.equal(sys.papersStep(papers, { x: 500, y: 392 }, true, 1 / 120).hits.length, 0, 'safe inside the bin');
+    assert.equal(sys.trimPapers([{ ...paper, life: -1 }, paper]).length, 1);
 });

@@ -6,6 +6,8 @@ import type { MonitorContact } from './systems/monitor';
 import { RULES } from './level';
 import { BIN_REST } from './systems/bin';
 import type { CleaningResult } from './systems/cleaning';
+import { paperShot, trimPapers, type CopierResult, type PaperHit } from './systems/papers';
+import type { Paper } from './types';
 
 // The only place where system decisions are written into game state. Systems decide; these apply.
 // Each applier returns false when the attempt stopped (focus lost, death) so the step can end early.
@@ -72,5 +74,33 @@ export function applyCleaning(s: GameState, out: GameEvent[], result: CleaningRe
         if (!applyFocusHit(s, out, result.soak)) return false;
     }
     out.push({ type: 'water-step', dt });
+    return true;
+}
+
+export function applyCopier(s: GameState, out: GameEvent[], result: CopierResult) {
+    s.copier = result.copier;
+    s.volley = result.volley;
+    if (!result.fire) return;
+    s.papers.push(...paperShot(s.copier, s.volley, s.bursts));
+    s.bursts++;
+    out.push({ type: 'volley' });
+    if (s.bursts === 1) out.push({ type: 'cue', id: 'first-volley' });
+}
+
+export function applyPapers(s: GameState, out: GameEvent[], result: { papers: Paper[]; hits: readonly PaperHit[] }, dt: number) {
+    for (const hit of result.hits) {
+        s.paperHits++;
+        if (!applyFocusHit(s, out, hit.focus)) {
+            // Play stops at this sheet: later sheets keep their previous positions this tick.
+            s.papers = [...result.papers.slice(0, hit.index + 1), ...s.papers.slice(hit.index + 1)];
+            return false;
+        }
+        s.p.vx *= .88;
+        s.p.w += hit.vx * .0009;
+        s.paperPenaltyRemaining = RULES.paperPenalty;
+        out.push({ type: 'cue', id: 'paper-hit' });
+    }
+    s.papers = trimPapers(result.papers);
+    out.push({ type: 'particles-step', dt });
     return true;
 }

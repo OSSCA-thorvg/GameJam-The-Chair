@@ -8,10 +8,10 @@ import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages';
 import type { DeepReadonly, Point } from './types';
 import { applyCommand, spray, type Command } from './commands';
 import { focusStep, advanceFocusLoss } from './systems/focus';
-import { shoot, particlesStep } from './systems/papers';
+import { copierStep, papersStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
 import { geyserHits } from './systems/geyser';
-import { applyBinFall, applyCleaning, applyGeyserHits, applyMonitorContact } from './apply';
+import { applyBinFall, applyCleaning, applyCopier, applyGeyserHits, applyMonitorContact, applyPapers } from './apply';
 import { monitorContact } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
 import { meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
@@ -92,22 +92,8 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     }
     if (s.stage === 2 && meetingStep(s, dt)) return;
     if (s.stage === 2 && liftRideStep(s, out, dt)) return;
-    if (s.stage === 1 && (s.volley > 0 || Math.abs(s.p.x - s.copier.x) < 350) && s.copier.cool === 0 && s.copier.burst === 0) {
-        s.copier.dir = s.p.x < s.copier.x ? -1 : 1;
-        s.volley++;
-        s.copier.burst = 4;
-        s.copier.next = .75;
-        s.copier.cool = 1.45;
-    }
-    if (s.copier.burst > 0) {
-        s.copier.next -= dt;
-        if (s.copier.next <= 0) {
-            shoot(s, out);
-            s.copier.burst--;
-            s.copier.next = .19;
-        }
-    }
-    particlesStep(s, out, dt);
+    applyCopier(s, out, copierStep(s.copier, s.volley, s.p.x, s.stage === 1, dt));
+    applyPapers(s, out, papersStep(s.papers, s.p, s.inBin, dt), dt);
     if (s.mode !== 'play') return;
     if (s.stage === 1) {
         applyCleaning(s, out, cleaningStep(s, dt), dt);
