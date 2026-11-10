@@ -62,10 +62,7 @@ test('corridor and meeting render finite vector paths in both languages and narr
         if (state.canEnterMeeting && !visited) { game.interact(); visited = true; }
         if (state.corridor.dispatchAge > 1.8 && state.corridor.dispatchAge < 2.1 && !frames.has('chairs')) frames.set('chairs', state);
         if (state.corridor.room.kind === 'meeting' && state.corridor.room.age > 3.7 && !frames.has('meeting')) frames.set('meeting', state);
-        if (state.corridor.cart && !frames.has('cart')) {
-            assert.ok(state.corridor.cart.x > state.player.x, 'delivery warning must precede the player crossing');
-            frames.set('cart', state);
-        }
+        if (state.corridor.pace === 'express' && state.corridor.chat.kind === 'rush' && !frames.has('rush')) frames.set('rush', state);
         if (frames.size === 4) break;
         assert.equal(state.mode, 'play');
         const waitingForMeeting = !visited && state.player.x > 510;
@@ -73,7 +70,7 @@ test('corridor and meeting render finite vector paths in both languages and narr
         game.setInput(...(waitingForMeeting ? (state.player.vx > 10 ? ['left'] : state.player.vx < -10 ? ['right'] : []) : ['right']), ...(correction < -.4 ? ['q'] : correction > .4 ? ['e'] : []));
         game.step(1/120); game.drainEvents();
     }
-    assert.deepEqual(new Set(frames.keys()), new Set(['entrance', 'chairs', 'meeting', 'cart']));
+    assert.deepEqual(new Set(frames.keys()), new Set(['entrance', 'chairs', 'meeting', 'rush']));
     for (const [name, state] of frames) for (const locale of ['en', 'ko']) for (const width of [540, 1000]) {
         const frame = render(state, locale, width);
         if (name === 'entrance') assert.ok(frame.labels.some(({ text }) => text === (locale === 'en' ? '↓ Enter' : '↓ 들어가기')));

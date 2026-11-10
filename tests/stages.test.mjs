@@ -12,13 +12,12 @@ function geyserBursting(g, t) {
     return p >= 2.0;
 }
 function drive(game, stop = state => state.mode !== 'play', options = {}) {
-    const seen = { checkpoints: new Set(), cartHit: false, airborneAtCart: false };
+    const seen = { checkpoints: new Set(), express: false };
     for (let i = 0; i < 120 * 60; i++) {
         const state = game.getSnapshot(), p = state.player;
         const simT = state.time;
         seen.checkpoints.add(state.checkpoint);
-        seen.cartHit ||= !!state.corridor.cart?.hit;
-        seen.airborneAtCart ||= !!state.corridor.cart && Math.abs(state.corridor.cart.x - p.x) < 100 && p.y < 320;
+        seen.express ||= state.corridor.pace === 'express';
         if (stop(state)) return { state, seen };
         let hazardWait = false;
         if (state.stage === 1) {
@@ -26,20 +25,21 @@ function drive(game, stop = state => state.mode !== 'play', options = {}) {
                 if (g.x - p.x > 10 && g.x - p.x < 70 && geyserBursting(g, simT + .4)) { hazardWait = true; break; }
             }
         }
-        const dodging = options.dodge && state.corridor.cart && state.corridor.cart.x - p.x > 0 && state.corridor.cart.x - p.x < 400;
         const correction = -p.a * 12 - p.w * 4;
-        const keys = (hazardWait && !dodging) ? [] : ['right'];
+        const keys = hazardWait ? [] : ['right'];
         if (correction < -.4) keys.push('q');
         if (correction > .4) keys.push('e');
         game.setInput(...keys);
-        if (options.dodge && state.ground && state.corridor.cart && state.corridor.cart.x - p.x > 0 && state.corridor.cart.x - p.x < 245) game.jump();
+        // The express convoy heads into the clock-out lift; leap off it unless the test wants the ride.
+        const { convoy, pace } = state.corridor;
+        if (!options.stayAboard && convoy === 'carried' && pace === 'express' && state.ground) game.jump();
         game.step(dt);
         game.drainEvents();
     }
     assert.fail('Route did not finish within 60 simulated seconds');
 }
 
-test('stage2 completes through chair dispatch and elevator cart', () => {
+test('stage2 completes through chair dispatch and the clock-out lift', () => {
     const game = createGame(); game.startStage(2);
     const { state, seen } = drive(game);
     assert.equal(state.mode, 'won');
@@ -48,57 +48,33 @@ test('stage2 completes through chair dispatch and elevator cart', () => {
     assert.equal(state.checkpoint, 3);
     assert.deepEqual([...seen.checkpoints], [0, 1, 2, 3]);
     assert.ok(state.furniture.every(chair => chair.released));
-    assert.ok(seen.cartHit, 'one cart collision remains recoverable');
+    assert.ok(seen.express, 'the convoy speeds up before the lift');
+    assert.notEqual(state.corridor.departure.kind, 'none', 'the chairs head into the lift');
+    assert.notEqual(state.corridor.departure.reason, 'abduction', 'the rider is not taken along');
     assert.equal(state.bursts, 0);
     assert.equal(state.cleaningSpilled, false);
 });
 
-test('document piles lift the rider, chairs, and delivery cart without blocking the route', () => {
-    const random = Math.random;
-    Math.random = () => .4;
-    let game;
-    try { game = createGame(); game.startStage(2); } finally { Math.random = random; }
-    const piles = game.getSnapshot().corridor.paperPiles;
-    assert.equal(piles.length, 5);
-    assert.ok(piles.every(pile => pile.x - pile.halfWidth > 2200 && pile.x + pile.halfWidth < 3250));
-    const lowest = { rider: 420, chair: 420, cart: 420 };
-    const { state } = drive(game, snapshot => {
-        const rider = snapshot.player;
-        if (rider.x > 2250 && rider.x < 3200 && snapshot.ground) lowest.rider = Math.min(lowest.rider, rider.y + 28);
-        for (const chair of snapshot.furniture) if (chair.x > 2250 && chair.x < 3200) lowest.chair = Math.min(lowest.chair, chair.y);
-        const cart = snapshot.corridor.cart;
-        if (cart && cart.x > 2250 && cart.x < 3200) lowest.cart = Math.min(lowest.cart, cart.y);
-        return snapshot.mode !== 'play';
-    });
-    assert.equal(state.mode, 'won');
-    assert.ok(lowest.rider < 415, `rider never climbed a pile: ${lowest.rider}`);
-    assert.ok(lowest.chair < 415, `chairs never climbed a pile: ${lowest.chair}`);
-    assert.ok(lowest.cart < 415, `cart never climbed a pile: ${lowest.cart}`);
-});
-
-test('cart shove remains recoverable when random draws are high', () => {
-    const random = Math.random;
-    Math.random = () => .99;
-    try {
-        const game = createGame(); game.startStage(2);
-        const { state, seen } = drive(game);
-        assert.ok(seen.cartHit);
-        assert.equal(state.mode, 'won');
-    } finally {
-        Math.random = random;
-    }
-});
-
-test('jumping over the cart also leads to the exit without losing focus', () => {
+test('staying aboard the express convoy ends in a forced clock-out', () => {
     const game = createGame(); game.startStage(2);
-    const { state, seen } = drive(game, undefined, { dodge: true });
+    const { state } = drive(game, undefined, { stayAboard: true });
+    assert.equal(state.mode, 'dead');
+    assert.equal(state.lossReason, 'lift');
+    assert.equal(state.deaths, 1);
+    assert.equal(state.corridor.departure.kind, 'lost');
+    game.reset();
+    assert.equal(game.getSnapshot().mode, 'play');
+    assert.equal(game.getSnapshot().checkpoint, 2, 'retry starts from the last flag before the lift');
+});
+
+test('leaping off the express convoy reaches the exit without losing focus', () => {
+    const game = createGame(); game.startStage(2);
+    const { state } = drive(game);
     assert.equal(state.mode, 'won');
     assert.equal(state.deaths, 0);
-    assert.equal(seen.cartHit, false);
-    assert.ok(seen.airborneAtCart);
     assert.equal(state.focus, 100);
+    assert.ok(state.player.x >= state.level.goal);
 });
-
 
 test('restart resumes at the last reached checkpoint and stage selection starts fresh', () => {
     const game = createGame();
@@ -134,10 +110,11 @@ test('three chairs are dispatched in sequence and snapshots cannot edit them', (
     const state = game.getSnapshot();
     assert.ok(state.furniture.every(c => c.x > 680));
     state.player.x = 99999; state.furniture[0].x = 99999;
-    state.corridor.cartHits = 999;
+    const convoy = state.corridor.convoy;
+    state.corridor.convoy = convoy === 'free' ? 'carried' : 'free';
     assert.ok(game.getSnapshot().player.x < 1000);
     assert.ok(game.getSnapshot().furniture[0].x < 2000);
-    assert.equal(game.getSnapshot().corridor.cartHits, 0);
+    assert.equal(game.getSnapshot().corridor.convoy, convoy);
 });
 
 
@@ -273,7 +250,7 @@ test('the office flag restores focus when first reached after a distraction', ()
     assert.equal(game.getSnapshot().focus, 100);
 
     game.setInput('left');
-    for (let i = 0; i < 120 * 20 && game.getSnapshot().player.x > 750; i++) game.step(dt);
+    for (let i = 0; i < 120 * 20 && game.getSnapshot().player.x > 1150; i++) game.step(dt);
     assert.ok(game.getSnapshot().focus < 100);
     game.setInput('right');
     for (let i = 0; i < 120 * 20 && game.getSnapshot().player.x < 1450; i++) game.step(dt);
