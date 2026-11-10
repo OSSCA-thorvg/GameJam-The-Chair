@@ -3,7 +3,7 @@ import type { DuctBurst } from './stage3';
 import { STAGE_TWO, createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
 import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Point, Snapshot } from './types';
 
-export type FocusNotice = { kind: 'paper' | 'water' | 'light' | 'door' | 'cart'; life: number };
+export type FocusNotice = { kind: 'paper' | 'water' | 'light' | 'door'; life: number };
 export type Impact = { frames: Snapshot[]; elapsed: number; point: Point };
 export type Solid = { p: Point[]; practice?: true };
 
