@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 
 // Unit tests for pure system decisions: same input, same answer, no state writes.
 const bundle = await build({
-    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor';`, resolveDir: process.cwd() },
+    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
 const sys = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
@@ -29,4 +29,15 @@ test('a lit monitor pushes the chair back the way it came', () => {
     assert.equal(sys.monitorContact({ x: 2110, y: 200 }, 2100, lit), null, 'above the screens');
     assert.deepEqual(sys.monitorContact({ x: 2110, y: 392 }, 2100, lit), { index: 0, x: 2065, vx: -65, focus: { kind: 'light', id: 0, damage: 30 } });
     assert.equal(sys.monitorContact({ x: 2110, y: 392 }, 2120, lit).vx, 65, 'from the right');
+});
+
+test('the office bin catches a falling chair over its opening only', () => {
+    const over = { x: 1660, y: 380, vx: 0, vy: 50, a: 0, w: 0 };
+    assert.equal(sys.fallsIntoBin(over, 0), true);
+    assert.equal(sys.fallsIntoBin({ ...over, vy: -10 }, 0), false, 'rising');
+    assert.equal(sys.fallsIntoBin(over, .5), false, 'cooling down');
+    assert.equal(sys.fallsIntoBin({ ...over, x: 1590 }, 0), false, 'on the rim');
+    assert.equal(sys.fellOffFloor({ x: 0, y: 671 }), true);
+    assert.equal(sys.fellOffFloor({ x: 0, y: 670 }), false);
+    assert.throws(() => { sys.BIN_REST.x = 0; });
 });

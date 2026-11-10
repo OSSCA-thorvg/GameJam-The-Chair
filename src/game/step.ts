@@ -11,11 +11,11 @@ import { focusStep, advanceFocusLoss } from './systems/focus';
 import { shoot, particlesStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
 import { geyserHits } from './systems/geyser';
-import { applyGeyserHits, applyMonitorContact } from './apply';
+import { applyBinFall, applyGeyserHits, applyMonitorContact } from './apply';
 import { monitorContact } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
 import { meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
-import { binEnter } from './systems/bin';
+import { fallsIntoBin, fellOffFloor } from './systems/bin';
 
 // Modes in which fixed steps advance the game. Others wait for a command.
 export const SIMULATED: readonly Mode[] = ['play', 'impact', 'focuslost'];
@@ -162,9 +162,8 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     p.x += p.vx * dt;
     p.y += p.vy * dt;
     p.a += p.w * dt;
-    const bin = LEVEL.bin;
-    if (s.stage === 1 && s.binCooldown === 0 && p.x > bin.a + 25 && p.x < bin.b - 25 && p.y + 28 >= bin.rim && p.vy >= 0) {
-        binEnter(s, out);
+    if (s.stage === 1 && fallsIntoBin(p, s.binCooldown)) {
+        applyBinFall(s, out);
         return;
     }
     if (s.stage === 2) corridorStep(s, dt, prev);
@@ -254,13 +253,13 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     if (s.slip && Math.abs(p.vx) > 90 && Math.floor(s.time * 30) !== Math.floor((s.time - dt) * 30)) {
         out.push({ type: 'speck', x: p.x - 15, vx: -p.vx * .2 });
     }
-    if (p.y > F + 250) {
+    if (fellOffFloor(p)) {
         if (s.stage >= 2) {
             s.deaths++;
             resetAttempt(s, out);
             return;
         }
-        binEnter(s, out);
+        applyBinFall(s, out);
         return;
     }
     if (s.stage <= 2 && p.x > STAGES[s.stage].goal) {

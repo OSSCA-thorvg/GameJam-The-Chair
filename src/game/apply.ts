@@ -4,6 +4,7 @@ import { focusHit, type FocusHit } from './systems/focus';
 import type { GeyserHit } from './systems/geyser';
 import type { MonitorContact } from './systems/monitor';
 import { RULES } from './level';
+import { BIN_REST } from './systems/bin';
 
 // The only place where system decisions are written into game state. Systems decide; these apply.
 // Each applier returns false when the attempt stopped (focus lost, death) so the step can end early.
@@ -39,4 +40,19 @@ export function applyMonitorContact(s: GameState, out: GameEvent[], contact: Mon
     out.push({ type: 'cue', id: 'light-hit' });
     out.push({ type: 'cue', id: 'light-comment', monitorIndex: contact.index });
     return true;
+}
+
+export function applyBinFall(s: GameState, out: GameEvent[]) {
+    if (s.mode !== 'play') return;
+    s.inBin = true;
+    s.dirty = true;
+    s.binFalls++;
+    s.deaths++;
+    s.lossReason = 'bin';
+    s.p = { ...BIN_REST };
+    s.keys = [];
+    s.mode = 'dead';
+    out.push({ type: 'cue', id: 'bin-fall' });
+    out.push({ type: 'cue', id: 'bin-comment' });
+    out.push({ type: 'cue', id: 'bin-game-over' });
 }

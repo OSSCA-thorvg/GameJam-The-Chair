@@ -1,22 +1,16 @@
 import { LEVEL } from '../level';
-import type { GameCore } from '../state';
-import type { GameEvent } from '../types';
+import type { Player, Point } from '../types';
 
-export function binEnter(s: GameCore, out: GameEvent[]) {
-    if (s.mode !== 'play') return;
-    const F = LEVEL.floor;
-    s.inBin = true;
-    s.dirty = true;
-    s.binFalls++;
-    s.deaths++;
-    s.lossReason = 'bin';
-    s.p.x = LEVEL.bin.x;
-    s.p.y = F + 66;
-    s.p.vx = s.p.vy = s.p.w = 0;
-    s.p.a = .1;
-    s.keys = [];
-    s.mode = 'dead';
-    out.push({ type: 'cue', id: 'bin-fall' });
-    out.push({ type: 'cue', id: 'bin-comment' });
-    out.push({ type: 'cue', id: 'bin-game-over' });
+// Dropping onto the open office bin while falling catches the chair.
+export function fallsIntoBin(p: Readonly<Player>, binCooldown: number) {
+    const bin = LEVEL.bin;
+    return binCooldown === 0 && p.x > bin.a + 25 && p.x < bin.b - 25 && p.y + 28 >= bin.rim && p.vy >= 0;
 }
+
+// Falling off the office floor also ends in the bin.
+export function fellOffFloor(p: Readonly<Point>) {
+    return p.y > LEVEL.floor + 250;
+}
+
+// Where the chair rests once inside the bin.
+export const BIN_REST: Readonly<Player> = Object.freeze({ x: LEVEL.bin.x, y: LEVEL.floor + 66, vx: 0, vy: 0, a: .1, w: 0 });
