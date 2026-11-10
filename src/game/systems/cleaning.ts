@@ -41,3 +41,9 @@ export function cleaningStep(input: { p: Readonly<Point>; cleaning: Readonly<Cle
     }
     return { cleaning, bucket, splash, followup, soak };
 }
+
+// Rolling over the spreading puddle makes the wheels slip.
+export function slipping(p: Readonly<Point>, cleaning: Readonly<Cleaning>, grounded: boolean) {
+    return grounded && cleaning.spilled && p.x > cleaning.a
+        && p.x < cleaning.a + Math.min(1, cleaning.age / .8) * (cleaning.b - cleaning.a) && p.y > LEVEL.floor - 55;
+}

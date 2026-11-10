@@ -3,7 +3,7 @@ import { CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES
 import { STAGE_THREE } from './stage3';
 import { STAGE_FOUR } from './stage4';
 import { polyRect } from './geometry';
-import { configHash, deepFreeze } from './freeze';
+import { configHash, deepFreeze } from './data';
 import type { DeepReadonly, Person, Point } from './types';
 
 // Where the chair must be for a checkpoint to save. x: [left, right), y: (top, bottom).

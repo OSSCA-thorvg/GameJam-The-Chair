@@ -40,12 +40,10 @@ for (const stage of [1, 2, 3]) {
         const endTick = JSON.parse(final).tick;
         assert.ok(session.log.length > 10, 'play produced commands');
 
-        const fromStart = JSON.parse(session.start);
-        replayCommands(fromStart, session.log, endTick);
+        const fromStart = replayCommands(JSON.parse(session.start), session.log, endTick).state;
         assert.equal(JSON.stringify(fromStart), final, 'whole session');
 
-        const fromAttempt = JSON.parse(attempt.start);
-        replayCommands(fromAttempt, attempt.log, endTick);
+        const fromAttempt = replayCommands(JSON.parse(attempt.start), attempt.log, endTick).state;
         assert.equal(JSON.stringify(fromAttempt), final, 'last attempt');
     });
 }

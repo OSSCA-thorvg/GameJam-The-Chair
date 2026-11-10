@@ -1,9 +1,10 @@
 import type { StageId } from './stage2';
 import { LEVEL, FIXED_STEP } from './level';
 import type { Input, DeepReadonly, GameEvent } from './types';
-import { createCore, serializeState, restoreState, type Progress } from './state';
-import { applyCommand, type Command } from './commands';
-import { SIMULATED, stageSolids, stepGame } from './step';
+import { clonePlain } from './data';
+import { cloneState, createCore, parseState, serializeState, type GameState as CoreState, type Progress } from './state';
+import type { Command } from './commands';
+import { SIMULATED, applyCommand, stageSolids, stepGame } from './step';
 import { STAGES } from './stages';
 import { focusBlocked } from './systems/focus';
 import { applyFocusLoss, applyImpact } from './apply';
@@ -11,7 +12,8 @@ import { monitorPhase } from './systems/monitor';
 import { canEnterMeeting } from './systems/corridor';
 
 export type { Command } from './commands';
-export { stepGame, replayCommands, type CommandLog } from './step';
+export { stepGame, applyCommand, replayCommands, type CommandLog, type StepResult } from './step';
+export { createCore, parseState, type GameState as CoreState } from './state';
 export { CONFIG_VERSION } from './stages';
 
 export type GameOptions = {
@@ -24,10 +26,11 @@ export type GameOptions = {
     onCommand?: (tick: number, command: Command) => void;
 };
 
-// Imperative shell around the deterministic core: holds the state, turns real frame time into fixed
-// steps, records commands and buffers events for the presentation layer.
+// Imperative shell around the deterministic core: holds the current state, turns real frame time into
+// fixed steps, records commands and buffers events for the presentation layer. Each step or command
+// produces a new state object; the shell only swaps which one it holds.
 export function createGame(options: GameOptions = {}) {
-    const s = createCore({ seed: options.seed ?? 0, deaths: options.progress?.deaths, completedStage: options.progress?.completedStage });
+    let s: CoreState = createCore({ seed: options.seed ?? 0, deaths: options.progress?.deaths, completedStage: options.progress?.completedStage });
     // Real frame time waiting to become fixed steps. Shell-only: it never reaches game state.
     let acc = 0;
     const pending: GameEvent[] = [];
@@ -38,12 +41,12 @@ export function createGame(options: GameOptions = {}) {
     }
 
     function send(command: Command) {
-        const out: GameEvent[] = [];
         // Record before applying so a reset's new attempt starts after the command that caused it.
         options.onCommand?.(s.tick, command);
-        applyCommand(s, command, out);
+        const result = applyCommand(s, command);
+        s = result.state;
         if (command.type === 'pause' || command.type === 'reset' || command.type === 'restart' || command.type === 'startStage') acc = 0;
-        emit(out);
+        emit(result.events);
     }
 
     function setKeys(keys: Input[]) {
@@ -52,11 +55,24 @@ export function createGame(options: GameOptions = {}) {
     }
 
     function tick() {
-        emit(stepGame(s));
+        const result = stepGame(s);
+        s = result.state;
+        emit(result.events);
     }
 
+    // Preview-only scrubbing at arbitrary frame times. Never used by real play or replays.
+    function preview(run: (next: CoreState, out: GameEvent[]) => void) {
+        const next = cloneState(s);
+        const out: GameEvent[] = [];
+        run(next, out);
+        s = next;
+        emit(out);
+    }
+
+    // Every call returns a copy the caller owns (UI and tests may edit it). States are never modified
+    // after a step, so a shared read-only view would be safe for the core, but it would change this contract.
     function getSnapshot() {
-        return structuredClone({
+        return clonePlain({
             game: STAGES[s.stage].name,
             spray: { burst: s.sprayBurst, cooldown: s.sprayCooldown, dir: s.sprayDir },
             lessons: s.lessons,
@@ -153,12 +169,12 @@ export function createGame(options: GameOptions = {}) {
         step: (_dt?: number) => tick(),
         advance,
         // Preview-only scrubbing at arbitrary frame times. Never used by real play or replays.
-        advanceImpact: (dt: number) => emit(withEvents(out => applyImpact(s, out, dt))),
-        advanceFocusLoss: (dt: number) => emit(withEvents(out => applyFocusLoss(s, out, dt))),
+        advanceImpact: (dt: number) => preview((next, out) => applyImpact(next, out, dt)),
+        advanceFocusLoss: (dt: number) => preview((next, out) => applyFocusLoss(next, out, dt)),
         /** Full game state as JSON. Restoring it into any game continues the run exactly. */
         serialize: () => serializeState(s),
         restore(json: string) {
-            restoreState(s, json);
+            s = parseState(json);
             acc = 0;
         },
         getSnapshot: getSnapshot as () => DeepReadonly<ReturnType<typeof getSnapshot>>,
@@ -166,12 +182,6 @@ export function createGame(options: GameOptions = {}) {
             return pending.splice(0);
         },
     };
-}
-
-function withEvents(run: (out: GameEvent[]) => void) {
-    const out: GameEvent[] = [];
-    run(out);
-    return out;
 }
 
 export type Game = ReturnType<typeof createGame>;

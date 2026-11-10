@@ -2,7 +2,7 @@
 import { build } from 'esbuild';
 
 const bundle = await build({ entryPoints: ['src/game/game.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
-export const { createGame, replayCommands, stepGame } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+export const { createGame, replayCommands, stepGame, applyCommand } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 
 // A command is [tick, method, ...args]; it runs before the given fixed step.
 // start = { progress?, stage? } describes the state before the first step.

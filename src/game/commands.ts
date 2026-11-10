@@ -15,8 +15,9 @@ export type Command =
     | { type: 'restart' }
     | { type: 'startStage'; id: StageId };
 
-// Commands take effect immediately, between fixed steps, even while paused.
-export function applyCommand(s: GameState, command: Command, out: GameEvent[]) {
+// Commands take effect immediately, between fixed steps, even while paused. Writes into `s`;
+// stepGame/applyCommand in step.ts are the pure entry points.
+export function runCommand(s: GameState, command: Command, out: GameEvent[]) {
     switch (command.type) {
         case 'keys': s.keys = [...command.keys]; return;
         case 'jump': jump(s); return;

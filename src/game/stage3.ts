@@ -1,5 +1,5 @@
 import type { Point } from './types';
-import { deepFreeze } from './freeze';
+import { deepFreeze } from './data';
 
 const blocks = [
     { id: 'room', x: -400, y: 420, width: 850, height: 380 },

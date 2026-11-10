@@ -2,10 +2,11 @@ import { LEVEL, RULES } from './level';
 import type { FocusNotice } from './systems/focus';
 import type { Impact } from './systems/impact';
 import type { DuctReaction, FirstFlight, RooftopEntrance } from './systems/rooftop';
-import { STAGE_TWO, createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
+import { createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
 import { STAGES, stageSpawn } from './stages';
+import { clonePlain } from './data';
 import { randomUint32, seedRng, type Rng } from './rng';
-import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Point, Snapshot } from './types';
+import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Snapshot } from './types';
 
 
 // Survives a restart. Only stage selection and checkpoints change it.
@@ -200,24 +201,20 @@ export function serializeState(s: GameState): string {
     return JSON.stringify(s);
 }
 
-// Replaces the contents of `s` in place so holders of the object see the restored state.
-export function restoreState(s: GameState, json: string) {
-    const state = JSON.parse(json) as GameState;
-    for (const key of Object.keys(s) as (keyof GameState)[]) delete (s as Partial<GameState>)[key];
-    Object.assign(s, state);
+export function parseState(json: string): GameState {
+    return JSON.parse(json) as GameState;
 }
 
-export function hasKey(s: GameState, input: Input) {
-    return s.keys.includes(input);
-}
-
-export function clearKeys(s: GameState) {
-    s.keys = [];
-}
-
+// Rewind frames are frozen: once recorded they are shared between states, never copied or edited.
 export function snapshot(s: GameState): Snapshot {
-    return { p: { ...s.p } };
+    return Object.freeze({ p: Object.freeze({ ...s.p }) }) as Snapshot;
 }
 
-// re-exports used by systems
-export { STAGE_TWO };
+// Copy for the pure step. Plain recursive copy is several times faster than structuredClone here,
+// and the rewind history (most of the state) shares its frozen frames.
+export function cloneState(s: Readonly<GameState>): GameState {
+    const { history, ...rest } = s;
+    const copy = clonePlain(rest) as GameState;
+    copy.history = history.slice();
+    return copy;
+}

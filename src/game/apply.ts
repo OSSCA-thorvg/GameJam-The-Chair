@@ -19,7 +19,7 @@ import { ductSprayed, entranceStep, flightStep, launchShot, rooftopStep } from '
 // Each applier returns false when the attempt stopped (focus lost, death) so the step can end early.
 
 // Player updates keep the same object: the play step holds a reference to it for the whole tick.
-function setPlayer(s: GameState, p: Readonly<GameState['p']>) {
+export function setPlayer(s: GameState, p: Readonly<GameState['p']>) {
     Object.assign(s.p, p);
 }
 

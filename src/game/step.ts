@@ -1,57 +1,87 @@
-import { LEVEL, FIXED_STEP } from './level';
-import type { GameEvent, Mode } from './types';
-import { clamp, contact } from './geometry';
-import { resetAttempt, startStage, snapshot, type GameState } from './state';
+import { FIXED_STEP } from './level';
+import type { DeepReadonly, GameEvent, Mode, Point } from './types';
+import { cloneState, resetAttempt, startStage, snapshot, type GameState } from './state';
 import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages';
-import type { DeepReadonly, Point } from './types';
-import { applyCommand, spray, type Command } from './commands';
+import { runCommand, spray, type Command } from './commands';
+import { drivePlayer, collide } from './physics';
 import { copierStep, papersStep } from './systems/papers';
-import { cleaningStep } from './systems/cleaning';
+import { cleaningStep, slipping } from './systems/cleaning';
 import { geyserHits } from './systems/geyser';
-import { applyBinFall, applyCleaning, applyCopier, applyFlight, applyGeyserHits, applyMonitorContact, applyPapers, applyRooftop, applyRooftopEntrance, applySky, applyFocusLoss, applyFocusRecovery, applyHeadHit, applyImpact, applyConvoyLanding, applyCorridor, applyLiftRide, applyMeeting } from './apply';
 import { monitorContact } from './systems/monitor';
 import { fallsIntoBin, fellOffFloor } from './systems/bin';
+import {
+    applyBinFall, applyCleaning, applyConvoyLanding, applyCopier, applyCorridor, applyFlight, applyFocusLoss,
+    applyFocusRecovery, applyGeyserHits, applyHeadHit, applyImpact, applyLiftRide, applyMeeting, applyMonitorContact,
+    applyPapers, applyRooftop, applyRooftopEntrance, applySky, setPlayer,
+} from './apply';
 
 // Modes in which fixed steps advance the game. Others wait for a command.
 export const SIMULATED: readonly Mode[] = ['play', 'impact', 'focuslost'];
 
+export type StepResult = { state: GameState; events: GameEvent[] };
+
 /**
- * One fixed step (1/120 s): applies the commands that arrived before it, then advances any simulated mode.
- * Depends only on its arguments, so the same state and commands always give the same result and events.
+ * One fixed step (1/120 s): applies the commands that arrived before it, then advances the current mode.
+ * Pure from the outside: `state` is never modified, so if anything throws the previous state stays intact.
  */
-export function stepGame(s: GameState, commands: readonly Command[] = []): GameEvent[] {
-    const out: GameEvent[] = [];
-    for (const command of commands) applyCommand(s, command, out);
-    if (!SIMULATED.includes(s.mode)) return out;
-    s.tick++;
-    if (s.mode === 'play') playStep(s, out, FIXED_STEP);
-    else if (s.mode === 'impact') applyImpact(s, out, FIXED_STEP);
-    else applyFocusLoss(s, out, FIXED_STEP);
-    return out;
+export function stepGame(state: Readonly<GameState>, commands: readonly Command[] = []): StepResult {
+    const s = cloneState(state);
+    const events: GameEvent[] = [];
+    for (const command of commands) runCommand(s, command, events);
+    advanceMode(s, events);
+    return { state: s, events };
+}
+
+/** Applies one command between steps, without stepping. Pure like stepGame. */
+export function applyCommand(state: Readonly<GameState>, command: Command): StepResult {
+    const s = cloneState(state);
+    const events: GameEvent[] = [];
+    runCommand(s, command, events);
+    return { state: s, events };
+}
+
+function advanceMode(s: GameState, out: GameEvent[]) {
+    switch (s.mode) {
+        case 'play':
+            s.tick++;
+            playStep(s, out, FIXED_STEP);
+            return;
+        case 'impact':
+            s.tick++;
+            applyImpact(s, out, FIXED_STEP);
+            return;
+        case 'focuslost':
+            s.tick++;
+            applyFocusLoss(s, out, FIXED_STEP);
+            return;
+        case 'intro': case 'pause': case 'dead': case 'won':
+            return;
+    }
 }
 
 export type CommandLog = readonly (readonly [tick: number, command: Command])[];
 
 /**
- * Re-runs the commands recorded after `s` was saved, then steps on to `endTick`. Returns every event emitted.
+ * Re-runs the commands recorded after `start` was saved, then steps on to `endTick`.
  * The log must start where the saved state was taken (see the createGame recording hooks).
  */
-export function replayCommands(s: GameState, log: CommandLog, endTick: number): GameEvent[] {
+export function replayCommands(start: Readonly<GameState>, log: CommandLog, endTick: number): StepResult {
+    const s = cloneState(start);
     const events: GameEvent[] = [];
     const advanceTo = (tick: number) => {
-        while (s.tick < tick && SIMULATED.includes(s.mode)) events.push(...stepGame(s));
+        while (s.tick < tick && SIMULATED.includes(s.mode)) advanceMode(s, events);
     };
     for (const [tick, command] of log) {
         if (tick < s.tick) throw new Error(`Command at tick ${tick} precedes the saved state at tick ${s.tick}.`);
         advanceTo(tick);
-        applyCommand(s, command, events);
+        runCommand(s, command, events);
     }
     advanceTo(endTick);
-    return events;
+    return { state: s, events };
 }
 
+// One tick of normal play. Order matters: hazards, then driving, collisions, stage rules, scoring.
 function playStep(s: GameState, out: GameEvent[], dt: number) {
-    const F = LEVEL.floor;
     s.history.push(snapshot(s));
     if (s.history.length > 60) s.history.shift();
     s.time += dt;
@@ -102,7 +132,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     const prev = p.x;
     s.coyote = s.ground ? .1 : Math.max(0, s.coyote - dt);
     s.jumpQ = Math.max(0, s.jumpQ - dt);
-    s.slip = was && s.cleaning.spilled && p.x > s.cleaning.a && p.x < s.cleaning.a + Math.min(1, s.cleaning.age / .8) * (s.cleaning.b - s.cleaning.a) && p.y > F - 55;
+    s.slip = slipping(p, s.cleaning, was);
     if (s.slip && !s.wetSeen) s.wetSeen = true;
     if (s.slip && s.slipCooldown === 0 && Math.abs(p.vx) > 65) {
         out.push({ type: 'cue', id: 'slipping' });
@@ -122,75 +152,18 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     const dir = s.stage === 2 && s.corridor.convoy === 'carried' ? 0 : inputDir;
     const balancing = s.keys.includes('q') || s.keys.includes('e');
     const tilt = (s.keys.includes('e') ? 1 : 0) - (s.keys.includes('q') ? 1 : 0) + (was || balancing ? 0 : dir);
-    p.w += tilt * (was ? 4.3 : 6.4) * dt;
-    if (p.x < 300 || s.stage >= 3) {
-        p.w += (-Math.sin(p.a) * 20 - p.w * 7) * dt;
-    }
-    if (convoyJump && dir) {
-        p.vx += dir * (expressJump ? 1400 : 1200) * dt;
-    } else if (was && dir) {
-        p.vx += dir * (s.slip ? 110 : 305) * dt;
-    } else if (!was && dir) {
-        p.vx += dir * 55 * dt;
-    }
-    p.vy += 950 * dt;
-    p.vx *= Math.exp(-(convoyJump ? 0 : was ? (s.slip ? .015 : .55) : .09) * dt);
-    p.w *= Math.exp(-(was ? (s.slip ? .9 : 1.8) : .75) * dt);
-    const horizontalLimit = expressJump ? 760 : convoyJump ? 700 : 315;
-    p.vx = clamp(p.vx, -horizontalLimit, horizontalLimit);
-    p.vy = clamp(p.vy, -500, 850);
-    p.w = clamp(p.w, -5.8, 5.8);
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-    p.a += p.w * dt;
+    setPlayer(s, drivePlayer(p, { grounded: was, slip: s.slip, dir, tilt, upright: p.x < 300 || s.stage >= 3, convoyJump, expressJump }, dt));
     if (s.stage === 1 && fallsIntoBin(p, s.binCooldown)) {
         applyBinFall(s, out);
         return;
     }
     if (s.stage === 2) applyCorridor(s, dt, prev);
-    const solids = stageSolids(s);
-    const parts = LEVEL.playerContacts;
-    s.ground = false;
-    let c = Math.cos(p.a);
-    let sn = Math.sin(p.a);
-    const head = parts[7];
-    const hx = p.x - head.y * sn;
-    const hy = p.y + head.y * c;
-    for (const ob of solids) {
-        const hit = contact(hx, hy, head.r, ob);
-        if (hit && hit.ny < -.25 && hit.depth > .05) {
-            applyHeadHit(s, out, { x: hx, y: hy });
-            return;
-        }
-    }
-    for (let iter = 0; iter < 5; iter++) {
-        for (const part of parts) {
-            c = Math.cos(p.a);
-            sn = Math.sin(p.a);
-            const rx = part.x * c - part.y * sn;
-            const ry = part.x * sn + part.y * c;
-            for (const ob of solids) {
-                const hit = contact(p.x + rx, p.y + ry, part.r, ob);
-                if (!hit) continue;
-                if (part.head && hit.ny < -.25 && hit.depth > .05) {
-                    applyHeadHit(s, out, { x: p.x + rx, y: p.y + ry });
-                    return;
-                }
-                p.x += hit.nx * hit.depth * .78;
-                p.y += hit.ny * hit.depth * .78;
-                const vn = (p.vx - p.w * ry) * hit.nx + (p.vy + p.w * rx) * hit.ny;
-                const cr = rx * hit.ny - ry * hit.nx;
-                if (vn < 0) {
-                    const impulse = -1.035 * vn / (1 + cr * cr / 2500);
-                    p.vx += hit.nx * impulse;
-                    p.vy += hit.ny * impulse;
-                    p.w += cr * impulse / 2500;
-                }
-                if (part.wheel && hit.ny < -.45) {
-                    s.ground = true;
-                }
-            }
-        }
+    const hit = collide(p, stageSolids(s));
+    setPlayer(s, hit.p);
+    s.ground = hit.ground;
+    if (hit.headHit) {
+        applyHeadHit(s, out, hit.headHit);
+        return;
     }
     if (s.stage === 3) applyRooftop(s, out, dt);
     if (s.stage === 2) applyConvoyLanding(s);

@@ -1,5 +1,6 @@
 import type { Player, Point } from '../types';
 import { nextRandom } from '../rng';
+import { clonePlain } from '../data';
 import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine, type ChairDeparture, type Corridor, type Furniture } from '../stage2';
 import type { Mode } from '../types';
 
@@ -53,7 +54,7 @@ export type CorridorResult = { corridor: Corridor; furniture: Furniture[]; p: Pl
 // The building corridor: typing bubbles, the chair convoy, its chatter and the lift ride.
 // Works on its own copies; the caller writes the result back.
 export function corridorStep(input: CorridorInput, dt: number, previousX: number): CorridorResult {
-    const c: Corridor = structuredClone(input.corridor) as Corridor;
+    const c = clonePlain(input.corridor) as Corridor;
     const furniture: Furniture[] = input.furniture.map(chair => ({ ...chair }));
     const p = { ...input.p };
     const ground = input.ground;
