@@ -39,6 +39,15 @@ test('pause menu shows only cleared stages and hides spray controls until equipp
 
         continued.startStage(3);
         hud.draw(continued.getSnapshot(), feedback, effects, view);
+        assert.equal(elements.get('[data-spray-help]').hidden, true);
+        for (let i = 0; i < 1440 && !continued.getSnapshot().hasExtinguisher; i++) {
+            const state = continued.getSnapshot();
+            continued.setInput('right');
+            if (state.ground && ((state.player.x > 205 && state.player.x < 330) || (state.player.x > 370 && state.player.x < 450))) continued.jump();
+            continued.step(1 / 120);
+        }
+        assert.equal(continued.getSnapshot().hasExtinguisher, true);
+        hud.draw(continued.getSnapshot(), feedback, effects, view);
         assert.equal(elements.get('[data-spray-help]').hidden, false);
         assert.equal(elements.get('[data-spray]').hidden, false);
         continued.startStage(1);

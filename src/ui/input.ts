@@ -45,9 +45,9 @@ export function bindInput(root: HTMLElement, game: Game) {
         else if (state.mode === 'won' && state.stage === 2) game.startStage(3);
         else game.reset();
     });
-    for (const stage of [1, 2, 3] as const) {
+    for (const stage of [1, 2, 3, 4] as const) {
         button(`[data-stage="${stage}"]`, () => {
-            if (stage <= game.getSnapshot().completedStage) game.startStage(stage);
+            if (stage <= game.getSnapshot().completedStage || (stage === 4 && game.getSnapshot().completedStage >= 3)) game.startStage(stage);
         });
     }
     button('[data-reset]', game.restart);
@@ -93,13 +93,15 @@ export function bindInput(root: HTMLElement, game: Game) {
         if (k || e.code === 'Space' || e.key === 'ArrowUp' || e.key === 'f' || e.key === 'F') {
             e.preventDefault();
             if (k) game.press(k);
-            if (!e.repeat && (e.code === 'Space' || e.key === 'ArrowUp')) game.jump();
-            if (!e.repeat && (e.key === 'f' || e.key === 'F')) game.spray();
+            if (state.stage >= 3 && (e.code === 'Space' || e.key.toLowerCase() === 'f')) game.press('spray');
+            else if (!e.repeat && e.code === 'Space') game.jump();
+            if (!e.repeat && e.key === 'ArrowUp') game.jump();
         }
     }, options);
     window.addEventListener('keyup', e => {
         const key = km[e.key];
         if (key) game.release(key);
+        if (e.code === 'Space' || e.key.toLowerCase() === 'f') game.release('spray');
     }, options);
     window.addEventListener('blur', game.clearInput, options);
     document.addEventListener('visibilitychange', () => {
@@ -117,7 +119,13 @@ export function bindInput(root: HTMLElement, game: Game) {
     });
     root.querySelector<HTMLElement>('[data-jump]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.jump(); }, options);
     root.querySelector<HTMLElement>('[data-interact]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.interact(); }, options);
-    root.querySelector<HTMLElement>('[data-spray]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.spray(); }, options);
+    const sprayButton = root.querySelector<HTMLElement>('[data-spray]');
+    sprayButton?.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        game.press('spray');
+        sprayButton.setPointerCapture(e.pointerId);
+    }, options);
+    for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) sprayButton?.addEventListener(event, () => game.release('spray'), options);
     const observer = new MutationObserver(() => {
         if ((game.getSnapshot().mode === 'pause') !== menuOpen || (!!panel && !panel.hidden) !== panelOpen) syncMenu();
     });

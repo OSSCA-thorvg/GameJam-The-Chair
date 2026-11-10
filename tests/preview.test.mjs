@@ -46,24 +46,6 @@ test('copier preview plays the real three-shot volley and seeks deterministicall
     assert.deepEqual(scene.sample(1.15), fired);
 });
 
-test('fan preview shows the chair rising with active wind', () => {
-    const scene = previewScenes.find(scene => scene.id === 'fan-ride');
-    assert.ok(scene);
-    const idle = scene.sample(0).state;
-    const peak = scene.sample(.9).state;
-    assert.equal(idle.onFan, false);
-    assert.equal(peak.onFan, true);
-    assert.ok(peak.player.y < idle.player.y);
-    const falling = scene.sample(1.8).state;
-    const landed = scene.sample(1.9).state;
-    assert.equal(falling.onFan, false);
-    assert.ok(falling.player.vy > 0);
-    assert.ok(falling.player.y < idle.player.y);
-    assert.equal(landed.player.y, idle.player.y);
-    assert.equal(landed.player.vy, 0);
-    assert.equal(landed.ground, true);
-});
-
 test('impact preview replays a collision through its game-over frame', () => {
     const scene = previewScenes.find(scene => scene.id === 'head-impact');
     assert.ok(scene);
@@ -103,8 +85,8 @@ test('extinguisher preview keeps the spray plume and recoil in sync', () => {
     const start = scene.sample(0).state;
     const recoil = scene.sample(.16).state;
     assert.ok(start.spray.burst > 0);
-    assert.ok(start.spray.dir.x > 0);
-    assert.ok(recoil.player.x < start.player.x);
+    assert.ok(start.spray.dir.x < 0);
+    assert.ok(recoil.player.x > start.player.x);
     assert.ok(recoil.player.y < start.player.y);
     assert.equal(scene.sample(.5).state.spray.burst, 0);
 });

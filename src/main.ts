@@ -52,7 +52,7 @@ let savedDeaths = 0;
 let savedCompletedStage: 0 | StageId = 0;
 try {
     const saved = JSON.parse(localStorage.getItem('the-chair-office-v1') || 'null');
-    if (saved?.completedStage === 1 || saved?.completedStage === 2 || saved?.completedStage === 3) {
+    if (saved?.completedStage === 1 || saved?.completedStage === 2 || saved?.completedStage === 3 || saved?.completedStage === 4) {
         savedCompletedStage = saved.completedStage;
     }
     if (Number.isFinite(saved?.deaths)) {

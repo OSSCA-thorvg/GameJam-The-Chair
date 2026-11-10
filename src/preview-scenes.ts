@@ -1,7 +1,6 @@
 import { createGame, type Game, type GameState } from './game/game';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_TWO } from './game/stage2';
-import { STAGE_THREE, fanStrength } from './game/stage3';
 import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/systems/monitor';
@@ -138,41 +137,6 @@ function copierVolley(): PreviewScene {
         [{ at: 0, label: 'Ready' }, { at: .75, label: 'First shot' }, { at: .95, label: 'Second shot' }, { at: 1.15, label: 'Third shot' }, { at: 2.25, label: 'Fires again' }], frames);
 }
 
-function fanRide(): PreviewScene {
-    const game = createGame();
-    game.startStage(3);
-    const base = game.getSnapshot();
-    const fan = STAGE_THREE.fans[0];
-    const effects = createEffects().snapshot();
-    const floorY = fan.y - 28;
-    const duration = 2.3;
-    let y = floorY;
-    let vy = -440;
-    const frames: PreviewFrame[] = [];
-    for (let i = 0; i <= Math.round(duration / FRAME_TIME); i++) {
-        const at = i * FRAME_TIME;
-        const power = fanStrength(fan, at);
-        if (i > 0) {
-            vy += (800 - power) * FRAME_TIME;
-            y = Math.min(floorY, y + vy * FRAME_TIME);
-            if (y === floorY) vy = 0;
-        }
-        frames.push({
-            state: {
-                ...base,
-                time: at,
-                player: { ...base.player, x: fan.x, y, vy },
-                ground: y === floorY && vy === 0,
-                onFan: power > 60 && y < floorY,
-                fans: STAGE_THREE.fans.map(item => ({ ...item, active: fanStrength(item, at) > 60, power: fanStrength(item, at) })),
-            },
-            effects,
-        });
-    }
-    return recordedScene('fan-ride', 'Rooftop · Fan wind', fan.x,
-        [{ at: 0, label: 'Takeoff' }, { at: fan.period / 4, label: 'Peak wind' }, { at: fan.period / 2, label: 'Wind stops' }, { at: 1.9, label: 'Landing' }], frames);
-}
-
 function headImpact(): PreviewScene {
     const game = createGame();
     game.startStage(2);
@@ -204,24 +168,28 @@ function headImpact(): PreviewScene {
 function extinguisherSpray(): PreviewScene {
     const game = createGame();
     game.startStage(3);
+    // Reach the pickup through the real course before recording recoil.
+    for (let i = 0; i < 1440 && !game.getSnapshot().hasExtinguisher; i++) {
+        const state = game.getSnapshot();
+        game.setInput('right');
+        if (state.ground && ((state.player.x > 205 && state.player.x < 330) || (state.player.x > 370 && state.player.x < 450))) game.jump();
+        game.step(FIXED_STEP);
+    }
+    if (!game.getSnapshot().hasExtinguisher) throw new Error('Spray preview could not reach the extinguisher.');
     game.drainEvents();
     game.setInput('right');
     game.spray();
     game.setInput();
     const effects = createEffects();
     for (const event of game.drainEvents()) effects.receive(event);
-    const shift = 600;
-    const frame = () => {
-        const state = game.getSnapshot();
-        return capture(game, effects, { ...state, player: { ...state.player, x: state.player.x + shift } });
-    };
+    const frame = () => capture(game, effects);
     const frames = [frame()];
     for (let i = 0; i < 54; i++) {
         stepGame(game, effects);
         frames.push(frame());
     }
     return recordedScene('extinguisher-spray', 'Chair · Extinguisher recoil', 700,
-        [{ at: 0, label: 'Spray' }, { at: .16, label: 'Recoil' }, { at: .32, label: 'Plume ends' }, { at: .6, label: 'Landing' }], frames);
+        [{ at: 0, label: 'Spray' }, { at: .16, label: 'Recoil' }, { at: .24, label: 'Plume ends' }, { at: .6, label: 'Landing' }], frames);
 }
 
 function officeTyping(): PreviewScene {
@@ -249,5 +217,5 @@ export const previewScenes: readonly PreviewScene[] = [
         markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
-    cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), extinguisherSpray(), officeTyping(),
+    cleanerRecovery(), monitorLight(), copierVolley(), headImpact(), extinguisherSpray(), officeTyping(),
 ];

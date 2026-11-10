@@ -14,12 +14,12 @@ export type GameCore = {
     officeCheckpoint: boolean;
     skylineSeed: number;
     lessons: { moved: boolean; jumped: boolean };
-    sprayAmmo: number;
+    hasExtinguisher: boolean;
+    firstFlight: { kind: 'course'; verticalShots: number; lastShotAt: number } | { kind: 'flight'; age: number };
+    rooftopEntrance: { kind: 'opening'; age: number } | { kind: 'ready' };
     sprayCooldown: number;
-    sprayCharge: number;
     sprayBurst: number;
     sprayDir: { x: number; y: number };
-    onFan: boolean;
     deaths: number;
 
     mode: string;
@@ -89,12 +89,12 @@ export function createCore(initialDeaths: number): GameCore {
         officeCheckpoint: false,
         skylineSeed: Math.floor(Math.random() * 0x100000000),
         lessons: { moved: false, jumped: false },
-        sprayAmmo: 4,
+        hasExtinguisher: false,
+        firstFlight: { kind: 'course', verticalShots: 0, lastShotAt: -1 },
+        rooftopEntrance: { kind: 'ready' },
         sprayCooldown: 0,
-        sprayCharge: 0,
         sprayBurst: 0,
         sprayDir: { x: 0, y: 1 },
-        onFan: false,
         deaths: initialDeaths,
 
         mode: 'intro',

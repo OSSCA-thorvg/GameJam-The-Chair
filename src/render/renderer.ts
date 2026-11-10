@@ -8,6 +8,7 @@ import { createRenderCtx } from './context';
 import { drawWorld } from './scene/world';
 import { drawBuilding } from './scene/building';
 import { drawRooftop } from './scene/rooftop';
+import { drawCloudStart } from './scene/clouds';
 import { paint } from './paint';
 
 export function createRenderer(root: HTMLElement, getLocale: () => Locale = () => 'en') {
@@ -33,6 +34,7 @@ function setup(
 ) {
     const ctx = createRenderCtx(bg, lg);
     let lastTime = 0;
+    let lastStage = 0;
     let pool: Shape[] = [];
     let TVG: ThorVGNamespace | null = null;
     let tvg: Canvas | null = null;
@@ -84,8 +86,8 @@ function setup(
 
         const t = ctx.t;
         const dt = Math.max(0, t - lastTime);
-        if (t < lastTime) {
-            ctx.cam = 0;
+        if (t < lastTime || next.stage !== lastStage) {
+            ctx.cam = ctx.clamp(ctx.p.x - ctx.VW * .35, 0, Math.max(0, ctx.LEN - ctx.VW));
             ctx.wheel = 0;
         }
         if (camera !== undefined) {
@@ -95,11 +97,17 @@ function setup(
             ctx.cam += (ctx.clamp(focusX, 0, Math.max(0, ctx.LEN - ctx.VW)) - ctx.cam) * Math.min(1, dt * 7);
             ctx.wheel += ctx.p.vx * dt / 8;
         }
+        const baseVertical = Math.max(0, ctx.H / ctx.scale - 510) * .7;
+        const focusY = next.stage === 4 ? 265 : next.firstFlight.kind === 'flight' ? 330 - Math.min(1, next.firstFlight.age) * 65 : 330;
+        ctx.vertical = next.stage >= 3 ? baseVertical + Math.max(0, focusY - ctx.p.y) : baseVertical;
+        lastStage = next.stage;
         lastTime = t;
         lg.setTransform(ctx.dpr, 0, 0, ctx.dpr, 0, 0);
         lg.clearRect(0, 0, ctx.W, ctx.H);
         ctx.foregroundActors = [];
-        if (next.stage === 3) {
+        if (next.stage === 4) {
+            drawCloudStart(ctx);
+        } else if (next.stage === 3) {
             drawRooftop(ctx);
         } else if (next.stage === 2) {
             drawBuilding(ctx);

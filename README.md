@@ -25,7 +25,7 @@ Clear each stage to continue to the next. The pause menu lists cleared stages fo
 - Stage 1: dodge copier paper, spilled water, the trash bin and monitor light to leave the office.
 - Stage 2: watch a worker send three cheering chairs home, stop for a chair-only badge scan, and jump over an overtime delivery cart. Enter the extended meeting for an optional six-second scene, or continue straight to the machine room.
 
-Use Left/Right or A/D to move, Space/Up to jump, and Q/E to balance. F sprays the extinguisher once equipped in stage 3. P pauses.
+Use Left/Right or A/D to move, Space/Up to jump, and Q/E to balance. In stage 3, Up jumps; hold Space (or F) to spray after collecting the extinguisher on the lower rooftop. Sprays repeat every 0.24 seconds without an ammo limit; Left/Right steers the recoil. P pauses.
 
 Near the stage 2 meeting door, press Down to enter. Press Down again to leave early. Touch controls use the same down arrow. At the badge scanner, release the movement keys and wait for approval.
 
@@ -47,3 +47,5 @@ npm run preview
 ```
 
 Pushes to `main` automatically deploy to GitHub Pages via GitHub Actions.
+
+At the end of the stage 3 rooftop, release Left/Right and hold Space for three consecutive upward bursts. The extinguisher switches to continuous thrust, carrying the chair smoothly upward into the stage 4 starting area, where it keeps spraying and hovering in open air.
