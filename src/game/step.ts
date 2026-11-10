@@ -3,7 +3,9 @@ import { rooftopStep, firstFlightStep, rooftopEntranceStep } from './systems/roo
 import { LEVEL, FIXED_STEP } from './level';
 import type { GameEvent, Mode } from './types';
 import { clamp, contact } from './geometry';
-import { resetAttempt, startStage, snapshot, type GameState, STAGE_TWO } from './core';
+import { resetAttempt, startStage, snapshot, type GameState } from './core';
+import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages';
+import type { DeepReadonly, Point } from './types';
 import { applyCommand, spray, type Command } from './commands';
 import { focusStep, advanceFocusLoss } from './systems/focus';
 import { shoot, particlesStep } from './systems/papers';
@@ -159,56 +161,35 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     p.x += p.vx * dt;
     p.y += p.vy * dt;
     p.a += p.w * dt;
-    if (s.stage === 1 && s.binCooldown === 0 && p.x > s.bin.a + 25 && p.x < s.bin.b - 25 && p.y + 28 >= s.bin.rim && p.vy >= 0) {
+    const bin = LEVEL.bin;
+    if (s.stage === 1 && s.binCooldown === 0 && p.x > bin.a + 25 && p.x < bin.b - 25 && p.y + 28 >= bin.rim && p.vy >= 0) {
         binEnter(s, out);
         return;
     }
-    if (s.stage === 2) {
-        corridorStep(s, dt, prev);
-        for (let i = s.checkpoint + 1; i < STAGE_TWO.checkpoints.length; i++) {
-            const mark = STAGE_TWO.checkpoints[i];
-            if (p.x >= mark.x && Math.abs(p.y - mark.y) < 65) {
-                s.checkpoint = i;
-                s.focus = 100;
-                s.focusClock = 0;
-                out.push({ type: 'cue', id: 'checkpoint' });
-            }
-        }
-    }
-    s.solids = s.solids.filter(ob => !ob.practice);
-    if (s.stage <= 2 && !s.lessons.jumped) {
-        const pile = LEVEL.practicePaper;
-        s.solids.push({
-            p: [
-                { x: pile.x - pile.width / 2, y: F },
-                { x: pile.x - 3, y: F - pile.height },
-                { x: pile.x + 3, y: F - pile.height },
-                { x: pile.x + pile.width / 2, y: F },
-            ],
-            practice: true,
-        });
-    }
+    if (s.stage === 2) corridorStep(s, dt, prev);
+    const solids = stageSolids(s);
+    const parts = LEVEL.playerContacts;
     s.ground = false;
     let c = Math.cos(p.a);
     let sn = Math.sin(p.a);
-    const head = s.parts[7];
+    const head = parts[7];
     const hx = p.x - head.y * sn;
     const hy = p.y + head.y * c;
-    for (const ob of s.solids) {
-        const hit = contact(hx, hy, head.r, ob.p);
+    for (const ob of solids) {
+        const hit = contact(hx, hy, head.r, ob);
         if (hit && hit.ny < -.25 && hit.depth > .05) {
             fail(s, out, { x: hx, y: hy });
             return;
         }
     }
     for (let iter = 0; iter < 5; iter++) {
-        for (const part of s.parts) {
+        for (const part of parts) {
             c = Math.cos(p.a);
             sn = Math.sin(p.a);
             const rx = part.x * c - part.y * sn;
             const ry = part.x * sn + part.y * c;
-            for (const ob of s.solids) {
-                const hit = contact(p.x + rx, p.y + ry, part.r, ob.p);
+            for (const ob of solids) {
+                const hit = contact(p.x + rx, p.y + ry, part.r, ob);
                 if (!hit) continue;
                 if (part.head && hit.ny < -.25 && hit.depth > .05) {
                     fail(s, out, { x: p.x + rx, y: p.y + ry });
@@ -236,6 +217,8 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         monitorStep(s, out, dt, prev);
     }
     if (s.mode !== 'play') return;
+    // The rooftop saves only once the extinguisher is in hand; picking it up is checkpoint 1.
+    if (s.stage !== 3 || s.hasExtinguisher) reachCheckpoints(s, out);
     focusStep(s, dt);
     if (s.ground) {
         p.w -= Math.sin(p.a) * dt;
@@ -250,12 +233,6 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         out.push({ type: 'cue', id: 'practice-cleared' });
     }
     s.actualSpeed += (Math.abs(p.x - prev) / dt - s.actualSpeed) * (1 - Math.exp(-dt / .12));
-    if (s.stage === 1 && !s.officeCheckpoint && p.x >= 1400 && p.x < s.bin.a - 25) {
-        s.officeCheckpoint = true;
-        s.focus = 100;
-        s.focusClock = 0;
-        out.push({ type: 'cue', id: 'checkpoint' });
-    }
     if (s.ground && dir && Math.abs(p.vx) > 95 && s.rollCooldown === 0) {
         out.push({ type: 'cue', id: 'rolling' });
         s.rollCooldown = 9;
@@ -285,10 +262,27 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         binEnter(s, out);
         return;
     }
-    if (s.stage <= 2 && p.x > s.GOAL) {
+    if (s.stage <= 2 && p.x > STAGES[s.stage].goal) {
         if (s.stage > s.completedStage) s.completedStage = s.stage;
         s.mode = 'won';
         s.keys = [];
         out.push({ type: 'cue', id: 'stage-clear' });
+    }
+}
+// Static terrain plus the practice pile, which stays until the first jump lesson is done.
+export function stageSolids(s: GameState): readonly DeepReadonly<Point[]>[] {
+    const terrain = STAGES[s.stage].terrain;
+    return s.stage <= 2 && !s.lessons.jumped ? [...terrain, PRACTICE_PILE] : terrain;
+}
+
+function reachCheckpoints(s: GameState, out: GameEvent[]) {
+    const stage = STAGES[s.stage];
+    if (stage.checkpointRule === 'land' && !s.ground) return;
+    for (let i = s.checkpoint + 1; i < stage.checkpoints.length; i++) {
+        if (!inCheckpointArea(stage.checkpoints[i], s.p)) continue;
+        s.checkpoint = i;
+        s.focus = 100;
+        s.focusClock = 0;
+        out.push({ type: 'cue', id: 'checkpoint' });
     }
 }

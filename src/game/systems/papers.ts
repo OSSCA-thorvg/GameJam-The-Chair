@@ -37,7 +37,7 @@ export function particlesStep(s: GameCore, out: GameEvent[], dt: number) {
         z.vx *= Math.exp(-.8 * dt);
         z.vy += 210 * dt;
         z.a += z.w * dt;
-        const pit = z.x > s.bin.a && z.x < s.bin.b;
+        const pit = z.x > LEVEL.bin.a && z.x < LEVEL.bin.b;
         if (z.y > F - 4 && !pit) {
             z.y = F - 4;
             z.vy = 0;

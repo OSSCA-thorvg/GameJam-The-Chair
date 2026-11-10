@@ -32,18 +32,6 @@ export function rooftopStep(s: GameCore, out: GameEvent[], dt: number) {
         out.push({ type: 'cue', id: 'extinguisher-pickup' });
         out.push({ type: 'cue', id: 'checkpoint' });
     }
-    // Save only on a real landing: flying past a flag must not skip the course.
-    if (s.hasExtinguisher && s.ground) {
-        for (let i = s.checkpoint + 1; i < STAGE_THREE.checkpoints.length; i++) {
-            const mark = STAGE_THREE.checkpoints[i];
-            if (Math.abs(p.x - mark.x) < 90 && Math.abs(p.y - mark.y) < 35) {
-                s.checkpoint = i;
-                s.focus = 100;
-                s.focusClock = 0;
-                out.push({ type: 'cue', id: 'checkpoint' });
-            }
-        }
-    }
     if (p.y < STAGE_THREE.ceiling) {
         p.y = STAGE_THREE.ceiling;
         p.vy = Math.max(0, p.vy);

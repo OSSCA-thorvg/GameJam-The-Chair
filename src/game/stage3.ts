@@ -1,4 +1,5 @@
 import type { Point } from './types';
+import { deepFreeze } from './freeze';
 
 const blocks = [
     { id: 'room', x: -400, y: 420, width: 850, height: 380 },
@@ -13,7 +14,7 @@ const blocks = [
     { id: 'rail', x: 2440, y: -204, width: 20, height: 60 },
 ];
 
-export const STAGE_THREE = {
+export const STAGE_THREE = deepFreeze({
     length: 3320, goal: 2920,
     entrance: { duration: 2.6, openDuration: .85, emergeAt: .55, emergeEnd: 1.8, closeAt: 1.95, closeDuration: .65, fromX: 100, toX: 235 },
     pickup: { x: 600, y: 368 },
@@ -32,7 +33,7 @@ export const STAGE_THREE = {
         { x: b.x, y: b.y }, { x: b.x + b.width, y: b.y },
         { x: b.x + b.width, y: b.y + b.height }, { x: b.x, y: b.y + b.height },
     ]) satisfies Point[][],
-};
+});
 
 export type DuctBurst = { kind: 'first' | 'repeat'; age: number };
 export function ductTimings(kind: DuctBurst['kind']) {

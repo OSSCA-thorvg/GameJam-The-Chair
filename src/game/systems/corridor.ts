@@ -1,6 +1,7 @@
 import type { GameCore } from '../core';
 import type { GameEvent } from '../types';
 import { random } from '../rng';
+import { STAGES } from '../stages';
 import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine } from '../stage2';
 
 function insideConvoy(s: GameCore) {
@@ -130,7 +131,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
         const cruise = c.pace === 'express' ? 360 : 185;
         const speed = index === 0 ? cruise : Math.max(minimumSpeed, Math.min(cruise + 170, cruise + (target - chair.x) * 2));
         chair.vx += (speed - chair.vx) * (1 - Math.exp(-4 * dt));
-        chair.x = Math.min(s.LEN + 450 + index * 130, chair.x + chair.vx * dt);
+        chair.x = Math.min(STAGES[s.stage].length + 450 + index * 130, chair.x + chair.vx * dt);
         if (c.convoy === 'free' && p.y > 350 && Math.abs(p.x - chair.x) < 58) {
             const side = previousX < chair.x ? 1 : -1;
             chair.x += side * (58 - Math.abs(p.x - chair.x)) * (1 - Math.exp(-14 * dt));

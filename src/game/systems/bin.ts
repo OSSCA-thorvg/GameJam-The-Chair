@@ -10,7 +10,7 @@ export function binEnter(s: GameCore, out: GameEvent[]) {
     s.binFalls++;
     s.deaths++;
     s.lossReason = 'bin';
-    s.p.x = s.bin.x;
+    s.p.x = LEVEL.bin.x;
     s.p.y = F + 66;
     s.p.vx = s.p.vy = s.p.w = 0;
     s.p.a = .1;

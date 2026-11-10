@@ -1,10 +1,11 @@
 import type { Point } from './types';
 import type { Message } from '../i18n';
+import { deepFreeze } from './freeze';
 
-export const TYPING_SOUNDS = ['typing.1', 'typing.2', 'typing.3', 'typing.4', 'typing.5'] satisfies Message[];
+export const TYPING_SOUNDS = deepFreeze(['typing.1', 'typing.2', 'typing.3', 'typing.4', 'typing.5'] satisfies Message[]);
 export type StageId = 1 | 2 | 3 | 4;
 export type Furniture = { kind: 'chair'; x: number; y: number; width: number; height: number; vx: number; released: boolean; cheer: number };
-export const STAGE_TWO = {
+export const STAGE_TWO = deepFreeze({
     length: 4000, goal: 3780,
     meeting: 620,
     lift: 3250,
@@ -13,9 +14,9 @@ export const STAGE_TWO = {
     terrain: [
         [{ x: -400, y: 420 }, { x: 4400, y: 420 }, { x: 4400, y: 800 }, { x: -400, y: 800 }],
     ] satisfies Point[][],
-};
+});
 export type ChairChat = { kind: 'waiting' } | { kind: 'gossip' | 'wary' | 'dismissed' | 'realizing' | 'welcoming' | 'companions' | 'rush'; age: number };
-export const CHAIR_CHAT = {
+export const CHAIR_CHAT = deepFreeze({
     rush: [
         { speaker: 0, text: 'chair.rush.1' },
         { speaker: 1, text: 'chair.rush.2' },
@@ -69,8 +70,8 @@ export const CHAIR_CHAT = {
         { speaker: 1, text: 'chair.companions.17' },
         { speaker: 2, text: 'chair.companions.18' },
     ],
-} satisfies Record<Exclude<ChairChat['kind'], 'waiting'>, { speaker: 0 | 1 | 2; text: Message }[]>;
-export const CHAIR_CHAT_INTERVAL = { gossip: 3.2, wary: 4, dismissed: 1.9, realizing: 4, welcoming: 4, companions: 3.2, rush: 1.6 };
+} satisfies Record<Exclude<ChairChat['kind'], 'waiting'>, { speaker: 0 | 1 | 2; text: Message }[]>);
+export const CHAIR_CHAT_INTERVAL = deepFreeze({ gossip: 3.2, wary: 4, dismissed: 1.9, realizing: 4, welcoming: 4, companions: 3.2, rush: 1.6 });
 export function chairChatLine(chat: Exclude<ChairChat, { kind: 'waiting' }>, seed: number) {
     const lines = CHAIR_CHAT[chat.kind];
     const looping = chat.kind === 'gossip' || chat.kind === 'companions';
@@ -79,14 +80,14 @@ export function chairChatLine(chat: Exclude<ChairChat, { kind: 'waiting' }>, see
 }
 export type ChairDepartureReason = 'companions' | 'clock-out' | 'abduction';
 export type ChairDeparture = { kind: 'none' } | { kind: 'boarding' | 'descending'; age: number; reason: ChairDepartureReason } | { kind: 'gone' | 'lost' };
-export const CHAIR_DEPARTURE = { boarding: 5, descending: 2, slots: [58, 0, -58] };
-export const CHAIR_FAREWELL = [
+export const CHAIR_DEPARTURE = deepFreeze({ boarding: 5, descending: 2, slots: [58, 0, -58] });
+export const CHAIR_FAREWELL = deepFreeze([
     { speaker: 2, text: 'chair.farewell.1' },
     { speaker: 1, text: 'chair.farewell.2' },
     { speaker: 0, text: 'chair.farewell.3' },
     { speaker: 2, text: 'chair.farewell.4' },
-] satisfies { speaker: 0 | 1 | 2; text: Message }[];
-export const CHAIR_DEPARTURE_LINES = {
+] satisfies { speaker: 0 | 1 | 2; text: Message }[]);
+export const CHAIR_DEPARTURE_LINES = deepFreeze({
     abduction: [
         { speaker: 2, text: 'chair.abduction.1' },
         { speaker: 1, text: 'chair.abduction.2' },
@@ -100,7 +101,7 @@ export const CHAIR_DEPARTURE_LINES = {
         { speaker: 0, text: 'chair.clockOut.3' },
         { speaker: 2, text: 'chair.clockOut.4' },
     ],
-} satisfies Record<ChairDepartureReason, { speaker: 0 | 1 | 2; text: Message }[]>;
+} satisfies Record<ChairDepartureReason, readonly { readonly speaker: 0 | 1 | 2; readonly text: Message }[]>);
 export type Corridor = {
     appearanceSeed: number;
     room: { kind: 'corridor' } | { kind: 'meeting'; age: number; returnX: number };

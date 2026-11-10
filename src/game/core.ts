@@ -1,20 +1,18 @@
 import { LEVEL, RULES } from './level';
-import { STAGE_THREE, type DuctBurst } from './stage3';
-import { STAGE_FOUR } from './stage4';
+import type { DuctBurst } from './stage3';
 import { STAGE_TWO, createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
-import { polyRect } from './geometry';
+import { STAGES, stageSpawn } from './stages';
 import { randomUint32, seedRng, type Rng } from './rng';
 import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Point, Snapshot } from './types';
 
 export type FocusNotice = { kind: 'paper' | 'water' | 'light' | 'door'; life: number };
 export type Impact = { frames: Snapshot[]; elapsed: number; point: Point };
-export type Solid = { p: Point[]; practice?: true };
 
 // Survives a restart. Only stage selection and checkpoints change it.
 export type Progress = {
     stage: StageId;
+    // Index into STAGES[stage].checkpoints. 0 is the stage start.
     checkpoint: number;
-    officeCheckpoint: boolean;
     lessons: { moved: boolean; jumped: boolean };
     deaths: number;
     completedStage: 0 | StageId;
@@ -26,8 +24,6 @@ export type Progress = {
 // Rebuilt from Progress on every attempt.
 export type Attempt = {
     rng: Rng;
-    LEN: number;
-    GOAL: number;
     hasExtinguisher: boolean;
     firstFlight: { kind: 'course'; verticalShots: number; lastShotAt: number } | { kind: 'flight'; age: number };
     rooftopEntrance: { kind: 'opening'; age: number } | { kind: 'ready' };
@@ -52,12 +48,9 @@ export type Attempt = {
     copier: { x: number; cool: number; burst: number; next: number; dir: number };
     cleaning: { x: number; a: number; b: number; spilled: boolean; age: number; followup: boolean; splashDir: number };
     bucket: { age: number; armed: boolean; spills: number };
-    readonly bin: { x: number; a: number; b: number; rim: number };
-    readonly parts: typeof LEVEL.playerContacts;
 
     papers: Paper[];
     people: Person[];
-    solids: Solid[];
     history: Snapshot[];
     impact: Impact | null;
 
@@ -98,7 +91,6 @@ function createProgress(skylineSeed: number, deaths = 0, completedStage: 0 | Sta
     return {
         stage: 1,
         checkpoint: 0,
-        officeCheckpoint: false,
         lessons: { moved: false, jumped: false },
         deaths,
         completedStage,
@@ -107,48 +99,17 @@ function createProgress(skylineSeed: number, deaths = 0, completedStage: 0 | Sta
     };
 }
 
-function stageSize(stage: StageId) {
-    if (stage === 2) return { LEN: STAGE_TWO.length, GOAL: STAGE_TWO.goal };
-    if (stage === 3) return { LEN: STAGE_THREE.length, GOAL: STAGE_THREE.goal };
-    if (stage === 4) return { LEN: STAGE_FOUR.length, GOAL: STAGE_FOUR.length };
-    return { LEN: LEVEL.length, GOAL: LEVEL.goal };
-}
-
-function stageLayout(progress: Progress, LEN: number): Pick<Attempt, 'solids' | 'people' | 'furniture'> {
-    const F = LEVEL.floor;
-    const copy = (terrain: readonly (readonly Point[])[]) => terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
-    if (progress.stage === 4) return { solids: [], people: [], furniture: [] };
-    if (progress.stage === 3) return { solids: copy(STAGE_THREE.terrain), people: [], furniture: [] };
-    if (progress.stage === 2) return { solids: copy(STAGE_TWO.terrain), people: [], furniture: createFurniture(progress.checkpoint) };
-    return {
-        solids: [
-            { p: polyRect(-400, F, LEVEL.bin.a + 400, 350) },
-            { p: polyRect(LEVEL.bin.b, F, LEN - LEVEL.bin.b + 400, 350) },
-        ],
-        people: [
-            { id: 'manager', x: 320, said: false },
-            { id: 'cleaner', x: LEVEL.cleaning.x + 55, said: false },
-            { id: 'admin', x: 1810, said: false },
-        ],
-        furniture: createFurniture(),
-    };
-}
-
-function spawnPoint(progress: Progress): Point {
-    if (progress.stage === 4) return STAGE_FOUR.spawn;
-    if (progress.stage === 3) return STAGE_THREE.checkpoints[progress.checkpoint];
-    if (progress.stage === 2) return STAGE_TWO.checkpoints[progress.checkpoint];
-    return { x: progress.officeCheckpoint ? 1400 : 100, y: LEVEL.floor - 28 };
+function stageFurniture(stage: StageId, checkpoint: number): Furniture[] {
+    if (stage === 2) return createFurniture(checkpoint);
+    return stage === 1 ? createFurniture() : [];
 }
 
 export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'): Attempt {
     const { stage, checkpoint } = progress;
-    const size = stageSize(stage);
     const rng = { ...seed };
     const appearanceSeed = randomUint32(rng, 'cosmetic');
     return {
         rng,
-        ...size,
         hasExtinguisher: stage === 4 || (stage === 3 && checkpoint > 0),
         firstFlight: { kind: 'course', verticalShots: 0, lastShotAt: -1 },
         rooftopEntrance: stage === 3 && checkpoint === 0 ? { kind: 'opening', age: 0 } : { kind: 'ready' },
@@ -158,7 +119,7 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
         sprayDir: { x: 0, y: 1 },
 
         mode,
-        p: { ...spawnPoint(progress), vx: 0, vy: 0, a: 0, w: 0 },
+        p: { ...stageSpawn(stage, checkpoint), vx: 0, vy: 0, a: 0, w: 0 },
         keys: [],
         ground: false,
         coyote: 0,
@@ -167,13 +128,12 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
         practiceJump: false,
         actualSpeed: 0,
 
-        ...stageLayout(progress, size.LEN),
+        people: STAGES[stage].people.map(person => ({ ...person })),
+        furniture: stageFurniture(stage, checkpoint),
         corridor: createCorridor(checkpoint, appearanceSeed),
         copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 },
         cleaning: { ...LEVEL.cleaning, spilled: false, age: 0, followup: false, splashDir: 0 },
         bucket: { age: RULES.bucketReset, armed: true, spills: 0 },
-        bin: { ...LEVEL.bin },
-        parts: LEVEL.playerContacts,
 
         papers: [],
         history: [],
@@ -218,8 +178,8 @@ export function createCore({ seed, deaths, completedStage }: CoreOptions): GameC
 }
 
 export function progressOf(s: GameState): Progress {
-    const { stage, checkpoint, officeCheckpoint, lessons, deaths, completedStage, skylineSeed, tick } = s;
-    return { stage, checkpoint, officeCheckpoint, lessons, deaths, completedStage, skylineSeed, tick };
+    const { stage, checkpoint, lessons, deaths, completedStage, skylineSeed, tick } = s;
+    return { stage, checkpoint, lessons, deaths, completedStage, skylineSeed, tick };
 }
 
 // Starts a new attempt from the current progress. The core object keeps its identity.
@@ -233,7 +193,6 @@ export function resetAttempt(s: GameState, out: GameEvent[]) {
 export function startStage(s: GameState, id: StageId, out: GameEvent[]) {
     s.stage = id;
     s.checkpoint = 0;
-    s.officeCheckpoint = false;
     s.lessons = { moved: false, jumped: false };
     resetAttempt(s, out);
 }
@@ -246,7 +205,7 @@ export function serializeState(s: GameState): string {
 export function restoreState(s: GameState, json: string) {
     const state = JSON.parse(json) as GameState;
     for (const key of Object.keys(s) as (keyof GameState)[]) delete (s as Partial<GameState>)[key];
-    Object.assign(s, state, { parts: LEVEL.playerContacts });
+    Object.assign(s, state);
 }
 
 export function hasKey(s: GameState, input: Input) {

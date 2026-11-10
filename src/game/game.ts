@@ -3,7 +3,8 @@ import { LEVEL, FIXED_STEP } from './level';
 import type { Input, DeepReadonly, GameEvent } from './types';
 import { createCore, serializeState, restoreState, type Progress } from './core';
 import { applyCommand, type Command } from './commands';
-import { SIMULATED, stepGame } from './step';
+import { SIMULATED, stageSolids, stepGame } from './step';
+import { STAGES } from './stages';
 import { focusBlocked, advanceFocusLoss } from './systems/focus';
 import { monitorPhase } from './systems/monitor';
 import { impactStep } from './systems/impact';
@@ -11,6 +12,7 @@ import { canEnterMeeting } from './systems/corridor';
 
 export type { Command } from './commands';
 export { stepGame, replayCommands, type CommandLog } from './step';
+export { CONFIG_VERSION } from './stages';
 
 export type GameOptions = {
     // Same seed, start and commands always produce the same run. The browser passes a random seed.
@@ -55,10 +57,10 @@ export function createGame(options: GameOptions = {}) {
 
     function getSnapshot() {
         return structuredClone({
-            game: s.stage === 1 ? 'office-stage-one' : s.stage === 2 ? 'building-stage-two' : s.stage === 3 ? 'rooftop-stage-three' : 'cloud-stage-four',
+            game: STAGES[s.stage].name,
             spray: { burst: s.sprayBurst, cooldown: s.sprayCooldown, dir: s.sprayDir },
             lessons: s.lessons,
-            officeCheckpoint: s.officeCheckpoint,
+            officeCheckpoint: s.stage === 1 && s.checkpoint > 0,
             skylineSeed: s.skylineSeed,
             actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
             tutorialAssist: s.mode === 'play' && s.p.x < 300,
@@ -72,7 +74,7 @@ export function createGame(options: GameOptions = {}) {
             furniture: s.furniture,
             corridor: s.corridor,
             canEnterMeeting: canEnterMeeting(s),
-            level: { length: s.LEN, goal: s.GOAL },
+            level: { length: STAGES[s.stage].length, goal: STAGES[s.stage].goal },
             mode: s.mode,
             focus: s.focus,
             focusClock: s.focusClock,
@@ -102,9 +104,9 @@ export function createGame(options: GameOptions = {}) {
             monitors: LEVEL.monitors.map(monitor => ({ ...monitor, ...monitorPhase(monitor, s.time) })),
             papers: s.papers,
             people: s.people,
-            solids: s.solids,
+            solids: stageSolids(s).map(p => ({ p })),
             copier: s.copier,
-            bin: s.bin,
+            bin: LEVEL.bin,
             focusBlocked: focusBlocked(s),
         });
     }
