@@ -1,4 +1,4 @@
-import { LEVEL, RULES } from '../level';
+import { FOCUS_DAMAGE, LEVEL, RULES } from '../level';
 import type { GameCore } from '../core';
 import { focusHit, waterExposureActive } from './focus';
 
@@ -28,7 +28,7 @@ export function cleaningStep(s: GameCore, dt: number) {
         }
         if (s.soakedOnSpill !== s.bucket.spills && waterExposureActive(s)) {
             s.soakedOnSpill = s.bucket.spills;
-            focusHit(s, 'water', s.bucket.spills);
+            focusHit(s, 'water', s.bucket.spills, FOCUS_DAMAGE.water);
             if (s.mode !== 'play') return;
         }
     }

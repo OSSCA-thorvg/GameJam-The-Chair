@@ -1,4 +1,4 @@
-import { LEVEL } from '../level';
+import { FOCUS_DAMAGE, LEVEL } from '../level';
 import type { GameCore } from '../core';
 import { focusHit } from './focus';
 
@@ -21,7 +21,7 @@ export function geyserStep(s: GameCore, _dt: number) {
         p.vy = -520;
         p.vx += (Math.sign(p.x - g.x) || 1) * 90;
         p.w += (Math.random() - .5) * 6;
-        focusHit(s, 'paper', 1000 + i * 100 + Math.floor(s.t / g.period));
+        focusHit(s, 'paper', 1000 + i * 100 + Math.floor(s.t / g.period), FOCUS_DAMAGE.paper);
         if (s.mode !== 'play') return;
         s.events.push({ type: 'cue', id: 'light-hit' });
     }

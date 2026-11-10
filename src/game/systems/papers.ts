@@ -1,4 +1,4 @@
-import { LEVEL, RULES } from '../level';
+import { FOCUS_DAMAGE, LEVEL, RULES } from '../level';
 import type { GameCore } from '../core';
 import { focusHit } from './focus';
 
@@ -47,7 +47,7 @@ export function particlesStep(s: GameCore, dt: number) {
         if (!z.safe && !z.hit && !z.landed && !s.inBin && Math.hypot(z.x - s.p.x, z.y - (s.p.y - 50)) < 48) {
             z.hit = true;
             s.paperHits++;
-            focusHit(s, 'paper', z.volley, RULES.copierFocusDamage);
+            focusHit(s, 'paper', z.volley, FOCUS_DAMAGE.copier);
             if (s.mode !== 'play') return;
             s.p.vx *= .88;
             s.p.w += z.vx * .0009;
