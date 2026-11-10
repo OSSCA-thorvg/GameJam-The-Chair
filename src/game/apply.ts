@@ -8,6 +8,8 @@ import { BIN_REST } from './systems/bin';
 import type { CleaningResult } from './systems/cleaning';
 import { paperShot, trimPapers, type CopierResult, type PaperHit } from './systems/papers';
 import type { Paper } from './types';
+import { skyStep } from './systems/sky';
+import { STAGES } from './stages';
 import { ductSprayed, entranceStep, flightStep, launchShot, rooftopStep } from './systems/rooftop';
 
 // The only place where system decisions are written into game state. Systems decide; these apply.
@@ -161,4 +163,15 @@ export function applyFlight(s: GameState, dt: number): false | 'flight' | 'arriv
     s.sprayBurst = .24;
     s.sprayDir = { x: 0, y: 1 };
     return r.arrived ? 'arrived' : 'flight';
+}
+
+export function applySky(s: GameState, dt: number) {
+    const direction = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
+    const r = skyStep(s.p, direction, s.time, STAGES[s.stage].length, dt);
+    setPlayer(s, r.p);
+    s.ground = false;
+    s.jumpQ = 0;
+    s.sprayBurst = .24;
+    s.sprayDir = r.sprayDir;
+    s.actualSpeed = r.speed;
 }

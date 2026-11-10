@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 
 // Unit tests for pure system decisions: same input, same answer, no state writes.
 const bundle = await build({
-    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning'; export * from './src/game/systems/papers'; export * from './src/game/systems/rooftop';`, resolveDir: process.cwd() },
+    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning'; export * from './src/game/systems/papers'; export * from './src/game/systems/rooftop'; export * from './src/game/systems/sky';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
 const sys = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
@@ -125,4 +125,17 @@ test('the duct sneezes back at a rider in front of it once the inhale ends', () 
     }
     assert.ok(knocked);
     assert.equal(reacting.bursts[0].age, 0, 'input untouched');
+});
+
+test('the sky drifts with input, stays inside the stage and hovers', () => {
+    const p = { x: 2380, y: -1820, vx: 0, vy: 0, a: 0, w: 0 };
+    const right = sky(p, 1, 600);
+    assert.ok(right.p.x > p.x && right.p.a > 0 && right.sprayDir.x < 0);
+    assert.ok(sky({ ...p, x: 3330 }, 1, 600).p.x <= 3320, 'clamped to the stage');
+    assert.equal(sky(p, 0, 1).speed, 0);
+    function sky(start, direction, ticks) {
+        let r = { p: start };
+        for (let i = 0; i < ticks; i++) r = sys.skyStep(r.p, direction, i / 120, 3400, 1 / 120);
+        return r;
+    }
 });

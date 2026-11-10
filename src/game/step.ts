@@ -1,4 +1,3 @@
-import { skyStep } from './systems/sky';
 import { LEVEL, FIXED_STEP } from './level';
 import type { GameEvent, Mode } from './types';
 import { clamp, contact } from './geometry';
@@ -10,7 +9,7 @@ import { focusStep, advanceFocusLoss } from './systems/focus';
 import { copierStep, papersStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
 import { geyserHits } from './systems/geyser';
-import { applyBinFall, applyCleaning, applyCopier, applyFlight, applyGeyserHits, applyMonitorContact, applyPapers, applyRooftop, applyRooftopEntrance } from './apply';
+import { applyBinFall, applyCleaning, applyCopier, applyFlight, applyGeyserHits, applyMonitorContact, applyPapers, applyRooftop, applyRooftopEntrance, applySky } from './apply';
 import { monitorContact } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
 import { meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
@@ -86,7 +85,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         }
     }
     if (s.stage === 4) {
-        skyStep(s, dt);
+        applySky(s, dt);
         return;
     }
     if (s.stage === 2 && meetingStep(s, dt)) return;
