@@ -112,7 +112,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         }
     }
     if (s.stage === 4) {
-        applySky(s, dt);
+        applySky(s, out, dt);
         return;
     }
     if (s.stage === 2 && applyMeeting(s, dt)) return;

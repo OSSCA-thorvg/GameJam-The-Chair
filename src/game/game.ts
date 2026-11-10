@@ -81,6 +81,7 @@ export function createGame(options: GameOptions = {}) {
             actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
             tutorialAssist: s.mode === 'play' && s.p.x < 300,
             stage: s.stage,
+            sky: s.sky,
             completedStage: s.completedStage,
             hasExtinguisher: s.hasExtinguisher,
             firstFlight: s.firstFlight,

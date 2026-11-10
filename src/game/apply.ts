@@ -7,7 +7,7 @@ import { RULES } from './level';
 import { BIN_REST } from './systems/bin';
 import type { CleaningResult } from './systems/cleaning';
 import { paperShot, trimPapers, type CopierResult, type PaperHit } from './systems/papers';
-import type { Paper } from './types';
+import type { Input, Paper } from './types';
 import { skyStep } from './systems/sky';
 import { impactReplay, impactStep } from './systems/impact';
 import { MEETING_SEAT, canEnterMeeting, convoyLanding, corridorStep, liftRide, meetingExit, meetingStep } from './systems/corridor';
@@ -201,15 +201,31 @@ export function applyFlight(s: GameState, dt: number): false | 'flight' | 'arriv
     return r.arrived ? 'arrived' : 'flight';
 }
 
-export function applySky(s: GameState, dt: number) {
-    const direction = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
-    const r = skyStep(s.p, direction, s.time, STAGES[s.stage].length, dt);
+export function applySky(s: GameState, out: GameEvent[], dt: number) {
+    const held = (input: Input) => s.keys.includes(input) ? 1 : 0;
+    const r = skyStep({
+        sky: s.sky, p: s.p, ground: s.ground, coyote: s.coyote, jumpQ: s.jumpQ, checkpoint: s.checkpoint, time: s.time,
+        direction: held('right') - held('left'), depthDir: held('forward') - held('back'),
+        length: STAGES[s.stage].length, sprayBurst: s.sprayBurst, sprayDir: s.sprayDir,
+    }, dt);
+    s.sky = r.sky;
     setPlayer(s, r.p);
-    s.ground = false;
-    s.jumpQ = 0;
-    s.sprayBurst = .24;
+    s.ground = r.ground;
+    s.coyote = r.coyote;
+    s.jumpQ = r.jumpQ;
+    s.checkpoint = r.checkpoint;
+    s.sprayBurst = r.sprayBurst;
     s.sprayDir = r.sprayDir;
-    s.actualSpeed = r.speed;
+    if (r.speed !== null) s.actualSpeed = r.speed;
+    if (r.reached) out.push({ type: 'cue', id: 'checkpoint' });
+    if (r.fell) s.deaths++;
+    if (r.won) {
+        s.mode = 'won';
+        s.keys = [];
+        out.push({ type: 'cue', id: 'stage-clear' });
+    }
+    // Reaching the depth reveal and moving through it counts as clearing the sky.
+    if (s.sky.depthTravel > .65 && s.completedStage < 4) s.completedStage = 4;
 }
 
 export function applyHeadHit(s: GameState, out: GameEvent[], point: Point) {

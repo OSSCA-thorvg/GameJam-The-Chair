@@ -1,17 +1,17 @@
 // All player controls live here: key bindings, on-screen labels, keyboard and touch handlers.
 // To change a key, edit CONTROLS; labels in the menu and in the world update automatically.
-import type { Game } from '../game/game';
+import type { Game, GameState } from '../game/game';
 import type { Input } from '../game/types';
 
-export type Action = 'left' | 'right' | 'leanLeft' | 'leanRight' | 'jump' | 'spray' | 'meeting' | 'pause' | 'restart';
+export type Action = 'left' | 'right' | 'leanLeft' | 'leanRight' | 'forward' | 'back' | 'jump' | 'spray' | 'meeting' | 'pause' | 'restart';
 
 interface Control {
     /** KeyboardEvent.key values (letters are matched case-insensitively). */
     keys: readonly string[];
     /** Text shown in the controls list and world pictograms. */
     label: string;
-    /** Stages where this control is active; omitted means every stage. */
-    stages?: (stage: number) => boolean;
+    /** When this control is active; omitted means always. Earlier entries win when keys overlap. */
+    when?: (state: GameState) => boolean;
 }
 
 export const CONTROLS: Readonly<Record<Action, Control>> = {
@@ -19,27 +19,34 @@ export const CONTROLS: Readonly<Record<Action, Control>> = {
     right:     { keys: ['ArrowRight', 'd'], label: '→ / D' },
     leanLeft:  { keys: ['q'], label: 'Q' },
     leanRight: { keys: ['e'], label: 'E' },
+    // Stage 4 depth flight: Up/Down move forward/back instead of jumping or entering meetings.
+    forward:   { keys: ['ArrowUp'], label: '↑', when: isDepthFlight },
+    back:      { keys: ['ArrowDown'], label: '↓', when: isDepthFlight },
     // Space is reserved for the extinguisher, so jumping is Up-only in every stage.
     jump:      { keys: ['ArrowUp'], label: '↑' },
-    spray:     { keys: [' ', 'f'], label: 'Space / F', stages: stage => stage >= 3 },
-    meeting:   { keys: ['ArrowDown'], label: '↓', stages: stage => stage === 2 },
+    spray:     { keys: [' ', 'f'], label: 'Space / F', when: s => s.stage >= 3 },
+    meeting:   { keys: ['ArrowDown'], label: '↓', when: s => s.stage === 2 },
     pause:     { keys: ['p', 'Escape'], label: 'P / Esc' },
     restart:   { keys: ['r'], label: 'R' },
 };
+
+function isDepthFlight(state: GameState) {
+    return state.stage === 4 && state.sky.phase === 'depth';
+}
 
 /** Short key name used by in-world pictograms (e.g. the extinguisher pickup). */
 export const SPRAY_KEY = 'Space';
 export const MOVE_LABEL = '← → / A D';
 
 /** Held actions map onto the game's continuous inputs. */
-const HELD: Partial<Record<Action, Input>> = { left: 'left', right: 'right', leanLeft: 'q', leanRight: 'e', spray: 'spray' };
+const HELD: Partial<Record<Action, Input>> = { left: 'left', right: 'right', leanLeft: 'q', leanRight: 'e', forward: 'forward', back: 'back', spray: 'spray' };
 
 const normalize = (key: string) => key.length === 1 ? key.toLowerCase() : key;
 
-export function actionForKey(key: string, stage: number): Action | null {
+export function actionForKey(key: string, state: GameState): Action | null {
     const k = normalize(key);
     for (const [action, control] of Object.entries(CONTROLS) as [Action, Control][]) {
-        if (control.keys.includes(k) && (!control.stages || control.stages(stage))) return action;
+        if (control.keys.includes(k) && (!control.when || control.when(state))) return action;
     }
     return null;
 }
@@ -66,7 +73,7 @@ export function bindControls(root: HTMLElement, game: Game, hooks: ControlHooks,
     window.addEventListener('keydown', e => {
         if (!hooks.accepting(e)) return;
         const state = game.getSnapshot();
-        const action = actionForKey(e.key, state.stage);
+        const action = actionForKey(e.key, state);
         if (!action) return;
         if (action === 'pause') {
             if (!e.repeat && (state.mode === 'play' || state.mode === 'pause')) { e.preventDefault(); hooks.togglePause(); }
@@ -102,14 +109,21 @@ export function bindControls(root: HTMLElement, game: Game, hooks: ControlHooks,
         }, options);
         for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) el?.addEventListener(event, () => game.release(input), options);
     };
-    const tap = (el: HTMLElement | null, action: () => void) =>
-        el?.addEventListener('pointerdown', e => { e.preventDefault(); action(); }, options);
 
     root.querySelectorAll<HTMLElement>('[data-key]').forEach(button => {
         const key = button.dataset.key;
         if (key === 'left' || key === 'right' || key === 'q' || key === 'e') hold(button, key);
     });
     hold(root.querySelector<HTMLElement>('[data-spray]'), 'spray');
-    tap(root.querySelector<HTMLElement>('[data-jump]'), game.jump);
-    tap(root.querySelector<HTMLElement>('[data-interact]'), game.interact);
+    // Jump / meeting buttons double as held forward / back during stage 4 depth flight.
+    const dual = (el: HTMLElement | null, input: Input, action: () => void) => {
+        el?.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            if (isDepthFlight(game.getSnapshot())) { game.press(input); el.setPointerCapture?.(e.pointerId); }
+            else action();
+        }, options);
+        for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) el?.addEventListener(event, () => game.release(input), options);
+    };
+    dual(root.querySelector<HTMLElement>('[data-jump]'), 'forward', game.jump);
+    dual(root.querySelector<HTMLElement>('[data-interact]'), 'back', game.interact);
 }

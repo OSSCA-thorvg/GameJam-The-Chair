@@ -77,9 +77,10 @@ const stages: Record<StageId, StageDefinition> = {
         id: 4,
         name: 'cloud-stage-four',
         length: STAGE_FOUR.length,
-        goal: STAGE_FOUR.length,
+        goal: STAGE_FOUR.goal,
         terrain: [],
-        checkpoints: [start(STAGE_FOUR.spawn)],
+        // Saved by landing on platforms in the sky system, not by area.
+        checkpoints: STAGE_FOUR.checkpoints.map(start),
         checkpointRule: 'pass',
         people: [],
     },

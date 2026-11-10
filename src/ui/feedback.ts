@@ -8,9 +8,10 @@ const NPC_COPY = {
     cleaner: { name: 'person.kim',     text: 'npc.cleaner.mop' },
     admin:   { name: 'person.admin',   text: 'npc.admin.sort' }
 } satisfies Record<string, { name: Message; text: Message }>;
-const STAGE_CLEAR: Record<1 | 2 | 3, { status: Message; title: Message; button: Message }> = {
+const STAGE_CLEAR: Record<1 | 2 | 3 | 4, { status: Message; title: Message; button: Message }> = {
     1: { status: 'status.stage1Clear', title: 'panel.stage1Title', button: 'button.next' },
     2: { status: 'status.stage2Clear', title: 'panel.stage2Title', button: 'button.next' },
+    4: { status: 'status.stage4Clear', title: 'panel.stage4Title', button: 'button.retryStage' },
     3: { status: 'status.stage3Clear', title: 'panel.stage3Title', button: 'button.retryStage' },
 };
 export function createFeedback(getLocale: () => Locale = () => 'en') {
@@ -117,7 +118,6 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
                 status = 'status.extinguisherPickup';
                 break;
             case 'stage-clear': {
-                if (state.stage === 4) break;
                 const clear = STAGE_CLEAR[state.stage];
                 status = clear.status;
                 overlay('empty', clear.title, '', clear.button);

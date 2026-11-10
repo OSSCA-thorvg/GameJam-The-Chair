@@ -44,6 +44,8 @@ const messages = {
     'panel.liftTitle':          { en: 'The mechanical room stayed upstairs.', ko: '기계실은 위에 남았습니다.' },
     'panel.stage1Title':         { en: 'Clocking out…',                                                  ko: '퇴근 처리 중…' },
     'panel.stage2Title':         { en: 'Business trip complete.',                                        ko: '출장 처리 완료.' },
+    'panel.stage4Title': { en: 'Still growing.', ko: '성장은 계속됩니다.' },
+    'status.stage4Clear': { en: 'Above the clouds.', ko: '구름 너머로.' },
     'panel.stage3Title':         { en: 'First flight.', ko: '첫 비행.' },
 
     'button.retry':              { en: 'Retry',                                                          ko: '다시' },

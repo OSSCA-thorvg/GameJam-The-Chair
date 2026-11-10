@@ -2,6 +2,7 @@ import { LEVEL, RULES } from './level';
 import type { FocusNotice } from './systems/focus';
 import type { Impact } from './systems/impact';
 import type { DuctReaction, FirstFlight, RooftopEntrance } from './systems/rooftop';
+import { createSky, type SkyState } from './stage4';
 import { createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
 import { STAGES, stageSpawn } from './stages';
 import { clonePlain } from './data';
@@ -25,6 +26,7 @@ export type Progress = {
 // Rebuilt from Progress on every attempt.
 export type Attempt = {
     rng: Rng;
+    sky: SkyState;
     hasExtinguisher: boolean;
     firstFlight: FirstFlight;
     rooftopEntrance: RooftopEntrance;
@@ -108,8 +110,12 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
     const { stage, checkpoint } = progress;
     const rng = { ...seed };
     const appearanceSeed = randomUint32(rng, 'cosmetic');
+    const sky = createSky();
+    // A sky retry after the first flag resumes with the building already grown.
+    if (stage === 4 && checkpoint > 0) { sky.phase = 'course'; sky.lift = 1; }
     return {
         rng,
+        sky,
         hasExtinguisher: stage === 4 || (stage === 3 && checkpoint > 0),
         firstFlight: { kind: 'course', verticalShots: 0, lastShotAt: -1 },
         rooftopEntrance: stage === 3 && checkpoint === 0 ? { kind: 'opening', age: 0 } : { kind: 'ready' },
