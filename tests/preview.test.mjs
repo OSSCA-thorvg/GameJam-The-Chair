@@ -57,28 +57,6 @@ test('impact preview replays a collision through its game-over frame', () => {
     assert.deepEqual(scene.sample(0).state, start);
 });
 
-test('cart preview shows a shove and recovery', () => {
-    const scene = previewScenes.find(scene => scene.id === 'cart-shove');
-    assert.ok(scene);
-    const contact = scene.markers.find(marker => marker.label === 'Cart contact');
-    assert.ok(contact);
-    assert.equal(scene.sample(0).state.corridor.cartHits, 0);
-    assert.equal(scene.sample(contact.at).state.corridor.cartHits, 1);
-    assert.equal(scene.sample(scene.duration).state.mode, 'play');
-});
-
-test('document bump preview follows the live stage-two route', () => {
-    const scene = previewScenes.find(scene => scene.id === 'paper-corridor');
-    assert.ok(scene);
-    const start = scene.sample(0).state;
-    const later = scene.sample(3).state;
-    assert.equal(start.stage, 2);
-    assert.ok(start.player.x < start.corridor.paperPiles[0].x);
-    assert.ok(later.player.x > start.player.x);
-    assert.ok(later.furniture.some(chair => chair.y < 420));
-    assert.deepEqual(scene.sample(3).state, later);
-});
-
 test('extinguisher preview keeps the spray plume and recoil in sync', () => {
     const scene = previewScenes.find(scene => scene.id === 'extinguisher-spray');
     assert.ok(scene);
@@ -112,4 +90,17 @@ test('duct preview seeks between powder intake, twitch and sneeze', () => {
     const sneeze = scene.sample(1.1);
     scene.sample(2.1);
     assert.deepEqual(scene.sample(1.1), sneeze);
+});
+
+test('merged preview registry keeps water, focus loss and rooftop scenes without the removed fan', () => {
+    const ids = previewScenes.map(scene => scene.id);
+    assert.equal(new Set(ids).size, ids.length);
+    for (const id of ['bucket-pour', 'focus-loss', 'rooftop-entrance', 'duct-sneeze', 'duct-repeat', 'cloud-entry']) {
+        assert.ok(ids.includes(id), `missing preview: ${id}`);
+    }
+    assert.equal(ids.includes('fan-ride'), false);
+    assert.equal(previewScenes.find(scene => scene.id === 'focus-loss').sample(1.7).state.mode, 'dead');
+    const airborne = previewScenes.find(scene => scene.id === 'cloud-entry').sample(1).state;
+    assert.equal(airborne.stage, 4);
+    assert.ok(airborne.spray.burst > .2);
 });

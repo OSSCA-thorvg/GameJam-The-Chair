@@ -1,5 +1,5 @@
 import type { Locale } from '../i18n';
-import type { Canvas, Shape, ThorVGNamespace } from '@thorvg/webcanvas';
+import type { Canvas, ThorVGNamespace } from '@thorvg/webcanvas';
 import { loadThorvg } from './thorvg';
 import type { GameState } from '../game/game';
 import { ART } from './art';
@@ -9,7 +9,7 @@ import { drawWorld } from './scene/world';
 import { drawBuilding } from './scene/building';
 import { drawRooftop } from './scene/rooftop';
 import { drawCloudStart } from './scene/clouds';
-import { paint } from './paint';
+import { createPaintPool, paint } from './paint';
 
 export function createRenderer(root: HTMLElement, getLocale: () => Locale = () => 'en') {
     const base = root.querySelector<HTMLCanvasElement>('[data-base]');
@@ -35,7 +35,7 @@ function setup(
     const ctx = createRenderCtx(bg, lg);
     let lastTime = 0;
     let lastStage = 0;
-    let pool: Shape[] = [];
+    const pool = createPaintPool();
     let TVG: ThorVGNamespace | null = null;
     let tvg: Canvas | null = null;
     let renderer = 'canvas2d';
@@ -78,6 +78,8 @@ function setup(
         ctx.copier = { ...next.copier, flash: effects.copierFlash };
         ctx.waterDrops = effects.waterDrops;
         ctx.waterRipples = effects.waterRipples;
+        ctx.waterPour = effects.waterPour;
+        ctx.waterPuddle = effects.waterPuddle;
         ctx.specks = effects.specks;
         ctx.paperFace = effects.paperFace;
         ctx.glare = effects.glare;

@@ -1,4 +1,4 @@
-import { LEVEL, RULES } from '../level';
+import { FOCUS_DAMAGE, LEVEL, RULES } from '../level';
 import type { GameCore } from '../core';
 import { focusHit } from './focus';
 
@@ -29,7 +29,7 @@ export function monitorStep(s: GameCore, _dt: number, previousX: number) {
             if (s.lightCooldown === 0) {
                 s.lightHits++;
                 s.lightCooldown = 1.4;
-                focusHit(s, 'light', i * 1000 + Math.floor(s.t / spec.period));
+                focusHit(s, 'light', i * 1000 + Math.floor(s.t / spec.period), FOCUS_DAMAGE.light);
                 if (s.mode !== 'play') return;
                 s.events.push({ type: 'cue', id: 'light-hit' });
                 s.events.push({ type: 'cue', id: 'light-comment', monitorIndex: i });

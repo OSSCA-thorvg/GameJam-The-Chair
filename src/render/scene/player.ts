@@ -51,13 +51,12 @@ export function player(ctx: RenderCtx) {
     ctx.polygon([[-15, -87], [-5, -100], [10, -97], [16, -88], [3, -87], [-3, -83], [-10, -77]], '#3c424f');
     ctx.polygon([[-7, -93], [-4, -98], [3, -96]], '#687380');
     const glance = state.lossReason === 'focus' ? .5 + .5 * Math.sin(state.focusLossTime * 6) : state.focusNotice ? Math.sin((1.7 - state.focusNotice.life) / 1.7 * Math.PI) : 0;
-    const gx = -glance * 10;
     ctx.ellipse(-7, -81, 2.7, 3.4, C.skin);
     ctx.rod(-5, -83, 4, -84, 1.35, '#3a414b');
-    ctx.rect(3 + gx, -86, 11, 6, '#50606a');
-    ctx.rect(4 + gx, -85, 9, 4, '#83c8e4');
-    ctx.rect(5 + gx, -85, 2, 4, '#bfe6ef');
-    ctx.rect(12 + gx, -84, 1.2, 2, '#446d82');
+    ctx.rect(3, -86, 11, 6, '#50606a');
+    ctx.rect(4, -85, 9, 4, '#83c8e4');
+    ctx.rect(5, -85, 2, 4, '#bfe6ef');
+    ctx.rect(11.5 - glance * 6, -84, 1.2, 2, '#446d82');
     ctx.rod(9, -71, 12, -71, 1, '#9c775f');
 
     ctx.polygon([[-17, -58], [-13, -60], [-9, -57], [-8, -35], [-18, -34]], '#e6e0cc');
