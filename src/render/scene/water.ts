@@ -1,8 +1,6 @@
 import type { RenderCtx } from '../context';
 import type { Curve, DrawCommand, LayerSpec, Vector } from '../types';
-import type { WaterDrop } from '../effects';
-import type { DeepReadonly } from '../../game/types';
-import { bucketMouth, pourFlow } from '../bucket';
+import { WATER_GRAVITY, bucketMouth, pourLaunch } from '../bucket';
 
 type Path = { start: Vector; curves: Curve[] };
 
@@ -133,102 +131,149 @@ export function drawPuddle(ctx: RenderCtx, shape: PuddleShape, reflect: () => vo
     ctx.endLayer();
 }
 
-type Ribbon = { points: Vector[]; widths: number[] };
+type SheetPoint = { p: Vector; dir: Vector; w: number; te: number };
+type Sheet = { points: SheetPoint[]; attached: boolean; landed: boolean };
 
-/** Split each stream chain into continuous ribbons, oldest (leading) particle first. */
-function ribbons(ctx: RenderCtx, mouth: Vector | null, mouthWidth: number): Ribbon[] {
-    const chains = new Map<number, DeepReadonly<WaterDrop>[]>();
-    for (const z of ctx.waterDrops) {
-        if (z.kind !== 'stream') continue;
-        let chain = chains.get(z.chain);
-        if (!chain) chains.set(z.chain, chain = []);
-        chain.push(z);
-    }
-    const pour = ctx.waterPour;
-    const result: Ribbon[] = [];
-    for (const [id, chain] of chains) {
-        let points: Vector[] = [];
-        let widths: number[] = [];
-        const flush = () => {
-            if (points.length > 1) result.push({ points, widths });
-            points = [];
-            widths = [];
-        };
-        for (let i = 0; i < chain.length; i += 2) {
-            const z = chain[i];
-            const p: Vector = [z.x, z.y];
-            const prev = points[points.length - 1];
-            if (prev && Math.hypot(p[0] - prev[0], p[1] - prev[1]) > 30) flush();
-            const before = points[points.length - 2];
-            // Skip water that has doubled back over the stream, so the ribbon never folds.
-            if (prev && before && (p[0] - prev[0]) * (prev[0] - before[0]) + (p[1] - prev[1]) * (prev[1] - before[1]) < 0) continue;
-            // A falling stream thins out as it speeds up.
-            const speed = Math.hypot(z.vx, z.vy);
-            points.push(p);
-            widths.push(z.r * ctx.clamp(Math.sqrt(150 / Math.max(1, speed)), .45, 1.15));
+/** Cheap deterministic noise in [-1, 1] for edge detail. */
+const wave = (v: number) => Math.sin(v) * .6 + Math.sin(v * 2.37 + 1.1) * .4;
+
+/**
+ * The falling water as sheets. Every point is the water that left the bucket
+ * `s` seconds ago, flown along its own ballistic arc, so the shape is always a
+ * physically consistent curtain. Glugs only change the thickness, which then
+ * travels down the curtain with the water.
+ */
+function sheets(ctx: RenderCtx, age: number): Sheet[] {
+    const { x, splashDir: side } = ctx.cleaning;
+    const floor = ctx.F + 3;
+    const result: Sheet[] = [];
+    let current: SheetPoint[] = [];
+    let attached = false;
+    const flush = (landed: boolean) => {
+        if (current.length > 1) result.push({ points: current, attached, landed });
+        current = [];
+    };
+    const span = age - .17;
+    for (let i = 0; i <= 40; i++) {
+        const s = Math.min(span, i * .012);
+        const te = age - s;
+        const launch = pourLaunch(x, ctx.F, side, te);
+        if (launch.flow < .1) {
+            flush(false);
+            if (s >= span) break;
+            continue;
         }
-        const live = pour?.flowing && pour.chain === id && mouth;
-        if (live) {
-            const prev = points[points.length - 1];
-            if (!prev || Math.hypot(mouth[0] - prev[0], mouth[1] - prev[1]) < 30) {
-                points.push(mouth);
-                widths.push(mouthWidth);
-            }
+        const vx = launch.vx;
+        const vy = launch.vy + WATER_GRAVITY * s;
+        let p: Vector = [launch.x + launch.vx * s, launch.y + launch.vy * s + .5 * WATER_GRAVITY * s * s];
+        const speed = Math.hypot(vx, vy) || 1;
+        const landedHere = p[1] >= floor;
+        if (landedHere) {
+            const prev = current[current.length - 1];
+            if (!prev) break;
+            // Cut exactly at the floor.
+            const k = (floor - prev.p[1]) / (p[1] - prev.p[1]);
+            p = [prev.p[0] + (p[0] - prev.p[0]) * k, floor];
         }
-        flush();
+        if (!current.length) attached = i === 0;
+        // Thick where much water left at once; thinner as gravity stretches it.
+        const neck = ctx.clamp(Math.sqrt(Math.hypot(launch.vx, launch.vy) / speed), .5, 1);
+        const ripple = 1 + .12 * wave(te * 61) + .05 * wave(te * 157);
+        current.push({ p, dir: [vx / speed, vy / speed], w: (1.8 + 8 * launch.flow) * neck * ripple, te });
+        if (landedHere) {
+            flush(true);
+            return result;
+        }
+        if (s >= span) break;
     }
+    flush(false);
     return result;
 }
 
-function ribbonOutline(r: Ribbon, scale: number): Path {
+/** Outline of a sheet: tapered where it has let go of the rim, torn into fingers at a free-falling front. */
+function sheetOutline(sheet: Sheet, age: number): { outline: Path; front: SheetPoint } {
+    const pts = sheet.points;
+    const n = pts.length;
     const left: Vector[] = [];
     const right: Vector[] = [];
-    const n = r.points.length;
-    for (let i = 0; i < n; i++) {
-        const a = r.points[Math.max(0, i - 1)];
-        const b = r.points[Math.min(n - 1, i + 1)];
-        const dx = b[0] - a[0];
-        const dy = b[1] - a[1];
-        const l = Math.hypot(dx, dy) || 1;
-        // Round, heavier head; narrow neck right behind it.
-        const head = i === 0 ? .9 : i === 1 ? .8 : 1;
-        const w = r.widths[i] * scale * head;
-        left.push([r.points[i][0] - dy / l * w, r.points[i][1] + dx / l * w]);
-        right.push([r.points[i][0] + dy / l * w, r.points[i][1] - dx / l * w]);
+    pts.forEach((q, i) => {
+        let w = q.w;
+        if (!sheet.attached) w *= smooth(Math.min(1, (i + .3) / 3));
+        if (!sheet.landed) w *= .55 + .45 * smooth(Math.min(1, (n - 1 - i) / 3));
+        if (sheet.landed && i === n - 1) w *= 1.35;
+        const nx = -q.dir[1];
+        const ny = q.dir[0];
+        left.push([q.p[0] + nx * w, q.p[1] + ny * w]);
+        right.push([q.p[0] - nx * w, q.p[1] - ny * w]);
+    });
+    const front = pts[n - 1];
+    const bottom: Vector[] = [];
+    if (!sheet.landed) {
+        // The leading edge tears into uneven fingers that shed drops.
+        const nx = -front.dir[1];
+        const ny = front.dir[0];
+        const fw = front.w * .55;
+        const fingers = 3;
+        for (let j = 0; j < fingers; j++) {
+            const across = 1 - (j + .5) / fingers * 2;
+            const len = (4 + 7 * (.5 + .5 * wave(j * 3.1 + front.te * 9))) * (1 + .25 * wave(age * 23 + j));
+            bottom.push([front.p[0] + nx * fw * across + front.dir[0] * len, front.p[1] + ny * fw * across + front.dir[1] * len]);
+            if (j < fingers - 1) {
+                const gap = across - 1 / fingers;
+                bottom.push([front.p[0] + nx * fw * gap - front.dir[0] * 2, front.p[1] + ny * fw * gap - front.dir[1] * 2]);
+            }
+        }
     }
-    const [hx, hy] = r.points[0];
-    const [nx, ny] = r.points[1];
-    const l = Math.hypot(hx - nx, hy - ny) || 1;
-    const capW = r.widths[0] * scale;
-    const cap: Vector = [hx + (hx - nx) / l * capW, hy + (hy - ny) / l * capW];
-    return spline([cap, ...left, ...right.reverse()], true);
+    return { outline: spline([...left, ...bottom, ...right.reverse()], true), front };
 }
 
 /**
- * Water in the air: the pour as filled ribbons in a softly blurred scene,
- * a Screen scene of dashed highlights that slide along the stream (stroke dash + trim),
- * and loose drops in a motion-blurred scene.
+ * Water in the air, as ThorVG scenes:
+ * - the falling sheet, softened with a motion blur along the flow (no stripes to read as scales)
+ *   and faded out at its torn front with an alpha mask;
+ * - steady edge highlights in a Screen scene;
+ * - spray and crowns in a softly blurred scene; loose drops in a motion-blurred scene.
  */
 export function drawPour(ctx: RenderCtx) {
     const cleaning = ctx.cleaning;
     const age = ctx.state.bucketAge;
     const side = cleaning.splashDir;
-    const flow = cleaning.spilled ? pourFlow(age) : 0;
     const mouth = bucketMouth(cleaning.x, ctx.F, side, age);
     const [lx, ly] = mouth.lip;
     const ax = mouth.rim[0] - lx;
     const ay = mouth.rim[1] - ly;
-    const opening = .1 + .32 * flow;
-    const mouthCenter: Vector = [lx + ax * opening * .5, ly + ay * opening * .5];
-    const mouthWidth = Math.hypot(ax, ay) * opening * .5 + 1;
-    const streams = cleaning.spilled ? ribbons(ctx, mouthCenter, mouthWidth) : [];
+    const curtains = cleaning.spilled && age > .17 ? sheets(ctx, age) : [];
     const spray = ctx.waterDrops.filter(z => z.kind === 'spray');
     const crowns = ctx.waterRipples.filter(r => r.crown);
     const swell = cleaning.spilled ? smooth(ctx.clamp((age - .06) / .12, 0, 1)) * (1 - smooth(ctx.clamp((age - .2) / .12, 0, 1))) : 0;
-    const body: LayerSpec = { key: 'water-body', blur: .75 * ctx.scale };
 
-    if (streams.length || spray.length || crowns.length || swell > 0) {
-        ctx.beginLayer(body);
+    if (curtains.length || swell > 0) {
+        let dx = 0;
+        let dy = 0;
+        for (const c of curtains) for (const q of c.points) {
+            dx += q.dir[0];
+            dy += q.dir[1];
+        }
+        if (!curtains.length) [dx, dy] = mouth.out;
+        const shapes = curtains.map(c => ({ sheet: c, ...sheetOutline(c, age) }));
+        // Fade the lowest free-falling front so it dissolves into the drops around it.
+        const falling = shapes.filter(s => !s.sheet.landed).sort((a, b) => b.front.p[1] - a.front.p[1])[0];
+        let mask: DrawCommand | undefined;
+        if (falling) {
+            const { p, dir } = falling.front;
+            const big = 1e4;
+            mask = ctx.pathCommand([-big, -big], [
+                [-big, -big, big, -big, big, -big], [big, -big, big, big, big, big],
+                [big, big, -big, big, -big, big], [-big, big, -big, -big, -big, -big],
+            ]);
+            mask.c = ctx.gradientFill(p[0] - dir[0] * 14, p[1] - dir[1] * 14, p[0] + dir[0] * 12, p[1] + dir[1] * 12, [[0, '#ffffff'], [1, '#ffffff00']]);
+        }
+        ctx.beginLayer({
+            key: 'water-sheet',
+            blur: .5 * ctx.scale,
+            motionBlur: { distance: 4 * ctx.scale, angle: Math.atan2(dy, dx) * 180 / Math.PI },
+            mask,
+        });
         if (swell > 0) {
             // The surface bulges over the rim just before it lets go.
             const [ox, oy] = mouth.out;
@@ -237,21 +282,45 @@ export function drawPour(ctx: RenderCtx) {
             ctx.effectPath(mouth.lip, [[lx + ox * reach, ly + oy * reach, end[0] + ox * reach, end[1] + oy * reach, end[0], end[1]],
                 [end[0], end[1], lx, ly, lx, ly]], ctx.gradientFill(lx, ly, lx + ox * reach, ly + oy * reach, [[0, WATER.body[1]], [1, WATER.body[0]]]));
         }
-        for (const r of streams) {
-            const outline = ribbonOutline(r, 1);
-            const head = r.points[0];
-            const tail = r.points[r.points.length - 1];
-            ctx.effectPath(outline.start, outline.curves, ctx.gradientFill(...tail, ...head,
-                [[0, ctx.tint(WATER.body[0], .95)], [.5, ctx.tint(WATER.body[1], .92)], [1, ctx.tint(WATER.body[2], .88)]]));
-            // Lighter core gives the stream its round, glassy volume.
-            const core = ribbonOutline({ points: r.points, widths: r.widths.map(w => w * .3) }, 1);
-            ctx.effectPath(core.start, core.curves, ctx.gradientFill(...tail, ...head, [[0, ctx.tint(WATER.core, .45)], [1, ctx.tint(WATER.core, .12)]]));
-            if (head[1] > ctx.F - 8) {
-                // Foam where the stream hammers the floor.
-                const w = r.widths[0];
-                ctx.ellipse(head[0], ctx.F + 3, 5 + w * 1.7, 1.6 + w * .35, ctx.tint('#dfe3cd', .75));
+        for (const { sheet, outline, front } of shapes) {
+            const top = sheet.points[0].p;
+            // Thin and see-through at the rim, denser where it gathers lower down.
+            ctx.effectPath(outline.start, outline.curves, ctx.gradientFill(...top, ...front.p,
+                [[0, ctx.tint(WATER.body[0], .72)], [.35, ctx.tint(WATER.body[1], .92)], [1, ctx.tint(WATER.body[2], .88)]]));
+            // Light passing through the middle of the sheet.
+            if (sheet.points.length > 2) {
+                const inner = sheet.points.map(q => [q.p[0] + q.dir[1] * q.w * .3 * side, q.p[1] - q.dir[0] * q.w * .3 * side] as Vector);
+                const line = spline(inner, false);
+                const w = sheet.points.reduce((sum, q) => sum + q.w, 0) / sheet.points.length;
+                ctx.strokePath(line.start, line.curves, { width: w * .7, color: ctx.tint(WATER.core, .28), cap: 'round' }, { trim: [.05, .85] });
+            }
+            if (sheet.landed) {
+                // Foam where the sheet hammers the floor.
+                const w = front.w;
+                ctx.ellipse(front.p[0], ctx.F + 3, 5 + w * 1.8, 1.6 + w * .35, ctx.tint('#dfe3cd', .7));
             }
         }
+        ctx.endLayer();
+
+        if (shapes.length) {
+            ctx.beginLayer({ key: 'water-glint', blend: 'screen', opacity: .8 + .2 * wave(age * 31), mask });
+            for (const { sheet } of shapes) {
+                if (sheet.points.length < 3) continue;
+                // A steady highlight along the upper edge; the sheet's motion blur does the flowing.
+                const edge = sheet.points.map(q => [q.p[0] + q.dir[1] * q.w * .72 * side, q.p[1] - q.dir[0] * q.w * .72 * side] as Vector);
+                const line = spline(edge, false);
+                ctx.strokePath(line.start, line.curves, { width: 1.1, color: ctx.tint(WATER.glint, .6), cap: 'round' },
+                    { trim: [sheet.attached ? .02 : .15, sheet.landed ? .9 : .75] });
+                const under = sheet.points.map(q => [q.p[0] - q.dir[1] * q.w * .6 * side, q.p[1] + q.dir[0] * q.w * .6 * side] as Vector);
+                const low = spline(under, false);
+                ctx.strokePath(low.start, low.curves, { width: .7, color: ctx.tint(WATER.glint, .22), cap: 'round' }, { trim: [.3, .8] });
+            }
+            ctx.endLayer();
+        }
+    }
+
+    if (spray.length || crowns.length) {
+        ctx.beginLayer({ key: 'water-body', blur: .75 * ctx.scale });
         for (const c of crowns) {
             const u = c.age / c.life;
             const h = c.r * 2.8 * Math.sin(u * Math.PI);
@@ -264,27 +333,6 @@ export function drawPour(ctx: RenderCtx) {
         }
         for (const z of spray) {
             ctx.ellipse(z.x, z.y, z.r, z.r * 1.15, ctx.tint(WATER.spray, ctx.clamp(z.life / .4, 0, 1) * .95));
-        }
-        ctx.endLayer();
-    }
-
-    if (streams.length) {
-        ctx.beginLayer({ key: 'water-glint', blend: 'screen' });
-        for (const r of streams) {
-            if (r.points.length < 3) continue;
-            const offset = r.points.map((p, i): Vector => {
-                const a = r.points[Math.max(0, i - 1)];
-                const b = r.points[Math.min(r.points.length - 1, i + 1)];
-                const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-                const w = r.widths[i] * .5;
-                return [p[0] + (b[1] - a[1]) / l * w * side, p[1] - (b[0] - a[0]) / l * w * side];
-            });
-            const line = spline(offset, false);
-            const width = Math.min(1.8, r.widths.reduce((s, w) => s + w, 0) / r.widths.length * .3);
-            ctx.strokePath(line.start, line.curves,
-                { width, color: ctx.tint(WATER.glint, .55), cap: 'round', dash: [4, 11], dashOffset: age * 260 },
-                { trim: [.08, .97] });
-            ctx.strokePath(line.start, line.curves, { width: width * .6, color: ctx.tint(WATER.glint, .45), cap: 'round' }, { trim: [.6, 1] });
         }
         ctx.endLayer();
     }

@@ -48,6 +48,8 @@ export type LayerSpec = {
     opacity?: number;
     /** Screen-space path the whole layer is clipped to. */
     clip?: DrawCommand;
+    /** Screen-space shape whose fill alpha masks the layer (ThorVG MaskMethod.Alpha). */
+    mask?: DrawCommand;
 };
 export type DrawCommand = {
     v: Vector[];

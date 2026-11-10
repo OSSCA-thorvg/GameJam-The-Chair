@@ -1,7 +1,7 @@
 import { LEVEL } from '../game/level';
 import type { GameEvent } from '../game/types';
 import { EFFECT_STYLE } from './art';
-import { bucketMouth, pourFlow } from './bucket';
+import { WATER_GRAVITY, bucketMouth, pourFlow, pourLaunch } from './bucket';
 export { EFFECT_STYLE } from './art';
 export type Speck = {
     x: number;
@@ -42,8 +42,6 @@ export type WaterPour = {
     chain: number;
     flowing: boolean;
     emit: number;
-    /** Eased exit speed; a sudden jump would let new water overtake old and fold the stream. */
-    speed: number;
     seed: number;
 };
 export type WaterPuddle = {
@@ -110,7 +108,7 @@ export function createEffects() {
             specks = specks.filter(z => z.life > 0).slice(-60);
         }
         if (event.type === 'water-splash') {
-            waterPour = { x: event.x, side: event.side, age: 0, chain: 0, flowing: false, emit: 0, speed: 0, seed: 0x9e3779b9 ^ Math.round(event.x) };
+            waterPour = { x: event.x, side: event.side, age: 0, chain: 0, flowing: false, emit: 0, seed: 0x9e3779b9 ^ Math.round(event.x) };
             waterPuddle = null;
         }
         if (event.type === 'water-step') {
@@ -138,30 +136,31 @@ export function createEffects() {
         const [lx, ly] = mouth.lip;
         const ax = mouth.rim[0] - lx;
         const ay = mouth.rim[1] - ly;
-        const [ox, oy] = mouth.out;
+        const spill = pourLaunch(pour.x, F, pour.side, pour.age);
+        const spillSpeed = Math.hypot(spill.vx, spill.vy) || 1;
+        const ox = spill.vx / spillSpeed;
+        const oy = spill.vy / spillSpeed;
         const opening = .08 + .2 * q;
-        pour.speed += (110 + 230 * q - pour.speed) * Math.min(1, dt * 5);
         if (q > .16) {
             if (!pour.flowing) pour.chain++;
             pour.flowing = true;
             pour.emit += dt * 110;
             while (pour.emit >= 1) {
                 pour.emit--;
-                const at = opening * (.45 + random() * .1);
-                const speed = pour.speed + random() * 6;
+                // Invisible tracers that follow the drawn water sheet; they make the splashes and the puddle.
+                const launch = pourLaunch(pour.x, F, pour.side, pour.age);
                 waterDrops.push({
                     kind: 'stream', chain: pour.chain,
-                    x: lx + ax * at, y: ly + ay * at,
-                    vx: ox * speed, vy: oy * speed - 10,
+                    x: launch.x, y: launch.y, vx: launch.vx, vy: launch.vy,
                     life: 2, r: 1.6 + Math.hypot(ax, ay) * opening * .42, floor: F + 3,
                 });
             }
         } else {
             pour.flowing = false;
         }
-        if (random() < q * dt * 70) {
+        if (random() < q * dt * 45) {
             const spin = (random() - .5) * .9;
-            const speed = (60 + 210 * q) * (.7 + random() * .65);
+            const speed = (50 + 140 * q) * (.7 + random() * .6);
             const at = opening * random();
             waterDrops.push({
                 kind: 'drop', chain: 0,
@@ -192,12 +191,12 @@ export function createEffects() {
             if (random() < .25) waterRipples.push({ x: z.x, y: z.floor, age: 0, life: .3, r: z.r, crown: false });
             return;
         }
-        const ring = z.kind === 'drop' ? random() < .3 : random() < .1;
+        const ring = z.kind === 'drop' ? random() < .2 : random() < .08;
         const crown = z.kind === 'stream' && z.r > 5.5 && random() < .07;
         if (ring || crown) {
             waterRipples.push({ x: z.x, y: z.floor, age: 0, life: crown ? .38 : .45 + z.r * .04, r: z.r, crown });
         }
-        const splashes = speed < 150 ? 0 : z.kind === 'stream' ? (random() < .55 ? 1 : 0) + (z.r > 6 && random() < .4 ? 1 : 0) : (random() < .4 ? 1 : 0);
+        const splashes = speed < 170 ? 0 : z.kind === 'stream' ? (random() < .55 ? 1 : 0) + (z.r > 6 && random() < .4 ? 1 : 0) : (random() < .4 ? 1 : 0);
         for (let i = 0; i < splashes; i++) {
             const kick = Math.min(1, speed / 380);
             waterDrops.push({
@@ -215,7 +214,7 @@ export function createEffects() {
         const alive: WaterDrop[] = [];
         for (const z of waterDrops) {
             z.life -= dt;
-            z.vy += 980 * dt;
+            z.vy += WATER_GRAVITY * dt;
             if (z.kind !== 'stream') z.vx *= Math.exp(-.5 * dt);
             z.x += z.vx * dt;
             z.y += z.vy * dt;

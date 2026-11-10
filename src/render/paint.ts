@@ -2,7 +2,7 @@ import type { Canvas, LinearGradient, RadialGradient, Scene, Shape, ThorVGNamesp
 import type { RenderCtx } from './context';
 import type { Blend, DrawCommand, Gradient, LayerSpec } from './types';
 
-type LayerSlot = { scene: Scene; shapes: Shape[]; clip: Shape | null };
+type LayerSlot = { scene: Scene; shapes: Shape[]; clip: Shape | null; mask: Shape | null };
 type Item = { cmd: DrawCommand } | { layer: LayerSpec; key: string; cmds: DrawCommand[] };
 
 // Shapes are pooled and reused; these bits remember which non-default
@@ -163,7 +163,7 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         }
         let slot = pool.layers.get(item.key);
         if (!slot) {
-            slot = { scene: new TVG.Scene(), shapes: [], clip: null };
+            slot = { scene: new TVG.Scene(), shapes: [], clip: null, mask: null };
             pool.layers.set(item.key, slot);
         }
         const { scene, shapes } = slot;
@@ -198,6 +198,25 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         } else if (slot.clip) {
             slot.clip.reset();
             slot.clip.appendRect(-1e4, -1e4, 2e4, 2e4);
+        }
+        if (spec.mask) {
+            if (!slot.mask) {
+                slot.mask = new TVG.Shape();
+                scene.mask(slot.mask, TVG.MaskMethod.Alpha);
+            }
+            const fill = spec.mask.c;
+            tracePath(slot.mask, spec.mask);
+            if (fill === null) slot.mask.fill(255, 255, 255, 255);
+            else if (typeof fill === 'string') slot.mask.fill(...ctx.rgba(fill));
+            else {
+                const g = fillOf(fill);
+                slot.mask.fill(g);
+                g.dispose();
+            }
+        } else if (slot.mask) {
+            slot.mask.reset();
+            slot.mask.appendRect(-1e4, -1e4, 2e4, 2e4);
+            slot.mask.fill(255, 255, 255, 255);
         }
         scene.visible(true);
         order.push(scene);

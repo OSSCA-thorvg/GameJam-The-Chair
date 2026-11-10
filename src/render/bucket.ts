@@ -58,3 +58,37 @@ export function pourFlow(age: number) {
     const glug = 1 - depth + depth * Math.cos(Math.max(0, u - .15) * Math.PI * 2 * 4.2);
     return envelope * glug;
 }
+
+export const WATER_GRAVITY = 980;
+
+/**
+ * Exit speed of water leaving at `age`. It only ever slows down after the
+ * first gush, so later water never overtakes earlier water and the falling
+ * sheet keeps one clean arc instead of bending like a rope.
+ */
+export function pourSpeed(age: number) {
+    const u = age - .17 - .07;
+    return 75 + 150 * (u <= 0 ? 1 : Math.exp(-u * 2.5));
+}
+
+export type WaterLaunch = { x: number; y: number; vx: number; vy: number; flow: number; opening: number };
+
+/** Where and how fast the water that left the bucket at `age` was launched. */
+export function pourLaunch(x: number, floor: number, side: number, age: number): WaterLaunch {
+    const flow = pourFlow(age);
+    const mouth = bucketMouth(x, floor, side, age);
+    const opening = .08 + .2 * flow;
+    const speed = pourSpeed(age);
+    // Water spills over the rim rather than firing along the bucket's axis:
+    // mostly sideways, with at most a slight lift while the bucket is still upright.
+    const lift = Math.max(-.2, Math.min(.1, mouth.out[1]));
+    const length = Math.hypot(1, lift);
+    return {
+        x: mouth.lip[0] + (mouth.rim[0] - mouth.lip[0]) * opening * .5,
+        y: mouth.lip[1] + (mouth.rim[1] - mouth.lip[1]) * opening * .5,
+        vx: (Math.sign(side) || 1) * speed / length,
+        vy: lift * speed / length,
+        flow,
+        opening,
+    };
+}
