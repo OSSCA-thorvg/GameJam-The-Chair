@@ -1,7 +1,7 @@
 import type { Game } from '../game/game';
-import type { Input } from '../game/types';
+import { bindControls } from './controls';
+// Menu buttons, dialog focus and pause syncing. Gameplay keys and touch controls live in ./controls.
 export function bindInput(root: HTMLElement, game: Game) {
-    const km: Partial<Record<string, Input>> = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', q: 'q', Q: 'q', e: 'e', E: 'e' };
     const controller = new AbortController();
     const options = { signal: controller.signal };
     const menu = root.querySelector<HTMLElement>('[data-pause-menu]');
@@ -53,79 +53,28 @@ export function bindInput(root: HTMLElement, game: Game) {
     button('[data-reset]', game.restart);
     button('[data-pause]', togglePause);
     button('[data-resume]', togglePause);
+    const accepting = () => root.isConnected && !document.querySelector?.('.startup-splash');
     window.addEventListener('keydown', e => {
-        if (!root.isConnected || (e.target instanceof Element && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName))) return;
-        if (document.querySelector?.('.startup-splash')) return;
+        if (e.key !== 'Tab' || !accepting()) return;
         const state = game.getSnapshot();
-        if (e.key === 'Tab') {
-            const dialog = state.mode === 'pause' ? menu : panel && !panel.hidden ? panel : null;
-            if (dialog) {
-                const targets = focusable(dialog);
-                const first = targets[0], last = targets[targets.length - 1];
-                if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
-                    e.preventDefault(); last?.focus();
-                } else if (!e.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
-                    e.preventDefault(); first?.focus();
-                }
-            }
-            return;
-        }
-        if (!e.repeat && (e.key.toLowerCase() === 'p' || e.key === 'Escape')) {
-            if (state.mode === 'play' || state.mode === 'pause') {
-                e.preventDefault();
-                togglePause();
-            }
-            return;
-        }
-        if (!e.repeat && e.key.toLowerCase() === 'r' && state.mode !== 'intro') {
-            e.preventDefault();
-            game.restart();
-            syncMenu();
-            return;
-        }
-        if (state.mode !== 'play') return;
-        if (e.key === 'ArrowDown' && state.stage === 2) {
-            e.preventDefault();
-            if (!e.repeat) game.interact();
-            return;
-        }
-        const k = km[e.key];
-        if (k || e.code === 'Space' || e.key === 'ArrowUp' || e.key === 'f' || e.key === 'F') {
-            e.preventDefault();
-            if (k) game.press(k);
-            if (state.stage >= 3 && (e.code === 'Space' || e.key.toLowerCase() === 'f')) game.press('spray');
-            else if (!e.repeat && e.code === 'Space') game.jump();
-            if (!e.repeat && e.key === 'ArrowUp') game.jump();
+        const dialog = state.mode === 'pause' ? menu : panel && !panel.hidden ? panel : null;
+        if (!dialog) return;
+        const targets = focusable(dialog);
+        const first = targets[0], last = targets[targets.length - 1];
+        if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+            e.preventDefault(); last?.focus();
+        } else if (!e.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
+            e.preventDefault(); first?.focus();
         }
     }, options);
-    window.addEventListener('keyup', e => {
-        const key = km[e.key];
-        if (key) game.release(key);
-        if (e.code === 'Space' || e.key.toLowerCase() === 'f') game.release('spray');
-    }, options);
-    window.addEventListener('blur', game.clearInput, options);
+    bindControls(root, game, {
+        accepting: e => accepting() && !(e.target instanceof Element && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)),
+        togglePause,
+        afterRestart: syncMenu,
+    }, controller.signal);
     document.addEventListener('visibilitychange', () => {
         if (document.hidden && game.getSnapshot().mode === 'play') togglePause();
     }, options);
-    root.querySelectorAll<HTMLElement>('[data-key]').forEach(button => {
-        const key = button.dataset.key;
-        if (key !== 'left' && key !== 'right' && key !== 'q' && key !== 'e') return;
-        button.addEventListener('pointerdown', e => {
-            e.preventDefault();
-            game.press(key);
-            button.setPointerCapture(e.pointerId);
-        }, options);
-        for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, () => game.release(key), options);
-    });
-    root.querySelector<HTMLElement>('[data-jump]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.jump(); }, options);
-    root.querySelector<HTMLElement>('[data-interact]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.interact(); }, options);
-    const sprayButton = root.querySelector<HTMLElement>('[data-spray]');
-    sprayButton?.addEventListener('pointerdown', e => {
-        e.preventDefault();
-        game.press('spray');
-        sprayButton.setPointerCapture(e.pointerId);
-    }, options);
-    for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) sprayButton?.addEventListener(event, () => game.release('spray'), options);
     const observer = new MutationObserver(() => {
         if ((game.getSnapshot().mode === 'pause') !== menuOpen || (!!panel && !panel.hidden) !== panelOpen) syncMenu();
     });

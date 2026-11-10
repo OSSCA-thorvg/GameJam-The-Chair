@@ -37,7 +37,10 @@ test('Space holds spray in stage three, releases on keyup/blur, and touch captur
         assert.ok(game.getSnapshot().player.vy < -300);
         game.startStage(1); for (let i = 0; i < 20; i++) game.step(1 / 120);
         key('keydown', ' ', 'Space'); game.step(1 / 120);
-        assert.ok(game.getSnapshot().player.vy < -300, 'Space still jumps in the office');
+        assert.ok(game.getSnapshot().player.vy > -300, 'Space no longer jumps in the office');
+        for (let i = 0; i < 20; i++) game.step(1 / 120);
+        key('keydown', 'ArrowUp'); game.step(1 / 120);
+        assert.ok(game.getSnapshot().player.vy < -300, 'Up jumps in the office');
         await Promise.resolve();
     } finally {
         unbind();
