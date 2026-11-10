@@ -12,6 +12,15 @@ export function player(ctx: RenderCtx) {
     ctx.oy = p.y + ART.player.offsetY;
     ctx.rotation = p.a + (ctx.mode === 'play' && ctx.t < 1 && !state.lessons.moved ? Math.sin(ctx.t * 12) * .025 : 0);
     ctx.localScale = ART.player.scale;
+    if (state.hasExtinguisher) {
+        ctx.rod(-39, -49, -45, -13, 4, '#394657');
+        ctx.rect(-54, -48, 16, 39, '#b75f4a');
+        ctx.ellipse(-46, -48, 8, 5, '#c7765c');
+        ctx.rect(-52, -37, 12, 11, '#eee5cd');
+        ctx.rod(-46, -52, -46, -59, 4, '#394657');
+        ctx.rod(-49, -59, -35, -59, 3, '#394657');
+        ctx.rod(-45, -52, -34, -44, 3, '#394657');
+    }
     ctx.rod(0, -4, 0, 16, 6, C.steel);
     ctx.rod(-29, 21, 0, 13, 5, C.steel);
     ctx.rod(0, 13, 29, 21, 5, C.steel);
@@ -56,7 +65,6 @@ export function player(ctx: RenderCtx) {
     ctx.polygon([[-16, -34], [-9, -35], [23, -36], [25, -32], [-15, -27]], C.skin);
     ctx.polygon([[-15, -29], [23, -33], [24, -32], [-15, -27]], '#d3aa80');
     ctx.polygon([[21, -31], [54, -31], [65, -59], [33, -59]], '#555f70');
-
     ctx.polygon([[35, -55], [59, -55], [51, -35], [27, -35]], '#a8b9c3');
 
     ctx.rod(18, -29, 55, -29, 3, C.steel);
