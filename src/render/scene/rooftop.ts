@@ -1,3 +1,4 @@
+import { SPRAY_KEY } from '../../ui/controls';
 import { STAGE_THREE } from '../../game/stage3';
 import type { RenderCtx } from '../context';
 import { checkpointFlag } from './decor';
@@ -38,7 +39,7 @@ export function drawRooftop(ctx: RenderCtx) {
         ctx.rod(pickup.x - 3, pickup.y - 84, pickup.x + 12, pickup.y - 84, 3, '#394657');
     }
     if (p.x < 790) {
-        ctx.label('Space', STAGE_THREE.pickup.x, STAGE_THREE.pickup.y - 97, 20, '#f0dfb9');
+        ctx.label(SPRAY_KEY, STAGE_THREE.pickup.x, STAGE_THREE.pickup.y - 97, 20, '#f0dfb9');
     }
 
     // Checkpoint flags.
@@ -48,7 +49,7 @@ export function drawRooftop(ctx: RenderCtx) {
     }
 
     if (p.x > 2100 && state.firstFlight.kind === 'course') {
-        ctx.label('Space × 3', 2350, -228, 18, '#ffe2a8');
+        ctx.label(`${SPRAY_KEY} × 3`, 2350, -228, 18, '#ffe2a8');
         for (let i = 0; i < 3; i++) ctx.ellipse(2330 + i * 20, -212, 4, 4,
             i < state.firstFlight.verticalShots ? '#fff2ce' : '#778ba4');
     }
