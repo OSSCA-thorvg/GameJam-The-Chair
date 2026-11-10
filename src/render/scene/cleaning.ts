@@ -1,6 +1,9 @@
 import type { Vector, Curve } from '../types';
 import type { DeepReadonly, Person } from '../../game/types';
 import type { RenderCtx } from '../context';
+import { bucketAngle, bucketOrigin, bucketPoint } from '../bucket';
+import { drawPour, drawPuddle, puddleShape } from './water';
+import { player } from './player';
 
 type CleanerControls = {
     approach: number;
@@ -90,14 +93,9 @@ function sampleCleaner(age: number): CleanerControls {
 }
 
 function bucketPose(ctx: RenderCtx, motion: CleanerControls): BucketPose {
-    const fall = ctx.cleaning.spilled ? Math.min(1, ctx.state.bucketAge / .42) : 0;
-    const angle = ctx.cleaning.splashDir * fall * motion.bucketTilt * 1.25;
-    const origin: Vector = [ctx.cleaning.x, ctx.F - 5 - 15 * Math.abs(Math.sin(angle)) - 2 * Math.cos(angle) - motion.bucketLift];
-    const point = (x: number, y: number): Vector => [
-        origin[0] + x * Math.cos(angle) - y * Math.sin(angle),
-        origin[1] + x * Math.sin(angle) + y * Math.cos(angle),
-    ];
-    return { origin, angle, frontGrip: point(-12, -66), rearGrip: point(12, -66) };
+    const angle = ctx.cleaning.spilled ? bucketAngle(ctx.cleaning.splashDir, ctx.state.bucketAge, motion.bucketTilt) : 0;
+    const origin = bucketOrigin(ctx.cleaning.x, ctx.F, angle, motion.bucketLift);
+    return { origin, angle, frontGrip: bucketPoint(origin, angle, -12, -66), rearGrip: bucketPoint(origin, angle, 12, -66) };
 }
 
 function cleanerHead(ctx: RenderCtx, x = 0, y = 0, facing = 1) {
@@ -273,47 +271,15 @@ function drawCleanerBody(ctx: RenderCtx, n: DeepReadonly<Person>, pose: CleanerP
     ctx.localScale = 1;
 }
 
-export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
-    const F = ctx.F;
-    const cleaning = ctx.cleaning;
-    const state = ctx.state;
-    const p = ctx.p;
-    const motion = sampleCleaner(cleaning.spilled ? state.bucketAge : 0);
-    const bucket = bucketPose(ctx, motion);
-    const pose = cleaner ? cleanerPose(ctx, cleaner, motion, bucket) : undefined;
-    const spread = cleaning.spilled ? Math.min(1, cleaning.age / .8) : 0;
-    if (spread > 0) {
-        const width = (cleaning.b - cleaning.a) * spread;
-        const inlet = Math.min(cleaning.x - 46 - cleaning.a, width * .5);
-        const depth = 6 + 15 * spread;
-        ctx.ox = cleaning.a;
-        ctx.oy = F;
-        ctx.effectPath([inlet, -17], [
-            [inlet * .35, -8, 0, -4, 0, 3],
-            [0, depth, width * .28, depth + 2, width * .42, depth],
-            [width * .66, depth + 1, width * .94, depth - 6, width, depth - 4],
-            [width, depth - 13, width * .57, depth - 10, width * .41, depth - 14],
-            [width * .2, depth - 16, inlet * 1.3, -8, inlet, -17]
-        ], ctx.gradientFill(0, -17, 0, depth + 2, [[0, '#777b5f'], [.55, '#8f9679'], [1, '#78826e']]));
-        ctx.ellipse(width * .28, depth - 6, width * .1, spread * 1.8, '#c6cbae90');
-        ctx.ellipse(width * .48, depth - 9, width * .06, spread * 1.4, '#c6cbae70');
-        ctx.ox = ctx.oy = 0;
-        if (state.slip) {
-            ctx.rod(p.x - 95, F - 2, p.x - 30, F - 2, 3, '#5e716c');
-            ctx.rod(p.x - 82, F + 4, p.x - 18, F + 4, 2, '#61736e');
-        }
-    }
-    const { bucketAge } = state;
-    const angle = bucket.angle;
-    const tip = Math.abs(angle) / 1.25;
-    const side = cleaning.splashDir;
-    ctx.ellipse(cleaning.x + side * tip * 20, F + 1, 28 + tip * 5, 3, '#515c6d48');
-    if (cleaner && pose) drawCleanerBody(ctx, cleaner, pose, motion);
+function drawBucket(ctx: RenderCtx, bucket: BucketPose) {
+    // The water left inside drains as the bucket empties.
+    const left = ctx.cleaning.spilled ? 1 - ctx.clamp(ctx.state.bucketAge / 1.2, 0, 1) : 1;
     ctx.ox = bucket.origin[0];
     ctx.oy = bucket.origin[1];
-    ctx.rotation = angle;
+    ctx.rotation = bucket.angle;
     ctx.polygon([[-23, -50], [20, -50], [15, -7], [-18, -7]], '#c0a775');
-    ctx.ellipse(-2, -50, 22, 6, '#647260');
+    ctx.ellipse(-2, -50, 22, 6, '#4f5a50');
+    if (left > 0) ctx.ellipse(-2, -50 + (1 - left) * 2, 21 * (.55 + .45 * left), 5 * (.5 + .5 * left), '#647260');
     ctx.rod(-24, -46, -19, -66, 3, '#7d8790');
     ctx.rod(-19, -66, 18, -66, 3, '#7d8790');
     ctx.rod(18, -66, 23, -46, 3, '#7d8790');
@@ -322,38 +288,33 @@ export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
     ctx.ellipse(15, 2, 5, 5, '#555f66');
     ctx.rect(-11, -36, 19, 13, '#eee1b5');
     ctx.ox = ctx.oy = ctx.rotation = 0;
+}
+
+export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
+    const F = ctx.F;
+    const cleaning = ctx.cleaning;
+    const state = ctx.state;
+    const p = ctx.p;
+    const motion = sampleCleaner(cleaning.spilled ? state.bucketAge : 0);
+    const bucket = bucketPose(ctx, motion);
+    const pose = cleaner ? cleanerPose(ctx, cleaner, motion, bucket) : undefined;
+    const puddle = puddleShape(ctx);
+    if (puddle) {
+        drawPuddle(ctx, puddle, () => {
+            if (cleaner && pose) drawCleanerBody(ctx, cleaner, pose, motion);
+            drawBucket(ctx, bucket);
+            if (pose) drawArm(ctx, pose.frontArm, true);
+            if (Math.abs(p.x - puddle.cx) < puddle.rx + 70 && p.y > F - 140) player(ctx);
+        });
+        if (state.slip) {
+            ctx.rod(p.x - 95, F - 2, p.x - 30, F - 2, 3, '#5e716c');
+            ctx.rod(p.x - 82, F + 4, p.x - 18, F + 4, 2, '#61736e');
+        }
+    }
+    const tip = Math.abs(bucket.angle) / 1.25;
+    ctx.ellipse(cleaning.x + cleaning.splashDir * tip * 20, F + 1, 28 + tip * 5, 3, '#515c6d48');
+    if (cleaner && pose) drawCleanerBody(ctx, cleaner, pose, motion);
+    drawBucket(ctx, bucket);
     if (pose) drawArm(ctx, pose.frontArm, true);
-    if (bucketAge < 1.1) {
-        const u = ctx.clamp(bucketAge / 1.1, 0, 1);
-        const reach = Math.sin(Math.min(1, u * 2) * Math.PI / 2);
-        const fade = Math.sin(u * Math.PI);
-        ctx.ox = cleaning.x + side * 10;
-        ctx.oy = F - 24;
-        for (let i = 0; i < 2; i++) {
-            const end = -65 - (125 - i * 38) * reach;
-            const crest = -30 - (80 - i * 22) * Math.sin(u * Math.PI);
-            ctx.effectPath([0, 0], [[end * .3, crest - 25, end * .65, crest, end, 12], [end + 24, 8, end + 38, -6, end + 52, 6], [end * .4, 14, -18, 24, 0, 0]].map(c => c.map((v, i) => i % 2 === 0 ? v * -side : v) as Curve), ctx.gradientFill(0, -65, 0, 30, [[0, '#bfca9c90'], [.45, '#8e9c7dcc'], [1, '#66796318']], fade));
-        }
-        ctx.ox = ctx.oy = ctx.rotation = 0;
-    }
-    for (const r of ctx.waterRipples) {
-        const u = r.age / r.life;
-        ctx.ripple(r.x, F + 5, 4 + u * (14 + r.r * 2), 1.5 + u * 3, 1.2, ctx.tint('#c0c7a4', (1 - u) * .65));
-    }
-    for (const z of ctx.waterDrops) {
-        const fade = ctx.clamp(z.life / .35, 0, 1);
-        const speed = Math.hypot(z.vx, z.vy);
-        const stretch = z.landed ? 1 : ctx.clamp(speed / 130, 1, 2.8);
-        ctx.ox = z.x;
-        ctx.oy = z.y;
-        ctx.rotation = Math.atan2(z.vy, z.vx) - Math.PI / 2;
-        const r = z.r;
-        const w = r * .68;
-        const h = r * stretch;
-        ctx.effectPath([0, -h], [[w, -h * .25, w, h * .65, 0, h], [-w, h * .65, -w, -h * .25, 0, -h]], ctx.gradientFill(-w, 0, w, 0, [[0, '#647960d0'], [.48, '#a8b58bdc'], [1, '#7d8e7880']], fade));
-        if (!z.landed && z.r > 4) {
-            ctx.ellipse(-w * .25, -h * .1, .8, h * .32, ctx.tint('#e0dfb7', fade * .7));
-        }
-        ctx.ox = ctx.oy = ctx.rotation = 0;
-    }
+    drawPour(ctx);
 }
