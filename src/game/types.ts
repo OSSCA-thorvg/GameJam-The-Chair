@@ -69,3 +69,5 @@ export type GameEvent = {
 } | {
     type: 'light-contact';
 };
+export type Mode = 'intro' | 'play' | 'pause' | 'impact' | 'focuslost' | 'dead' | 'won';
+export type LossReason = 'head' | 'bin' | 'focus' | 'lift';

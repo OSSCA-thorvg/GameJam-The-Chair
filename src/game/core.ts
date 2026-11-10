@@ -1,7 +1,7 @@
 import { LEVEL, RULES } from './level';
 import type { DuctBurst } from './stage3';
 import { STAGE_TWO, createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
-import type { GameEvent, Input, Paper, Person, Player, Point, Snapshot } from './types';
+import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Point, Snapshot } from './types';
 
 export type FocusNotice = { kind: 'paper' | 'water' | 'light' | 'door' | 'cart'; life: number };
 export type Impact = { frames: Snapshot[]; elapsed: number; point: Point };
@@ -24,7 +24,7 @@ export type GameCore = {
     sprayDir: { x: number; y: number };
     deaths: number;
 
-    mode: string;
+    mode: Mode;
     p: Player;
     keys: Set<Input>;
     ground: boolean;
@@ -75,7 +75,7 @@ export type GameCore = {
     focusEvents: Set<string>;
     focusNotice: FocusNotice | null;
     volley: number;
-    lossReason: string | null;
+    lossReason: LossReason | null;
     focusLossTime: number;
 
     events: GameEvent[];

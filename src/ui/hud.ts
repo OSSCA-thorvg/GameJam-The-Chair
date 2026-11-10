@@ -1,5 +1,6 @@
 import { translate, type Locale, type Message } from '../i18n';
 import type { GameState } from '../game/game';
+import type { Mode } from '../game/types';
 import type { FeedbackState } from './feedback';
 import type { EffectsState } from '../render/effects';
 import type { Viewport } from '../render/renderer';
@@ -15,7 +16,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         if (el) el.hidden = value;
     };
     const style = (selector: string, key: string, value: string) => q(selector)?.style.setProperty(key, value);
-    let previousMode = 'intro';
+    let previousMode: Mode = 'intro';
     let lastStage = 1;
     let lastTime = 0;
     let previousFocus = 100;
