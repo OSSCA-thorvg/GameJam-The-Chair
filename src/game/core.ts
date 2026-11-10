@@ -1,3 +1,4 @@
+import { createSky, type SkyState } from './stage4';
 import { LEVEL, RULES } from './level';
 import type { DuctBurst } from './stage3';
 import { STAGE_TWO, createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
@@ -9,6 +10,7 @@ export type Solid = { p: Point[]; practice?: true };
 
 export type GameCore = {
     stage: StageId;
+    sky: SkyState;
     LEN: number;
     GOAL: number;
     checkpoint: number;
@@ -85,6 +87,7 @@ export function createCore(initialDeaths: number): GameCore {
     const F = LEVEL.floor;
     return {
         stage: 1,
+        sky: createSky(),
         LEN: LEVEL.length,
         GOAL: LEVEL.goal,
         checkpoint: 0,

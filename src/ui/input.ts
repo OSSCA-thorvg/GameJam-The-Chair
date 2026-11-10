@@ -84,6 +84,9 @@ export function bindInput(root: HTMLElement, game: Game) {
             return;
         }
         if (state.mode !== 'play') return;
+        if (state.stage === 4 && state.sky.phase === 'depth' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+            e.preventDefault(); game.press(e.key === 'ArrowUp' ? 'forward' : 'back'); return;
+        }
         if (e.key === 'ArrowDown' && state.stage === 2) {
             e.preventDefault();
             if (!e.repeat) game.interact();
@@ -99,6 +102,8 @@ export function bindInput(root: HTMLElement, game: Game) {
         }
     }, options);
     window.addEventListener('keyup', e => {
+        if (e.key === 'ArrowUp') game.release('forward');
+        if (e.key === 'ArrowDown') game.release('back');
         const key = km[e.key];
         if (key) game.release(key);
         if (e.code === 'Space' || e.key.toLowerCase() === 'f') game.release('spray');
@@ -117,8 +122,18 @@ export function bindInput(root: HTMLElement, game: Game) {
         }, options);
         for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, () => game.release(key), options);
     });
-    root.querySelector<HTMLElement>('[data-jump]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.jump(); }, options);
-    root.querySelector<HTMLElement>('[data-interact]')?.addEventListener('pointerdown', e => { e.preventDefault(); game.interact(); }, options);
+    for (const [selector, key, action] of [
+        ['[data-jump]', 'forward', game.jump], ['[data-interact]', 'back', game.interact],
+    ] as const) {
+        const button = root.querySelector<HTMLElement>(selector);
+        button?.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            const state = game.getSnapshot();
+            if (state.stage === 4 && state.sky.phase === 'depth') { game.press(key); button.setPointerCapture(e.pointerId); }
+            else action();
+        }, options);
+        for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button?.addEventListener(event, () => game.release(key), options);
+    }
     const sprayButton = root.querySelector<HTMLElement>('[data-spray]');
     sprayButton?.addEventListener('pointerdown', e => {
         e.preventDefault();

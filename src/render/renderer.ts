@@ -86,6 +86,11 @@ function setup(
         ctx.practiceBurst = effects.practiceBurst;
         ctx.saveFlash = effects.saveFlash;
 
+        const ending = next.stage === 4 && (next.sky.phase === 'reveal' || next.sky.phase === 'depth');
+        const pullback = ending ? (next.sky.phase === 'depth' ? 1 : Math.min(1, next.sky.age / 5)) : 0;
+        const baseWidth = ctx.W < 520 ? 540 : Math.max(760, ctx.W);
+        ctx.VW = next.stage === 4 ? baseWidth * (1.12 + pullback * .65) : baseWidth;
+        ctx.scale = ctx.W / ctx.VW;
         const t = ctx.t;
         const dt = Math.max(0, t - lastTime);
         if (t < lastTime || next.stage !== lastStage) {
@@ -94,7 +99,7 @@ function setup(
         }
         if (camera !== undefined) {
             ctx.cam = ctx.clamp(camera, 0, Math.max(0, ctx.LEN - ctx.VW));
-        } else if (ctx.mode === 'play') {
+        } else if (ctx.mode === 'play' || (next.stage === 4 && ctx.mode === 'won')) {
             const focusX = ctx.p.x - ctx.VW * .35;
             ctx.cam += (ctx.clamp(focusX, 0, Math.max(0, ctx.LEN - ctx.VW)) - ctx.cam) * Math.min(1, dt * 7);
             ctx.wheel += ctx.p.vx * dt / 8;
