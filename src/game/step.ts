@@ -11,7 +11,7 @@ import { focusStep, advanceFocusLoss } from './systems/focus';
 import { shoot, particlesStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
 import { geyserHits } from './systems/geyser';
-import { applyBinFall, applyGeyserHits, applyMonitorContact } from './apply';
+import { applyBinFall, applyCleaning, applyGeyserHits, applyMonitorContact } from './apply';
 import { monitorContact } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
 import { meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
@@ -110,7 +110,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     particlesStep(s, out, dt);
     if (s.mode !== 'play') return;
     if (s.stage === 1) {
-        cleaningStep(s, out, dt);
+        applyCleaning(s, out, cleaningStep(s, dt), dt);
         applyGeyserHits(s, out, geyserHits(s.p, s.time, s.rng.physics));
     }
     if (s.mode !== 'play') return;

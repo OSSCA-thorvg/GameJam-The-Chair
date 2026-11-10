@@ -5,6 +5,7 @@ import type { GeyserHit } from './systems/geyser';
 import type { MonitorContact } from './systems/monitor';
 import { RULES } from './level';
 import { BIN_REST } from './systems/bin';
+import type { CleaningResult } from './systems/cleaning';
 
 // The only place where system decisions are written into game state. Systems decide; these apply.
 // Each applier returns false when the attempt stopped (focus lost, death) so the step can end early.
@@ -55,4 +56,21 @@ export function applyBinFall(s: GameState, out: GameEvent[]) {
     out.push({ type: 'cue', id: 'bin-fall' });
     out.push({ type: 'cue', id: 'bin-comment' });
     out.push({ type: 'cue', id: 'bin-game-over' });
+}
+
+export function applyCleaning(s: GameState, out: GameEvent[], result: CleaningResult, dt: number) {
+    s.cleaning = result.cleaning;
+    s.bucket = result.bucket;
+    if (result.splash) {
+        out.push({ type: 'water-splash', x: s.cleaning.x, side: s.cleaning.splashDir });
+        out.push({ type: 'cue', id: 'water-spilled' });
+        out.push({ type: 'cue', id: 'water-comment' });
+    }
+    if (result.followup) out.push({ type: 'cue', id: 'water-followup' });
+    if (result.soak) {
+        s.soakedOnSpill = s.bucket.spills;
+        if (!applyFocusHit(s, out, result.soak)) return false;
+    }
+    out.push({ type: 'water-step', dt });
+    return true;
 }

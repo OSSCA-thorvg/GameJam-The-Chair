@@ -1,10 +1,9 @@
-import { LEVEL, RULES } from '../level';
+import { waterExposure } from './cleaning';
 import type { GameCore } from '../state';
 import type { GameEvent } from '../types';
 
 export function waterExposureActive(s: GameCore) {
-    const F = LEVEL.floor;
-    return s.bucket.age < RULES.waterExposure && Math.abs(s.p.x - s.cleaning.x) < 210 && s.p.y > F - 150;
+    return waterExposure(s.bucket.age, s.p, s.cleaning.x);
 }
 
 export function focusBlocked(s: GameCore) {

@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 
 // Unit tests for pure system decisions: same input, same answer, no state writes.
 const bundle = await build({
-    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin';`, resolveDir: process.cwd() },
+    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
 const sys = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
@@ -40,4 +40,20 @@ test('the office bin catches a falling chair over its opening only', () => {
     assert.equal(sys.fellOffFloor({ x: 0, y: 671 }), true);
     assert.equal(sys.fellOffFloor({ x: 0, y: 670 }), false);
     assert.throws(() => { sys.BIN_REST.x = 0; });
+});
+
+test('the bucket tips once when approached, splashes nearby riders and must refill', () => {
+    const cleaning = { x: 1095, a: 1035, b: 1360, spilled: false, age: 0, followup: false, splashDir: 0 };
+    const bucket = { age: 2.2, armed: true, spills: 0 };
+    const input = { p: { x: 1000, y: 392 }, cleaning, bucket, soakedOnSpill: 0 };
+    const first = sys.cleaningStep(input, 1 / 120);
+    assert.equal(first.splash, true);
+    assert.equal(first.cleaning.splashDir, -1);
+    assert.deepEqual(first.soak, { kind: 'water', id: 1, damage: 30 });
+    assert.equal(cleaning.spilled, false, 'input untouched');
+    const again = sys.cleaningStep({ ...input, cleaning: first.cleaning, bucket: first.bucket, soakedOnSpill: 1 }, 1 / 120);
+    assert.equal(again.splash, false, 'not refilled yet');
+    assert.equal(again.soak, null, 'one soak per spill');
+    const far = sys.cleaningStep({ ...input, p: { x: 600, y: 392 } }, 1 / 120);
+    assert.equal(far.splash, false);
 });
