@@ -28,7 +28,7 @@ test('pause menu shows only cleared stages and hides spray controls until equipp
         hud.draw(fresh.getSnapshot(), feedback, effects, view);
         for (const element of elements.values()) assert.equal(element.hidden, true);
 
-        const continued = createGame(0, 1);
+        const continued = createGame({ progress: { completedStage: 1 } });
         continued.startStage(2);
         hud.draw(continued.getSnapshot(), feedback, effects, view);
         assert.equal(elements.get('[data-stage-menu]').hidden, false);

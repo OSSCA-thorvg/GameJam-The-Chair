@@ -352,7 +352,7 @@ test('holding right runs into the copier papers while the copier keeps firing', 
 
 
 test('cleared-stage history survives retries, stage changes and saved-game restoration', () => {
-    const game = createGame(0, 1);
+    const game = createGame({ progress: { completedStage: 1 } });
     assert.equal(game.getSnapshot().completedStage, 1);
     game.startStage(2);
     assert.equal(game.getSnapshot().completedStage, 1, 'entering a stage does not mark it cleared');
@@ -362,7 +362,7 @@ test('cleared-stage history survives retries, stage changes and saved-game resto
     assert.equal(game.getSnapshot().completedStage, 2);
     game.startStage(1);
     assert.equal(game.getSnapshot().completedStage, 2);
-    const restored = createGame(state.deaths, state.completedStage);
+    const restored = createGame({ progress: { deaths: state.deaths, completedStage: state.completedStage } });
     assert.equal(restored.getSnapshot().completedStage, 2);
     assert.equal(createGame().getSnapshot().completedStage, 0);
 });

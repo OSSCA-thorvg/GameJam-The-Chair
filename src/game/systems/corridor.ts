@@ -27,7 +27,7 @@ export function liftRideStep(s: GameCore, dt: number) {
         s.mode = 'dead';
         s.lossReason = 'lift';
         s.deaths++;
-        s.keys.clear();
+        s.keys = [];
         s.events.push({ type: 'cue', id: 'lift-game-over' });
     }
     return true;
@@ -42,7 +42,7 @@ export function leaveMeeting(s: GameCore, pushed = false) {
     if (room.kind !== 'meeting') return;
     s.p = { x: room.returnX + (pushed ? 110 : 0), y: 392, vx: pushed ? 180 : 0, vy: 0, a: 0, w: 0 };
     s.corridor.room = { kind: 'corridor' };
-    s.keys.clear();
+    s.keys = [];
     s.jumpQ = 0;
     s.ground = true;
     s.actualSpeed = 0;
@@ -54,7 +54,7 @@ export function interactMeeting(s: GameCore) {
     s.corridor.room = { kind: 'meeting', age: 0, returnX: s.p.x };
     s.corridor.meetingVisited = true;
     s.p = { x: STAGE_TWO.meeting - 100, y: 392, vx: 0, vy: 0, a: 0, w: 0 };
-    s.keys.clear();
+    s.keys = [];
     s.jumpQ = 0;
     s.actualSpeed = 0;
 }
@@ -135,7 +135,7 @@ export function corridorStep(s: GameCore, dt: number, previousX: number) {
         if (index > 0 && s.furniture[index - 1].released) chair.x = Math.min(chair.x, s.furniture[index - 1].x - 80);
         chair.y = 420;
     }
-    const followsBoarding = captiveBoarding && c.convoy === 'airborne' && !s.keys.has('left') && !s.keys.has('right');
+    const followsBoarding = captiveBoarding && c.convoy === 'airborne' && !s.keys.includes('left') && !s.keys.includes('right');
     if (c.convoy === 'carried' || followsBoarding) {
         p.x = Math.max(back.x + 29, Math.min(front.x - 29, previousX + front.x - frontX));
         p.vx = front.vx;

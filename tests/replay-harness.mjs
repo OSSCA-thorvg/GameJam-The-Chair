@@ -21,7 +21,7 @@ export function play(game, commands, from, to) {
             const [, method, ...args] = commands[next++];
             game[method](...args);
         }
-        game.step();
+        game.step(1 / 120);
         game.drainEvents();
     }
     return game;

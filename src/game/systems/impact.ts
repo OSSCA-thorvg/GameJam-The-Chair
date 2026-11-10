@@ -5,7 +5,7 @@ export function fail(s: GameCore, point: Point) {
     if (s.mode !== 'play' || s.inBin) return;
     s.deaths++;
     s.lossReason = 'head';
-    s.keys.clear();
+    s.keys = [];
     s.impact = { frames: s.history.slice(-42).concat(snapshot(s)), elapsed: 0, point };
     s.mode = 'impact';
     s.events.push({ type: 'cue', id: 'head-hit' });

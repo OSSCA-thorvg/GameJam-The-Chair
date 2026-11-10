@@ -1,12 +1,10 @@
-import { STAGE_TWO, createFurniture, createCorridor, type StageId } from './stage2';
-import { STAGE_THREE } from './stage3';
-import { STAGE_FOUR } from './stage4';
+import { STAGE_TWO, type StageId } from './stage2';
 import { skyStep } from './systems/sky';
 import { rooftopStep, firstFlightStep, rooftopEntranceStep, rooftopLaunchShot, ductSpray } from './systems/rooftop';
-import { LEVEL, RULES, FIXED_STEP } from './level';
+import { LEVEL, FIXED_STEP } from './level';
 import type { Input, DeepReadonly } from './types';
-import { clamp, polyRect, contact } from './geometry';
-import { createCore, snapshot } from './core';
+import { clamp, contact } from './geometry';
+import { createCore, createProgress, resetAttempt, startStage as beginStage, serializeState, restoreState, snapshot, type Progress } from './core';
 import { focusBlocked, focusStep, advanceFocusLoss } from './systems/focus';
 import { shoot, particlesStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
@@ -16,104 +14,17 @@ import { fail, impactStep } from './systems/impact';
 import { canEnterMeeting, interactMeeting, leaveMeeting, meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
 import { binEnter } from './systems/bin';
 
-export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId = 0) {
-    const F = LEVEL.floor;
-    const s = createCore(initialDeaths);
-    let completedStage = initialCompletedStage;
+export type GameOptions = { progress?: Partial<Pick<Progress, 'deaths' | 'completedStage'>> };
 
-    function build() {
-        if (s.stage === 4) {
-            s.solids = [];
-            s.people = [];
-            s.furniture = [];
-            return;
-        }
-        if (s.stage === 3) {
-            s.solids = STAGE_THREE.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
-            s.people = [];
-            s.furniture = [];
-            return;
-        }
-        if (s.stage === 2) {
-            s.solids = STAGE_TWO.terrain.map(p => ({ p: p.map(v => ({ ...v })) }));
-            s.people = [];
-            s.furniture = createFurniture(s.checkpoint);
-            return;
-        }
-        s.solids = [
-            { p: polyRect(-400, F, s.bin.a + 400, 350) },
-            { p: polyRect(s.bin.b, F, s.LEN - s.bin.b + 400, 350) },
-        ];
-        s.people = [
-            { id: 'manager', x: 320, said: false },
-            { id: 'cleaner', x: LEVEL.cleaning.x + 55, said: false },
-            { id: 'admin', x: 1810, said: false },
-        ];
-    }
+export function createGame(options: GameOptions = {}) {
+    const F = LEVEL.floor;
+    const s = createCore(createProgress(options.progress?.deaths, options.progress?.completedStage));
+    // Real frame time waiting to become fixed steps. Shell-only: it never reaches game state.
+    let acc = 0;
 
     function reset() {
-        s.corridor = createCorridor(s.checkpoint);
-        build();
-        const spawn = s.stage === 4 ? STAGE_FOUR.spawn : s.stage === 3
-            ? STAGE_THREE.checkpoints[s.checkpoint]
-            : s.stage === 2
-                ? STAGE_TWO.checkpoints[s.checkpoint]
-                : { x: s.officeCheckpoint ? 1400 : 100, y: F - 28 };
-        s.p = { ...spawn, vx: 0, vy: 0, a: 0, w: 0 };
-        s.actualSpeed = 0;
-        s.practiceJump = false;
-        s.keys.clear();
-        s.ground = false;
-        s.coyote = 0;
-        s.jumpQ = 0;
-        s.escapeQueued = false;
-        s.time = 0;
-        s.t = 0;
-        if (s.stage === 1) s.skylineSeed = Math.floor(Math.random() * 0x100000000);
-        s.acc = 0;
-        s.dirty = false;
-        s.inBin = false;
-        s.binAge = 0;
-        s.binCooldown = 0;
-        s.slip = false;
-        s.wetSeen = false;
-        s.slipCooldown = 0;
-        s.papers = [];
-        s.paperPenaltyRemaining = 0;
-        s.paperHits = 0;
-        s.bursts = 0;
-        s.binFalls = 0;
-        s.history = [];
-        s.impact = null;
-        s.rollCooldown = 0;
-        s.reverseCooldown = 0;
-        s.focus = 100;
-        s.focusClock = 0;
-        s.focusEvents.clear();
-        s.focusNotice = null;
-        s.volley = 0;
-        s.lossReason = null;
-        s.focusLossTime = 0;
-        s.soakedOnSpill = 0;
-        Object.assign(s.cleaning, { spilled: false, age: 0, followup: false, splashDir: 0 });
-        Object.assign(s.bucket, { age: RULES.bucketReset, armed: true, spills: 0 });
-        s.lightPenaltyRemaining = 0;
-        s.lightHits = 0;
-        s.doorHits = 0;
-        s.lightCooldown = 0;
-        Object.assign(s.copier, { cool: 0, burst: 0, next: 0 });
-        s.hasExtinguisher = s.stage === 4 || (s.stage === 3 && s.checkpoint > 0);
-        s.firstFlight = { kind: 'course', verticalShots: 0, lastShotAt: -1 };
-        s.ductReaction = { kind: 'idle' };
-        s.rooftopEntrance = s.stage === 3 && s.checkpoint === 0 ? { kind: 'opening', age: 0 } : { kind: 'ready' };
-        s.sprayCooldown = 0;
-        s.sprayBurst = s.stage === 4 ? .24 : 0;
-        s.sprayDir = { x: 0, y: 1 };
-        s.mode = 'play';
-        s.events.length = 0;
-        s.events.push({ type: 'reset' });
+        resetAttempt(s);
     }
-
     function jump() {
         if (s.mode !== 'play' || s.corridor.room.kind === 'meeting' || s.rooftopEntrance.kind === 'opening') return;
         s.jumpQ = .14;
@@ -121,7 +32,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
 
     function spray() {
         if (s.mode !== 'play' || !s.hasExtinguisher || s.stage === 4 || s.firstFlight.kind === 'flight' || s.sprayCooldown > 0) return;
-        const dx = (s.keys.has('right') ? 1 : 0) - (s.keys.has('left') ? 1 : 0);
+        const dx = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
         const len = Math.hypot(dx, 1);
         s.sprayDir = { x: -dx / len, y: 1 / len };
         s.p.vx += dx * 150;
@@ -138,8 +49,8 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
     function pause() {
         if (s.mode !== 'play' && s.mode !== 'pause') return;
         s.mode = s.mode === 'play' ? 'pause' : 'play';
-        s.keys.clear();
-        s.acc = 0;
+        s.keys = [];
+        acc = 0;
     }
 
     function step(dt: number) {
@@ -158,18 +69,16 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         s.lightCooldown = Math.max(0, s.lightCooldown - dt);
         s.sprayCooldown = Math.max(0, s.sprayCooldown - dt);
         s.sprayBurst = Math.max(0, s.sprayBurst - dt);
-        if (s.keys.has('spray')) spray();
+        if (s.keys.includes('spray')) spray();
         s.events.push({ type: 'tick', dt });
         if (s.stage === 3) {
             if (rooftopEntranceStep(s, dt)) return;
             const flight = firstFlightStep(s, dt);
             if (flight) {
                 if (flight === 'arrived') {
-                    if (completedStage < 3) completedStage = 3;
+                    if (s.completedStage < 3) s.completedStage = 3;
                     const arrival = { ...s.p };
-                    const pendingTime = s.acc;
-                    startStage(4);
-                    s.acc = pendingTime;
+                    beginStage(s, 4);
                     s.p = arrival;
                     s.ground = false;
                 }
@@ -207,7 +116,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
 
         const p = s.p;
         const was = s.ground;
-        const inputDir = (s.keys.has('right') ? 1 : 0) - (s.keys.has('left') ? 1 : 0);
+        const inputDir = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
         const prev = p.x;
         s.coyote = s.ground ? .1 : Math.max(0, s.coyote - dt);
         s.jumpQ = Math.max(0, s.jumpQ - dt);
@@ -229,8 +138,8 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         const convoyJump = s.stage === 2 && s.corridor.convoy === 'airborne' && !s.ground;
         const expressJump = convoyJump && s.corridor.pace === 'express';
         const dir = s.stage === 2 && s.corridor.convoy === 'carried' ? 0 : inputDir;
-        const balancing = s.keys.has('q') || s.keys.has('e');
-        const tilt = (s.keys.has('e') ? 1 : 0) - (s.keys.has('q') ? 1 : 0) + (was || balancing ? 0 : dir);
+        const balancing = s.keys.includes('q') || s.keys.includes('e');
+        const tilt = (s.keys.includes('e') ? 1 : 0) - (s.keys.includes('q') ? 1 : 0) + (was || balancing ? 0 : dir);
         p.w += tilt * (was ? 4.3 : 6.4) * dt;
         if (p.x < 300 || s.stage >= 3) {
             p.w += (-Math.sin(p.a) * 20 - p.w * 7) * dt;
@@ -379,14 +288,12 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             return;
         }
         if (s.stage <= 2 && p.x > s.GOAL) {
-            if (s.stage > completedStage) completedStage = s.stage;
+            if (s.stage > s.completedStage) s.completedStage = s.stage;
             s.mode = 'won';
-            s.keys.clear();
+            s.keys = [];
             s.events.push({ type: 'cue', id: 'stage-clear' });
         }
     }
-
-    build();
 
     function getSnapshot() {
         return structuredClone({
@@ -398,7 +305,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
             tutorialAssist: s.mode === 'play' && s.p.x < 300,
             stage: s.stage,
-            completedStage,
+            completedStage: s.completedStage,
             hasExtinguisher: s.hasExtinguisher,
             firstFlight: s.firstFlight,
             rooftopEntrance: s.rooftopEntrance,
@@ -447,34 +354,32 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
     function advance(dt: number) {
         if (!Number.isFinite(dt) || dt < 0) return;
         if (s.mode === 'play') {
-            s.acc += dt;
-            while (s.acc >= FIXED_STEP) {
+            acc += dt;
+            while (acc >= FIXED_STEP) {
                 step(FIXED_STEP);
-                s.acc -= FIXED_STEP;
+                acc -= FIXED_STEP;
                 if (s.mode !== 'play') {
-                    s.acc = 0;
+                    acc = 0;
                     break;
                 }
             }
         } else {
-            s.acc = 0;
+            acc = 0;
             if (s.mode === 'impact') impactStep(s, dt);
             if (s.mode === 'focuslost') advanceFocusLoss(s, dt);
         }
     }
 
     function startStage(id: StageId) {
-        s.stage = id;
-        s.checkpoint = 0;
-        s.officeCheckpoint = false;
-        s.lessons = { moved: false, jumped: false };
-        s.LEN = s.stage === 1 ? LEVEL.length : s.stage === 2 ? STAGE_TWO.length : s.stage === 3 ? STAGE_THREE.length : STAGE_FOUR.length;
-        s.GOAL = s.stage === 1 ? LEVEL.goal : s.stage === 2 ? STAGE_TWO.goal : s.stage === 3 ? STAGE_THREE.goal : STAGE_FOUR.length;
-        reset();
+        beginStage(s, id);
+        acc = 0;
     }
 
     return {
-        reset,
+        reset() {
+            reset();
+            acc = 0;
+        },
         jump,
         interact: () => interactMeeting(s),
         leaveMeeting: () => { if (s.mode === 'play') leaveMeeting(s); },
@@ -486,20 +391,27 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         restart() {
             if (s.mode === 'play') s.deaths++;
             reset();
+            acc = 0;
         },
         advanceImpact: (dt: number) => impactStep(s, dt),
         advanceFocusLoss: (dt: number) => advanceFocusLoss(s, dt),
         setInput(...input: Input[]) {
-            s.keys = new Set(input);
+            s.keys = [...new Set(input)];
         },
         press(input: Input) {
-            if (s.mode === 'play') s.keys.add(input);
+            if (s.mode === 'play' && !s.keys.includes(input)) s.keys.push(input);
         },
         release(input: Input) {
-            s.keys.delete(input);
+            s.keys = s.keys.filter(key => key !== input);
         },
         clearInput() {
-            s.keys.clear();
+            s.keys = [];
+        },
+        /** Full game state as JSON. Restoring it into any game continues the run exactly. */
+        serialize: () => serializeState(s),
+        restore(json: string) {
+            restoreState(s, json);
+            acc = 0;
         },
         getSnapshot: getSnapshot as () => DeepReadonly<ReturnType<typeof getSnapshot>>,
         drainEvents() {

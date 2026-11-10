@@ -16,7 +16,7 @@ export function rooftopEntranceStep(s: GameCore, dt: number) {
     if (s.rooftopEntrance.age >= entrance.duration) {
         s.rooftopEntrance = { kind: 'ready' };
         s.p.vx = 0;
-        s.keys.clear();
+        s.keys = [];
         s.jumpQ = 0;
     }
     return true;
@@ -67,7 +67,7 @@ export function rooftopLaunchShot(s: GameCore, direction: number) {
         s.firstFlight = { kind: 'flight', age: 0 };
         s.p.vy = Math.min(s.p.vy, -320);
         s.p.w = 0;
-        s.keys.clear();
+        s.keys = [];
         s.jumpQ = 0;
     }
 }

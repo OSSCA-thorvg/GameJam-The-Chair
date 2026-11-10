@@ -61,7 +61,7 @@ try {
 }
 catch {
 }
-const game = createGame(savedDeaths, savedCompletedStage);
+const game = createGame({ progress: { deaths: savedDeaths, completedStage: savedCompletedStage } });
 const effects = createEffects();
 const feedback = createFeedback(() => locale);
 const unbind = bindInput(root, game);

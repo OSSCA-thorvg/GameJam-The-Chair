@@ -2,7 +2,7 @@ import type { GameCore } from '../core';
 import { STAGE_FOUR } from '../stage4';
 
 export function skyStep(s: GameCore, dt: number) {
-    const direction = (s.keys.has('right') ? 1 : 0) - (s.keys.has('left') ? 1 : 0);
+    const direction = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
     const p = s.p;
     p.vx += direction * 220 * dt;
     p.vx *= Math.exp(-1.4 * dt);

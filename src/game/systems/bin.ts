@@ -13,7 +13,7 @@ export function binEnter(s: GameCore) {
     s.p.y = F + 66;
     s.p.vx = s.p.vy = s.p.w = 0;
     s.p.a = .1;
-    s.keys.clear();
+    s.keys = [];
     s.mode = 'dead';
     s.events.push({ type: 'cue', id: 'bin-fall' });
     s.events.push({ type: 'cue', id: 'bin-comment' });

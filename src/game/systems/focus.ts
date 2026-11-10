@@ -13,8 +13,8 @@ export function focusBlocked(s: GameCore) {
 export function focusHit(s: GameCore, kind: 'paper' | 'water' | 'light' | 'door', id: number, damage: number) {
     if (s.mode !== 'play') return;
     const token = kind + ':' + id;
-    if (s.focusEvents.has(token)) return;
-    s.focusEvents.add(token);
+    if (s.focusEvents.includes(token)) return;
+    s.focusEvents.push(token);
     s.focus = Math.max(0, s.focus - damage);
     s.focusClock = 0;
     s.focusNotice = { kind, life: 1.7 };
@@ -31,8 +31,7 @@ export function focusFailure(s: GameCore) {
     s.focus = 0;
     s.focusClock = 0;
     s.deaths++;
-    s.keys.clear();
-    s.acc = 0;
+    s.keys = [];
     s.events.push({ type: 'cue', id: 'focus-lost' });
 }
 
