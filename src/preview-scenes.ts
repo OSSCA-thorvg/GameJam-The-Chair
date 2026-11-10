@@ -85,6 +85,48 @@ function cleanerRecovery(): PreviewScene {
     };
 }
 
+function bucketPour(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const base = game.getSnapshot();
+    const duration = 2.6;
+    const effect = createEffects();
+    effect.receive({ type: 'water-splash', x: base.cleaning.x, side: 1 });
+    const frames = [structuredClone(effect.snapshot())];
+    for (let frame = 1; frame <= Math.ceil(duration / FRAME_TIME); frame++) {
+        effect.receive({ type: 'water-step', dt: FRAME_TIME });
+        frames.push(structuredClone(effect.snapshot()));
+    }
+    return {
+        id: 'bucket-pour',
+        label: 'Bucket · Water pour',
+        duration,
+        focusX: base.cleaning.x + 110,
+        markers: [
+            { at: .12, label: 'Rim bulges' },
+            { at: .26, label: 'Gush' },
+            { at: .5, label: 'Glugs' },
+            { at: 1.2, label: 'Dribble' },
+            { at: 2.2, label: 'Puddle' },
+        ],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            return {
+                state: {
+                    ...base,
+                    mode: 'play',
+                    time: at,
+                    bucketAge: at,
+                    cleaning: { ...base.cleaning, spilled: true, age: at, splashDir: 1 },
+                    player: { ...base.player, x: base.cleaning.x + 205, y: LEVEL.floor - 28, vx: 0, vy: 0 },
+                    ground: true,
+                },
+                effects: frames[Math.min(frames.length - 1, Math.round(at / FRAME_TIME))],
+            };
+        },
+    };
+}
+
 function monitorLight(): PreviewScene {
     const game = createGame();
     game.reset();
@@ -249,5 +291,5 @@ export const previewScenes: readonly PreviewScene[] = [
         markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
-    cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), extinguisherSpray(), officeTyping(),
+    bucketPour(), cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), extinguisherSpray(), officeTyping(),
 ];

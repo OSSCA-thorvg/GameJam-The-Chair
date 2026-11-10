@@ -2,7 +2,7 @@ import type { Locale } from '../i18n';
 import { LEVEL } from '../game/level';
 import type { GameState } from '../game/game';
 import type { DeepReadonly } from '../game/types';
-import type { Vector, Curve, Color, Gradient, DrawCommand } from './types';
+import type { Vector, Curve, Color, Gradient, DrawCommand, LayerSpec, Blend, Stroke } from './types';
 import { ART } from './art';
 import type { EffectsState } from './effects';
 
@@ -29,6 +29,9 @@ export type RenderCtx = {
     oy: number;
     rotation: number;
     localScale: number;
+    /** Reflect world y around `y`, squashed by `k` (floor-plane reflections). */
+    mirror: { y: number; k: number } | null;
+    layer: LayerSpec | null;
 
     commands: DrawCommand[];
     foregroundActors: DrawCommand[];
@@ -52,6 +55,8 @@ export type RenderCtx = {
 
     waterDrops: DeepReadonly<EffectsState['waterDrops']>;
     waterRipples: DeepReadonly<EffectsState['waterRipples']>;
+    waterPour: DeepReadonly<EffectsState['waterPour']>;
+    waterPuddle: DeepReadonly<EffectsState['waterPuddle']>;
     specks: DeepReadonly<EffectsState['specks']>;
     paperFace: number;
     glare: number;
@@ -63,7 +68,12 @@ export type RenderCtx = {
     rgba(hex: string, alpha?: number): Color;
     rgb(hex: string): [number, number, number];
     gradientFill(x1: number, y1: number, x2: number, y2: number, stops: [number, string][], alpha?: number): Gradient;
-    effectPath(start: Vector, curves: Curve[], fill: Gradient): void;
+    effectPath(start: Vector, curves: Curve[], fill: Gradient | string, opts?: PathOptions): void;
+    strokePath(start: Vector, curves: Curve[], stroke: StrokeInput, opts?: PathOptions & { closed?: boolean }): void;
+    pathCommand(start: Vector, curves: Curve[]): DrawCommand;
+    radialFill(cx: number, cy: number, r: number, stops: [number, string][], alpha?: number): Gradient;
+    beginLayer(spec: LayerSpec): void;
+    endLayer(): void;
     gradientPolygon(points: Vector[], fill: Gradient): void;
     ripple(x: number, y: number, rx: number, ry: number, width: number, color: string): void;
     tint(hex: string, alpha: number): string;
@@ -72,6 +82,9 @@ export type RenderCtx = {
     rod(x: number, y: number, xx: number, yy: number, w: number, c: string): void;
     label(text: string, x: number, y: number, size?: number, color?: string, align?: CanvasTextAlign): void;
 };
+
+export type PathOptions = { blend?: Blend; trim?: [number, number] };
+export type StrokeInput = { width: number; color: string | Gradient; cap?: Stroke['cap']; dash?: number[]; dashOffset?: number };
 
 export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderingContext2D): RenderCtx {
     const TAU = Math.PI * 2;
@@ -96,6 +109,8 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         oy: 0,
         rotation: 0,
         localScale: 1,
+        mirror: null,
+        layer: null,
         commands: [] as DrawCommand[],
         foregroundActors: [],
         state: null as unknown as GameState,
@@ -116,6 +131,8 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         GOAL: LEVEL.goal,
         waterDrops: [] as DeepReadonly<EffectsState['waterDrops']>,
         waterRipples: [] as DeepReadonly<EffectsState['waterRipples']>,
+        waterPour: null,
+        waterPuddle: null,
         specks: [] as DeepReadonly<EffectsState['specks']>,
         paperFace: 0,
         glare: 0,
@@ -128,10 +145,16 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         const s = Math.sin(ctx.rotation);
         x *= ctx.localScale;
         y *= ctx.localScale;
-        return [(x * c - y * s + ctx.ox - ctx.cam) * ctx.scale, (x * s + y * c + ctx.oy + ctx.vertical) * ctx.scale];
+        let wy = x * s + y * c + ctx.oy;
+        if (ctx.mirror) wy = ctx.mirror.y + (ctx.mirror.y - wy) * ctx.mirror.k;
+        return [(x * c - y * s + ctx.ox - ctx.cam) * ctx.scale, (wy + ctx.vertical) * ctx.scale];
+    };
+    const push = (cmd: DrawCommand) => {
+        if (ctx.layer) cmd.layer = ctx.layer;
+        ctx.commands.push(cmd);
     };
     ctx.polygon = (points, color) => {
-        ctx.commands.push({ v: points.map(([x, y]) => ctx.screenPoint(x, y)), c: color });
+        push({ v: points.map(([x, y]) => ctx.screenPoint(x, y)), c: color });
     };
     ctx.rgb = (hex) => {
         const h = hex.slice(1);
@@ -143,15 +166,47 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
     ctx.gradientFill = (x1, y1, x2, y2, stops, alpha = 1) => {
         return { from: ctx.screenPoint(x1, y1), to: ctx.screenPoint(x2, y2), stops: stops.map(([at, c]) => [at, ctx.rgba(c, alpha)]) };
     };
-    ctx.effectPath = (start, curves, fill) => {
-        ctx.commands.push({
-            v: [ctx.screenPoint(...start)],
-            curves: curves.map(c => [...ctx.screenPoint(c[0], c[1]), ...ctx.screenPoint(c[2], c[3]), ...ctx.screenPoint(c[4], c[5])]),
-            c: fill,
-        });
+    ctx.pathCommand = (start, curves) => ({
+        v: [ctx.screenPoint(...start)],
+        curves: curves.map(c => [...ctx.screenPoint(c[0], c[1]), ...ctx.screenPoint(c[2], c[3]), ...ctx.screenPoint(c[4], c[5])]),
+        c: null,
+    });
+    ctx.effectPath = (start, curves, fill, opts) => {
+        const cmd = ctx.pathCommand(start, curves);
+        cmd.c = fill;
+        if (opts?.blend) cmd.blend = opts.blend;
+        if (opts?.trim) cmd.trim = opts.trim;
+        push(cmd);
+    };
+    ctx.strokePath = (start, curves, stroke, opts) => {
+        const cmd = ctx.pathCommand(start, curves);
+        const unit = ctx.scale * ctx.localScale;
+        cmd.open = !opts?.closed;
+        cmd.stroke = {
+            width: stroke.width * unit,
+            color: stroke.color,
+            cap: stroke.cap,
+            dash: stroke.dash?.map(d => d * unit),
+            dashOffset: stroke.dashOffset === undefined ? undefined : stroke.dashOffset * unit,
+        };
+        if (opts?.blend) cmd.blend = opts.blend;
+        if (opts?.trim) cmd.trim = opts.trim;
+        push(cmd);
+    };
+    ctx.radialFill = (cx, cy, r, stops, alpha = 1) => ({
+        from: ctx.screenPoint(cx, cy),
+        to: ctx.screenPoint(cx + r, cy),
+        radius: r * ctx.scale * ctx.localScale,
+        stops: stops.map(([at, c]) => [at, ctx.rgba(c, alpha)]),
+    });
+    ctx.beginLayer = (spec) => {
+        ctx.layer = spec;
+    };
+    ctx.endLayer = () => {
+        ctx.layer = null;
     };
     ctx.gradientPolygon = (points, fill) => {
-        ctx.commands.push({ v: points.map(v => ctx.screenPoint(...v)), c: fill });
+        push({ v: points.map(v => ctx.screenPoint(...v)), c: fill });
     };
     ctx.ripple = (x, y, rx, ry, width, color) => {
         const points: Vector[] = [];
