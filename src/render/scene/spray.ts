@@ -4,7 +4,7 @@ export function sprayPlume(ctx: RenderCtx) {
     const p = ctx.p;
     // Spray plume: cubic-bezier cone with gradient fade along the direction.
     const spray = ctx.state.spray;
-    const continuous = ctx.state.stage === 4 || ctx.state.firstFlight.kind === 'flight';
+    const continuous = (ctx.state.stage === 4 && ctx.state.sky.phase !== 'course') || ctx.state.firstFlight.kind === 'flight';
     if (continuous || spray.burst > 0) {
         const dx = spray.dir.x;
         const dy = spray.dir.y;

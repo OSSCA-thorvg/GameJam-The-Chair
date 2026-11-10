@@ -34,7 +34,7 @@ test('rooftop renders the live course and first flight in both languages and nar
         if (state.stage === 3) assert.ok(ctx.commands.some(command => command.curves?.length), 'rooftop retains curved effects');
         for (const command of ctx.commands) {
             for (const point of [...command.v, ...(command.curves ?? [])]) assert.ok(point.every(Number.isFinite));
-            if (typeof command.c !== 'string') assert.ok(command.c.stops.every(([, color]) => color.every(Number.isFinite)));
+            if (command.c && typeof command.c !== 'string') assert.ok(command.c.stops.every(([, color]) => color.every(Number.isFinite)));
         }
         const [, playerY] = ctx.screenPoint(state.player.x, state.player.y);
         assert.ok(playerY > 120 && playerY < 450, `${name}: chair remains in view`);

@@ -1,6 +1,6 @@
 import { STAGE_TWO, createFurniture, createCorridor, type StageId } from './stage2';
 import { STAGE_THREE } from './stage3';
-import { STAGE_FOUR } from './stage4';
+import { STAGE_FOUR, createSky } from './stage4';
 import { skyStep } from './systems/sky';
 import { rooftopStep, firstFlightStep, rooftopEntranceStep, rooftopLaunchShot, ductSpray } from './systems/rooftop';
 import { LEVEL, RULES, FIXED_STEP } from './level';
@@ -53,8 +53,10 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
 
     function reset() {
         s.corridor = createCorridor(s.checkpoint);
+        s.sky = createSky();
+        if (s.stage === 4 && s.checkpoint > 0) { s.sky.phase = 'course'; s.sky.lift = 1; }
         build();
-        const spawn = s.stage === 4 ? STAGE_FOUR.spawn : s.stage === 3
+        const spawn = s.stage === 4 ? STAGE_FOUR.checkpoints[s.checkpoint] : s.stage === 3
             ? STAGE_THREE.checkpoints[s.checkpoint]
             : s.stage === 2
                 ? STAGE_TWO.checkpoints[s.checkpoint]
@@ -120,7 +122,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
     }
 
     function spray() {
-        if (s.mode !== 'play' || !s.hasExtinguisher || s.stage === 4 || s.firstFlight.kind === 'flight' || s.sprayCooldown > 0) return;
+        if (s.mode !== 'play' || !s.hasExtinguisher || (s.stage === 4 && s.sky.phase !== 'course') || s.firstFlight.kind === 'flight' || s.sprayCooldown > 0) return;
         const dx = (s.keys.has('right') ? 1 : 0) - (s.keys.has('left') ? 1 : 0);
         const len = Math.hypot(dx, 1);
         s.sprayDir = { x: -dx / len, y: 1 / len };
@@ -178,6 +180,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         }
         if (s.stage === 4) {
             skyStep(s, dt);
+            if (s.sky.depthTravel > .65 && completedStage < 4) completedStage = 4;
             return;
         }
         if (s.stage === 2 && meetingStep(s, dt)) return;
@@ -398,6 +401,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
             actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
             tutorialAssist: s.mode === 'play' && s.p.x < 300,
             stage: s.stage,
+            sky: s.sky,
             completedStage,
             hasExtinguisher: s.hasExtinguisher,
             firstFlight: s.firstFlight,
@@ -469,7 +473,7 @@ export function createGame(initialDeaths = 0, initialCompletedStage: 0 | StageId
         s.officeCheckpoint = false;
         s.lessons = { moved: false, jumped: false };
         s.LEN = s.stage === 1 ? LEVEL.length : s.stage === 2 ? STAGE_TWO.length : s.stage === 3 ? STAGE_THREE.length : STAGE_FOUR.length;
-        s.GOAL = s.stage === 1 ? LEVEL.goal : s.stage === 2 ? STAGE_TWO.goal : s.stage === 3 ? STAGE_THREE.goal : STAGE_FOUR.length;
+        s.GOAL = s.stage === 1 ? LEVEL.goal : s.stage === 2 ? STAGE_TWO.goal : s.stage === 3 ? STAGE_THREE.goal : STAGE_FOUR.goal;
         reset();
     }
 

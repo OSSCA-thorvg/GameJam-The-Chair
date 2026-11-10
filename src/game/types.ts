@@ -31,7 +31,7 @@ export type Paper = {
     volley: number;
     safe: boolean;
 };
-export type Input = 'left' | 'right' | 'q' | 'e' | 'spray';
+export type Input = 'left' | 'right' | 'q' | 'e' | 'spray' | 'forward' | 'back';
 export type DeepReadonly<T> = T extends object ? {
     readonly [K in keyof T]: DeepReadonly<T[K]>;
 } : T;
