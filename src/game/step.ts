@@ -8,9 +8,8 @@ import { applyCommand, spray, type Command } from './commands';
 import { copierStep, papersStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
 import { geyserHits } from './systems/geyser';
-import { applyBinFall, applyCleaning, applyCopier, applyFlight, applyGeyserHits, applyMonitorContact, applyPapers, applyRooftop, applyRooftopEntrance, applySky, applyFocusLoss, applyFocusRecovery } from './apply';
+import { applyBinFall, applyCleaning, applyCopier, applyFlight, applyGeyserHits, applyMonitorContact, applyPapers, applyRooftop, applyRooftopEntrance, applySky, applyFocusLoss, applyFocusRecovery, applyHeadHit, applyImpact } from './apply';
 import { monitorContact } from './systems/monitor';
-import { fail, impactStep } from './systems/impact';
 import { meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
 import { fallsIntoBin, fellOffFloor } from './systems/bin';
 
@@ -27,7 +26,7 @@ export function stepGame(s: GameState, commands: readonly Command[] = []): GameE
     if (!SIMULATED.includes(s.mode)) return out;
     s.tick++;
     if (s.mode === 'play') playStep(s, out, FIXED_STEP);
-    else if (s.mode === 'impact') impactStep(s, out, FIXED_STEP);
+    else if (s.mode === 'impact') applyImpact(s, out, FIXED_STEP);
     else applyFocusLoss(s, out, FIXED_STEP);
     return out;
 }
@@ -161,7 +160,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     for (const ob of solids) {
         const hit = contact(hx, hy, head.r, ob);
         if (hit && hit.ny < -.25 && hit.depth > .05) {
-            fail(s, out, { x: hx, y: hy });
+            applyHeadHit(s, out, { x: hx, y: hy });
             return;
         }
     }
@@ -175,7 +174,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
                 const hit = contact(p.x + rx, p.y + ry, part.r, ob);
                 if (!hit) continue;
                 if (part.head && hit.ny < -.25 && hit.depth > .05) {
-                    fail(s, out, { x: p.x + rx, y: p.y + ry });
+                    applyHeadHit(s, out, { x: p.x + rx, y: p.y + ry });
                     return;
                 }
                 p.x += hit.nx * hit.depth * .78;

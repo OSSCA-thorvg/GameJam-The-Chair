@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 
 // Unit tests for pure system decisions: same input, same answer, no state writes.
 const bundle = await build({
-    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning'; export * from './src/game/systems/papers'; export * from './src/game/systems/rooftop'; export * from './src/game/systems/sky'; export * from './src/game/systems/focus';`, resolveDir: process.cwd() },
+    stdin: { contents: `export * from './src/game/systems/geyser'; export * from './src/game/systems/monitor'; export * from './src/game/systems/bin'; export * from './src/game/systems/cleaning'; export * from './src/game/systems/papers'; export * from './src/game/systems/rooftop'; export * from './src/game/systems/sky'; export * from './src/game/systems/focus'; export * from './src/game/systems/impact';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
 const sys = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
@@ -153,4 +153,16 @@ test('each distraction costs focus once, and focus recovers only when undisturbe
     const blocked = { paperPenaltyRemaining: 0, lightPenaltyRemaining: 0, bucket: { age: 5 }, p: { x: 0, y: 0 }, cleaning: { x: 1095 } };
     assert.equal(sys.focusBlocked(blocked), false);
     assert.equal(sys.focusBlocked({ ...blocked, lightPenaltyRemaining: .1 }), true);
+});
+
+test('a head hit replays the last frames in slow motion, then holds', () => {
+    const history = Array.from({ length: 60 }, (_, i) => ({ p: { x: i, y: 0, vx: 0, vy: 0, a: 0, w: 0 } }));
+    const impact = sys.impactReplay(history, { x: 60, y: 0, vx: 0, vy: 0, a: 0, w: 0 }, { x: 60, y: -77 });
+    assert.equal(impact.frames.length, 43);
+    assert.equal(impact.frames[0].p.x, 18);
+    const half = sys.impactStep(impact, 21 / 120 / .25);
+    assert.equal(half.pose.x, 39);
+    assert.equal(half.done, false);
+    assert.equal(sys.impactStep(impact, 42 / 120 / .25 + .36).done, true);
+    assert.equal(impact.elapsed, 0, 'input untouched');
 });

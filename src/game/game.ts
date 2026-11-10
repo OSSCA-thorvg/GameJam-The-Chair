@@ -6,9 +6,8 @@ import { applyCommand, type Command } from './commands';
 import { SIMULATED, stageSolids, stepGame } from './step';
 import { STAGES } from './stages';
 import { focusBlocked } from './systems/focus';
-import { applyFocusLoss } from './apply';
+import { applyFocusLoss, applyImpact } from './apply';
 import { monitorPhase } from './systems/monitor';
-import { impactStep } from './systems/impact';
 import { canEnterMeeting } from './systems/corridor';
 
 export type { Command } from './commands';
@@ -154,7 +153,7 @@ export function createGame(options: GameOptions = {}) {
         step: (_dt?: number) => tick(),
         advance,
         // Preview-only scrubbing at arbitrary frame times. Never used by real play or replays.
-        advanceImpact: (dt: number) => emit(withEvents(out => impactStep(s, out, dt))),
+        advanceImpact: (dt: number) => emit(withEvents(out => applyImpact(s, out, dt))),
         advanceFocusLoss: (dt: number) => emit(withEvents(out => applyFocusLoss(s, out, dt))),
         /** Full game state as JSON. Restoring it into any game continues the run exactly. */
         serialize: () => serializeState(s),
