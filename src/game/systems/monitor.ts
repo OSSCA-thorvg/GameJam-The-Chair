@@ -1,7 +1,6 @@
-import { FOCUS_DAMAGE, LEVEL, RULES } from '../level';
-import type { GameCore } from '../state';
-import type { GameEvent } from '../types';
-import { focusHit } from './focus';
+import { FOCUS_DAMAGE, LEVEL } from '../level';
+import type { Point } from '../types';
+import type { FocusHit } from './focus';
 
 export type MonitorSpec = { wall: number; period: number; offset: number };
 export function monitorPhase(m: MonitorSpec, t: number) {
@@ -14,28 +13,23 @@ export function monitorPhase(m: MonitorSpec, t: number) {
     };
 }
 
-export function monitorStep(s: GameCore, out: GameEvent[], _dt: number, previousX: number) {
-    if (s.p.y + 28 < 300) return;
+export type MonitorContact = { index: number; x: number; vx: number; focus: FocusHit };
+
+// The first lit monitor the chair touches pushes it back to the side it came from.
+export function monitorContact(p: Readonly<Point>, previousX: number, time: number): MonitorContact | null {
+    if (p.y + 28 < 300) return null;
     for (let i = 0; i < LEVEL.monitors.length; i++) {
         const spec = LEVEL.monitors[i];
-        const m = monitorPhase(spec, s.time);
-        if (!m.active) continue;
-        if (s.p.x + 35 > spec.wall - 8 && s.p.x - 35 < spec.wall + 22) {
+        if (!monitorPhase(spec, time).active) continue;
+        if (p.x + 35 > spec.wall - 8 && p.x - 35 < spec.wall + 22) {
             const side = previousX < spec.wall ? -1 : 1;
-            s.p.x = side < 0 ? spec.wall - 45 : spec.wall + 65;
-            s.p.vx = side * 65;
-            s.p.w *= .45;
-            s.lightPenaltyRemaining = RULES.lightPenalty;
-            out.push({ type: 'light-contact' });
-            if (s.lightCooldown === 0) {
-                s.lightHits++;
-                s.lightCooldown = 1.4;
-                focusHit(s, out, 'light', i * 1000 + Math.floor(s.time / spec.period), FOCUS_DAMAGE.light);
-                if (s.mode !== 'play') return;
-                out.push({ type: 'cue', id: 'light-hit' });
-                out.push({ type: 'cue', id: 'light-comment', monitorIndex: i });
-            }
-            return;
+            return {
+                index: i,
+                x: side < 0 ? spec.wall - 45 : spec.wall + 65,
+                vx: side * 65,
+                focus: { kind: 'light', id: i * 1000 + Math.floor(time / spec.period), damage: FOCUS_DAMAGE.light },
+            };
         }
     }
+    return null;
 }

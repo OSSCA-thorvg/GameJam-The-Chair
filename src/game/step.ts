@@ -11,8 +11,8 @@ import { focusStep, advanceFocusLoss } from './systems/focus';
 import { shoot, particlesStep } from './systems/papers';
 import { cleaningStep } from './systems/cleaning';
 import { geyserHits } from './systems/geyser';
-import { applyGeyserHits } from './apply';
-import { monitorStep } from './systems/monitor';
+import { applyGeyserHits, applyMonitorContact } from './apply';
+import { monitorContact } from './systems/monitor';
 import { fail, impactStep } from './systems/impact';
 import { meetingStep, corridorStep, landInConvoy, liftRideStep } from './systems/corridor';
 import { binEnter } from './systems/bin';
@@ -215,7 +215,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     if (s.stage === 3) rooftopStep(s, out, dt);
     if (s.stage === 2) landInConvoy(s);
     if (s.stage === 1) {
-        monitorStep(s, out, dt, prev);
+        applyMonitorContact(s, out, monitorContact(p, prev, s.time));
     }
     if (s.mode !== 'play') return;
     // The rooftop saves only once the extinguisher is in hand; picking it up is checkpoint 1.

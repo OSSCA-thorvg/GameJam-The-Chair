@@ -9,7 +9,8 @@ async function load(entry) {
 const { createGame } = await load('src/game/game.ts');
 const { createFeedback } = await load('src/ui/feedback.ts');
 const { createCore } = await load('src/game/state.ts');
-const { monitorStep } = await load('src/game/systems/monitor.ts');
+const { monitorContact } = await load('src/game/systems/monitor.ts');
+const { applyMonitorContact } = await load('src/game/apply.ts');
 
 test('head failures retain the short cause and joke without control hints', () => {
     const feedback = createFeedback(() => 'ko');
@@ -100,7 +101,7 @@ test('the monitor that hit the rider owns the speech bubble', () => {
         core.p.x = wall;
         core.p.y = 392;
         const events = [];
-        monitorStep(core, events, 1 / 120, wall - 10);
+        applyMonitorContact(core, events, monitorContact(core.p, wall - 10, core.time));
         const cue = events.find(event => event.type === 'cue' && event.id === 'light-comment');
         assert.deepEqual(cue, { type: 'cue', id: 'light-comment', monitorIndex: index });
         const feedback = createFeedback();
