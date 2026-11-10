@@ -24,7 +24,17 @@ export type GameOptions = {
     // inside a step; `state` is the serialized state at that moment. Commands that follow belong to it.
     onAttemptStart?: (state: string) => void;
     onCommand?: (tick: number, command: Command) => void;
+    // Called after every fixed step with the new state (read-only) and the events it produced.
+    onStep?: (state: Readonly<CoreState>, events: readonly GameEvent[]) => void;
+    // Called when a step or command throws. The game keeps its previous state and rethrows.
+    onError?: (error: GameError) => void;
 };
+
+export type GameError = { tick: number; at: 'step' | 'command'; message: string; stack?: string; command?: Command };
+
+function describe(error: unknown) {
+    return error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+}
 
 // Imperative shell around the deterministic core: holds the current state, turns real frame time into
 // fixed steps, records commands and buffers events for the presentation layer. Each step or command
@@ -43,7 +53,13 @@ export function createGame(options: GameOptions = {}) {
     function send(command: Command) {
         // Record before applying so a reset's new attempt starts after the command that caused it.
         options.onCommand?.(s.tick, command);
-        const result = applyCommand(s, command);
+        let result;
+        try {
+            result = applyCommand(s, command);
+        } catch (error) {
+            options.onError?.({ tick: s.tick, at: 'command', command, ...describe(error) });
+            throw error;
+        }
         s = result.state;
         if (command.type === 'pause' || command.type === 'reset' || command.type === 'restart' || command.type === 'startStage') acc = 0;
         emit(result.events);
@@ -55,9 +71,16 @@ export function createGame(options: GameOptions = {}) {
     }
 
     function tick() {
-        const result = stepGame(s);
+        let result;
+        try {
+            result = stepGame(s);
+        } catch (error) {
+            options.onError?.({ tick: s.tick, at: 'step', ...describe(error) });
+            throw error;
+        }
         s = result.state;
         emit(result.events);
+        options.onStep?.(s, result.events);
     }
 
     // Preview-only scrubbing at arbitrary frame times. Never used by real play or replays.
@@ -72,60 +95,7 @@ export function createGame(options: GameOptions = {}) {
     // Every call returns a copy the caller owns (UI and tests may edit it). States are never modified
     // after a step, so a shared read-only view would be safe for the core, but it would change this contract.
     function getSnapshot() {
-        return clonePlain({
-            game: STAGES[s.stage].name,
-            spray: { burst: s.sprayBurst, cooldown: s.sprayCooldown, dir: s.sprayDir },
-            lessons: s.lessons,
-            officeCheckpoint: s.stage === 1 && s.checkpoint > 0,
-            skylineSeed: s.skylineSeed,
-            actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
-            tutorialAssist: s.mode === 'play' && s.p.x < 300,
-            stage: s.stage,
-            sky: s.sky,
-            completedStage: s.completedStage,
-            hasExtinguisher: s.hasExtinguisher,
-            firstFlight: s.firstFlight,
-            rooftopEntrance: s.rooftopEntrance,
-            ductReaction: s.ductReaction,
-            checkpoint: s.checkpoint,
-            furniture: s.furniture,
-            corridor: s.corridor,
-            canEnterMeeting: canEnterMeeting(s),
-            level: { length: STAGES[s.stage].length, goal: STAGES[s.stage].goal },
-            mode: s.mode,
-            focus: s.focus,
-            focusClock: s.focusClock,
-            focusLossTime: s.focusLossTime,
-            focusNotice: s.focusNotice,
-            lossReason: s.lossReason,
-            player: s.p,
-            ground: s.ground,
-            slip: s.slip,
-            dirty: s.dirty,
-            inBin: s.inBin,
-            binAge: s.binAge,
-            time: s.time,
-            deaths: s.deaths,
-            bursts: s.bursts,
-            paperHits: s.paperHits,
-            binFalls: s.binFalls,
-            dirtyWaterExperienced: s.wetSeen,
-            cleaningSpilled: s.cleaning.spilled,
-            soaked: s.soakedOnSpill > 0,
-            bucketAge: s.bucket.age,
-            paperPenaltyRemaining: s.paperPenaltyRemaining,
-            lightPenaltyRemaining: s.lightPenaltyRemaining,
-            cleaning: s.cleaning,
-            lightHits: s.lightHits,
-            doorHits: s.doorHits,
-            monitors: LEVEL.monitors.map(monitor => ({ ...monitor, ...monitorPhase(monitor, s.time) })),
-            papers: s.papers,
-            people: s.people,
-            solids: stageSolids(s).map(p => ({ p })),
-            copier: s.copier,
-            bin: LEVEL.bin,
-            focusBlocked: focusBlocked(s),
-        });
+        return viewState(s);
     }
     function advance(dt: number) {
         if (!Number.isFinite(dt) || dt < 0) return;
@@ -178,11 +148,69 @@ export function createGame(options: GameOptions = {}) {
             s = parseState(json);
             acc = 0;
         },
-        getSnapshot: getSnapshot as () => DeepReadonly<ReturnType<typeof getSnapshot>>,
+        getSnapshot: getSnapshot as () => DeepReadonly<ReturnType<typeof viewState>>,
         drainEvents() {
             return pending.splice(0);
         },
     };
+}
+
+/** The presentation view of a core state, as a detached copy. Used by the shell and the replay player. */
+export function viewState(s: Readonly<CoreState>) {
+    return clonePlain({
+        game: STAGES[s.stage].name,
+        spray: { burst: s.sprayBurst, cooldown: s.sprayCooldown, dir: s.sprayDir },
+        lessons: s.lessons,
+        officeCheckpoint: s.stage === 1 && s.checkpoint > 0,
+        skylineSeed: s.skylineSeed,
+        actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
+        tutorialAssist: s.mode === 'play' && s.p.x < 300,
+        stage: s.stage,
+        sky: s.sky,
+        completedStage: s.completedStage,
+        hasExtinguisher: s.hasExtinguisher,
+        firstFlight: s.firstFlight,
+        rooftopEntrance: s.rooftopEntrance,
+        ductReaction: s.ductReaction,
+        checkpoint: s.checkpoint,
+        furniture: s.furniture,
+        corridor: s.corridor,
+        canEnterMeeting: canEnterMeeting(s),
+        level: { length: STAGES[s.stage].length, goal: STAGES[s.stage].goal },
+        mode: s.mode,
+        focus: s.focus,
+        focusClock: s.focusClock,
+        focusLossTime: s.focusLossTime,
+        focusNotice: s.focusNotice,
+        lossReason: s.lossReason,
+        player: s.p,
+        ground: s.ground,
+        slip: s.slip,
+        dirty: s.dirty,
+        inBin: s.inBin,
+        binAge: s.binAge,
+        time: s.time,
+        deaths: s.deaths,
+        bursts: s.bursts,
+        paperHits: s.paperHits,
+        binFalls: s.binFalls,
+        dirtyWaterExperienced: s.wetSeen,
+        cleaningSpilled: s.cleaning.spilled,
+        soaked: s.soakedOnSpill > 0,
+        bucketAge: s.bucket.age,
+        paperPenaltyRemaining: s.paperPenaltyRemaining,
+        lightPenaltyRemaining: s.lightPenaltyRemaining,
+        cleaning: s.cleaning,
+        lightHits: s.lightHits,
+        doorHits: s.doorHits,
+        monitors: LEVEL.monitors.map(monitor => ({ ...monitor, ...monitorPhase(monitor, s.time) })),
+        papers: s.papers,
+        people: s.people,
+        solids: stageSolids(s).map(p => ({ p })),
+        copier: s.copier,
+        bin: LEVEL.bin,
+        focusBlocked: focusBlocked(s),
+    });
 }
 
 export type Game = ReturnType<typeof createGame>;
