@@ -201,6 +201,37 @@ function headImpact(): PreviewScene {
         [{ at: 0, label: 'Impact' }, { at: .5, label: 'Rewind' }, { at: 1.4, label: 'Collision' }, { at: 1.8, label: 'End' }], frames);
 }
 
+function focusLoss(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const duration = 1.7;
+    const focusX = 500;
+    return {
+        id: 'focus-loss',
+        label: 'Chair · Focus loss',
+        duration,
+        focusX,
+        markers: [{ at: 0, label: 'Focus depleted' }, { at: .8, label: 'Glance' }, { at: duration, label: 'Game over' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            return {
+                state: {
+                    ...base,
+                    mode: at < duration ? 'focuslost' : 'dead',
+                    lossReason: 'focus',
+                    focus: 0,
+                    focusLossTime: at,
+                    time: at,
+                    player: { ...base.player, x: focusX },
+                },
+                effects,
+            };
+        },
+    };
+}
+
 function extinguisherSpray(): PreviewScene {
     const game = createGame();
     game.startStage(3);
@@ -249,5 +280,5 @@ export const previewScenes: readonly PreviewScene[] = [
         markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
-    cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), extinguisherSpray(), officeTyping(),
+    cleanerRecovery(), monitorLight(), copierVolley(), fanRide(), headImpact(), focusLoss(), extinguisherSpray(), officeTyping(),
 ];
