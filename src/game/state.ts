@@ -10,6 +10,7 @@ import { createStageStates, prepareStageAttempt } from './stages/attempt';
 import { clonePlain } from './data';
 import { randomUint32, seedRng, type Rng } from './rng';
 import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Snapshot, StageId } from './types';
+import { assertGameState } from './validation';
 
 
 // Survives a restart. Only stage selection and checkpoints change it.
@@ -156,7 +157,9 @@ export function serializeState(s: GameState): string {
 }
 
 export function parseState(json: string): GameState {
-    return JSON.parse(json) as GameState;
+    const value: unknown = JSON.parse(json);
+    assertGameState(value);
+    return value;
 }
 
 // Rewind frames are frozen: once recorded they are shared between states, never copied or edited.
