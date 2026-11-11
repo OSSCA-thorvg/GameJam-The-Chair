@@ -25,8 +25,7 @@ const FLOOR = 368, R1 = 248, L1 = 78, R2 = -92, L2 = -262, UPPER = -172;
 // to settle; 'hop' climbs from a ledge at `level` to `to`: roll to `takeoff`, wait until `ready`, then
 // burst straight up (at most `ups` times, default 2) until high enough and spend the remaining bursts
 // toward the target. A 'leap' first runs
-// from `start` so the chair carries speed off the edge. 'drop' runs at the roof edge, hops the rail and
-// falls onto the sales graph.
+// from `start` so the chair carries speed off the edge. 'board' rolls right onto the sales graph.
 const ROUTE = [
     { how: 'start' },
     { how: 'pickup' },
@@ -41,8 +40,7 @@ const ROUTE = [
     { how: 'hop', level: L1, takeoff: 1372, to: [1690, R2], apex: -120, ups: 1, ready: ventQuiet(0, 1.4) },
     { how: 'hop', level: R2, takeoff: 1660, to: [1330, L2], apex: -290, ready: ventQuiet(1, 1.4) },
     { how: 'leap', level: L2, start: 1262, takeoff: 1505, to: [1880, UPPER], apex: -420, ready: state => ventQuiet(2, 1.45)(state) && ventQuiet(1, 1.2)(state) },
-    { how: 'roll', x: 2250 },
-    { how: 'drop', takeoff: 2330 },
+    { how: 'board' },
 ];
 export const ROUTE_STEPS = ROUTE.length;
 
@@ -137,10 +135,8 @@ export function driveStageThree(game, stop = state => state.stage === 4 || state
                 game.setInput(...keys);
                 if (state.ground) sub = 'go';
             }
-        } else if (step.how === 'drop') {
-            if (p.x < step.takeoff || state.ground) game.setInput('right');
-            else game.setInput();
-            if (state.ground && p.x >= step.takeoff && p.x < 2440) game.jump();
+        } else if (step.how === 'board') {
+            game.setInput('right');
         }
         game.step(1 / 120);
         game.drainEvents();

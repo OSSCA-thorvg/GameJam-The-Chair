@@ -97,11 +97,11 @@ test('rooftop door scene rolls the chair out and hands over control when closed'
 });
 
 test('a chair falling onto the slumping sales graph rides it up and climbs to the sky', () => {
-    const base = { p: { x: 2700, y: 92, vx: 300, vy: 400, a: 0, w: 0 }, ground: false, hasExtinguisher: true, firstFlight: { kind: 'course' }, ductReaction: { kind: 'idle' }, time: 0 };
+    const base = { p: { x: 2200, y: -184, vx: 200, vy: 0, a: 0, w: 0 }, ground: false, hasExtinguisher: true, firstFlight: { kind: 'course' }, ductReaction: { kind: 'idle' }, time: 0 };
     const caught = sys.rooftopStep(base, 1 / 120).firstFlight;
     assert.equal(caught.kind, 'ride');
-    assert.equal(sys.rooftopStep({ ...base, p: { ...base.p, y: 0 } }, 1 / 120).firstFlight.kind, 'course', 'too high above the line');
-    assert.equal(sys.rooftopStep({ ...base, p: { ...base.p, vy: -50 } }, 1 / 120).firstFlight.kind, 'course', 'only a falling chair lands');
+    assert.equal(sys.rooftopStep({ ...base, p: { ...base.p, y: -260 } }, 1 / 120).firstFlight.kind, 'course', 'too high above the line');
+    assert.equal(sys.rooftopStep({ ...base, p: { ...base.p, vx: -100, vy: -50 } }, 1 / 120).firstFlight.kind, 'course', 'rising away from the line does not board');
     assert.equal(sys.rooftopStep({ ...base, hasExtinguisher: false }, 1 / 120).firstFlight.kind, 'course');
     let flight = caught, p = base.p, top = Infinity, right = 0;
     for (let i = 0; i < 120 * 10 && flight.kind === 'ride'; i++) {
@@ -110,7 +110,7 @@ test('a chair falling onto the slumping sales graph rides it up and climbs to th
         flight = r.flight; p = r.p; top = Math.min(top, p.y); right = Math.max(right, p.x);
     }
     assert.equal(flight.kind, 'flight');
-    assert.ok(top < -900 && p.vy <= -320 && right > 3100, 'the line carries the chair up the facade');
+    assert.ok(top < -900 && p.vy <= -320 && right > 2560, 'the line carries the chair up and to the right');
     const climb = sys.flightStep({ kind: 'flight', age: 0 }, { ...p, y: -1819, vy: -300 }, 1 / 120);
     assert.equal(climb.arrived, true);
 });

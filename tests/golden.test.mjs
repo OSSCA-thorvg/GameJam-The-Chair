@@ -19,14 +19,14 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // still matched, so their play is unchanged.
 // Updated when the rooftop's three-spray launch pad was replaced by dropping off the roof onto the sales
 // graph: every final snapshot's `rooftop.flight` lost `verticalShots`/`lastShotAt`, and 'rooftop to sky'
-// now hops the lowered rail and rides the graph.
+// now rolls onto the graph billboard on the roof and rides it straight up.
 const EXPECTED = {
     'office route': '5e268dc8d025bc4c',
     'office crash': '0a33170f70fc527a',
     'building exit': '21eeedbb9f9afb54',
     'building lift': 'b1aa567a5ded73e4',
-    'rooftop to sky': '774d687d83d347a4',
-    'rooftop duct': 'f0bda3d4f92cced2',
+    'rooftop to sky': 'fe14aeb8c299dc18',
+    'rooftop duct': '3194ab69f891a9d9',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

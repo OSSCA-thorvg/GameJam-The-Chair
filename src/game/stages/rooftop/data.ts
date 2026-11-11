@@ -19,8 +19,7 @@ const blocks = [
     { id: 'pipe-high', x: 1712, y: -262, width: 68, height: 16 },
     { id: 'upper', x: 1780, y: -144, width: 680, height: 944 },
     { id: 'parapet', x: 1780, y: -330, width: 22, height: 186 },
-    // A low guard rail: one hop clears it and drops the chair off the roof onto the sales graph.
-    { id: 'rail', x: 2440, y: -170, width: 20, height: 26 },
+    { id: 'rail', x: 2440, y: -204, width: 20, height: 60 },
 ];
 
 export const STAGE_THREE = deepFreeze({
@@ -50,19 +49,22 @@ export const STAGE_THREE = deepFreeze({
         { left: 1390, right: 1530, y: -234 },
     ],
     edge: 2460,
-    // The company's sales chart, a neon sign hung on the facade below the roof edge. While the
-    // chair stays on the roof it shows a slump; a chair falling onto the slump (points up to
-    // `catchUntil`) makes sales surge, and the line shoots up the facade carrying the chair.
-    // The ride accelerates from `startSpeed` to `topSpeed`; the line tip leads the chair by `lead`.
+    // The company's sales chart: a neon billboard standing on the roof edge. Its line already climbs
+    // from the roof surface toward the top right, ending in an arrow. Rolling (or dropping) onto the line
+    // inside the sign (points up to `catchUntil`) makes sales surge: the line carries the chair up, bursts
+    // out of the top of the sign and its last stretch points straight up into the climb.
+    // The ride accelerates from `startSpeed` to `topSpeed`; the bright line tip leads the chair by `lead`.
     graph: {
         points: [
-            { x: 2480, y: 90 }, { x: 2580, y: 112 }, { x: 2660, y: 100 }, { x: 2760, y: 140 }, { x: 2840, y: 154 },
-            { x: 2880, y: 60 }, { x: 2920, y: 90 }, { x: 2980, y: -140 }, { x: 3020, y: -100 },
-            { x: 3090, y: -480 }, { x: 3130, y: -430 }, { x: 3200, y: -1060 },
+            { x: 2170, y: -144 }, { x: 2250, y: -176 }, { x: 2290, y: -164 }, { x: 2370, y: -260 },
+            { x: 2405, y: -240 }, { x: 2475, y: -380 }, { x: 2505, y: -360 }, { x: 2575, y: -540 },
+            { x: 2590, y: -760 }, { x: 2596, y: -1000 },
         ],
-        catchUntil: 4,
-        catchBelow: 10, catchAbove: 46,
-        startSpeed: 220, topSpeed: 900, accel: 520, lead: 130,
+        catchUntil: 7,
+        catchBelow: 10, catchAbove: 30,
+        startSpeed: 220, topSpeed: 820, accel: 480, lead: 130,
+        // The chair leans with the line but never further than this, so it reads as riding up, not flipping.
+        maxTilt: .75,
     },
     ceiling: -460,
     // Extinguisher bursts allowed per time in the air; touching the ground refills them.
@@ -136,7 +138,8 @@ export function graphPointAt(dist: number): { x: number; y: number; tx: number; 
     return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, tx: (b.x - a.x) / span, ty: (b.y - a.y) / span };
 }
 
-// Where a falling chair (centre `p`) lands on the slump, as an arc length, or null when it misses.
+// Where a chair (centre `p`) rolling or dropping onto the line inside the sign boards it, as an arc
+// length, or null when its wheels are not on the line.
 export function graphCatch(p: Readonly<Point>): number | null {
     const g = STAGE_THREE.graph;
     for (let i = 1; i <= g.catchUntil; i++) {

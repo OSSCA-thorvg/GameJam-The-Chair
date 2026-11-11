@@ -2,13 +2,15 @@ import { GRAPH_CORNERS, GRAPH_LENGTH, STAGE_THREE, graphPointAt } from '../../ga
 import type { RenderCtx } from '../context';
 import type { Curve, Vector } from '../types';
 
-// The sales-graph sign on the facade below the roof edge. It shows a slump until the chair lands on
-// it; then the line turns green and draws itself (ThorVG trim path) just ahead of the chair, breaking
-// out through the top of the sign and up the building.
-const PANEL = { left: 2468, right: 2960, top: 10, bottom: 190 };
-const SLUMP_END = STAGE_THREE.graph.catchUntil;
+// The sales-graph billboard standing on the roof edge. Its line already climbs toward an arrow at the top
+// right. Once the chair rolls onto it the line lights up green behind the chair, draws itself just ahead
+// (ThorVG trim path), bursts out through the top of the sign and points straight up into the sky.
+const PANEL = { left: 2150, right: 2620, top: -600, bottom: -150 };
+const INSIDE = STAGE_THREE.graph.catchUntil;
 // Where the line breaks through the sign's top edge.
-const BREAK = { x: 2942, y: PANEL.top };
+const BREAK = { x: 2579, y: PANEL.top };
+const PEAKS = [3, 5, 7];
+const GROWTH = [120, 480, 9999];
 
 function lineCurves(from: number, to: number): { start: Vector; curves: Curve[] } {
     const pts = STAGE_THREE.graph.points.slice(from, to + 1);
@@ -24,54 +26,55 @@ export function rooftopGraphSign(ctx: RenderCtx) {
     const shown = flight.kind === 'ride' ? Math.min(GRAPH_LENGTH, flight.dist + STAGE_THREE.graph.lead) : flight.kind === 'flight' ? GRAPH_LENGTH : 0;
     const t = ctx.t;
 
-    // Brackets bolt the sign to the facade.
-    for (const y of [PANEL.top + 30, PANEL.bottom - 30]) ctx.rod(2460, y, PANEL.left + 6, y, 7, '#4b5568');
-    // Board with an LED grid.
-    ctx.rect(PANEL.left - 6, PANEL.top - 6, PANEL.right - PANEL.left + 12, PANEL.bottom - PANEL.top + 12, '#2b3242');
+    // Legs on the roof and the board with an LED grid.
+    for (const x of [PANEL.left + 40, PANEL.right - 40]) ctx.rod(x, PANEL.bottom, x, -144, 9, '#3d4658');
+    ctx.rect(PANEL.left - 7, PANEL.top - 7, PANEL.right - PANEL.left + 14, PANEL.bottom - PANEL.top + 14, '#2b3242');
     ctx.gradientPolygon([[PANEL.left, PANEL.top], [PANEL.right, PANEL.top], [PANEL.right, PANEL.bottom], [PANEL.left, PANEL.bottom]],
         ctx.gradientFill(0, PANEL.top, 0, PANEL.bottom, [[0, '#101a2b'], [1, '#1b2a3e']]));
-    for (let x = PANEL.left + 31; x < PANEL.right; x += 31) ctx.rod(x, PANEL.top + 4, x, PANEL.bottom - 4, 1, '#2b3d55');
-    for (let y = PANEL.top + 34; y < PANEL.bottom; y += 34) ctx.rod(PANEL.left + 4, y, PANEL.right - 4, y, 1, '#2b3d55');
-    // Little sales bars along the bottom; they jump up once sales surge.
-    for (let i = 0; i < 13; i++) {
-        const x = PANEL.left + 14 + i * 37;
-        const calm = 18 + ((i * 37) % 23) - i * 1.2;
-        const h = surging ? Math.min(150, calm + 30 + i * 9 + Math.sin(t * 9 + i) * 6) : calm;
-        ctx.rect(x, PANEL.bottom - 6 - h, 14, h, surging ? '#2f8a5ad0' : '#6b3540c0');
+    for (let x = PANEL.left + 39; x < PANEL.right; x += 39) ctx.rod(x, PANEL.top + 4, x, PANEL.bottom - 4, 1, '#2b3d55');
+    for (let y = PANEL.top + 45; y < PANEL.bottom; y += 45) ctx.rod(PANEL.left + 4, y, PANEL.right - 4, y, 1, '#2b3d55');
+    // Rising sales bars; they shoot up once the chair is riding.
+    for (let i = 0; i < 12; i++) {
+        const x = PANEL.left + 14 + i * 38;
+        const calm = 24 + i * 16;
+        const h = surging ? Math.min(420, calm * 1.8 + 40 + Math.sin(t * 9 + i) * 8) : calm + Math.sin(t * 2 + i) * 3;
+        ctx.rect(x, PANEL.bottom - 6 - h, 16, h, surging ? '#2f8a5ad0' : '#2b5a4ab0');
     }
 
+    // The resting chart: the climbing line inside the sign, pulsing gently, with its arrow.
+    const inside = lineCurves(0, INSIDE);
+    const pulse = .55 + .45 * Math.abs(Math.sin(t * 2.6));
+    ctx.beginLayer({ key: 'graph-rest-glow', blur: 3, blend: 'add', opacity: (surging ? .35 : .75) * pulse });
+    ctx.strokePath(inside.start, inside.curves, { width: 13, color: '#3cff9a', cap: 'round' });
+    ctx.endLayer();
+    ctx.strokePath(inside.start, inside.curves, { width: 4, color: surging ? '#4f8f6c' : '#bdf5d4', cap: 'round' });
     if (!surging) {
-        // The slump: a dim red line ending in a falling arrow, blinking like a bad quarter.
-        const slump = lineCurves(0, SLUMP_END);
-        const blink = .55 + .45 * Math.abs(Math.sin(t * 3));
-        ctx.beginLayer({ key: 'graph-glow', blur: 3, blend: 'add', opacity: .8 * blink });
-        ctx.strokePath(slump.start, slump.curves, { width: 13, color: '#ff3b4e', cap: 'round' });
-        ctx.endLayer();
-        ctx.strokePath(slump.start, slump.curves, { width: 4, color: '#ffd0d4', cap: 'round' });
-        tipArrow(ctx, graphPointAt(GRAPH_CORNERS[SLUMP_END]), '#ff5466');
-        // Chevrons falling from the roof edge onto the sign: drop here.
-        if (ctx.p.x > 2100) for (let i = 0; i < 3; i++) {
-            const y = -125 + ((t * 60 + i * 40) % 120);
-            const alpha = Math.round(255 * Math.max(0, 1 - Math.abs(y + 65) / 70)).toString(16).padStart(2, '0');
-            ctx.polygon([[2636, y], [2664, y], [2650, y + 13]], `#ffe2a8${alpha}`);
+        tipArrow(ctx, graphPointAt(GRAPH_CORNERS[INSIDE]), '#7dffb5');
+        // Chevrons along the start of the line: roll this way.
+        if (ctx.p.x > 1950) for (let i = 0; i < 3; i++) {
+            const k = (t * .8 + i / 3) % 1;
+            const at = graphPointAt(k * GRAPH_CORNERS[3]);
+            const alpha = Math.round(255 * Math.sin(k * Math.PI)).toString(16).padStart(2, '0');
+            const x = at.x, y = at.y - 20;
+            ctx.polygon([[x - 6, y - 9], [x + 8, y], [x - 6, y + 9]], `#ffe2a8${alpha}`);
         }
         return;
     }
 
-    // The surge: the whole line, drawn up to just ahead of the chair.
+    // The surge: the whole line, bright up to just ahead of the chair.
     const whole = lineCurves(0, STAGE_THREE.graph.points.length - 1);
     const trim: [number, number] = [0, shown / GRAPH_LENGTH];
     ctx.beginLayer({ key: 'graph-glow', blur: 5, blend: 'add', opacity: .9 });
     ctx.strokePath(whole.start, whole.curves, { width: 22, color: '#2bff88', cap: 'round' }, { trim });
     ctx.endLayer();
-    ctx.strokePath(whole.start, whole.curves, { width: 9, color: ctx.gradientFill(0, 200, 0, -1000, [[0, '#4dff9a'], [.5, '#c4ff5c'], [1, '#fff27a']]), cap: 'round' }, { trim });
+    ctx.strokePath(whole.start, whole.curves, { width: 9, color: ctx.gradientFill(0, -144, 0, -1000, [[0, '#4dff9a'], [.5, '#c4ff5c'], [1, '#fff27a']]), cap: 'round' }, { trim });
     ctx.strokePath(whole.start, whole.curves, { width: 3, color: '#f4fff6', cap: 'round' }, { trim });
     tipArrow(ctx, graphPointAt(shown), '#c9ff6a');
 
-    // Where the line burst out of the sign: a cracked frame and flying glass.
-    if (shown > GRAPH_CORNERS[6] + 40) {
+    // Where the line burst out of the sign: a cracked frame and falling glass.
+    if (shown > GRAPH_CORNERS[INSIDE] + 40) {
         for (const [dx, dy] of [[-22, -10], [18, -14], [-6, 16], [26, 8]]) ctx.rod(BREAK.x, BREAK.y, BREAK.x + dx, BREAK.y + dy, 1.6, '#cfe4ff');
-        const age = flight.kind === 'ride' ? Math.max(0, flight.age - .45) : 3;
+        const age = flight.kind === 'ride' ? Math.max(0, flight.age - 1) : 3;
         for (let i = 0; i < 6; i++) {
             const k = Math.min(age, 1.6);
             const x = BREAK.x + (i - 2.5) * 22 * k, y = BREAK.y - 60 * k + 260 * k * k;
@@ -80,13 +83,12 @@ export function rooftopGraphSign(ctx: RenderCtx) {
     }
 
     // Each peak the chair passes pops a bigger growth figure.
-    const peaks = [5, 7, 9];
-    peaks.forEach((index, n) => {
+    PEAKS.forEach((index, n) => {
         const at = GRAPH_CORNERS[index];
         if (shown < at) return;
         const point = STAGE_THREE.graph.points[index];
         const pop = Math.min(1, (shown - at) / 120);
-        ctx.label(`+${[120, 480, 9999][n]}%`, point.x - 18, point.y - 18 - pop * 14, 16 + n * 6 + pop * 4, '#d4ff7a', 'right');
+        ctx.label(`+${GROWTH[n]}%`, point.x - 20, point.y - 14 - pop * 14, 16 + n * 6 + pop * 4, '#d4ff7a', 'right');
     });
 }
 

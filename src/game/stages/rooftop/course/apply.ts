@@ -26,6 +26,7 @@ export function applyRooftop(s: GameState, out: GameEvent[], dt: number) {
         s.jumpQ = 0;
         s.sprayBurst = .24;
         s.sprayDir = { x: -1, y: 0 };
+        s.ground = false;
         out.push({ type: 'cue', id: 'checkpoint' });
     }
     s.rooftop.flight = r.firstFlight;

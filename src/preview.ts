@@ -33,7 +33,7 @@ function render() {
         const { state, effects } = scene.sample(time);
         const width = root.querySelector('canvas')!.clientWidth;
         const worldWidth = width < 520 ? 540 : Math.max(760, width);
-        renderer.draw(state, effects, scene.focusX - worldWidth / 2);
+        renderer.draw(state, effects, (scene.follow ? state.player.x : scene.focusX) - worldWidth / 2);
     }
     slider.value = String(time);
     value.value = `${time.toFixed(2)} s`;

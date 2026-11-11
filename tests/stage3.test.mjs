@@ -73,8 +73,7 @@ test('dropping off the roof onto the sales graph rides it into an airborne stage
     assert.deepEqual([...reactions], ['idle', 'reacting', 'done']);
     assert.equal(ride.mode, 'play');
     assert.equal(ride.deaths, 0);
-    assert.ok(ride.player.x > 2460, 'the chair left the roof');
-    assert.ok(ride.player.y > -144, 'and fell below the roof onto the graph');
+    assert.ok(ride.player.x > 2150 && ride.player.x < 2300, 'the chair boards at the start of the graph');
     game.drainEvents(); game.spray();
     assert.ok(!game.drainEvents().some(event => event.type === 'cue' && event.id === 'spray'), 'no manual sprays during the ride');
     game.pause(); const paused = game.getSnapshot(); game.advance(1);
@@ -96,7 +95,7 @@ test('dropping off the roof onto the sales graph rides it into an airborne stage
     assert.equal(end.completedStage, 3);
     assert.ok(Math.abs(end.player.y - beforeTransition.player.y) < 5, 'no position jump on entry');
     assert.ok(Math.abs(end.player.vy - beforeTransition.player.vy) < 5, 'velocity carries through the transition');
-    assert.ok(end.player.x < 2640, 'the climb drifts back over the roof to the hover start');
+    assert.ok(Math.abs(end.player.x - 2596) < 30 && end.player.x < 2640, 'the climb goes straight up from the graph tip into the hover start');
     assert.equal(end.hasExtinguisher, true);
     assert.equal(end.ground, false);
     assert.equal(end.solids.length, 0, 'no landing cloud or floor');
@@ -144,23 +143,15 @@ test('entrance moves the chair to the first block and closes before enabling con
     assert.ok(game.getSnapshot().player.x < 230, 'controls activate after the door closes');
 });
 
-test('missing the sales graph falls past it and restarts from the last flag', () => {
+test('the sales graph waits until the chair rolls onto it', () => {
     const game = createGame(); game.startStage(3);
-    driveStageThree(game, state => state.checkpoint === 4 && state.ground && state.player.x > 2250);
-    // Hop the rail with a spray boost so the chair sails over the slump.
+    driveStageThree(game, state => state.checkpoint === 4 && state.ground && state.player.x > 2000);
+    game.setInput('left');
+    for (let i = 0; i < 120 * 2; i++) game.step(dt);
+    assert.equal(game.getSnapshot().firstFlight.kind, 'course', 'rolling away leaves the graph alone');
     game.setInput('right');
-    for (let i = 0; i < 120 * 3 && !(game.getSnapshot().player.x > 2330); i++) game.step(dt);
-    game.jump();
-    for (let i = 0; i < 20; i++) game.step(dt);
-    game.spray();
-    for (let i = 0; i < 30; i++) game.step(dt);
-    game.spray();
-    for (let i = 0; i < 120 * 4 && game.getSnapshot().deaths === 0; i++) {
-        assert.equal(game.getSnapshot().firstFlight.kind, 'course');
-        game.step(dt);
-    }
+    for (let i = 0; i < 120 * 4 && game.getSnapshot().firstFlight.kind === 'course'; i++) game.step(dt);
     const state = game.getSnapshot();
-    assert.equal(state.deaths, 1);
-    assert.equal(state.stage, 3);
-    assert.equal(state.firstFlight.kind, 'course');
+    assert.equal(state.firstFlight.kind, 'ride');
+    assert.equal(state.deaths, 0);
 });

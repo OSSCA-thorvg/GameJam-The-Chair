@@ -12,6 +12,8 @@ export type PreviewScene = {
     label: string;
     duration: number;
     focusX: number;
+    // Follow the chair with the camera (centred) instead of holding it at `focusX`.
+    follow?: boolean;
     markers: readonly { at: number; label: string }[];
     sample(time: number): { state: GameState; effects: EffectsState };
 };
@@ -279,7 +281,7 @@ function extinguisherSpray(): PreviewScene {
         [{ at: 0, label: 'Spray' }, { at: .16, label: 'Recoil' }, { at: .24, label: 'Plume ends' }, { at: .6, label: 'Landing' }], frames);
 }
 
-// Off the roof edge onto the slumping sales graph, up the surging line, then the climb to the sky stage.
+// Rolling onto the sales-graph billboard, up the surging line, out of the sign and straight up to the sky stage.
 function rooftopTakeoff(): PreviewScene {
     const game = createGame();
     game.startStage(3);
@@ -288,23 +290,19 @@ function rooftopTakeoff(): PreviewScene {
     game.restore(JSON.stringify(saved));
     game.reset();
     const parked = JSON.parse(game.serialize());
-    parked.p = { ...parked.p, x: 2250, y: -172, vx: 0, vy: 0, a: 0, w: 0 };
+    parked.p = { ...parked.p, x: 1960, y: -172, vx: 0, vy: 0, a: 0, w: 0 };
     parked.ground = true;
     parked.hasExtinguisher = true;
     game.restore(JSON.stringify(parked));
     const effects = createEffects();
     const frames = [capture(game, effects)];
-    let jumped = false;
     game.setInput('right');
     for (let i = 0; i < 600 && game.getSnapshot().stage === 3; i++) {
-        const state = game.getSnapshot();
-        if (!jumped && state.ground && state.player.x > 2330) { game.jump(); jumped = true; }
-        if (jumped && state.player.x > 2470) game.setInput();
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('rooftop-takeoff', 'Rooftop · Drop onto the sales graph and ride it up', 2500,
-        [{ at: 0, label: 'Run-up' }, { at: .5, label: 'Over the rail' }, { at: 1.2, label: 'Graph catches · Surge' }, { at: 3, label: 'Breaks out of the sign' }, { at: 5, label: 'Climb to the clouds' }], frames);
+    return { ...recordedScene('rooftop-takeoff', 'Rooftop · Ride the sales graph up to the sky', 2300,
+        [{ at: 0, label: 'Run-up' }, { at: 1.3, label: 'Boards the graph · Surge' }, { at: 2.6, label: 'Breaks out of the sign' }, { at: 3.4, label: 'Straight up to the clouds' }], frames), follow: true };
 }
 
 // The duct shaft's hazards seen from a ledge: the awake duct's gusts and the steam vents' hiss and blast.

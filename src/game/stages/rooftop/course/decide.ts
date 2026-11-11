@@ -48,31 +48,32 @@ export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
         p.vy = Math.max(0, p.vy);
     }
     let firstFlight: FirstFlight = { ...input.firstFlight };
-    // Falling off the roof onto the slumping sales graph starts the ride.
-    const caught = firstFlight.kind === 'course' && input.hasExtinguisher && p.vy >= 0 ? graphCatch(p) : null;
+    // Rolling right onto the sales graph (or landing on it) starts the ride.
+    const caught = firstFlight.kind === 'course' && input.hasExtinguisher && (p.vx > 20 || p.vy >= 0) ? graphCatch(p) : null;
     if (caught !== null) firstFlight = { kind: 'ride', dist: caught, speed: Math.max(STAGE_THREE.graph.startSpeed, Math.abs(p.vx)), age: 0 };
     return { p, ground, firstFlight, ductReaction: duct.reaction, pickup };
 }
 
 // The chair rides the surging sales graph: it sticks to the line, speeds up, and leaves the tip
-// heading up into the climb.
+// heading straight up into the climb.
 export function graphRideStep(ride: Readonly<Extract<FirstFlight, { kind: 'ride' }>>, p: Readonly<Player>, dt: number): { flight: FirstFlight; p: Player } {
     const g = STAGE_THREE.graph;
     const speed = Math.min(g.topSpeed, ride.speed + g.accel * dt);
     const dist = ride.dist + speed * dt;
     const at = graphPointAt(dist);
     // The chair turns smoothly into each corner; the seat sits above the line along its own tilt.
-    const a = p.a + (Math.atan2(at.ty, at.tx) - p.a) * (1 - Math.exp(-14 * dt));
+    const target = Math.max(-g.maxTilt, Math.min(g.maxTilt, Math.atan2(at.ty, at.tx)));
+    const a = p.a + (target - p.a) * (1 - Math.exp(-10 * dt));
     const next = { ...p, x: at.x + Math.sin(a) * 28, y: at.y - Math.cos(a) * 28, vx: at.tx * speed, vy: at.ty * speed, a, w: 0 };
     if (dist < GRAPH_LENGTH) return { flight: { kind: 'ride', dist, speed, age: ride.age + dt }, p: next };
     next.vy = Math.min(next.vy, -320);
     return { flight: { kind: 'flight', age: 0 }, p: next };
 }
 
-// The climb from the graph's tip up to the sky stage, drifting back over the roof where it starts.
+// The straight climb from the graph's tip up to the sky stage.
 export function flightStep(flight: { kind: 'flight'; age: number }, p: Readonly<Player>, dt: number): { flight: FirstFlight; p: Player; arrived: boolean } {
     const next = { ...p };
-    next.vx += ((STAGE_FOUR.spawn.x - next.x) * .9 - next.vx) * (1 - Math.exp(-2 * dt));
+    next.vx *= Math.exp(-3 * dt);
     next.x += next.vx * dt;
     const remaining = Math.max(0, next.y - STAGE_FOUR.arrivalY);
     const targetSpeed = -Math.min(300, Math.max(35, remaining * 1.5));
