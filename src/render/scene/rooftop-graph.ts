@@ -57,17 +57,48 @@ function catwalk(ctx: RenderCtx) {
     ctx.rect(right - 6, ROOF - 46, 6, 4, '#f3bf70');
 }
 
-// Floodlights on arms below the catwalk, washing the board with light.
-function floodlights(ctx: RenderCtx, on: number) {
-    ctx.beginLayer({ key: 'billboard-flood', blend: 'add', opacity: .5 * on });
-    for (const x of LAMPS) {
-        ctx.gradientPolygon([[x - 8, ROOF], [x + 8, ROOF], [x + 70, PANEL.bottom - 220], [x - 70, PANEL.bottom - 220]],
-            ctx.gradientFill(0, ROOF, 0, PANEL.bottom - 220, [[0, '#ffe7b0a0'], [1, '#ffe7b000']]));
-    }
+// Floodlights on arms below the catwalk, washing the board with light. They glow while the board waits
+// and clack on one by one at full blast the moment the chair boards (`since` is seconds since boarding).
+function floodlights(ctx: RenderCtx, since: number | null) {
+    const t = ctx.t;
+    LAMPS.forEach((x, i) => {
+        const on = since === null ? .55 + .06 * Math.sin(t * 7 + i * 2) : since < .12 + i * .14 ? .2 : 1;
+        const flash = since === null ? 0 : Math.max(0, 1 - (since - .12 - i * .14) / .35);
+        const reach = PANEL.bottom - 300;
+        ctx.beginLayer({ key: `billboard-flood-${i}`, blend: 'add', opacity: Math.min(1, on * .75 + flash * .5) });
+        ctx.gradientPolygon([[x - 9, ROOF + 12], [x + 9, ROOF + 12], [x + 95, reach], [x - 95, reach]],
+            ctx.gradientFill(0, ROOF + 12, 0, reach, [[0, '#fff0c8d0'], [.35, '#ffe2a070'], [1, '#ffe2a000']]));
+        ctx.endLayer();
+        ctx.rod(x, ROOF + 10, x, ROOF + 24, 3, '#3a4352');
+        ctx.polygon([[x - 11, ROOF + 12], [x + 11, ROOF + 12], [x + 7, ROOF + 24], [x - 7, ROOF + 24]], '#5a6577');
+        ctx.beginLayer({ key: `billboard-lamp-${i}`, blend: 'add', opacity: Math.min(1, on + flash) });
+        ctx.gradientPolygon(quad(x - 30, ROOF - 18, x + 30, ROOF + 42), ctx.radialFill(x, ROOF + 12, 30, [[0, '#fff6dcff'], [.3, '#ffe2a080'], [1, '#ffe2a000']]));
+        ctx.endLayer();
+    });
+}
+
+// A small company monitor showing the same sales chart before the billboard: falling in the machine
+// room, going nowhere in the shaft. Same neon line as the billboard, so the big one reads as its payoff.
+export function salesMonitor(ctx: RenderCtx, x: number, y: number, trend: 'fall' | 'flat') {
+    const w = 104, h = 62;
+    ctx.rod(x + 22, y - 18, x + 22, y, 3, '#3a4f66');
+    ctx.rod(x + w - 22, y - 18, x + w - 22, y, 3, '#3a4f66');
+    ctx.rect(x - 4, y - 4, w + 8, h + 8, '#1c2636');
+    ctx.gradientPolygon(quad(x, y, x + w, y + h), ctx.gradientFill(0, y, 0, y + h, [[0, '#101a2b'], [1, '#1b2a3e']]));
+    for (let gx = x + 20; gx < x + w; gx += 21) ctx.rod(gx, y + 3, gx, y + h - 3, 1, '#2b3d55');
+    const ys = trend === 'fall' ? [.25, .35, .3, .55, .5, .78] : [.55, .45, .6, .5, .58, .52];
+    const pts = ys.map((k, i) => [x + 8 + i * (w - 16) / (ys.length - 1), y + 6 + k * (h - 12)] as Vector);
+    const curves = pts.slice(1).map((b, i) => [pts[i][0], pts[i][1], b[0], b[1], b[0], b[1]] as Curve);
+    const color = trend === 'fall' ? '#ff4d5e' : '#f2c14e';
+    const blink = .6 + .4 * Math.abs(Math.sin(ctx.t * (trend === 'fall' ? 3 : 1.5)));
+    ctx.beginLayer({ key: `sales-monitor-${trend}`, blur: 2, blend: 'add', opacity: .8 * blink });
+    ctx.strokePath(pts[0], curves, { width: 8, color, cap: 'round' });
     ctx.endLayer();
-    for (const x of LAMPS) {
-        ctx.rod(x, ROOF + 12, x, ROOF + 22, 3, '#3a4352');
-        ctx.polygon([[x - 9, ROOF + 22], [x + 9, ROOF + 22], [x + 6, ROOF + 12], [x - 6, ROOF + 12]], '#5a6577');
+    ctx.strokePath(pts[0], curves, { width: 2.5, color: '#fff1e0', cap: 'round' });
+    if (trend === 'fall') {
+        const [a, b] = [pts[pts.length - 2], pts[pts.length - 1]];
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        tipArrow(ctx, { x: b[0], y: b[1], tx: (b[0] - a[0]) / len, ty: (b[1] - a[1]) / len }, color, .5);
     }
 }
 
@@ -91,7 +122,7 @@ export function rooftopGraphSign(ctx: RenderCtx) {
     const t = ctx.t;
 
     structure(ctx);
-    floodlights(ctx, surging ? 1 : .65 + .1 * Math.sin(t * 1.7));
+
     // The board with an LED grid.
     ctx.rect(PANEL.left - 6, PANEL.top, PANEL.right - PANEL.left + 12, PANEL.bottom - PANEL.top + 6, '#2b3242');
     ctx.gradientPolygon(quad(PANEL.left, PANEL.top + 4, PANEL.right, PANEL.bottom),
@@ -107,6 +138,7 @@ export function rooftopGraphSign(ctx: RenderCtx) {
     }
     logoBand(ctx, surging);
     catwalk(ctx);
+    floodlights(ctx, flight.kind === 'ride' ? flight.age : flight.kind === 'flight' ? 9 : null);
 
     // The resting chart: the climbing line inside the board, pulsing gently, with its arrow.
     const inside = lineCurves(0, INSIDE);
@@ -151,8 +183,8 @@ export function rooftopGraphSign(ctx: RenderCtx) {
 }
 
 // The arrow head at the end of a chart line, pointing along it.
-function tipArrow(ctx: RenderCtx, at: { x: number; y: number; tx: number; ty: number }, color: string) {
-    const nx = -at.ty, ny = at.tx;
-    const tip: Vector = [at.x + at.tx * 16, at.y + at.ty * 16];
-    ctx.polygon([tip, [at.x + nx * 11 - at.tx * 6, at.y + ny * 11 - at.ty * 6], [at.x - nx * 11 - at.tx * 6, at.y - ny * 11 - at.ty * 6]], color);
+function tipArrow(ctx: RenderCtx, at: { x: number; y: number; tx: number; ty: number }, color: string, size = 1) {
+    const nx = -at.ty * size, ny = at.tx * size, fx = at.tx * size, fy = at.ty * size;
+    const tip: Vector = [at.x + fx * 16, at.y + fy * 16];
+    ctx.polygon([tip, [at.x + nx * 11 - fx * 6, at.y + ny * 11 - fy * 6], [at.x - nx * 11 - fx * 6, at.y - ny * 11 - fy * 6]], color);
 }
