@@ -17,6 +17,9 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when stage three capped the extinguisher at three bursts per time in the air: both rooftop traces
 // change, and every final snapshot gains `airSprays`. Without that field the four office/building hashes
 // still matched, so their play is unchanged.
+// Updated when the rooftop's three-spray launch pad was replaced by dropping off the roof onto the sales
+// graph: every final snapshot's `rooftop.flight` lost `verticalShots`/`lastShotAt`, and 'rooftop to sky'
+// now hops the lowered rail and rides the graph.
 const EXPECTED = {
     'office route': '5e268dc8d025bc4c',
     'office crash': '0a33170f70fc527a',
