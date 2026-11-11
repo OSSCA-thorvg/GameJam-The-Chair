@@ -170,14 +170,15 @@ export const DUCT_PROP_COLORS = { can: '#2340a8', bottle: '#e08a2c', badge: '#f3
 
 // Landing spots sit on real ledges: the left pad (top 136), the pad in front of the duct (top 276)
 // and the shelf above the duct (top -4).
-type Flight = { delay: number; time: number; to: [number, number]; arc: number; spin: number; rest: number; bounce: number };
+type Flight = { delay: number; time: number; to: [number, number]; arc: number; spin: number; rest: number; bounce: number; scale: number };
+// Sizes follow the rider (about 1 unit per cm): a can is ~7x21, the badge card ~11x14, the tie ~35 long like the rider's own.
 const PROPS = {
-    canA: { delay: 0, time: .62, to: [1350, 127], arc: 120, spin: 9.4, rest: Math.PI / 2, bounce: 14 },
-    canB: { delay: .05, time: .5, to: [1556, 267], arc: 70, spin: -7.9, rest: -Math.PI / 2, bounce: 10 },
-    bottle: { delay: .03, time: .58, to: [1592, 263], arc: 95, spin: 6.3, rest: Math.PI / 2, bounce: 8 },
-    badge: { delay: .08, time: .82, to: [1286, 114], arc: 150, spin: 12.6, rest: 0, bounce: 0 },
+    canA: { delay: 0, time: .62, to: [1350, 132], arc: 120, spin: 9.4, rest: Math.PI / 2, bounce: 6, scale: .45 },
+    canB: { delay: .05, time: .5, to: [1556, 272], arc: 70, spin: -7.9, rest: -Math.PI / 2, bounce: 5, scale: .45 },
+    bottle: { delay: .03, time: .58, to: [1592, 271], arc: 95, spin: 6.3, rest: Math.PI / 2, bounce: 4, scale: .42 },
+    badge: { delay: .08, time: .82, to: [1286, 128], arc: 150, spin: 12.6, rest: 0, bounce: 0, scale: .38 },
     // The tie is flung highest and lands on the shelf above the duct.
-    tie: { delay: .02, time: 1.05, to: [1585, -16], arc: 150, spin: 5.2, rest: Math.PI / 2, bounce: 0 },
+    tie: { delay: .02, time: 1.05, to: [1585, -10], arc: 150, spin: 5.2, rest: Math.PI / 2, bounce: 0, scale: .62 },
 } satisfies Record<string, Flight>;
 
 // Where a prop is `age` seconds into the sneeze: a thrown arc, then a damped hop on landing.
@@ -206,10 +207,10 @@ function ductProps(ctx: RenderCtx, x: number, y: number, age: number) {
     const cans = [flight(from, y, age, PROPS.canA), flight(from, y, age, PROPS.canB)];
 
     pills(ctx, from, y, age);
-    place(ctx, tie.x, tie.y, tie.rotation, 1.15); necktie(ctx, tie.flying ? age : -1);
-    place(ctx, badge.x, badge.y, badge.rotation, 1.1); idBadge(ctx, badge.flying ? age : -1);
-    place(ctx, bottle.x, bottle.y, bottle.rotation, 1.05); pillBottle(ctx);
-    for (const can of cans) { place(ctx, can.x, can.y, can.rotation, 1.05); energyCan(ctx); }
+    place(ctx, tie.x, tie.y, tie.rotation, PROPS.tie.scale); necktie(ctx, tie.flying ? age : -1);
+    place(ctx, badge.x, badge.y, badge.rotation, PROPS.badge.scale); idBadge(ctx, badge.flying ? age : -1);
+    place(ctx, bottle.x, bottle.y, bottle.rotation, PROPS.bottle.scale); pillBottle(ctx);
+    for (const can of cans) { place(ctx, can.x, can.y, can.rotation, PROPS.canA.scale); energyCan(ctx); }
     ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
 }
 
@@ -243,14 +244,14 @@ function pills(ctx: RenderCtx, x: number, y: number, age: number) {
         if (t < 0) continue;
         const h = Math.sin(i * 12.9898) * 43758.5453, r = h - Math.floor(h);
         const start = flight(x, y, release, PROPS.bottle);
-        const landX = 1520 + r * 110, landY = 272;
+        const landX = 1530 + r * 90, landY = 275;
         const u = Math.min(1, t / (.35 + r * .2));
         const px = start.x + (landX - start.x) * u;
-        const py = start.y + (landY - start.y) * u * u - Math.sin(u * Math.PI) * (20 + r * 30);
+        const py = start.y + (landY - start.y) * u * u - Math.sin(u * Math.PI) * (12 + r * 18);
         const angle = u < 1 ? t * (14 + r * 10) : r * 3;
-        const c = Math.cos(angle) * 4, s = Math.sin(angle) * 4;
-        ctx.rod(px - c, py - s, px, py, 4.2, i % 3 === 0 ? '#f4f1e8' : '#d8483c');
-        ctx.rod(px, py, px + c, py + s, 4.2, i % 2 ? '#f4f1e8' : '#f2c14e');
+        const c = Math.cos(angle) * 1.8, s = Math.sin(angle) * 1.8;
+        ctx.rod(px - c, py - s, px, py, 1.8, i % 3 === 0 ? '#f4f1e8' : '#d8483c');
+        ctx.rod(px, py, px + c, py + s, 1.8, i % 2 ? '#f4f1e8' : '#f2c14e');
     }
 }
 
