@@ -22,6 +22,34 @@ export function createPaintPool(): PaintPool {
     return { top: [], layers: new Map(), styled: new Map(), signature: '' };
 }
 
+/**
+ * Where a layer command touches the canvas, or null when it cannot leave a pixel there.
+ *
+ * ThorVG 1.1.3 (SW engine) sizes a layer's offscreen buffer, and any blur over it, from the union of its
+ * children's boxes. A child wholly off the canvas reports an empty box at the origin, which drags that
+ * union to the canvas's top-left corner, and hidden children still count. Off-canvas commands draw
+ * nothing anyway, so they are left out of layers.
+ */
+function canvasBox(cmd: DrawCommand, width: number, height: number): [number, number] | null {
+    if (cmd.c === null && !cmd.stroke) return null;
+    // The polygon and Bézier control points enclose the whole path.
+    let xMin = Infinity, yMin = Infinity, xMax = -Infinity, yMax = -Infinity;
+    const take = (x: number, y: number) => {
+        if (x < xMin) xMin = x;
+        if (x > xMax) xMax = x;
+        if (y < yMin) yMin = y;
+        if (y > yMax) yMax = y;
+    };
+    for (const [x, y] of cmd.v) take(x, y);
+    for (const c of cmd.curves ?? []) {
+        take(c[0], c[1]); take(c[2], c[3]); take(c[4], c[5]);
+    }
+    const pad = (cmd.stroke?.width ?? 0) / 2 + 1;
+    if (xMax + pad <= 0 || yMax + pad <= 0 || xMin - pad >= width || yMin - pad >= height) return null;
+    // A point that lies both on the canvas and inside this command's box.
+    return [Math.max(0, Math.min(width - 1, xMin)), Math.max(0, Math.min(height - 1, yMin))];
+}
+
 /** Group consecutive commands that share a layer into one item. */
 function collect(commands: DrawCommand[]): Item[] {
     const items: Item[] = [];
@@ -168,7 +196,11 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         }
         const { scene, shapes } = slot;
         let i = 0;
+        let anchor: [number, number] | null = null;
         for (const cmd of item.cmds) {
+            const box = canvasBox(cmd, ctx.W, ctx.H);
+            if (!box) continue;
+            anchor ??= box;
             let s = shapes[i];
             if (!s) {
                 s = new TVG.Shape();
@@ -178,7 +210,10 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
             apply(s, cmd);
             i++;
         }
-        for (; i < shapes.length; i++) shapes[i].visible(false);
+        // Spare shapes stay in the scene (re-adding leaks a ThorVG reference each time) but are parked as a
+        // near-transparent pixel inside the drawn area: hiding them or emptying them would widen the region.
+        const [px, py] = anchor ?? [0, 0];
+        for (; i < shapes.length; i++) apply(shapes[i], { v: [[px, py], [px + 1, py], [px + 1, py + 1], [px, py + 1]], c: '#00000001' });
 
         const spec = item.layer;
         scene.resetEffects();
