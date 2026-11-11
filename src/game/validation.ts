@@ -192,17 +192,20 @@ function entrance(value: unknown, path: string) {
 function duct(value: unknown, path: string) {
     const data = record(value, path);
     const kind = choice(data.kind, ['idle', 'reacting', 'done'], `${path}.kind`);
-    exact(data, kind === 'reacting' ? ['kind', 'age', 'shots', 'bursts'] : kind === 'done' ? ['kind', 'shots'] : ['kind'], path);
+    exact(data, kind === 'reacting' ? ['kind', 'age', 'shots', 'bursts'] : kind === 'done' ? ['kind', 'shots', 'rest'] : ['kind'], path);
     if (kind === 'reacting') {
         finite(data.age, `${path}.age`);
         integer(data.shots, `${path}.shots`);
         array(data.bursts, `${path}.bursts`, 64).forEach((item, index) => {
             const burst = record(item, `${path}.bursts[${index}]`);
             exact(burst, ['kind', 'age'], `${path}.bursts[${index}]`);
-            choice(burst.kind, ['first', 'repeat'], `${path}.bursts[${index}].kind`);
+            choice(burst.kind, ['first', 'repeat', 'gust'], `${path}.bursts[${index}].kind`);
             finite(burst.age, `${path}.bursts[${index}].age`);
         });
-    } else if (kind === 'done') integer(data.shots, `${path}.shots`);
+    } else if (kind === 'done') {
+        integer(data.shots, `${path}.shots`);
+        finite(data.rest, `${path}.rest`);
+    }
 }
 
 function flight(value: unknown, path: string) {
@@ -217,10 +220,11 @@ function flight(value: unknown, path: string) {
 
 function rooftop(value: unknown, path: string) {
     const data = record(value, path);
-    exact(data, ['entrance', 'duct', 'flight'], path);
+    exact(data, ['entrance', 'duct', 'flight', 'airSprays'], path);
     entrance(data.entrance, `${path}.entrance`);
     duct(data.duct, `${path}.duct`);
     flight(data.flight, `${path}.flight`);
+    integer(data.airSprays, `${path}.airSprays`);
 }
 
 function sky(value: unknown, path: string) {
