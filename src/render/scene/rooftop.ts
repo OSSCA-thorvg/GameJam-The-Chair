@@ -5,7 +5,7 @@ import { checkpointFlag } from './decor';
 import { player } from './player';
 import { sprayPlume } from './spray';
 import { ascentClouds } from './clouds';
-import { rooftopSky, rooftopWalls, rooftopPlatforms } from './rooftop-art';
+import { rooftopCeilingLight, rooftopSky, rooftopWalls, rooftopPlatforms } from './rooftop-art';
 import { rooftopDuct } from './rooftop-duct';
 
 export function drawRooftop(ctx: RenderCtx) {
@@ -60,7 +60,7 @@ export function drawRooftop(ctx: RenderCtx) {
     if (!behindDoor) entranceDoor(ctx);
     player(ctx);
     if (behindDoor) entranceDoor(ctx);
-
+    rooftopCeilingLight(ctx);
 
     sprayPlume(ctx);
 }

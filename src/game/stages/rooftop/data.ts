@@ -18,7 +18,7 @@ export const STAGE_THREE = deepFreeze({
     length: 3320, goal: 2920,
     entrance: { duration: 2.6, openDuration: .85, emergeAt: .55, emergeEnd: 1.8, closeAt: 1.95, closeDuration: .65, fromX: 100, toX: 235 },
     pickup: { x: 600, y: 368 },
-    duct: { x: 1660, y: 226, frontReach: 170, frontHeight: 80, inhaleDuration: .12, twitchDuration: .08, sneezeDuration: 1.3, repeatInhaleDuration: .06, repeatTwitchDuration: .04, repeatSneezeDuration: .5, firstKnockback: 285, repeatKnockback: 120 },
+    duct: { x: 1660, y: 226, wakeReach: 260, wakeHeight: 120, frontReach: 170, frontHeight: 80, rearReach: 45, inhaleDuration: .12, twitchDuration: .08, sneezeDuration: 1.3, repeatInhaleDuration: .06, repeatTwitchDuration: .04, repeatSneezeDuration: .5, firstKnockback: 285, repeatKnockback: 120 },
     edge: 2460,
     launch: { left: 2230, right: 2440, shotWindow: .65 },
     ceiling: -460,

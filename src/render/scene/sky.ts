@@ -4,17 +4,10 @@ import { player } from './player';
 import { sprayPlume } from './spray';
 import { billboard } from './sky-art';
 import { drawSkyReveal } from './sky-reveal';
+import { CLOUD_TONES, puffCloud } from './cloud-art';
 
-function cloud(ctx: RenderCtx, x: number, y: number, size: number, near: boolean) {
-    ctx.ox = x; ctx.oy = y; ctx.localScale = size;
-    ctx.effectPath([-160, 12], [
-        [-185, -9, -151, -35, -112, -29], [-123, -74, -49, -101, -18, -64],
-        [12, -116, 86, -94, 91, -46], [131, -65, 189, -28, 160, 4],
-        [123, 38, -109, 47, -160, 12],
-    ], ctx.gradientFill(0, -100, 0, 45, [[0, near ? '#fbebdbed' : '#f5e6deaa'], [.45, '#dfc7ce99'], [1, '#a6b7d100']]));
-    ctx.effectPath([-118, -18], [[-84, -69, -30, -37, -8, -59], [29, -91, 63, -60, 85, -34]],
-        ctx.gradientFill(0, -70, 0, 0, [[0, '#fff6e490'], [1, '#fff6e400']]));
-    ctx.ox = ctx.oy = 0; ctx.localScale = 1;
+function cloud(ctx: RenderCtx, x: number, y: number, size: number, seed: number, near: boolean) {
+    puffCloud(ctx, x, y, size, seed, CLOUD_TONES.day, near ? { alpha: .95, fade: true } : { alpha: .72, fade: true });
 }
 
 function atmosphere(ctx: RenderCtx) {
@@ -37,9 +30,12 @@ function atmosphere(ctx: RenderCtx) {
     ctx.endLayer();
     ctx.beginLayer({ key: 'sky-far-clouds', blur: 2 });
     for (let i = -2; i < 7; i++) {
-        const x = ctx.cam + i * 290 - (ctx.cam * .18 + ctx.t * 4) % 290;
-        cloud(ctx, x, top + height * (.98 + Math.sin(i * 4) * .065), .8 + (i % 2) * .2, false);
-        if (i % 2 === 0) cloud(ctx, x + 110, top + height * .08, .65, false);
+        const drift = ctx.cam * .18 + ctx.t * 4;
+        const x = ctx.cam + i * 290 - drift % 290;
+        // Follow each cloud as it scrolls, so it keeps its own shape after wrapping round.
+        const id = i + Math.floor(drift / 290);
+        cloud(ctx, x, top + height * (.98 + Math.sin(i * 4) * .065), .8 + (i % 2) * .2, 700 + id * 2, false);
+        if (i % 2 === 0) cloud(ctx, x + 110, top + height * .08, .65, 701 + id * 2, false);
     }
     ctx.endLayer();
     // Broken wisps, never a solid cloud floor or an apparent landing surface.
@@ -153,7 +149,7 @@ export function drawSky(ctx: RenderCtx) {
     // Foreground cloud edges frame open space without hiding the next landing.
     ctx.beginLayer({ key: 'sky-near-clouds', blur: 1.5, opacity: .75 });
     const bottom = ctx.H / ctx.scale - ctx.vertical;
-    cloud(ctx, ctx.cam - 100 - Math.sin(ctx.t * .15) * 25, bottom + 60, 1.45, true);
-    cloud(ctx, ctx.cam + ctx.VW + 130, bottom + 45, 1.7, true);
+    cloud(ctx, ctx.cam - 100 - Math.sin(ctx.t * .15) * 25, bottom + 60, 1.45, 901, true);
+    cloud(ctx, ctx.cam + ctx.VW + 130, bottom + 45, 1.7, 902, true);
     ctx.endLayer();
 }

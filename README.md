@@ -1,5 +1,7 @@
 # GameJam-The-Chair
 
+[English](README.md) | [한국어](README-ko.md)
+
 A chair escape game rendered with ThorVG WebCanvas. The employee keeps working while the chair rolls through the building.
 
 [Live demo](https://ossca-thorvg.github.io/GameJam-The-Chair/)
@@ -16,7 +18,7 @@ npm run dev
 
 Open http://127.0.0.1:5173/.
 
-To inspect the cleaner, copier, duct, head impact, extinguisher animation, or sky ending, open http://127.0.0.1:5173/preview.html while the development server is running. Choose a scene, drag the time slider, step one frame at a time, or play the loop. The URL keeps the selected scene and time across reloads. For the stage 4 ending, open http://127.0.0.1:5173/preview.html?motion=sky-ending. The chair stays in side view for one second, the camera turns behind it over seven seconds, and the back view holds for two seconds before the stage clears.
+To inspect the cleaner, bucket, copier, duct, head impact, extinguisher animation, or sky ending, open http://127.0.0.1:5173/preview.html while the development server is running. Choose a scene, drag the time slider, step one frame at a time, or play the loop. The URL keeps the selected scene and time across reloads. For the stage 4 ending, open http://127.0.0.1:5173/preview.html?motion=sky-ending. The chair stays in side view for one second, the camera turns behind it over seven seconds, and the back view holds for two seconds before the stage clears.
 
 ## Play
 
