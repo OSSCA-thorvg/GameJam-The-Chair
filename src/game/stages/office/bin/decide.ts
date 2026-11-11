@@ -1,5 +1,5 @@
-import { LEVEL } from '../level';
-import type { Player, Point } from '../types';
+import { LEVEL } from '../../../level';
+import type { Player, Point } from '../../../types';
 
 // Dropping onto the open office bin while falling catches the chair.
 export function fallsIntoBin(p: Readonly<Player>, binCooldown: number) {

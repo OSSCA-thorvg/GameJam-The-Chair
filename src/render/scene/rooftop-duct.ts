@@ -1,4 +1,4 @@
-import { STAGE_THREE, ductTimings } from '../../game/stage3';
+import { STAGE_THREE, ductTimings } from '../../game/stages/rooftop/data';
 import type { RenderCtx } from '../context';
 
 export function rooftopDuct(ctx: RenderCtx) {

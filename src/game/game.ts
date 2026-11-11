@@ -1,20 +1,21 @@
-import type { StageId } from './stage2';
+import type { StageId } from './stages/building/data';
 import { LEVEL, FIXED_STEP } from './level';
 import type { Input, DeepReadonly, GameEvent } from './types';
 import { clonePlain } from './data';
 import { cloneState, createCore, parseState, serializeState, type GameState as CoreState, type Progress } from './state';
 import type { Command } from './commands';
 import { SIMULATED, applyCommand, stageSolids, stepGame } from './step';
-import { STAGES } from './stages';
-import { focusBlocked } from './systems/focus';
-import { applyFocusLoss, applyImpact } from './apply';
-import { monitorPhase } from './systems/monitor';
-import { canEnterMeeting } from './systems/corridor';
+import { STAGES } from './stages/index';
+import { focusBlocked } from './systems/focus/decide';
+import { applyFocusLoss } from './systems/focus/apply';
+import { applyImpact } from './systems/impact/apply';
+import { monitorPhase } from './stages/office/monitor/decide';
+import { canEnterMeeting } from './stages/building/corridor/decide';
 
 export type { Command } from './commands';
 export { stepGame, applyCommand, replayCommands, type CommandLog, type StepResult } from './step';
 export { createCore, parseState, type GameState as CoreState } from './state';
-export { CONFIG_VERSION } from './stages';
+export { CONFIG_VERSION } from './stages/index';
 
 export type GameOptions = {
     // Same seed, start and commands always produce the same run. The browser passes a random seed.

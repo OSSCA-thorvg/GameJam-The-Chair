@@ -1,7 +1,7 @@
-import { FOCUS_DAMAGE, LEVEL } from '../level';
-import type { Point } from '../types';
-import type { FocusHit } from './focus';
-import { nextRandom } from '../rng';
+import { FOCUS_DAMAGE, LEVEL } from '../../../level';
+import type { Point } from '../../../types';
+import type { FocusHit } from '../../../systems/focus/decide';
+import { nextRandom } from '../../../rng';
 
 export type GeyserPhase = 'rest' | 'warning' | 'burst';
 export function geyserPhase(geyser: { period: number; offset: number }, t: number): { kind: GeyserPhase; age: number; remaining: number } {

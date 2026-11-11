@@ -1,5 +1,5 @@
-import { STAGE_FOUR, skyPlatforms, skySurface, skyWind, type SkyState } from '../stage4';
-import type { Player, Point } from '../types';
+import { STAGE_FOUR, skyPlatforms, skySurface, skyWind, type SkyState } from '../data';
+import type { Player, Point } from '../../../types';
 
 export type SkyInput = {
     sky: Readonly<SkyState>;

@@ -1,4 +1,4 @@
-import { STAGE_THREE } from '../../game/stage3';
+import { STAGE_THREE } from '../../game/stages/rooftop/data';
 import type { RenderCtx } from '../context';
 
 export function rooftopSky(ctx: RenderCtx) {

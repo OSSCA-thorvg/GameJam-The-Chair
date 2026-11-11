@@ -1,10 +1,10 @@
 import { LEVEL, RULES } from './level';
-import type { FocusNotice } from './systems/focus';
-import type { Impact } from './systems/impact';
-import type { DuctReaction, FirstFlight, RooftopEntrance } from './systems/rooftop';
-import { createSky, type SkyState } from './stage4';
-import { createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stage2';
-import { STAGES, stageSpawn } from './stages';
+import type { FocusNotice } from './systems/focus/decide';
+import type { Impact } from './systems/impact/decide';
+import type { DuctReaction, FirstFlight, RooftopEntrance } from './stages/rooftop/course/decide';
+import { createSky, type SkyState } from './stages/sky/data';
+import { createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stages/building/data';
+import { STAGES, stageSpawn } from './stages/index';
 import { clonePlain } from './data';
 import { randomUint32, seedRng, type Rng } from './rng';
 import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Snapshot } from './types';
@@ -223,4 +223,9 @@ export function cloneState(s: Readonly<GameState>): GameState {
     const copy = clonePlain(rest) as GameState;
     copy.history = history.slice();
     return copy;
+}
+
+// Player updates keep the same object: the play step holds a reference to it for the whole tick.
+export function setPlayer(s: GameState, p: Readonly<GameState['p']>) {
+    Object.assign(s.p, p);
 }

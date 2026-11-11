@@ -10,7 +10,7 @@ import { createErrorLog, replayData, saveBrowserData } from './ui/replay-store';
 import { bindReplayMenu } from './ui/replay-menu';
 import { createReplayPlayer } from './ui/replay-player';
 import { showStartupSplash } from './ui/splash';
-import type { StageId } from './game/stage2';
+import type { StageId } from './game/stages/building/data';
 import type { Input } from './game/types';
 import markup from './scene.html?raw';
 import './style.css';

@@ -8,7 +8,7 @@ import { player, debugCollisions } from './player';
 import { EFFECT_STYLE } from '../art';
 import type { Vector } from '../types';
 import { LEVEL } from '../../game/level';
-import { geyserPhase } from '../../game/systems/geyser';
+import { geyserPhase } from '../../game/stages/office/geyser/decide';
 
 export function drawWorld(ctx: RenderCtx) {
     const F = ctx.F;

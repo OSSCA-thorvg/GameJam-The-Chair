@@ -1,5 +1,5 @@
 import { SPRAY_KEY } from '../../ui/controls';
-import { STAGE_THREE } from '../../game/stage3';
+import { STAGE_THREE } from '../../game/stages/rooftop/data';
 import type { RenderCtx } from '../context';
 import { checkpointFlag } from './decor';
 import { player } from './player';

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { build } from 'esbuild';
-const bundle = await build({ stdin: { contents: `export {createCore} from './src/game/state'; export {applyRooftopSpray, applyRooftop} from './src/game/apply'; export {createRenderCtx} from './src/render/context'; export {rooftopDuct} from './src/render/scene/rooftop-duct';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
+const bundle = await build({ stdin: { contents: `export {createCore} from './src/game/state'; export {applyRooftopSpray, applyRooftop} from './src/game/stages/rooftop/course/apply'; export {createRenderCtx} from './src/render/context'; export {rooftopDuct} from './src/render/scene/rooftop-duct';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 const { createCore, applyRooftopSpray, applyRooftop, createRenderCtx, rooftopDuct } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 function front() {
     const s = createCore({ seed: 0 }); s.stage = 3; s.hasExtinguisher = true;

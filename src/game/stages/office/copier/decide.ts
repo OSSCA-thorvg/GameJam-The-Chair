@@ -1,6 +1,6 @@
-import { FOCUS_DAMAGE, LEVEL } from '../level';
-import type { Paper, Point } from '../types';
-import type { FocusHit } from './focus';
+import { FOCUS_DAMAGE, LEVEL } from '../../../level';
+import type { Paper, Point } from '../../../types';
+import type { FocusHit } from '../../../systems/focus/decide';
 
 export type Copier = { x: number; cool: number; burst: number; next: number; dir: number };
 export type CopierResult = { copier: Copier; volley: number; fire: boolean };

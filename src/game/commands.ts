@@ -1,7 +1,8 @@
 import { resetAttempt, startStage, type GameState } from './state';
-import type { StageId } from './stage2';
+import type { StageId } from './stages/building/data';
 import type { GameEvent, Input } from './types';
-import { applyInteract, applyLeaveMeeting, applyRooftopSpray } from './apply';
+import { applyInteract, applyLeaveMeeting } from './stages/building/corridor/apply';
+import { applyRooftopSpray } from './stages/rooftop/course/apply';
 
 // Every way the outside world changes the game. Recorded with the tick it arrived on.
 export type Command =

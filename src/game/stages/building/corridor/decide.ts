@@ -1,8 +1,8 @@
-import type { Player, Point } from '../types';
-import { nextRandom } from '../rng';
-import { clonePlain } from '../data';
-import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine, type ChairDeparture, type Corridor, type Furniture } from '../stage2';
-import type { Mode } from '../types';
+import type { Player, Point } from '../../../types';
+import { nextRandom } from '../../../rng';
+import { clonePlain } from '../../../data';
+import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine, type ChairDeparture, type Corridor, type Furniture } from '../data';
+import type { Mode } from '../../../types';
 
 function insideConvoy(p: Readonly<Point>, furniture: readonly Readonly<Furniture>[]) {
     return p.y > 360 && p.x > furniture[2].x + 28 && p.x < furniture[0].x - 28;

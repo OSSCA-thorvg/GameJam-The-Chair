@@ -1,6 +1,6 @@
-import { FOCUS_DAMAGE, LEVEL } from '../level';
-import type { Point } from '../types';
-import type { FocusHit } from './focus';
+import { FOCUS_DAMAGE, LEVEL } from '../../../level';
+import type { Point } from '../../../types';
+import type { FocusHit } from '../../../systems/focus/decide';
 
 export type MonitorSpec = { wall: number; period: number; offset: number };
 export function monitorPhase(m: MonitorSpec, t: number) {

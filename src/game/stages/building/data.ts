@@ -1,6 +1,6 @@
-import type { Point } from './types';
-import type { Message } from '../i18n';
-import { deepFreeze } from './data';
+import type { Point } from '../../types';
+import type { Message } from '../../../i18n';
+import { deepFreeze } from '../../data';
 
 export const TYPING_SOUNDS = deepFreeze(['typing.1', 'typing.2', 'typing.3', 'typing.4', 'typing.5'] satisfies Message[]);
 export type StageId = 1 | 2 | 3 | 4;

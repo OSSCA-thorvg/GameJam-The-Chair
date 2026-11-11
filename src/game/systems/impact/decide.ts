@@ -1,4 +1,4 @@
-import type { Player, Point, Snapshot } from '../types';
+import type { Player, Point, Snapshot } from '../../types';
 
 export type Impact = { frames: Snapshot[]; elapsed: number; point: Point };
 

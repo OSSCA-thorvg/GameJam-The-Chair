@@ -1,4 +1,4 @@
-import { deepFreeze } from './data';
+import { deepFreeze } from '../../data';
 
 export const STAGE_FOUR = deepFreeze({
     length: 6100,

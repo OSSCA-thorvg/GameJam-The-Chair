@@ -2,7 +2,7 @@
 // browser), play it back with seek and frame steps, check hashes and errors, and inspect the state.
 import { FIXED_STEP } from './game/level';
 import { normalizeReplaySettings, readReplaySources, REPLAY_DEFAULTS, type ReplaySettings, type ReplaySource } from './game/replay';
-import { CONFIG_VERSION } from './game/stages';
+import { CONFIG_VERSION } from './game/stages/index';
 import { isMessage, resolveLocale, translate, type Locale, type Message } from './i18n';
 import { createRenderer } from './render/renderer';
 import { createReplayPlayer } from './ui/replay-player';

@@ -1,19 +1,25 @@
 import { FIXED_STEP } from './level';
 import type { DeepReadonly, GameEvent, Mode, Point } from './types';
 import { cloneState, resetAttempt, startStage, snapshot, type GameState } from './state';
-import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages';
+import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages/index';
 import { runCommand, spray, type Command } from './commands';
 import { drivePlayer, collide } from './physics';
-import { copierStep, papersStep } from './systems/papers';
-import { cleaningStep, slipping } from './systems/cleaning';
-import { geyserHits } from './systems/geyser';
-import { monitorContact } from './systems/monitor';
-import { fallsIntoBin, fellOffFloor } from './systems/bin';
-import {
-    applyBinFall, applyCleaning, applyConvoyLanding, applyCopier, applyCorridor, applyFlight, applyFocusLoss,
-    applyFocusRecovery, applyGeyserHits, applyHeadHit, applyImpact, applyLiftRide, applyMeeting, applyMonitorContact,
-    applyPapers, applyRooftop, applyRooftopEntrance, applySky, setPlayer,
-} from './apply';
+import { copierStep, papersStep } from './stages/office/copier/decide';
+import { cleaningStep, slipping } from './stages/office/cleaning/decide';
+import { geyserHits } from './stages/office/geyser/decide';
+import { monitorContact } from './stages/office/monitor/decide';
+import { fallsIntoBin, fellOffFloor } from './stages/office/bin/decide';
+import { applyBinFall } from './stages/office/bin/apply';
+import { applyCleaning } from './stages/office/cleaning/apply';
+import { applyConvoyLanding, applyCorridor, applyLiftRide, applyMeeting } from './stages/building/corridor/apply';
+import { applyCopier, applyPapers } from './stages/office/copier/apply';
+import { applyFlight, applyRooftop, applyRooftopEntrance } from './stages/rooftop/course/apply';
+import { applyFocusLoss, applyFocusRecovery } from './systems/focus/apply';
+import { applyGeyserHits } from './stages/office/geyser/apply';
+import { applyHeadHit, applyImpact } from './systems/impact/apply';
+import { applyMonitorContact } from './stages/office/monitor/apply';
+import { applySky } from './stages/sky/course/apply';
+import { setPlayer } from './state';
 
 // Modes in which fixed steps advance the game. Others wait for a command.
 export const SIMULATED: readonly Mode[] = ['play', 'impact', 'focuslost'];

@@ -1,6 +1,6 @@
-import { FOCUS_DAMAGE, LEVEL, RULES } from '../level';
-import type { Point } from '../types';
-import type { FocusHit } from './focus';
+import { FOCUS_DAMAGE, LEVEL, RULES } from '../../../level';
+import type { Point } from '../../../types';
+import type { FocusHit } from '../../../systems/focus/decide';
 
 export type Cleaning = { x: number; a: number; b: number; spilled: boolean; age: number; followup: boolean; splashDir: number };
 export type Bucket = { age: number; armed: boolean; spills: number };

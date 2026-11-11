@@ -1,6 +1,6 @@
-import type { Player } from '../types';
-import { STAGE_THREE, ductTimings, type DuctBurst } from '../stage3';
-import { STAGE_FOUR } from '../stage4';
+import type { Player } from '../../../types';
+import { STAGE_THREE, ductTimings, type DuctBurst } from '../data';
+import { STAGE_FOUR } from '../../sky/data';
 
 export type RooftopEntrance = { kind: 'opening'; age: number } | { kind: 'ready' };
 export type FirstFlight = { kind: 'course'; verticalShots: number; lastShotAt: number } | { kind: 'flight'; age: number };

@@ -1,7 +1,7 @@
 // Replays: record an attempt as (start state, commands by tick), check it with state hashes, and play it
 // back with seekable keyframes. Pure core module: no DOM, storage or clock; the UI supplies those.
 import type { Command } from './commands';
-import { CONFIG_VERSION } from './stages';
+import { CONFIG_VERSION } from './stages/index';
 import { clonePlain, configHash, deepFreeze } from './data';
 import { SIMULATED, applyCommand, stepGame } from './step';
 import type { GameState } from './state';

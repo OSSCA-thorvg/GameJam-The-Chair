@@ -1,5 +1,5 @@
-import { waterExposure } from './cleaning';
-import type { Point } from '../types';
+import { waterExposure } from '../../stages/office/cleaning/decide';
+import type { Point } from '../../types';
 
 export type FocusKind = 'paper' | 'water' | 'light' | 'door';
 // One distraction. The same kind and id only ever costs focus once per attempt.

@@ -1,10 +1,10 @@
 import { createGame, type Game, type GameState } from './game/game';
 import { LEVEL, FIXED_STEP } from './game/level';
-import { STAGE_TWO } from './game/stage2';
-import { ductTimings } from './game/stage3';
+import { STAGE_TWO } from './game/stages/building/data';
+import { ductTimings } from './game/stages/rooftop/data';
 import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
-import { monitorPhase } from './game/systems/monitor';
+import { monitorPhase } from './game/stages/office/monitor/decide';
 import { SPLASH_DURATION } from './ui/splash-meta';
 
 export type PreviewScene = {
