@@ -69,15 +69,9 @@ export function rooftopDuct(ctx: RenderCtx) {
             ductSteam(ctx, x, y, sneezeAge * pace, timing.sneeze * pace, burst.kind === 'first' ? 1 : .85);
         }
     }
+    // The first sneeze coughs up what years of overtime left inside the duct.
     const sneezeAge = age - duct.inhaleDuration - duct.twitchDuration;
-    if (sneezeAge >= 0) {
-        const travel = Math.min(1, sneezeAge / .68);
-        const ease = 1 - Math.pow(1 - travel, 3);
-        glove(ctx, x + (1308 - x) * ease, y + (44 - y) * ease - Math.sin(travel * Math.PI) * 38, -.27 * ease);
-        glove(ctx, x + (1380 - x) * ease, y + (64 - y) * ease - Math.sin(travel * Math.PI) * 52, .32 * ease);
-        const spin = Math.min(1, sneezeAge / 1.3);
-        glove(ctx, x - 210 * spin, y - Math.sin(spin * Math.PI) * 90 + 60 * spin, spin * Math.PI * 4.3);
-    }
+    if (sneezeAge >= 0) ductProps(ctx, x, y, sneezeAge);
 }
 
 // Deterministic 0..1 noise per puff, so a sneeze looks the same when replayed or scrubbed.
@@ -171,15 +165,127 @@ function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: 
     ctx.endLayer();
 }
 
-function glove(ctx: RenderCtx, x: number, y: number, rotation: number) {
-    ctx.ox = x; ctx.oy = y; ctx.rotation = rotation; ctx.localScale = .58;
-    ctx.polygon([[-17, 14], [-22, -11], [-14, -23], [13, -23], [21, -10], [17, 15]], '#a18a45');
-    for (const [fx, fy, tx, ty] of [[-15, -13, -25, -34], [-8, -22, -13, -47], [1, -22, 0, -51], [10, -20, 14, -44], [17, -7, 31, -26]]) {
-        ctx.rod(fx, fy, tx, ty, 8, '#ad9950');
-        ctx.ellipse(tx, ty, 4, 4, '#ad9950');
-    }
-    ctx.rect(-17, 10, 34, 14, '#d1b768');
-    ctx.rect(-17, 21, 34, 5, '#806a32');
-    ctx.rod(-12, 13, 11, 13, 2, '#ead28b');
+/** Fill colours that identify each ejected prop (tests count them). */
+export const DUCT_PROP_COLORS = { can: '#2340a8', bottle: '#e08a2c', badge: '#f3f1ea', tie: '#b23a3f' } as const;
+
+// Landing spots sit on real ledges: the left pad (top 136), the pad in front of the duct (top 276)
+// and the shelf above the duct (top -4).
+type Flight = { delay: number; time: number; to: [number, number]; arc: number; spin: number; rest: number; bounce: number };
+const PROPS = {
+    canA: { delay: 0, time: .62, to: [1350, 127], arc: 120, spin: 9.4, rest: Math.PI / 2, bounce: 14 },
+    canB: { delay: .05, time: .5, to: [1556, 267], arc: 70, spin: -7.9, rest: -Math.PI / 2, bounce: 10 },
+    bottle: { delay: .03, time: .58, to: [1592, 263], arc: 95, spin: 6.3, rest: Math.PI / 2, bounce: 8 },
+    badge: { delay: .08, time: .82, to: [1286, 114], arc: 150, spin: 12.6, rest: 0, bounce: 0 },
+    // The tie is flung highest and lands on the shelf above the duct.
+    tie: { delay: .02, time: 1.05, to: [1585, -16], arc: 150, spin: 5.2, rest: Math.PI / 2, bounce: 0 },
+} satisfies Record<string, Flight>;
+
+// Where a prop is `age` seconds into the sneeze: a thrown arc, then a damped hop on landing.
+function flight(x: number, y: number, age: number, f: Flight) {
+    const u = Math.min(1, Math.max(0, (age - f.delay) / f.time));
+    const ease = 1 - Math.pow(1 - u, 2);
+    const after = Math.max(0, age - f.delay - f.time);
+    const hop = f.bounce * Math.abs(Math.sin(after * 14)) * Math.exp(-after * 7);
+    const px = x + (f.to[0] - x) * ease;
+    const py = y + (f.to[1] - y) * u * u - Math.sin(u * Math.PI) * f.arc - hop;
+    // Spin while airborne and settle into the resting angle as it lands.
+    const turns = Math.round((f.spin - f.rest) / (Math.PI * 2)) * Math.PI * 2 + f.rest;
+    const rotation = turns * ease + Math.sin(after * 18) * Math.exp(-after * 8) * .25 * Math.sign(f.bounce);
+    return { x: px, y: py, rotation, flying: u < 1, u, after };
+}
+
+function place(ctx: RenderCtx, x: number, y: number, rotation: number, scale = 1) {
+    ctx.ox = x; ctx.oy = y; ctx.rotation = rotation; ctx.localScale = scale;
+}
+
+function ductProps(ctx: RenderCtx, x: number, y: number, age: number) {
+    const from = x + 6;
+    const tie = flight(from, y, age, PROPS.tie);
+    const badge = flight(from, y, age, PROPS.badge);
+    const bottle = flight(from, y, age, PROPS.bottle);
+    const cans = [flight(from, y, age, PROPS.canA), flight(from, y, age, PROPS.canB)];
+
+    pills(ctx, from, y, age);
+    place(ctx, tie.x, tie.y, tie.rotation, 1.15); necktie(ctx, tie.flying ? age : -1);
+    place(ctx, badge.x, badge.y, badge.rotation, 1.1); idBadge(ctx, badge.flying ? age : -1);
+    place(ctx, bottle.x, bottle.y, bottle.rotation, 1.05); pillBottle(ctx);
+    for (const can of cans) { place(ctx, can.x, can.y, can.rotation, 1.05); energyCan(ctx); }
     ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
+}
+
+// A tall energy-drink can: blue body, lightning bolt, brushed rims and a shine down one side.
+function energyCan(ctx: RenderCtx) {
+    ctx.rect(-8, -18, 16, 36, DUCT_PROP_COLORS.can);
+    ctx.gradientPolygon([[-8, -18], [8, -18], [8, 18], [-8, 18]],
+        ctx.gradientFill(-8, 0, 8, 0, [[0, '#0c1d5e80'], [.3, '#ffffff00'], [.42, '#ffffff55'], [.55, '#ffffff00'], [1, '#0c1d5e90']]));
+    ctx.polygon([[2, -12], [-5, 1], [0, 1], [-3, 12], [5, -2], [0, -2]], '#ffd23a');
+    ctx.rect(-7, -21, 14, 4, '#c9d0d8');
+    ctx.rect(-5, -23, 10, 2, '#e9edf1');
+    ctx.rect(-7, 17, 14, 4, '#aab3be');
+}
+
+// A plastic supplement bottle; its pills are drawn separately as they scatter.
+function pillBottle(ctx: RenderCtx) {
+    ctx.gradientPolygon([[-11, -12], [11, -12], [11, 20], [-11, 20]],
+        ctx.gradientFill(-11, 0, 11, 0, [[0, '#b8661ddd'], [.35, ctx.tint(DUCT_PROP_COLORS.bottle, .9)], [.5, '#ffcf8fe0'], [1, '#a95a18dd']]));
+    ctx.rect(-12, -21, 24, 10, '#f6f4ee');
+    for (let i = 0; i < 4; i++) ctx.rect(-12 + i * 6.5, -21, 2, 10, '#d9d6cc');
+    ctx.rect(-9, -2, 18, 13, '#fbfaf5');
+    ctx.rect(-6, 1, 12, 2, '#3a8f5a');
+    ctx.rect(-6, 5, 8, 2, '#c9c5b8');
+}
+
+// Capsules shake out of the bottle mid-flight and skitter across the pad in front of the duct.
+function pills(ctx: RenderCtx, x: number, y: number, age: number) {
+    for (let i = 0; i < 9; i++) {
+        const release = .14 + i * .025;
+        const t = age - release;
+        if (t < 0) continue;
+        const h = Math.sin(i * 12.9898) * 43758.5453, r = h - Math.floor(h);
+        const start = flight(x, y, release, PROPS.bottle);
+        const landX = 1520 + r * 110, landY = 272;
+        const u = Math.min(1, t / (.35 + r * .2));
+        const px = start.x + (landX - start.x) * u;
+        const py = start.y + (landY - start.y) * u * u - Math.sin(u * Math.PI) * (20 + r * 30);
+        const angle = u < 1 ? t * (14 + r * 10) : r * 3;
+        const c = Math.cos(angle) * 4, s = Math.sin(angle) * 4;
+        ctx.rod(px - c, py - s, px, py, 4.2, i % 3 === 0 ? '#f4f1e8' : '#d8483c');
+        ctx.rod(px, py, px + c, py + s, 4.2, i % 2 ? '#f4f1e8' : '#f2c14e');
+    }
+}
+
+// An employee badge with nobody on it: blank photo, blank name, still on its lanyard.
+function idBadge(ctx: RenderCtx, flutter: number) {
+    // In the air the lanyard loop whips about; once landed it slumps onto the ledge beside the card.
+    if (flutter < 0) {
+        ctx.strokePath([-6, -20], [[-22, -26, -38, -6, -40, 19], [-28, 21, -12, 21, 6, -20]], { width: 3, color: '#2f5fb3', cap: 'round' });
+    } else {
+        const sway = Math.sin(flutter * 26) * 10;
+        ctx.strokePath([-6, -20], [[-14 + sway, -48, 14 + sway, -48, 6, -20]], { width: 3, color: '#2f5fb3', cap: 'round' });
+    }
+    ctx.rect(-4, -23, 8, 6, '#9aa6b4');
+    ctx.rect(-14, -18, 28, 38, '#d7e3ee');
+    ctx.rect(-12, -16, 24, 34, DUCT_PROP_COLORS.badge);
+    ctx.rect(-12, -16, 24, 6, '#2f5fb3');
+    ctx.rect(-7, -7, 14, 15, '#e3e1d8');
+    ctx.strokePath([-7, -7], [[-2, -7, 2, -7, 7, -7], [7, -2, 7, 3, 7, 8], [2, 8, -2, 8, -7, 8], [-7, 3, -7, -2, -7, -7]],
+        { width: 1, color: '#a8a597', dash: [2, 2] }, { closed: true });
+    ctx.rect(-8, 11, 16, 2, '#d2cfc4');
+    ctx.rect(-5, 14, 10, 2, '#d2cfc4');
+}
+
+// A striped necktie that flutters while it flies and lies flat once it lands.
+function necktie(ctx: RenderCtx, flutter: number) {
+    const w = flutter < 0 ? 0 : Math.sin(flutter * 30) * 5;
+    const w2 = flutter < 0 ? 0 : Math.sin(flutter * 30 + 1.4) * 7;
+    ctx.polygon([[-6, -26], [6, -26], [4, -17], [-4, -17]], '#8f2b31');
+    ctx.effectPath([-4, -17], [
+        [-6 + w * .3, -6, -9 + w, 8, -10 + w2, 22],
+        [-6 + w2, 30, 6 + w2, 30, 10 + w2, 22],
+        [9 + w, 8, 6 + w * .3, -6, 4, -17],
+    ], DUCT_PROP_COLORS.tie);
+    for (let i = 0; i < 3; i++) {
+        const sy = -10 + i * 11, k = (sy + 17) / 39;
+        ctx.rod(-7 + w * k, sy + 4, 7 + w * k, sy - 2, 2.4, '#e3b450');
+    }
 }

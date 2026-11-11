@@ -322,9 +322,9 @@ function ductSneeze(repeat = false): PreviewScene {
     const kind = repeat ? 'repeat' : 'first';
     const timing = ductTimings(kind);
     return {
-        id: repeat ? 'duct-repeat' : 'duct-sneeze', label: repeat ? 'Rooftop · Gentle repeat wind' : 'Rooftop · First sneeze & gloves', duration: 2.2, focusX: 1510,
+        id: repeat ? 'duct-repeat' : 'duct-sneeze', label: repeat ? 'Rooftop · Gentle repeat wind' : 'Rooftop · First sneeze & overtime junk', duration: 2.2, focusX: 1510,
         markers: [{ at: .05, label: 'Inhale' }, { at: timing.inhale + .02, label: 'Twitch' },
-            { at: timing.inhale + timing.twitch + .18, label: 'Sneeze' }, { at: repeat ? .8 : 2.1, label: repeat ? 'Wind fades' : 'Gloves settle' }],
+            { at: timing.inhale + timing.twitch + .18, label: 'Sneeze' }, { at: repeat ? .8 : 2.1, label: repeat ? 'Wind fades' : 'Junk settles' }],
         sample(time) {
             const at = Math.max(0, Math.min(2.2, time));
             const drift = Math.min(1, Math.max(0, at - timing.inhale - timing.twitch));
