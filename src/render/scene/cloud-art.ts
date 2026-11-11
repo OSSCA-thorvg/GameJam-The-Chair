@@ -40,7 +40,7 @@ const FLAT_BOTTOM = 34;
 const shapes = new Map<number, CloudShape>();
 
 // mulberry32: tiny seeded generator so render-side randomness stays repeatable.
-function seeded(seed: number) {
+export function seeded(seed: number) {
     let a = (Math.imul(seed | 0, 0x9e3779b1) ^ 0x5bd1e995) >>> 0;
     return () => {
         a = (a + 0x6d2b79f5) >>> 0;
@@ -90,7 +90,7 @@ function buildShape(seed: number): CloudShape {
         const along = i / (count - 1);
         const swell = Math.max(.2, 1 - Math.abs(along - peak) * 1.5);
         // Neighbouring puffs always overlap, so the crown dips between them instead of splitting.
-        const r = Math.max(width / (count - 1) * .62, (30 + 44 * swell) * (.82 + random() * .36));
+        const r = Math.max(width / (count - 1) * (.52 + random() * .14), (24 + 54 * swell) * (.7 + random() * .6));
         const x = -width / 2 + width * along + (random() - .5) * width / count * .4;
         puffs.push({ x, y: 18 - r * (.42 + random() * .3), r });
     }
