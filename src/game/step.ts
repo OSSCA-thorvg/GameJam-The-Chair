@@ -1,25 +1,12 @@
 import { FIXED_STEP } from './level';
 import type { DeepReadonly, GameEvent, Mode, Point } from './types';
-import { cloneState, resetAttempt, startStage, snapshot, type GameState } from './state';
+import { cloneState, resetAttempt, setPlayer, snapshot, type GameState } from './state';
 import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages/index';
+import { stageHooks } from './stages/hooks';
 import { runCommand, spray, type Command } from './commands';
-import { drivePlayer, collide } from './physics';
-import { copierStep, papersStep } from './stages/office/copier/decide';
-import { cleaningStep, slipping } from './stages/office/cleaning/decide';
-import { geyserHits } from './stages/office/geyser/decide';
-import { monitorContact } from './stages/office/monitor/decide';
-import { fallsIntoBin, fellOffFloor } from './stages/office/bin/decide';
-import { applyBinFall } from './stages/office/bin/apply';
-import { applyCleaning } from './stages/office/cleaning/apply';
-import { applyConvoyLanding, applyCorridor, applyLiftRide, applyMeeting } from './stages/building/corridor/apply';
-import { applyCopier, applyPapers } from './stages/office/copier/apply';
-import { applyFlight, applyRooftop, applyRooftopEntrance } from './stages/rooftop/course/apply';
+import { collide, drivePlayer, fellOffFloor } from './physics';
 import { applyFocusLoss, applyFocusRecovery } from './systems/focus/apply';
-import { applyGeyserHits } from './stages/office/geyser/apply';
 import { applyHeadHit, applyImpact } from './systems/impact/apply';
-import { applyMonitorContact } from './stages/office/monitor/apply';
-import { applySky } from './stages/sky/course/apply';
-import { setPlayer } from './state';
 
 // Modes in which fixed steps advance the game. Others wait for a command.
 export const SIMULATED: readonly Mode[] = ['play', 'impact', 'focuslost'];
@@ -86,51 +73,25 @@ export function replayCommands(start: Readonly<GameState>, log: CommandLog, endT
     return { state: s, events };
 }
 
-// One tick of normal play. Order matters: hazards, then driving, collisions, stage rules, scoring.
+// One tick of normal play, shared by every stage. Stage behaviour plugs in through its hooks
+// (stages/<stage>/hooks.ts) at fixed points, in this order:
+// timers → takeover → hazards → beforeDrive → jump (onJump) → drive → afterMove → collisions →
+// afterCollide → checkpoints → shared scoring → fall (onFall) → finish.
 function playStep(s: GameState, out: GameEvent[], dt: number) {
+    const hooks = stageHooks(s.stage);
+    const stage = STAGES[s.stage];
     s.history.push(snapshot(s));
     if (s.history.length > 60) s.history.shift();
     s.time += dt;
-    s.copier.cool = Math.max(0, s.copier.cool - dt);
-    s.binCooldown = Math.max(0, s.binCooldown - dt);
-    s.paperPenaltyRemaining = Math.max(0, s.paperPenaltyRemaining - dt);
     s.rollCooldown = Math.max(0, s.rollCooldown - dt);
     s.reverseCooldown = Math.max(0, s.reverseCooldown - dt);
-    s.slipCooldown = Math.max(0, s.slipCooldown - dt);
-    s.lightPenaltyRemaining = Math.max(0, s.lightPenaltyRemaining - dt);
-    s.lightCooldown = Math.max(0, s.lightCooldown - dt);
     s.sprayCooldown = Math.max(0, s.sprayCooldown - dt);
     s.sprayBurst = Math.max(0, s.sprayBurst - dt);
+    hooks.timers?.(s, dt);
     if (s.keys.includes('spray')) spray(s, out);
     out.push({ type: 'tick', dt });
-    if (s.stage === 3) {
-        if (applyRooftopEntrance(s, dt)) return;
-        const flight = applyFlight(s, dt);
-        if (flight) {
-            if (flight === 'arrived') {
-                if (s.completedStage < 3) s.completedStage = 3;
-                const arrival = { ...s.p };
-                startStage(s, 4, out);
-                s.p = arrival;
-                s.ground = false;
-            }
-            return;
-        }
-    }
-    if (s.stage === 4) {
-        applySky(s, out, dt);
-        return;
-    }
-    if (s.stage === 2 && applyMeeting(s, dt)) return;
-    if (s.stage === 2 && applyLiftRide(s, out, dt)) return;
-    applyCopier(s, out, copierStep(s.copier, s.volley, s.p.x, s.stage === 1, dt));
-    applyPapers(s, out, papersStep(s.papers, s.p, s.inBin, dt), dt);
-    if (s.mode !== 'play') return;
-    if (s.stage === 1) {
-        applyCleaning(s, out, cleaningStep(s, dt), dt);
-        applyGeyserHits(s, out, geyserHits(s.p, s.time, s.rng.physics));
-    }
-    if (s.mode !== 'play') return;
+    if (hooks.takeover?.(s, out, dt)) return;
+    if (hooks.hazards && !hooks.hazards(s, out, dt)) return;
 
     const p = s.p;
     const was = s.ground;
@@ -138,32 +99,24 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     const prev = p.x;
     s.coyote = s.ground ? .1 : Math.max(0, s.coyote - dt);
     s.jumpQ = Math.max(0, s.jumpQ - dt);
-    s.slip = slipping(p, s.cleaning, was);
-    if (s.slip && !s.wetSeen) s.wetSeen = true;
-    if (s.slip && s.slipCooldown === 0 && Math.abs(p.vx) > 65) {
-        out.push({ type: 'cue', id: 'slipping' });
-        s.slipCooldown = 7;
-    }
+    hooks.beforeDrive?.(s, out, was);
     if (s.jumpQ > 0 && s.coyote > 0) {
         if (p.x < 300) s.practiceJump = true;
         p.vy = -380;
         p.w -= inputDir * .12;
         s.ground = false;
-        if (s.stage === 2 && s.corridor.convoy === 'carried') s.corridor.convoy = 'airborne';
+        hooks.onJump?.(s);
         s.coyote = 0;
         s.jumpQ = 0;
     }
-    const convoyJump = s.stage === 2 && s.corridor.convoy === 'airborne' && !s.ground;
-    const expressJump = convoyJump && s.corridor.pace === 'express';
-    const dir = s.stage === 2 && s.corridor.convoy === 'carried' ? 0 : inputDir;
+    const tweak = hooks.drive?.(s, inputDir) ?? {};
+    const dir = tweak.dir ?? inputDir;
+    const convoyJump = tweak.convoyJump ?? false;
+    const expressJump = tweak.expressJump ?? false;
     const balancing = s.keys.includes('q') || s.keys.includes('e');
     const tilt = (s.keys.includes('e') ? 1 : 0) - (s.keys.includes('q') ? 1 : 0) + (was || balancing ? 0 : dir);
-    setPlayer(s, drivePlayer(p, { grounded: was, slip: s.slip, dir, tilt, upright: p.x < 300 || s.stage >= 3, convoyJump, expressJump }, dt));
-    if (s.stage === 1 && fallsIntoBin(p, s.binCooldown)) {
-        applyBinFall(s, out);
-        return;
-    }
-    if (s.stage === 2) applyCorridor(s, dt, prev);
+    setPlayer(s, drivePlayer(p, { grounded: was, slip: s.slip, dir, tilt, upright: p.x < 300 || stage.alwaysUpright, convoyJump, expressJump }, dt));
+    if (hooks.afterMove?.(s, out, dt, prev)) return;
     const hit = collide(p, stageSolids(s));
     setPlayer(s, hit.p);
     s.ground = hit.ground;
@@ -171,14 +124,9 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         applyHeadHit(s, out, hit.headHit);
         return;
     }
-    if (s.stage === 3) applyRooftop(s, out, dt);
-    if (s.stage === 2) applyConvoyLanding(s);
-    if (s.stage === 1) {
-        applyMonitorContact(s, out, monitorContact(p, prev, s.time));
-    }
+    hooks.afterCollide?.(s, out, dt, prev);
     if (s.mode !== 'play') return;
-    // The rooftop saves only once the extinguisher is in hand; picking it up is checkpoint 1.
-    if (s.stage !== 3 || s.hasExtinguisher) reachCheckpoints(s, out);
+    if (hooks.checkpointsOpen?.(s) ?? true) reachCheckpoints(s, out);
     applyFocusRecovery(s, dt);
     if (s.ground) {
         p.w -= Math.sin(p.a) * dt;
@@ -188,7 +136,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         p.vx = Math.max(0, p.vx);
     }
     s.lessons.moved ||= p.x > 140;
-    if (s.stage <= 2 && !s.lessons.jumped && s.practiceJump && s.ground && p.x < 330) {
+    if (stage.practicePile && !s.lessons.jumped && s.practiceJump && s.ground && p.x < 330) {
         s.lessons.jumped = true;
         out.push({ type: 'cue', id: 'practice-cleared' });
     }
@@ -214,15 +162,14 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         out.push({ type: 'speck', x: p.x - 15, vx: -p.vx * .2 });
     }
     if (fellOffFloor(p)) {
-        if (s.stage >= 2) {
+        if (hooks.onFall) hooks.onFall(s, out);
+        else {
             s.deaths++;
             resetAttempt(s, out);
-            return;
         }
-        applyBinFall(s, out);
         return;
     }
-    if (s.stage <= 2 && p.x > STAGES[s.stage].goal) {
+    if (stage.finishAtGoal && p.x > stage.goal) {
         if (s.stage > s.completedStage) s.completedStage = s.stage;
         s.mode = 'won';
         s.keys = [];
@@ -232,7 +179,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
 // Static terrain plus the practice pile, which stays until the first jump lesson is done.
 export function stageSolids(s: GameState): readonly DeepReadonly<Point[]>[] {
     const terrain = STAGES[s.stage].terrain;
-    return s.stage <= 2 && !s.lessons.jumped ? [...terrain, PRACTICE_PILE] : terrain;
+    return STAGES[s.stage].practicePile && !s.lessons.jumped ? [...terrain, PRACTICE_PILE] : terrain;
 }
 
 function reachCheckpoints(s: GameState, out: GameEvent[]) {

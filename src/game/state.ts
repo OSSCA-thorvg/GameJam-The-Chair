@@ -3,11 +3,12 @@ import type { FocusNotice } from './systems/focus/decide';
 import type { Impact } from './systems/impact/decide';
 import type { DuctReaction, FirstFlight, RooftopEntrance } from './stages/rooftop/course/decide';
 import { createSky, type SkyState } from './stages/sky/data';
-import { createFurniture, createCorridor, type Corridor, type StageId, type Furniture } from './stages/building/data';
+import { createCorridor, type Corridor, type Furniture } from './stages/building/data';
 import { STAGES, stageSpawn } from './stages/index';
+import { prepareStageAttempt } from './stages/attempt';
 import { clonePlain } from './data';
 import { randomUint32, seedRng, type Rng } from './rng';
-import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Snapshot } from './types';
+import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Snapshot, StageId } from './types';
 
 
 // Survives a restart. Only stage selection and checkpoints change it.
@@ -101,27 +102,19 @@ function createProgress(skylineSeed: number, deaths = 0, completedStage: 0 | Sta
     };
 }
 
-function stageFurniture(stage: StageId, checkpoint: number): Furniture[] {
-    if (stage === 2) return createFurniture(checkpoint);
-    return stage === 1 ? createFurniture() : [];
-}
-
 export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'): Attempt {
     const { stage, checkpoint } = progress;
     const rng = { ...seed };
     const appearanceSeed = randomUint32(rng, 'cosmetic');
-    const sky = createSky();
-    // A sky retry after the first flag resumes with the building already grown.
-    if (stage === 4 && checkpoint > 0) { sky.phase = 'course'; sky.lift = 1; }
-    return {
+    const attempt: Attempt = {
         rng,
-        sky,
-        hasExtinguisher: stage === 4 || (stage === 3 && checkpoint > 0),
+        sky: createSky(),
+        hasExtinguisher: false,
         firstFlight: { kind: 'course', verticalShots: 0, lastShotAt: -1 },
-        rooftopEntrance: stage === 3 && checkpoint === 0 ? { kind: 'opening', age: 0 } : { kind: 'ready' },
+        rooftopEntrance: { kind: 'ready' },
         ductReaction: { kind: 'idle' },
         sprayCooldown: 0,
-        sprayBurst: stage === 4 ? .24 : 0,
+        sprayBurst: 0,
         sprayDir: { x: 0, y: 1 },
 
         mode,
@@ -135,7 +128,7 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
         actualSpeed: 0,
 
         people: STAGES[stage].people.map(person => ({ ...person })),
-        furniture: stageFurniture(stage, checkpoint),
+        furniture: [],
         corridor: createCorridor(checkpoint, appearanceSeed),
         copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 },
         cleaning: { ...LEVEL.cleaning, spilled: false, age: 0, followup: false, splashDir: 0 },
@@ -173,6 +166,9 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
         lossReason: null,
         focusLossTime: 0,
     };
+    // Stage-specific starting values live with each stage (stages/<stage>/attempt.ts).
+    prepareStageAttempt(stage, attempt, checkpoint);
+    return attempt;
 }
 
 export type CoreOptions = { seed: number; deaths?: number; completedStage?: 0 | StageId };
@@ -190,8 +186,8 @@ export function progressOf(s: GameState): Progress {
 
 // Starts a new attempt from the current progress. The core object keeps its identity.
 export function resetAttempt(s: GameState, out: GameEvent[]) {
-    // The office skyline changes on every office attempt; later stages keep theirs.
-    if (s.stage === 1) s.skylineSeed = randomUint32(s.rng, 'cosmetic');
+    // Some stages show a fresh skyline on every attempt; the others keep theirs.
+    if (STAGES[s.stage].newSkylineEachAttempt) s.skylineSeed = randomUint32(s.rng, 'cosmetic');
     Object.assign(s, createAttempt(progressOf(s), s.rng));
     out.push({ type: 'reset' });
 }

@@ -3,7 +3,7 @@ import type { Message } from '../../../i18n';
 import { deepFreeze } from '../../data';
 
 export const TYPING_SOUNDS = deepFreeze(['typing.1', 'typing.2', 'typing.3', 'typing.4', 'typing.5'] satisfies Message[]);
-export type StageId = 1 | 2 | 3 | 4;
+export type { StageId } from '../../types';
 export type Furniture = { kind: 'chair'; x: number; y: number; width: number; height: number; vx: number; released: boolean; cheer: number };
 export const STAGE_TWO = deepFreeze({
     length: 4000, goal: 3780,

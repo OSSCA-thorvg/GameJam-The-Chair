@@ -1,5 +1,6 @@
 // Writes the decisions from ./decide into game state. The only place this system changes state.
 import type { GameState } from '../../state';
+import { stageHooks } from '../../stages/hooks';
 import type { GameEvent } from '../../types';
 import { focusAfterHit, focusBlocked, focusLossStep, focusRecovery, type FocusHit } from './decide';
 // Returns false once play has stopped, so callers skip the rest of their effects.
@@ -36,6 +37,11 @@ export function applyFocusLoss(s: GameState, out: GameEvent[], dt: number) {
     }
 }
 
+/** Whether focus recovery is paused right now, including the current stage's own distractions. */
+export function focusBlockedIn(s: Readonly<GameState>) {
+    return focusBlocked(s, stageHooks(s.stage).focusBlocked?.(s) ?? false);
+}
+
 export function applyFocusRecovery(s: GameState, dt: number) {
-    Object.assign(s, focusRecovery(s, focusBlocked(s), dt));
+    Object.assign(s, focusRecovery(s, focusBlockedIn(s), dt));
 }

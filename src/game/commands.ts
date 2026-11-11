@@ -1,8 +1,7 @@
 import { resetAttempt, startStage, type GameState } from './state';
-import type { StageId } from './stages/building/data';
+import type { StageId } from './types';
 import type { GameEvent, Input } from './types';
-import { applyInteract, applyLeaveMeeting } from './stages/building/corridor/apply';
-import { applyRooftopSpray } from './stages/rooftop/course/apply';
+import { stageHooks } from './stages/hooks';
 
 // Every way the outside world changes the game. Recorded with the tick it arrived on.
 export type Command =
@@ -23,8 +22,8 @@ export function runCommand(s: GameState, command: Command, out: GameEvent[]) {
         case 'keys': s.keys = [...command.keys]; return;
         case 'jump': jump(s); return;
         case 'spray': spray(s, out); return;
-        case 'interact': applyInteract(s); return;
-        case 'leaveMeeting': if (s.mode === 'play') applyLeaveMeeting(s); return;
+        case 'interact': if (s.mode === 'play') stageHooks(s.stage).interact?.(s); return;
+        case 'leaveMeeting': stageHooks(s.stage).leave?.(s); return;
         case 'pause': pause(s); return;
         case 'reset': resetAttempt(s, out); return;
         case 'restart':
@@ -36,12 +35,13 @@ export function runCommand(s: GameState, command: Command, out: GameEvent[]) {
 }
 
 function jump(s: GameState) {
-    if (s.mode !== 'play' || s.corridor.room.kind === 'meeting' || s.rooftopEntrance.kind === 'opening') return;
+    if (s.mode !== 'play' || stageHooks(s.stage).canJump?.(s) === false) return;
     s.jumpQ = .14;
 }
 
 export function spray(s: GameState, out: GameEvent[]) {
-    if (s.mode !== 'play' || !s.hasExtinguisher || (s.stage === 4 && s.sky.phase !== 'course') || s.firstFlight.kind === 'flight' || s.sprayCooldown > 0) return;
+    const hooks = stageHooks(s.stage);
+    if (s.mode !== 'play' || !s.hasExtinguisher || hooks.canSpray?.(s) === false || s.firstFlight.kind === 'flight' || s.sprayCooldown > 0) return;
     const dx = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
     const len = Math.hypot(dx, 1);
     s.sprayDir = { x: -dx / len, y: 1 / len };
@@ -52,7 +52,7 @@ export function spray(s: GameState, out: GameEvent[]) {
     s.sprayCooldown = .24;
     s.sprayBurst = .24;
     out.push({ type: 'cue', id: 'spray' });
-    applyRooftopSpray(s, dx);
+    hooks.onSpray?.(s, dx);
 }
 
 function pause(s: GameState) {

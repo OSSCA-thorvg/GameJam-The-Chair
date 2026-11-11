@@ -1,4 +1,4 @@
-import type { StageId } from './stages/building/data';
+import type { StageId } from './types';
 import { LEVEL, FIXED_STEP } from './level';
 import type { Input, DeepReadonly, GameEvent } from './types';
 import { clonePlain } from './data';
@@ -6,11 +6,11 @@ import { cloneState, createCore, parseState, serializeState, type GameState as C
 import type { Command } from './commands';
 import { SIMULATED, applyCommand, stageSolids, stepGame } from './step';
 import { STAGES } from './stages/index';
-import { focusBlocked } from './systems/focus/decide';
+import { focusBlockedIn } from './systems/focus/apply';
 import { applyFocusLoss } from './systems/focus/apply';
 import { applyImpact } from './systems/impact/apply';
-import { monitorPhase } from './stages/office/monitor/decide';
-import { canEnterMeeting } from './stages/building/corridor/decide';
+import { stageHooks } from './stages/hooks';
+import { monitorsView } from './stages/view';
 
 export type { Command } from './commands';
 export { stepGame, applyCommand, replayCommands, type CommandLog, type StepResult } from './step';
@@ -176,7 +176,7 @@ export function viewState(s: Readonly<CoreState>) {
         checkpoint: s.checkpoint,
         furniture: s.furniture,
         corridor: s.corridor,
-        canEnterMeeting: canEnterMeeting(s),
+        canEnterMeeting: stageHooks(s.stage).canInteract?.(s) ?? false,
         level: { length: STAGES[s.stage].length, goal: STAGES[s.stage].goal },
         mode: s.mode,
         focus: s.focus,
@@ -204,13 +204,13 @@ export function viewState(s: Readonly<CoreState>) {
         cleaning: s.cleaning,
         lightHits: s.lightHits,
         doorHits: s.doorHits,
-        monitors: LEVEL.monitors.map(monitor => ({ ...monitor, ...monitorPhase(monitor, s.time) })),
+        monitors: monitorsView(s.time),
         papers: s.papers,
         people: s.people,
         solids: stageSolids(s).map(p => ({ p })),
         copier: s.copier,
         bin: LEVEL.bin,
-        focusBlocked: focusBlocked(s),
+        focusBlocked: focusBlockedIn(s),
     });
 }
 

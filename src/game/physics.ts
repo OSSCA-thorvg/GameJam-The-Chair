@@ -84,3 +84,8 @@ export function collide(player: Readonly<Player>, solids: readonly DeepReadonly<
     }
     return { p, ground, headHit: null };
 }
+
+// Far below every floor: the attempt is lost (each stage decides how, see StageHooks.onFall).
+export function fellOffFloor(p: Readonly<Point>) {
+    return p.y > LEVEL.floor + 250;
+}

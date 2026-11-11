@@ -1,5 +1,3 @@
-import { waterExposure } from '../../stages/office/cleaning/decide';
-import type { Point } from '../../types';
 
 export type FocusKind = 'paper' | 'water' | 'light' | 'door';
 // One distraction. The same kind and id only ever costs focus once per attempt.
@@ -9,9 +7,9 @@ export type Focus = { focus: number; focusClock: number; focusEvents: readonly s
 
 export const FOCUS_LOSS_DURATION = 1.7;
 
-// Focus does not recover while a distraction is still active.
-export function focusBlocked(s: { paperPenaltyRemaining: number; lightPenaltyRemaining: number; bucket: { age: number }; p: Readonly<Point>; cleaning: { x: number } }) {
-    return s.paperPenaltyRemaining > 0 || s.lightPenaltyRemaining > 0 || waterExposure(s.bucket.age, s.p, s.cleaning.x);
+// Focus does not recover while a distraction is still active: a recent hit, or a stage hazard (`stageBlocked`).
+export function focusBlocked(s: { paperPenaltyRemaining: number; lightPenaltyRemaining: number }, stageBlocked: boolean) {
+    return s.paperPenaltyRemaining > 0 || s.lightPenaltyRemaining > 0 || stageBlocked;
 }
 
 // Focus after a distraction, or null if this distraction already counted. `lost` means focus ran out.

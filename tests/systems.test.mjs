@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 
 // Unit tests for pure system decisions: same input, same answer, no state writes.
 const bundle = await build({
-    stdin: { contents: `export * from './src/game/stages/office/geyser/decide'; export * from './src/game/stages/office/monitor/decide'; export * from './src/game/stages/office/bin/decide'; export * from './src/game/stages/office/cleaning/decide'; export * from './src/game/stages/office/copier/decide'; export * from './src/game/stages/rooftop/course/decide'; export * from './src/game/stages/sky/course/decide'; export * from './src/game/systems/focus/decide'; export * from './src/game/systems/impact/decide'; export * from './src/game/stages/building/corridor/decide';`, resolveDir: process.cwd() },
+    stdin: { contents: `export * from './src/game/stages/office/geyser/decide'; export * from './src/game/stages/office/monitor/decide'; export * from './src/game/stages/office/bin/decide'; export { fellOffFloor } from './src/game/physics'; export * from './src/game/stages/office/cleaning/decide'; export * from './src/game/stages/office/copier/decide'; export * from './src/game/stages/rooftop/course/decide'; export * from './src/game/stages/sky/course/decide'; export * from './src/game/systems/focus/decide'; export * from './src/game/systems/impact/decide'; export * from './src/game/stages/building/corridor/decide';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
 const sys = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
@@ -157,9 +157,10 @@ test('each distraction costs focus once, and focus recovers only when undisturbe
     assert.deepEqual(sys.focusRecovery({ ...hit, focusClock: 1.999 }, true, .01).focus, 70, 'blocked');
     assert.equal(sys.focusRecovery({ ...hit, focusNotice: { kind: 'paper', life: .005 } }, false, .01).focusNotice, null);
     assert.deepEqual(sys.focusLossStep(1.69, .01).over, true);
-    const blocked = { paperPenaltyRemaining: 0, lightPenaltyRemaining: 0, bucket: { age: 5 }, p: { x: 0, y: 0 }, cleaning: { x: 1095 } };
-    assert.equal(sys.focusBlocked(blocked), false);
-    assert.equal(sys.focusBlocked({ ...blocked, lightPenaltyRemaining: .1 }), true);
+    const calm = { paperPenaltyRemaining: 0, lightPenaltyRemaining: 0 };
+    assert.equal(sys.focusBlocked(calm, false), false);
+    assert.equal(sys.focusBlocked({ ...calm, lightPenaltyRemaining: .1 }, false), true);
+    assert.equal(sys.focusBlocked(calm, true), true, 'a stage hazard such as spilled water');
 });
 
 test('a head hit replays the last frames in slow motion, then holds', () => {
