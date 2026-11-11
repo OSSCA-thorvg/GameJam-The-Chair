@@ -1,62 +1,61 @@
-// Browser-side storage for replay settings and the error log, plus file download and clipboard helpers.
+// Browser-side storage for the replay data: the error log survives reloads, and the latest data bundle is
+// kept so the replay tool (/replay.html) can open it from the same browser. Plus download/copy helpers.
 import { CONFIG_VERSION } from '../game/stages';
-import { normalizeReplaySettings, type ReplayError, type ReplayFile, type ReplaySettings } from '../game/replay';
+import type { Recorder, ReplayData, ReplayError, ReplayErrorEntry, ReplayFile } from '../game/replay';
 
-const SETTINGS_KEY = 'the-chair-replay-settings';
 const ERRORS_KEY = 'the-chair-error-log';
+export const BROWSER_DATA_KEY = 'the-chair-replay-data';
 
-export function loadReplaySettings(): ReplaySettings {
-    try { return normalizeReplaySettings(JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null')); } catch { return normalizeReplaySettings(null); }
+function store(key: string, value: unknown) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
 }
 
-export function saveReplaySettings(settings: ReplaySettings) {
-    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch {}
-}
-
-export type ErrorLogEntry = ReplayError & { time: string; stage: number | null; replay: ReplayFile | null };
-export type ErrorLogFile = { kind: 'the-chair-error-log'; format: 1; version: string; userAgent: string; exportedAt: string; entries: ErrorLogEntry[] };
-
-// Errors survive reloads (a crash may stop the game loop) and keep the replay of the attempt that failed.
-export function createErrorLog(getMax: () => number) {
-    let entries: ErrorLogEntry[] = [];
+// Errors keep the replay of the attempt that failed. A crash may stop the game loop, so they are stored at once.
+export function createErrorLog(max: number) {
+    let entries: ReplayErrorEntry[] = [];
     try {
         const saved = JSON.parse(localStorage.getItem(ERRORS_KEY) || '[]');
         if (Array.isArray(saved)) entries = saved;
     } catch {}
-    const listeners = new Set<() => void>();
     function persist() {
         // Drop replays from the oldest entries first if storage is full.
         for (let keepReplays = entries.length; keepReplays >= 0; keepReplays--) {
-            const stored = entries.map((entry, i) => i < entries.length - keepReplays ? { ...entry, replay: null } : entry);
-            try { localStorage.setItem(ERRORS_KEY, JSON.stringify(stored)); return; } catch {}
+            if (store(ERRORS_KEY, entries.map((entry, i) => i < entries.length - keepReplays ? { ...entry, replay: null } : entry))) return;
         }
-    }
-    function changed() {
-        persist();
-        for (const listener of listeners) listener();
     }
     return {
         add(error: ReplayError, stage: number | null, replay: ReplayFile | null) {
             entries.push({ ...error, time: new Date().toISOString(), stage, replay });
-            while (entries.length > getMax()) entries.shift();
-            changed();
+            while (entries.length > max) entries.shift();
+            persist();
         },
-        clear() {
-            entries = [];
-            changed();
-        },
-        get size() { return entries.length; },
-        file(): ErrorLogFile {
-            return { kind: 'the-chair-error-log', format: 1, version: CONFIG_VERSION, userAgent: navigator.userAgent, exportedAt: new Date().toISOString(), entries };
-        },
-        onChange(listener: () => void) {
-            listeners.add(listener);
-            return () => listeners.delete(listener);
-        },
+        get entries(): readonly ReplayErrorEntry[] { return entries; },
     };
 }
 
 export type ErrorLog = ReturnType<typeof createErrorLog>;
+
+export function replayData(recorder: Recorder, errorLog: ErrorLog): ReplayData {
+    return {
+        kind: 'the-chair-replay-data',
+        format: 1,
+        version: CONFIG_VERSION,
+        exportedAt: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        attempts: recorder.attempts(),
+        errors: [...errorLog.entries],
+    };
+}
+
+/** Keeps the newest data bundle in this browser for the replay tool. Replays are dropped if storage is full. */
+export function saveBrowserData(data: ReplayData) {
+    if (store(BROWSER_DATA_KEY, data)) return;
+    store(BROWSER_DATA_KEY, { ...data, attempts: data.attempts.slice(0, 1), errors: data.errors.map(entry => ({ ...entry, replay: null })) });
+}
+
+export function loadBrowserData(): string | null {
+    try { return localStorage.getItem(BROWSER_DATA_KEY); } catch { return null; }
+}
 
 export function downloadJson(name: string, data: unknown) {
     const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
@@ -67,8 +66,7 @@ export function downloadJson(name: string, data: unknown) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export async function copyJson(data: unknown) {
-    const text = JSON.stringify(data);
+export async function copyText(text: string) {
     try {
         await navigator.clipboard.writeText(text);
         return true;

@@ -256,3 +256,49 @@ export function seekTimeline(timeline: Readonly<Timeline>, tick: number) {
 }
 
 export type ReplayCursor = ReturnType<typeof createCursor>;
+
+// Everything the game exports for developers: recent attempts and the error log, each error with the
+// replay of the attempt that failed. Read-only for players; opened in the replay tool (/replay.html).
+export type ReplayErrorEntry = ReplayError & { time: string; stage: number | null; replay: ReplayFile | null };
+export type ReplayData = {
+    kind: 'the-chair-replay-data';
+    format: typeof REPLAY_FORMAT;
+    version: string;
+    exportedAt: string;
+    userAgent: string;
+    attempts: ReplayFile[];
+    errors: ReplayErrorEntry[];
+};
+
+export type ReplaySource = { label: string; kind: 'attempt' | 'error' | 'file'; file: ReplayFile; error: ReplayErrorEntry | null };
+
+/**
+ * Accepts a replay data bundle, a single replay file, or an older error log, and lists the replays inside.
+ * Entries without a usable replay are skipped. Throws when nothing in the text is a replay.
+ */
+export function readReplaySources(text: string): { sources: ReplaySource[]; data: Partial<ReplayData> | null } {
+    let raw: unknown;
+    try { raw = JSON.parse(text); } catch { throw new Error('not JSON'); }
+    const data = raw as Partial<ReplayData> & { kind?: string; entries?: ReplayErrorEntry[] };
+    const seconds = (file: ReplayFile) => (replayLength(file) / 120).toFixed(1) + 's';
+    const sources: ReplaySource[] = [];
+    if (data?.kind === 'the-chair-replay-data' || data?.kind === 'the-chair-error-log') {
+        (data.attempts ?? []).forEach((attempt, i) => {
+            try {
+                const file = parseReplay(JSON.stringify(attempt));
+                sources.push({ label: `#${i + 1} · stage ${file.start.stage} · ${seconds(file)}${file.error ? ' · error' : ''}`, kind: 'attempt', file, error: null });
+            } catch {}
+        });
+        (data.errors ?? data.entries ?? []).forEach(entry => {
+            if (!entry?.replay) return;
+            try {
+                const file = parseReplay(JSON.stringify(entry.replay));
+                sources.push({ label: `error · ${entry.message} · stage ${file.start.stage}`, kind: 'error', file, error: entry });
+            } catch {}
+        });
+        if (!sources.length && !(data.attempts?.length || (data.errors ?? data.entries)?.length)) throw new Error('no replays inside');
+        return { sources, data };
+    }
+    const file = parseReplay(text);
+    return { sources: [{ label: `stage ${file.start.stage} · ${seconds(file)}`, kind: 'file', file, error: null }], data: null };
+}

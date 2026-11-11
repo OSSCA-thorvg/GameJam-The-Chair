@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Chair · Replay tool</title>
+  </head>
+  <body>
+    <main class="preview replay-tool">
+      <header>
+        <a href="/" data-i18n="tool.backToGame">← Game</a>
+        <h1 data-i18n="tool.title">Replay tool</h1>
+        <small id="renderer">ThorVG</small>
+      </header>
+      <section class="tool-load" aria-label="Load">
+        <button type="button" id="open-file" data-i18n="replay.open">Open file</button>
+        <input type="file" id="file" accept=".json,application/json" hidden />
+        <button type="button" id="browser-data" data-i18n="tool.browserData">This browser's data</button>
+        <details>
+          <summary data-i18n="tool.paste">Paste JSON</summary>
+          <textarea id="paste" rows="4" spellcheck="false"></textarea>
+          <button type="button" id="load-paste" data-i18n="tool.load">Load</button>
+        </details>
+        <p class="tool-hint" data-i18n="tool.drop">Drop a replay or data file anywhere on this page.</p>
+        <p class="tool-status" id="status" role="status"></p>
+      </section>
+      <div class="tool-layout">
+        <div class="tool-view">
+          <div id="chair-office-one">
+            <div class="scene">
+              <canvas data-base aria-label="Replay"></canvas>
+              <canvas data-tvg id="chair-office-one-tvg" aria-hidden="true" hidden></canvas>
+              <canvas class="labels" data-labels aria-hidden="true"></canvas>
+              <p class="tool-empty" id="empty" data-i18n="tool.empty">Open a replay to start.</p>
+              <div class="replay-bar" data-replay-bar role="group" aria-label="Replay controls" data-i18n-aria="replay.bar" hidden>
+                <button data-replay-play aria-label="Play">▶</button>
+                <button data-replay-prev aria-label="Previous frame" data-i18n-aria="replay.prev">⏴</button>
+                <button data-replay-next aria-label="Next frame" data-i18n-aria="replay.next">⏵</button>
+                <span class="replay-seek"><input type="range" data-replay-seek aria-label="Position" data-i18n-aria="replay.seek"><span class="replay-markers" data-replay-markers aria-hidden="true"></span></span>
+                <span class="replay-time" data-replay-time></span>
+                <select data-replay-speed aria-label="Speed" data-i18n-aria="replay.speed"></select>
+                <button data-replay-loop aria-label="Loop" data-i18n-aria="replay.loop" aria-pressed="false">⟲</button>
+                <button data-replay-exit hidden aria-label="Exit replay">✕</button>
+                <small class="replay-note" data-replay-note></small>
+              </div>
+            </div>
+          </div>
+          <section class="tool-panel">
+            <h2 data-i18n="tool.commands">Commands</h2>
+            <ol class="tool-commands" id="commands"></ol>
+          </section>
+        </div>
+        <aside class="tool-side">
+          <section class="tool-panel">
+            <h2 data-i18n="tool.replays">Replays</h2>
+            <select id="sources" size="5" aria-label="Replays"></select>
+          </section>
+          <section class="tool-panel">
+            <h2 data-i18n="tool.file">Recording</h2>
+            <dl class="tool-facts" id="file-info"></dl>
+            <pre class="tool-error" id="error-info" hidden></pre>
+            <button type="button" id="download-replay" data-i18n="tool.downloadReplay">Download replay</button>
+          </section>
+          <section class="tool-panel">
+            <h2 data-i18n="tool.markers">Markers</h2>
+            <div class="tool-markers" id="markers"></div>
+          </section>
+          <section class="tool-panel">
+            <h2 data-i18n="tool.current">Current state</h2>
+            <dl class="tool-facts" id="state-info"></dl>
+            <button type="button" id="copy-state" data-i18n="tool.copyState">Copy state JSON</button>
+          </section>
+          <section class="tool-panel">
+            <h2 data-i18n="tool.viewer">Viewer</h2>
+            <label><span data-i18n="replay.keyframeInterval">Seek point every (ticks)</span><input type="number" id="keyframe" min="30" max="1200" step="1" /></label>
+            <label><span data-i18n="replay.warmup">Warm-up before seek (s)</span><input type="number" id="warmup" min="0" max="5" step="any" /></label>
+            <label><span data-i18n="replay.playbackSpeed">Playback speed</span><input type="number" id="speed" min="0.25" max="4" step="any" /></label>
+          </section>
+        </aside>
+      </div>
+    </main>
+    <script type="module" src="/src/replay-tool.ts"></script>
+  </body>
+</html>

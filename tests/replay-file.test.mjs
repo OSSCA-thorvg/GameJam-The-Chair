@@ -112,3 +112,21 @@ test('checked-in replay files still play back exactly', () => {
         assert.equal(timeline.endTick, file.endTick, name);
     }
 });
+
+test('replay data bundles, single files and old error logs all open as replay lists', () => {
+    const { game, recorder } = recordedGame();
+    game.startStage(1);
+    for (let i = 0; i < 200; i++) game.step();
+    game.startStage(2);
+    for (let i = 0; i < 200; i++) game.step();
+    const attempts = recorder.attempts();
+    const bundle = { kind: 'the-chair-replay-data', format: 1, version: 'x', exportedAt: '', userAgent: '', attempts,
+        errors: [{ tick: 3, at: 'step', message: 'boom', time: '', stage: 1, replay: attempts[1] }, { tick: 1, at: 'window', message: 'no replay', time: '', stage: null, replay: null }] };
+    const fromBundle = R.readReplaySources(JSON.stringify(bundle)).sources;
+    assert.deepEqual(fromBundle.map(source => source.kind), ['attempt', 'attempt', 'error']);
+    assert.equal(fromBundle[2].error.message, 'boom');
+    assert.deepEqual(R.readReplaySources(JSON.stringify(attempts[0])).sources.map(source => source.kind), ['file']);
+    const errorLog = { kind: 'the-chair-error-log', entries: bundle.errors };
+    assert.equal(R.readReplaySources(JSON.stringify(errorLog)).sources.length, 1);
+    assert.throws(() => R.readReplaySources('{"kind":"the-chair-replay-data","attempts":[],"errors":[]}'), /no replays/);
+});

@@ -3,7 +3,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
     build: {
         rollupOptions: {
-            input: ['index.html', 'preview.html'],
+            input: ['index.html', 'preview.html', 'replay.html'],
         },
     },
 });
