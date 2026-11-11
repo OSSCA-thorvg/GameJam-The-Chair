@@ -1,5 +1,6 @@
 import { STAGE_THREE, ductTimings } from '../../game/stages/rooftop/data';
 import type { RenderCtx } from '../context';
+import { ART } from '../art';
 
 export function rooftopDuct(ctx: RenderCtx) {
     const duct = STAGE_THREE.duct;
@@ -166,15 +167,15 @@ function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: 
 }
 
 /** Fill colours that identify each ejected prop (tests count them). */
-export const DUCT_PROP_COLORS = { can: '#2340a8', cup: '#f4ece0', badge: '#f3f1ea', tie: '#b23a3f' } as const;
+export const DUCT_PROP_COLORS = { can: '#2340a8', cup: '#f4ece0', badge: '#f3f1ea', tie: '#b23a3f', paper: ART.palette.paper } as const;
 
-type PropKind = 'can' | 'cup' | 'spill' | 'badge' | 'tie';
+type PropKind = 'can' | 'cup' | 'spill' | 'badge' | 'tie' | 'paper';
 // Landing spots sit on real ledges: the left pad (top 136, x 1240-1400), the pad in front of the duct
 // (top 276, x 1510-1640) and the shelf above the duct (top -4, x 1510-1780). `to` is the resting centre.
 type Flight = { kind: PropKind; delay: number; time: number; to: [number, number]; arc: number; spin: number; rest: number; bounce: number };
 // Sizes follow the rider (about 1 unit per cm): a can is ~7x21, a takeaway cup ~9x14, the badge card ~11x14
 // and a tie ~35 long like the rider's own.
-const SCALE: Record<PropKind, number> = { can: .45, cup: .55, spill: .55, badge: .38, tie: .62 };
+const SCALE: Record<PropKind, number> = { can: .45, cup: .55, spill: .55, badge: .38, tie: .62, paper: 1 };
 const PROPS: readonly Flight[] = [
     // Energy drinks: the heaviest, they tumble and rattle to a stop on their side.
     { kind: 'can', delay: 0, time: .62, to: [1352, 132], arc: 120, spin: 9.4, rest: Math.PI / 2, bounce: 6 },
@@ -189,6 +190,13 @@ const PROPS: readonly Flight[] = [
     { kind: 'badge', delay: .08, time: .82, to: [1270, 128], arc: 150, spin: 12.6, rest: 0, bounce: 0 },
     { kind: 'tie', delay: .02, time: 1.05, to: [1600, -10], arc: 150, spin: 5.2, rest: Math.PI / 2, bounce: 0 },
     { kind: 'tie', delay: .07, time: 1.15, to: [1672, -10], arc: 170, spin: -4.6, rest: -Math.PI / 2, bounce: 0 },
+    // Printouts, the same sheets the office copier spits out: light, so they float and sway down last.
+    { kind: 'paper', delay: .04, time: 1.3, to: [1312, 130], arc: 110, spin: .5, rest: .06, bounce: 0 },
+    { kind: 'paper', delay: .1, time: 1.55, to: [1722, -10], arc: 230, spin: -.4, rest: -.04, bounce: 0 },
+    { kind: 'paper', delay: .06, time: 1.2, to: [1524, 270], arc: 90, spin: .3, rest: 0, bounce: 0 },
+    { kind: 'paper', delay: .14, time: 1.45, to: [1630, 270], arc: 120, spin: -.6, rest: .05, bounce: 0 },
+    { kind: 'paper', delay: .08, time: 1.7, to: [1636, -10], arc: 200, spin: .4, rest: -.05, bounce: 0 },
+    { kind: 'paper', delay: .18, time: 1.6, to: [1530, -10], arc: 190, spin: -.5, rest: .03, bounce: 0 },
 ];
 
 // Where a prop is `age` seconds into the sneeze: a thrown arc, then a damped hop on landing.
@@ -211,10 +219,18 @@ function ductProps(ctx: RenderCtx, x: number, y: number, age: number) {
     for (const f of PROPS) if (f.kind === 'spill') coffeeSpill(ctx, from, y, age, f);
     for (const f of PROPS) {
         const at = flight(from, y, age, f);
+        if (f.kind === 'paper' && at.flying) {
+            // A sheet catches the air: it slides side to side and rocks as it falls.
+            const phase = f.to[0] * .37 + f.delay * 40;
+            const drift = Math.min(1, Math.max(0, age - f.delay) / f.time);
+            at.x += Math.sin(age * 7 + phase) * 14 * drift;
+            at.rotation += Math.sin(age * 7 + phase + 1.2) * .7 * drift;
+        }
         ctx.ox = at.x; ctx.oy = at.y; ctx.rotation = at.rotation; ctx.localScale = SCALE[f.kind];
         if (f.kind === 'can') energyCan(ctx);
         else if (f.kind === 'cup' || f.kind === 'spill') coffeeCup(ctx, f.kind === 'spill' && !at.flying);
         else if (f.kind === 'badge') idBadge(ctx, at.flying ? age : -1);
+        else if (f.kind === 'paper') printout(ctx);
         else necktie(ctx, at.flying ? age + f.delay * 9 : -1);
     }
     ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
@@ -256,6 +272,13 @@ function coffeeSpill(ctx: RenderCtx, x: number, y: number, age: number, f: Fligh
         [right - 2, 276.6, left + 2, 276.6, left, 276],
     ], ctx.gradientFill(left, 0, right, 0, [[0, '#4a2c1890'], [.5, '#5b3a22d8'], [1, '#4a2c18b0']]));
     ctx.ellipse(left + (right - left) * .4, 275.3, (right - left) * .15, .5, '#c79b6e80');
+}
+
+// One printed sheet, drawn exactly like the office copier's paper.
+function printout(ctx: RenderCtx) {
+    ctx.rect(-10, -6, 20, 12, DUCT_PROP_COLORS.paper);
+    ctx.rod(-6, -2, 6, -2, 1, '#9a9e9d');
+    ctx.rod(-6, 2, 3, 2, 1, '#b3b3a7');
 }
 
 // A tall energy-drink can: blue body, lightning bolt, brushed rims and a shine down one side.
