@@ -63,7 +63,11 @@ export function rooftopDuct(ctx: RenderCtx) {
             }
         }
         const sneezeAge = burst.age - timing.inhale - timing.twitch;
-        if (sneezeAge >= 0 && sneezeAge < timing.sneeze) ductSteam(ctx, x, y, sneezeAge, timing.sneeze, burst.kind === 'first' ? 1 : .58);
+        if (sneezeAge >= 0 && sneezeAge < timing.sneeze) {
+            // The repeat wind is short, so its steam plays faster to still billow out to a good size.
+            const pace = Math.pow(duct.sneezeDuration / timing.sneeze, .6);
+            ductSteam(ctx, x, y, sneezeAge * pace, timing.sneeze * pace, burst.kind === 'first' ? 1 : .85);
+        }
     }
     const sneezeAge = age - duct.inhaleDuration - duct.twitchDuration;
     if (sneezeAge >= 0) {
