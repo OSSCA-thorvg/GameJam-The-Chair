@@ -4,6 +4,7 @@ export const STAGE_FOUR = deepFreeze({
     length: 6100,
     goal: 5410,
     arrivalY: -1820,
+    reveal: { settle: 1, turn: 7, hold: 2 },
     spawn: { x: 2380, y: -1820 },
     checkpoints: [{ x: 2380, y: -1820 }, { x: 2820, y: -1748 }, { x: 3790, y: -2078 }, { x: 4510, y: -2258 }],
 });

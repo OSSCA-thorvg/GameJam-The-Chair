@@ -128,7 +128,7 @@ test('the duct sneezes back at a rider in front of it once the inhale ends', () 
 
 test('the sky hovers in, lands on platforms and saves flags without touching its input', () => {
     const sky = { phase: 'arrival', age: 0, lift: 0, drawer: 0, deskTilt: 0, signTilt: -1.28, standing: null, depth: 0, depthTravel: 0 };
-    const base = { sky, p: { x: 2380, y: -1820, vx: 0, vy: 0, a: 0, w: 0 }, ground: false, coyote: 0, jumpQ: 0, checkpoint: 0, time: 0, direction: 1, depthDir: 0, length: 6100, sprayBurst: 0, sprayDir: { x: 0, y: 1 } };
+    const base = { sky, p: { x: 2380, y: -1820, vx: 0, vy: 0, a: 0, w: 0 }, ground: false, coyote: 0, jumpQ: 0, checkpoint: 0, time: 0, direction: 1, length: 6100, sprayBurst: 0, sprayDir: { x: 0, y: 1 } };
     let r = sys.skyStep(base, 1 / 120);
     assert.ok(r.p.x > 2380 && r.sprayBurst === .24 && r.speed > 0);
     assert.equal(sky.age, 0, 'input untouched');
@@ -141,9 +141,9 @@ test('the sky hovers in, lands on platforms and saves flags without touching its
     }
     assert.ok(reached, 'landing on the arrival roof saves flag 1');
     assert.equal(r.checkpoint, 1);
-    const depth = sys.skyStep({ ...base, sky: { ...sky, phase: 'depth', depthTravel: .649 }, depthDir: 1 }, 1 / 120);
+    const depth = sys.skyStep({ ...base, sky: { ...sky, phase: 'depth', age: 4 } }, 1 / 120);
     assert.equal(depth.won, true);
-    assert.equal(depth.speed, null);
+    assert.equal(depth.speed, 0);
 });
 
 test('each distraction costs focus once, and focus recovers only when undisturbed', () => {

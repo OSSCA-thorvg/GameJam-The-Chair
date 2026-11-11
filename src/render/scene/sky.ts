@@ -2,6 +2,8 @@ import { skyPlatforms, skyWind, STAGE_FOUR, type SkyPlatform } from '../../game/
 import type { RenderCtx } from '../context';
 import { player } from './player';
 import { sprayPlume } from './spray';
+import { billboard } from './sky-art';
+import { drawSkyReveal } from './sky-reveal';
 
 function cloud(ctx: RenderCtx, x: number, y: number, size: number, near: boolean) {
     ctx.ox = x; ctx.oy = y; ctx.localScale = size;
@@ -66,30 +68,6 @@ function desk(ctx: RenderCtx, width: number, small: boolean, drawer: number) {
     if (drawer > 0) ctx.polygon([[dx, 13], [dx + 65, 13], [dx + 49, 5], [dx - 16, 5]], '#b8adac');
 }
 
-function billboard(ctx: RenderCtx, width: number, text: string, label: boolean) {
-    ctx.rect(-width / 2 - 5, -8, width + 10, 16, '#b9b6bb');
-    ctx.rect(-width / 2, -3, width, 7, '#edc58c');
-    ctx.rect(-width / 2 + 5, 9, width - 10, 83, '#424f6d');
-    ctx.rect(-width / 2 + 9, 13, width - 18, 73, '#69738c');
-    for (const x of [-width / 2 + 30, width / 2 - 34]) {
-        ctx.rod(x, 90, x, 124, 8, '#5c6b83');
-        ctx.rod(x - 14, 124, x + 16, 124, 6, '#9ca6b2');
-    }
-    // The unflappable model keeps giving a thumbs-up as the sign rotates.
-    ctx.ellipse(width / 2 - 32, 36, 9, 11, '#d8b593');
-    ctx.rect(width / 2 - 42, 48, 24, 31, '#e6ddc8');
-    ctx.rod(width / 2 - 43, 56, width / 2 - 58, 43, 6, '#d8b593');
-    ctx.rod(width / 2 - 58, 43, width / 2 - 58, 34, 5, '#d8b593');
-    if (label && Math.abs(ctx.rotation) < .65) {
-        const [sx, sy] = ctx.screenPoint(-20, 45);
-        ctx.lg.save();
-        ctx.lg.translate(sx, sy); ctx.lg.rotate(ctx.rotation);
-        ctx.lg.font = `${11 * ctx.scale * ctx.localScale}px system-ui,sans-serif`;
-        ctx.lg.fillStyle = '#f7e5c6'; ctx.lg.textAlign = 'center';
-        ctx.lg.fillText(text, 0, 0); ctx.lg.restore();
-    }
-}
-
 function platform(ctx: RenderCtx, spec: SkyPlatform) {
     if (spec.x > ctx.cam + ctx.VW + 200 || spec.x + spec.width < ctx.cam - 200) return;
     ctx.ox = spec.x + spec.width / 2; ctx.oy = spec.y; ctx.rotation = spec.angle;
@@ -144,38 +122,17 @@ function ribbon(ctx: RenderCtx) {
         [3520, -2234, 3505, -2220, 3475, -2223]], '#dfbd85');
 }
 
-function reveal(ctx: RenderCtx) {
-    const sky = ctx.state.sky;
-    const turn = sky.phase === 'reveal' ? Math.min(1, Math.max(0, (sky.age - 1.5) / 3.5)) : 1;
-    // Perspective projection opens the hidden depth axis while the camera pulls away.
-    for (let i = 23; i >= 0; i--) {
-        const z = i * .5 + 1.7 + sky.depth * .35;
-        const k = 1 / z;
-        ctx.localScale = k;
-        ctx.ox = 5410 + turn * (400 - 760 * k);
-        ctx.oy = -2600 + (i === 0 ? 0 : turn * (75 - 160 * k));
-        ctx.rotation = turn * -.08;
-        if (i > 0 && turn < .04) continue;
-        ctx.beginLayer({ key: `sky-end-sign-${i}`, opacity: i === 0 ? 1 : turn * (.3 + .7 * k) });
-        billboard(ctx, 530, '', false);
-        ctx.endLayer();
-    }
-    ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
-    if (sky.phase === 'reveal' && sky.age < 3.8) {
-        ctx.label(ctx.locale === 'ko' ? '우리 회사의 성장에는 한계가 없습니다.' : 'OUR GROWTH HAS NO LIMITS.', 5410, -2585, 15, '#f9e8cc');
-    }
-    if (sky.phase === 'depth' && ctx.mode === 'play') ctx.label('↑ / ↓', ctx.p.x, ctx.p.y + 65, 17, '#f3e5d0');
-}
-
 export function drawSky(ctx: RenderCtx) {
     ctx.commands = [];
     ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
-    atmosphere(ctx);
     const ending = ctx.state.sky.phase === 'reveal' || ctx.state.sky.phase === 'depth';
-    if (!ending) {
-        growingBuilding(ctx);
-        ribbon(ctx);
-    } else reveal(ctx);
+    if (ending) {
+        drawSkyReveal(ctx);
+        return;
+    }
+    atmosphere(ctx);
+    growingBuilding(ctx);
+    ribbon(ctx);
     for (const spec of skyPlatforms(ctx.state.sky, ctx.t)) platform(ctx, spec);
     for (let i = 1; i < STAGE_FOUR.checkpoints.length; i++) {
         const cp = STAGE_FOUR.checkpoints[i];
@@ -192,12 +149,7 @@ export function drawSky(ctx: RenderCtx) {
         ctx.rod(0, 14, 0, 23, 4, '#8a9aaf'); ctx.rod(-11, 24, 11, 24, 3, '#aab4c0');
     }
     ctx.ox = ctx.oy = ctx.rotation = 0;
-    if (ending) {
-        const depth = ctx.state.sky.depth;
-        const original = ctx.p;
-        ctx.p = { ...original, x: original.x + depth * 85, y: original.y - depth * 55 };
-        sprayPlume(ctx); player(ctx); ctx.p = original;
-    } else { sprayPlume(ctx); player(ctx); }
+    sprayPlume(ctx); player(ctx);
     // Foreground cloud edges frame open space without hiding the next landing.
     ctx.beginLayer({ key: 'sky-near-clouds', blur: 1.5, opacity: .75 });
     const bottom = ctx.H / ctx.scale - ctx.vertical;

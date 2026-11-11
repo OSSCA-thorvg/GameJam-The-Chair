@@ -1,5 +1,6 @@
 import { createGame, type Game, type GameState } from './game/game';
 import { LEVEL, FIXED_STEP } from './game/level';
+import { STAGE_FOUR } from './game/stages/sky/data';
 import { STAGE_TWO } from './game/stages/building/data';
 import { ductTimings } from './game/stages/rooftop/data';
 import { createEffects, type EffectsState } from './render/effects';
@@ -292,6 +293,28 @@ function cloudEntry(): PreviewScene {
         [{ at: 0, label: 'Arrival' }, { at: 1, label: 'Continuous spray · Hovering' }], frames);
 }
 
+function skyEnding(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const { settle, turn, hold } = STAGE_FOUR.reveal;
+    const duration = settle + turn + hold;
+    return {
+        id: 'sky-ending', label: 'Sky · Side to back', duration, focusX: STAGE_FOUR.goal,
+        markers: [{ at: 0, label: 'Side view' }, { at: settle + turn / 2, label: 'Camera turning' },
+            { at: settle + turn, label: 'Back view' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            const depth = at >= settle + turn;
+            return { state: { ...base, time: at,
+                sky: { ...base.sky, phase: depth ? 'depth' : 'reveal', age: depth ? at - settle - turn : at },
+                player: { ...base.player, x: 5045, y: -2338 }, ground: false,
+            }, effects };
+        },
+    };
+}
+
 function ductSneeze(repeat = false): PreviewScene {
     const game = createGame();
     game.startStage(3);
@@ -340,5 +363,5 @@ export const previewScenes: readonly PreviewScene[] = [
         markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
-    bucketPour(), cleanerRecovery(), monitorLight(), copierVolley(), headImpact(), focusLoss(), rooftopEntrance(), extinguisherSpray(), ductSneeze(), ductSneeze(true), cloudEntry(), officeTyping(),
+    bucketPour(), cleanerRecovery(), monitorLight(), copierVolley(), headImpact(), focusLoss(), rooftopEntrance(), extinguisherSpray(), ductSneeze(), ductSneeze(true), cloudEntry(), skyEnding(), officeTyping(),
 ];

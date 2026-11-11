@@ -6,8 +6,7 @@ export function driveStageFour(game, visit = () => {}) {
         visit(state, targetIndex);
         if (state.mode === 'won') return state;
         if (state.deaths > 0) throw new Error(`Fall approaching ${route[targetIndex]} at ${JSON.stringify(p)}`);
-        if (sky.phase === 'reveal') game.setInput();
-        else if (sky.phase === 'depth') game.setInput('forward');
+        if (sky.phase === 'reveal' || sky.phase === 'depth') game.setInput();
         else if (sky.phase === 'arrival') game.setInput('right');
         else {
             const id = route[targetIndex];
