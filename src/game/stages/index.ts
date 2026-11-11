@@ -1,6 +1,6 @@
 // The stage table: static data only. Each stage defines itself in stages/<stage>/definition.ts;
 // adding a stage adds one line here and one case in stages/hooks.ts and stages/attempt.ts.
-import { FIXED_STEP, FOCUS_DAMAGE, LEVEL, RULES } from '../level';
+import { FIXED_STEP, FOCUS_DAMAGE, LEVEL, PHYSICS, RULES } from '../level';
 import { configHash, deepFreeze } from '../data';
 import type { DeepReadonly, Point, StageId } from '../types';
 import type { Checkpoint, StageDefinition } from './types';
@@ -38,6 +38,7 @@ export function inCheckpointArea(mark: DeepReadonly<Checkpoint>, p: Point) {
 export const GAME_CONFIG = deepFreeze({
     fixedStep: FIXED_STEP,
     rules: RULES,
+    physics: PHYSICS,
     focusDamage: FOCUS_DAMAGE,
     stages: STAGES,
     practicePile: PRACTICE_PILE,

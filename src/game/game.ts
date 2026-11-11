@@ -1,5 +1,5 @@
 import type { StageId } from './types';
-import { LEVEL, FIXED_STEP } from './level';
+import { FIXED_STEP, LEVEL, PHYSICS } from './level';
 import type { Input, DeepReadonly, GameEvent } from './types';
 import { clonePlain } from './data';
 import { cloneState, createCore, parseState, serializeState, type GameState as CoreState, type Progress } from './state';
@@ -165,7 +165,7 @@ export function viewState(s: Readonly<CoreState>) {
         officeCheckpoint: s.stage === 1 && s.checkpoint > 0,
         skylineSeed: s.skylineSeed,
         actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
-        tutorialAssist: s.mode === 'play' && s.p.x < 300,
+        tutorialAssist: s.mode === 'play' && s.p.x < PHYSICS.upright.tutorialUntilX,
         stage: s.stage,
         sky: s.sky,
         completedStage: s.completedStage,

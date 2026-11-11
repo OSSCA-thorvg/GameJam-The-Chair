@@ -1,3 +1,4 @@
+import { deepFreeze } from './data';
 // Gameplay geometry. Artwork reads these anchors but never writes collision bounds.
 export const LEVEL = Object.freeze({
     floor: 420,
@@ -27,3 +28,17 @@ export const LEVEL = Object.freeze({
 export const FOCUS_DAMAGE = Object.freeze({ paper: 30, water: 30, light: 30, door: 30, copier: 15 });
 export const RULES = Object.freeze({ paperPenalty: 2.4, lightPenalty: 1.65, waterExposure: 1.3, bucketReset: 2.2 });
 export const FIXED_STEP = 1 / 120;
+// Chair handling shared by every stage. Changing a value changes CONFIG_VERSION (older replays then warn).
+// Units: px, seconds, radians.
+export const PHYSICS = deepFreeze({
+    gravity: 950,
+    lean: { ground: 4.3, air: 6.4 },                         // Q/E (and air steering) spin acceleration
+    upright: { pull: 20, damping: 7, tutorialUntilX: 300 },   // self-righting assist
+    drive: { ground: 305, slip: 110, air: 55, convoy: 1200, express: 1400 },
+    drag: { ground: .55, slip: .015, air: .09 },
+    spinDrag: { ground: 1.8, slip: .9, air: .75 },
+    limits: { vx: 315, convoyVx: 700, expressVx: 760, rise: 500, fall: 850, spin: 5.8 },
+    jump: { speed: 380, spin: .12, coyote: .1, buffer: .14 },
+    contact: { iterations: 5, push: .78, bounce: 1.035, inertia: 2500, wheelGround: -.45, headDown: -.25, headDepth: .05 },
+    fallDepth: 250,                                           // below the floor: the attempt is lost
+});

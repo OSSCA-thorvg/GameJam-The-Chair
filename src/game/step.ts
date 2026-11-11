@@ -1,4 +1,4 @@
-import { FIXED_STEP } from './level';
+import { FIXED_STEP, PHYSICS } from './level';
 import type { DeepReadonly, GameEvent, Mode, Point } from './types';
 import { cloneState, resetAttempt, setPlayer, snapshot, type GameState } from './state';
 import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages/index';
@@ -97,13 +97,13 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     const was = s.ground;
     const inputDir = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
     const prev = p.x;
-    s.coyote = s.ground ? .1 : Math.max(0, s.coyote - dt);
+    s.coyote = s.ground ? PHYSICS.jump.coyote : Math.max(0, s.coyote - dt);
     s.jumpQ = Math.max(0, s.jumpQ - dt);
     hooks.beforeDrive?.(s, out, was);
     if (s.jumpQ > 0 && s.coyote > 0) {
-        if (p.x < 300) s.practiceJump = true;
-        p.vy = -380;
-        p.w -= inputDir * .12;
+        if (p.x < PHYSICS.upright.tutorialUntilX) s.practiceJump = true;
+        p.vy = -PHYSICS.jump.speed;
+        p.w -= inputDir * PHYSICS.jump.spin;
         s.ground = false;
         hooks.onJump?.(s);
         s.coyote = 0;
@@ -115,7 +115,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     const expressJump = tweak.expressJump ?? false;
     const balancing = s.keys.includes('q') || s.keys.includes('e');
     const tilt = (s.keys.includes('e') ? 1 : 0) - (s.keys.includes('q') ? 1 : 0) + (was || balancing ? 0 : dir);
-    setPlayer(s, drivePlayer(p, { grounded: was, slip: s.slip, dir, tilt, upright: p.x < 300 || stage.alwaysUpright, convoyJump, expressJump }, dt));
+    setPlayer(s, drivePlayer(p, { grounded: was, slip: s.slip, dir, tilt, upright: p.x < PHYSICS.upright.tutorialUntilX || stage.alwaysUpright, convoyJump, expressJump }, dt));
     if (hooks.afterMove?.(s, out, dt, prev)) return;
     const hit = collide(p, stageSolids(s));
     setPlayer(s, hit.p);

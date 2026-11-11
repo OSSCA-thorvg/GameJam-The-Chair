@@ -2,6 +2,7 @@ import { resetAttempt, startStage, type GameState } from './state';
 import type { StageId } from './types';
 import type { GameEvent, Input } from './types';
 import { stageHooks } from './stages/hooks';
+import { PHYSICS } from './level';
 
 // Every way the outside world changes the game. Recorded with the tick it arrived on.
 export type Command =
@@ -36,7 +37,7 @@ export function runCommand(s: GameState, command: Command, out: GameEvent[]) {
 
 function jump(s: GameState) {
     if (s.mode !== 'play' || stageHooks(s.stage).canJump?.(s) === false) return;
-    s.jumpQ = .14;
+    s.jumpQ = PHYSICS.jump.buffer;
 }
 
 export function spray(s: GameState, out: GameEvent[]) {
