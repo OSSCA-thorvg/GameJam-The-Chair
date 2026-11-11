@@ -210,12 +210,13 @@ function duct(value: unknown, path: string) {
 
 function flight(value: unknown, path: string) {
     const data = record(value, path);
-    const kind = choice(data.kind, ['course', 'flight'], `${path}.kind`);
-    exact(data, kind === 'course' ? ['kind', 'verticalShots', 'lastShotAt'] : ['kind', 'age'], path);
-    if (kind === 'course') {
-        integer(data.verticalShots, `${path}.verticalShots`);
-        finite(data.lastShotAt, `${path}.lastShotAt`);
-    } else finite(data.age, `${path}.age`);
+    const kind = choice(data.kind, ['course', 'ride', 'flight'], `${path}.kind`);
+    exact(data, kind === 'course' ? ['kind'] : kind === 'ride' ? ['kind', 'dist', 'speed', 'age'] : ['kind', 'age'], path);
+    if (kind === 'ride') {
+        finite(data.dist, `${path}.dist`);
+        finite(data.speed, `${path}.speed`);
+    }
+    if (kind !== 'course') finite(data.age, `${path}.age`);
 }
 
 function rooftop(value: unknown, path: string) {
@@ -243,7 +244,8 @@ export function assertGameState(value: unknown, path = 'state'): asserts value i
         'rollCooldown', 'reverseCooldown', 'people', 'history', 'impact', 'focus', 'focusClock', 'focusEvents', 'focusNotice', 'lossReason',
         'focusLossTime', 'office', 'building', 'rooftop', 'sky'], path);
     choice(data.stage, [1, 2, 3, 4], `${path}.stage`);
-    integer(data.checkpoint, `${path}.checkpoint`, 0, 3);
+    // The rooftop has the most flags: the start plus four (index 4 is the upper roof).
+    integer(data.checkpoint, `${path}.checkpoint`, 0, 4);
     const lessons = record(data.lessons, `${path}.lessons`);
     exact(lessons, ['moved', 'jumped'], `${path}.lessons`);
     boolean(lessons.moved, `${path}.lessons.moved`);

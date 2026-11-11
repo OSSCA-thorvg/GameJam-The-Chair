@@ -18,12 +18,12 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // change, and every final snapshot gains `airSprays`. Without that field the four office/building hashes
 // still matched, so their play is unchanged.
 const EXPECTED = {
-    'office route': '995927ffea4a5796',
-    'office crash': 'e6454bb05e08a208',
-    'building exit': 'db4de9b6bb96890d',
-    'building lift': '97d2abf2c791c11b',
-    'rooftop to sky': '552d0b94896862a5',
-    'rooftop duct': '6727692e86ef84e3',
+    'office route': '5e268dc8d025bc4c',
+    'office crash': '0a33170f70fc527a',
+    'building exit': '21eeedbb9f9afb54',
+    'building lift': 'b1aa567a5ded73e4',
+    'rooftop to sky': '774d687d83d347a4',
+    'rooftop duct': 'f0bda3d4f92cced2',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

@@ -105,7 +105,10 @@ function setup(
             ctx.wheel += ctx.p.vx * dt / 8;
         }
         const baseVertical = Math.max(0, ctx.H / ctx.scale - 510) * .7;
-        const focusY = next.stage === 4 ? 265 : next.firstFlight.kind === 'flight' ? 330 - Math.min(1, next.firstFlight.age) * 65 : 330;
+        // Nearing the rooftop edge the view tilts down to show the sales graph below; the climb then
+        // eases into the sky stage's framing.
+        const edgeLook = next.stage === 3 ? 170 * ctx.clamp((ctx.p.x - 1950) / 300, 0, 1) : 0;
+        const focusY = next.stage === 4 ? 265 : next.firstFlight.kind === 'flight' ? 160 + Math.min(1, next.firstFlight.age) * 105 : 330 - edgeLook;
         ctx.vertical = next.stage >= 3 ? baseVertical + Math.max(0, focusY - ctx.p.y) : baseVertical;
         lastStage = next.stage;
         lastTime = t;

@@ -19,7 +19,8 @@ const blocks = [
     { id: 'pipe-high', x: 1712, y: -262, width: 68, height: 16 },
     { id: 'upper', x: 1780, y: -144, width: 680, height: 944 },
     { id: 'parapet', x: 1780, y: -330, width: 22, height: 186 },
-    { id: 'rail', x: 2440, y: -204, width: 20, height: 60 },
+    // A low guard rail: one hop clears it and drops the chair off the roof onto the sales graph.
+    { id: 'rail', x: 2440, y: -170, width: 20, height: 26 },
 ];
 
 export const STAGE_THREE = deepFreeze({
@@ -49,7 +50,20 @@ export const STAGE_THREE = deepFreeze({
         { left: 1390, right: 1530, y: -234 },
     ],
     edge: 2460,
-    launch: { left: 2230, right: 2440, shotWindow: .65 },
+    // The company's sales chart, a neon sign hung on the facade below the roof edge. While the
+    // chair stays on the roof it shows a slump; a chair falling onto the slump (points up to
+    // `catchUntil`) makes sales surge, and the line shoots up the facade carrying the chair.
+    // The ride accelerates from `startSpeed` to `topSpeed`; the line tip leads the chair by `lead`.
+    graph: {
+        points: [
+            { x: 2480, y: 90 }, { x: 2580, y: 112 }, { x: 2660, y: 100 }, { x: 2760, y: 140 }, { x: 2840, y: 154 },
+            { x: 2880, y: 60 }, { x: 2920, y: 90 }, { x: 2980, y: -140 }, { x: 3020, y: -100 },
+            { x: 3090, y: -480 }, { x: 3130, y: -430 }, { x: 3200, y: -1060 },
+        ],
+        catchUntil: 4,
+        catchBelow: 10, catchAbove: 46,
+        startSpeed: 220, topSpeed: 900, accel: 520, lead: 130,
+    },
     ceiling: -460,
     // Extinguisher bursts allowed per time in the air; touching the ground refills them.
     airSprayLimit: 3,
@@ -99,4 +113,39 @@ export function inVentBlast(vent: Vent, p: Readonly<Point>) {
 // Whether the chair (centre `p`, wheels down) stands on one of the paper-covered spans.
 export function onSlickPaper(p: Readonly<Point>, ground: boolean) {
     return ground && STAGE_THREE.slick.some(span => p.x >= span.left && p.x <= span.right && Math.abs(p.y - (span.y - 28)) < 14);
+}
+
+// The sales graph as a polyline: cumulative length at each point.
+const GRAPH = STAGE_THREE.graph.points;
+const GRAPH_DIST = GRAPH.reduce<number[]>((acc, point, i) => {
+    acc.push(i === 0 ? 0 : acc[i - 1] + Math.hypot(point.x - GRAPH[i - 1].x, point.y - GRAPH[i - 1].y));
+    return acc;
+}, []);
+export const GRAPH_LENGTH = GRAPH_DIST[GRAPH_DIST.length - 1];
+// Arc-length positions of the line's corners, for the art (peaks light up once the chair passes).
+export const GRAPH_CORNERS: readonly number[] = GRAPH_DIST;
+
+// Point and unit tangent at arc length `dist` along the graph (clamped to the line).
+export function graphPointAt(dist: number): { x: number; y: number; tx: number; ty: number } {
+    const d = Math.max(0, Math.min(GRAPH_LENGTH, dist));
+    let i = 1;
+    while (i < GRAPH.length - 1 && GRAPH_DIST[i] < d) i++;
+    const a = GRAPH[i - 1], b = GRAPH[i];
+    const span = GRAPH_DIST[i] - GRAPH_DIST[i - 1];
+    const k = span > 0 ? (d - GRAPH_DIST[i - 1]) / span : 0;
+    return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, tx: (b.x - a.x) / span, ty: (b.y - a.y) / span };
+}
+
+// Where a falling chair (centre `p`) lands on the slump, as an arc length, or null when it misses.
+export function graphCatch(p: Readonly<Point>): number | null {
+    const g = STAGE_THREE.graph;
+    for (let i = 1; i <= g.catchUntil; i++) {
+        const a = GRAPH[i - 1], b = GRAPH[i];
+        if (p.x < a.x || p.x > b.x) continue;
+        const k = (p.x - a.x) / (b.x - a.x);
+        const wheels = p.y + 28, line = a.y + (b.y - a.y) * k;
+        if (wheels < line - g.catchBelow || wheels > line + g.catchAbove) return null;
+        return GRAPH_DIST[i - 1] + Math.hypot(p.x - a.x, line - a.y);
+    }
+    return null;
 }

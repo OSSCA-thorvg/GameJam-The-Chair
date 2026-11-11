@@ -1,4 +1,4 @@
-// Stage 3 · Rooftop: the door scene, the duct, the extinguisher pickup and the take-off to the sky.
+// Stage 3 · Rooftop: the door scene, the duct, the extinguisher pickup and the ride up the sales graph to the sky.
 import { startStage } from '../../state';
 import type { StageHooks } from '../types';
 import { applyFlight, applyRooftop, applyRooftopEntrance, applyRooftopSpray } from './course/apply';
@@ -28,10 +28,10 @@ export const rooftopHooks: StageHooks = {
     // Picking up the extinguisher is flag 1; later flags count only with it in hand.
     checkpointsOpen: s => s.hasExtinguisher,
     canJump: s => s.rooftop.entrance.kind !== 'opening',
-    // No manual sprays once the take-off is under way, and at most three per time in the air.
-    canSpray: s => s.rooftop.flight.kind !== 'flight' && s.rooftop.airSprays < STAGE_THREE.airSprayLimit,
-    onSpray: (s, direction) => {
+    // No manual sprays once the graph ride is under way, and at most three per time in the air.
+    canSpray: s => s.rooftop.flight.kind === 'course' && s.rooftop.airSprays < STAGE_THREE.airSprayLimit,
+    onSpray: s => {
         s.rooftop.airSprays++;
-        applyRooftopSpray(s, direction);
+        applyRooftopSpray(s);
     },
 };
