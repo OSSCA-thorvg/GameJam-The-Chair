@@ -61,16 +61,25 @@ function column(ctx: RenderCtx, x: number, top: number, bottom: number) {
     }
 }
 
+// Lamps stay inside the machine room; the last one used to hang past the wall into the sky.
+const CEILING_LAMPS = [-180, -30, 120, 270];
+
+// Drawn after the entrance door and cabinets so the beams fall across them instead of being cut off.
+export function rooftopCeilingLight(ctx: RenderCtx) {
+    for (const x of CEILING_LAMPS) {
+        ctx.gradientPolygon([[x - 4, 121], [x + 70, 121], [x + 117, 312], [x - 51, 312]],
+            ctx.gradientFill(0, 121, 0, 312, [[0, '#ffe0a426'], [1, '#ffe0a400']]));
+    }
+}
+
 export function rooftopWalls(ctx: RenderCtx) {
     wallPanels(ctx, -400, 88, 850, 332);
     ctx.rect(-400, 88, 850, 14, '#273d56');
     ctx.rod(-300, 122, 420, 122, 12, '#8192a4');
     ctx.rod(-300, 118, 420, 118, 3, '#b0b9c4');
-    for (let x = -180; x < 430; x += 150) {
+    for (const x of CEILING_LAMPS) {
         ctx.rect(x - 5, 106, 76, 15, '#26394f');
         ctx.rect(x, 110, 66, 5, '#f8d8a2');
-        ctx.gradientPolygon([[x - 4, 121], [x + 70, 121], [x + 117, 312], [x - 51, 312]],
-            ctx.gradientFill(0, 121, 0, 312, [[0, '#ffe0a426'], [1, '#ffe0a400']]));
     }
     // Closed equipment cabinets and conduits keep the room visibly unoccupied.
     for (const x of [-110, 218, 341]) {
