@@ -10,7 +10,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test tests/*.test.mjs",
     "replay:check": "node scripts/replay-check.mjs",
-    "golden:update": "node scripts/golden-update.mjs"
+    "golden:update": "node scripts/golden-update.mjs",
+    "lint": "eslint src/game"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -20,7 +21,9 @@
   },
   "devDependencies": {
     "esbuild": "0.25.12",
+    "eslint": "9.39.5",
     "typescript": "5.9.3",
+    "typescript-eslint": "8.71.2",
     "vite": "^6.4.1"
   }
 }
