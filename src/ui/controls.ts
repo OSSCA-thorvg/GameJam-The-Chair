@@ -1,6 +1,6 @@
 // All player controls live here: key bindings, on-screen labels, keyboard and touch handlers.
 // To change a key, edit CONTROLS; labels in the menu and in the world update automatically.
-import type { Game, GameState } from '../game/game';
+import type { Game, GameStatus } from '../game/game';
 import type { Input } from '../game/types';
 
 export type Action = 'left' | 'right' | 'leanLeft' | 'leanRight' | 'forward' | 'back' | 'jump' | 'spray' | 'meeting' | 'pause' | 'restart';
@@ -11,7 +11,7 @@ interface Control {
     /** Text shown in the controls list and world pictograms. */
     label: string;
     /** When this control is active; omitted means always. Earlier entries win when keys overlap. */
-    when?: (state: GameState) => boolean;
+    when?: (status: GameStatus) => boolean;
 }
 
 export const CONTROLS: Readonly<Record<Action, Control>> = {
@@ -30,8 +30,8 @@ export const CONTROLS: Readonly<Record<Action, Control>> = {
     restart:   { keys: ['r'], label: 'R' },
 };
 
-function isDepthFlight(state: GameState) {
-    return state.stage === 4 && state.sky.phase === 'depth';
+function isDepthFlight(status: GameStatus) {
+    return status.stage === 4 && status.skyPhase === 'depth';
 }
 
 /** Short key name used by in-world pictograms (e.g. the extinguisher pickup). */
@@ -43,7 +43,7 @@ const HELD: Partial<Record<Action, Input>> = { left: 'left', right: 'right', lea
 
 const normalize = (key: string) => key.length === 1 ? key.toLowerCase() : key;
 
-export function actionForKey(key: string, state: GameState): Action | null {
+export function actionForKey(key: string, state: GameStatus): Action | null {
     const k = normalize(key);
     for (const [action, control] of Object.entries(CONTROLS) as [Action, Control][]) {
         if (control.keys.includes(k) && (!control.when || control.when(state))) return action;
@@ -72,7 +72,7 @@ export function bindControls(root: HTMLElement, game: Game, hooks: ControlHooks,
 
     window.addEventListener('keydown', e => {
         if (!hooks.accepting(e)) return;
-        const state = game.getSnapshot();
+        const state = game.status();
         const action = actionForKey(e.key, state);
         if (!action) return;
         if (action === 'pause') {
@@ -119,7 +119,7 @@ export function bindControls(root: HTMLElement, game: Game, hooks: ControlHooks,
     const dual = (el: HTMLElement | null, input: Input, action: () => void) => {
         el?.addEventListener('pointerdown', e => {
             e.preventDefault();
-            if (isDepthFlight(game.getSnapshot())) { game.press(input); el.setPointerCapture?.(e.pointerId); }
+            if (isDepthFlight(game.status())) { game.press(input); el.setPointerCapture?.(e.pointerId); }
             else action();
         }, options);
         for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) el?.addEventListener(event, () => game.release(input), options);

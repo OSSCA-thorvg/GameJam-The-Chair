@@ -1,7 +1,7 @@
 import type { Locale } from '../i18n';
 import { LEVEL } from '../game/level';
 import type { GameState } from '../game/game';
-import type { DeepReadonly } from '../game/types';
+import type { DeepReadonly, Mode } from '../game/types';
 import type { Vector, Curve, Color, Gradient, DrawCommand, LayerSpec, Blend, Stroke } from './types';
 import { ART } from './art';
 import type { EffectsState } from './effects';
@@ -38,7 +38,7 @@ export type RenderCtx = {
 
     state: GameState;
     p: GameState['player'];
-    mode: string;
+    mode: Mode;
     monitors: (GameState['monitors'][number] & typeof ART.monitors[number])[];
     cleaning: GameState['cleaning'];
     bin: GameState['bin'] & { bottom: number };
@@ -115,7 +115,7 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         foregroundActors: [],
         state: null as unknown as GameState,
         p: null as unknown as GameState['player'],
-        mode: '',
+        mode: 'intro' as Mode,
         monitors: [] as RenderCtx['monitors'],
         cleaning: null as unknown as GameState['cleaning'],
         bin: null as unknown as GameState['bin'] & { bottom: number },

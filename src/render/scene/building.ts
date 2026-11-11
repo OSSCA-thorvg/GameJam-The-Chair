@@ -1,5 +1,5 @@
 import { translate, type Message } from '../../i18n';
-import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES, chairChatLine } from '../../game/stage2';
+import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES, chairChatLine } from '../../game/stages/building/data';
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
 import { practiceFloor, checkpointFlag } from './decor';

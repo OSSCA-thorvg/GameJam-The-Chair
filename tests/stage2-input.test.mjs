@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { build } from 'esbuild';
+import { bundled } from './support/load.mjs';
 
-const bundle = await build({ stdin: {
+const { createGame, bindInput } = await bundled({ stdin: {
     contents: `export { createGame } from './src/game/game'; export { bindInput } from './src/ui/input';`,
     resolveDir: process.cwd(),
 }, bundle: true, write: false, platform: 'node', format: 'esm' });
-const { createGame, bindInput } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 
 test('stage2 uses Down for meeting entry and exit, keeps Up for jumping, and supports touch', async () => {
     const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];

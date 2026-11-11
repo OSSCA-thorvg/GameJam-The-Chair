@@ -1,16 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
-import { build } from 'esbuild';
+import { load } from './support/load.mjs';
 
-async function load(entry) {
-    const bundle = await build({ entryPoints: [entry], bundle: true, write: false, platform: 'node', format: 'esm' });
-    return import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
-}
 const { resolveLocale, translate, isMessage } = await load('src/i18n.ts');
 const { createFeedback } = await load('src/ui/feedback.ts');
 const { createGame } = await load('src/game/game.ts');
-const { CHAIR_CHAT, CHAIR_DEPARTURE_LINES } = await load('src/game/stage2.ts');
+const { CHAIR_CHAT, CHAIR_DEPARTURE_LINES } = await load('src/game/stages/building/data.ts');
 
 test('language detection respects supported browser preferences and falls back to English', () => {
     assert.equal(resolveLocale(['ko-KR', 'en-US']), 'ko');

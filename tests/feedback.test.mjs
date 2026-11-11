@@ -1,15 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { build } from 'esbuild';
+import { load } from './support/load.mjs';
 
-async function load(entry) {
-    const bundle = await build({ entryPoints: [entry], bundle: true, write: false, platform: 'node', format: 'esm' });
-    return import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
-}
 const { createGame } = await load('src/game/game.ts');
 const { createFeedback } = await load('src/ui/feedback.ts');
-const { createCore } = await load('src/game/core.ts');
-const { monitorStep } = await load('src/game/systems/monitor.ts');
+const { createCore } = await load('src/game/state.ts');
+const { monitorContact } = await load('src/game/stages/office/monitor/decide.ts');
+const { applyMonitorContact } = await load('src/game/stages/office/monitor/apply.ts');
 
 test('head failures retain the short cause and joke without control hints', () => {
     const feedback = createFeedback(() => 'ko');
@@ -94,13 +91,14 @@ test('monitor and accident responses retain the original speaker and line', () =
 test('the monitor that hit the rider owns the speech bubble', () => {
     const state = createGame().getSnapshot();
     for (const [index, time, wall, speakerX] of [[1, 2.3, 2560, 2701], [2, .1, 2980, 3121]]) {
-        const core = createCore(0);
+        const core = createCore({ seed: 0 });
         core.mode = 'play';
-        core.t = time;
+        core.time = time;
         core.p.x = wall;
         core.p.y = 392;
-        monitorStep(core, 1 / 120, wall - 10);
-        const cue = core.events.find(event => event.type === 'cue' && event.id === 'light-comment');
+        const events = [];
+        applyMonitorContact(core, events, monitorContact(core.p, wall - 10, core.time));
+        const cue = events.find(event => event.type === 'cue' && event.id === 'light-comment');
         assert.deepEqual(cue, { type: 'cue', id: 'light-comment', monitorIndex: index });
         const feedback = createFeedback();
         feedback.receive(cue, state);

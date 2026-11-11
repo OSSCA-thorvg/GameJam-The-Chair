@@ -6,7 +6,7 @@ export function polyRect(x: number, y: number, w: number, h: number): Point[] {
     return [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
 }
 
-export function contact(cx: number, cy: number, r: number, poly: Point[]) {
+export function contact(cx: number, cy: number, r: number, poly: readonly Readonly<Point>[]) {
     let best = Infinity;
     let nx = 0;
     let ny = 0;

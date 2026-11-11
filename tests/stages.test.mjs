@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { build } from 'esbuild';
+import { bundled } from './support/load.mjs';
 
-const bundle = await build({ entryPoints: ['src/game/game.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
-const { createGame } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+const { createGame } = await bundled({ entryPoints: ['src/game/game.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
 const dt = 1 / 120;
 
 const GEYSERS = [{ x: 2600, period: 3.5, offset: 0 }, { x: 2850, period: 3.5, offset: 1.2 }, { x: 3100, period: 3.5, offset: 2.4 }];
@@ -352,7 +351,7 @@ test('holding right runs into the copier papers while the copier keeps firing', 
 
 
 test('cleared-stage history survives retries, stage changes and saved-game restoration', () => {
-    const game = createGame(0, 1);
+    const game = createGame({ progress: { completedStage: 1 } });
     assert.equal(game.getSnapshot().completedStage, 1);
     game.startStage(2);
     assert.equal(game.getSnapshot().completedStage, 1, 'entering a stage does not mark it cleared');
@@ -362,7 +361,7 @@ test('cleared-stage history survives retries, stage changes and saved-game resto
     assert.equal(game.getSnapshot().completedStage, 2);
     game.startStage(1);
     assert.equal(game.getSnapshot().completedStage, 2);
-    const restored = createGame(state.deaths, state.completedStage);
+    const restored = createGame({ progress: { deaths: state.deaths, completedStage: state.completedStage } });
     assert.equal(restored.getSnapshot().completedStage, 2);
     assert.equal(createGame().getSnapshot().completedStage, 0);
 });

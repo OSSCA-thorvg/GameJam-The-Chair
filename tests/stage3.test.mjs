@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { build } from 'esbuild';
-import { driveStageThree } from './stage3-route.mjs';
+import { driveStageThree } from './support/stage3-route.mjs';
+import { bundled } from './support/load.mjs';
 
-const bundle = await build({ entryPoints: ['src/game/game.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
-const { createGame } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+const { createGame } = await bundled({ entryPoints: ['src/game/game.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
 const dt = 1 / 120;
 
 test('extinguisher must be collected and does not leak into other stages', () => {

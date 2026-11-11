@@ -1,4 +1,4 @@
-import { skyPlatforms, skyWind, STAGE_FOUR, type SkyPlatform } from '../../game/stage4';
+import { skyPlatforms, skyWind, STAGE_FOUR, type SkyPlatform } from '../../game/stages/sky/data';
 import type { RenderCtx } from '../context';
 import { player } from './player';
 import { sprayPlume } from './spray';

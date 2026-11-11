@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { build } from 'esbuild';
-import { driveStageThree } from './stage3-route.mjs';
-const bundle = await build({ stdin: { contents: `export { createGame } from './src/game/game'; export { createRenderCtx } from './src/render/context'; export { drawRooftop } from './src/render/scene/rooftop'; export { drawCloudStart } from './src/render/scene/clouds';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
-const { createGame, createRenderCtx, drawRooftop, drawCloudStart } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+import { driveStageThree } from './support/stage3-route.mjs';
+import { bundled } from './support/load.mjs';
+const { createGame, createRenderCtx, drawRooftop, drawCloudStart } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { createRenderCtx } from './src/render/context'; export { drawRooftop } from './src/render/scene/rooftop'; export { drawCloudStart } from './src/render/scene/clouds';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
 test('rooftop renders the live course and first flight in both languages and narrow views', () => {
     const game = createGame(); game.startStage(3);

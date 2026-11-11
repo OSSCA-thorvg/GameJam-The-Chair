@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { build } from 'esbuild';
+import { load } from './support/load.mjs';
 
-async function load(entry) {
-    const bundle = await build({ entryPoints: [entry], bundle: true, write: false, platform: 'node', format: 'esm' });
-    return import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
-}
 const { createGame } = await load('src/game/game.ts');
 const { createHud } = await load('src/ui/hud.ts');
 const { createFeedback } = await load('src/ui/feedback.ts');
@@ -28,7 +24,7 @@ test('pause menu shows only cleared stages and hides spray controls until equipp
         hud.draw(fresh.getSnapshot(), feedback, effects, view);
         for (const element of elements.values()) assert.equal(element.hidden, true);
 
-        const continued = createGame(0, 1);
+        const continued = createGame({ progress: { completedStage: 1 } });
         continued.startStage(2);
         hud.draw(continued.getSnapshot(), feedback, effects, view);
         assert.equal(elements.get('[data-stage-menu]').hidden, false);

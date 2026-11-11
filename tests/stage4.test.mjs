@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { build } from 'esbuild';
-import { driveStageFour } from './stage4-route.mjs';
-const bundle = await build({ stdin: { contents: `export { createGame } from './src/game/game'; export { skyPlatforms, skySurface } from './src/game/stage4';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
-const { createGame, skyPlatforms, skySurface } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+import { driveStageFour } from './support/stage4-route.mjs';
+import { bundled } from './support/load.mjs';
+const { createGame, skyPlatforms, skySurface } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { skyPlatforms, skySurface } from './src/game/stages/sky/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
 test('stage 4 traverses growing building, gust sign, nested desk and depth reveal without falling', () => {
     const game = createGame(); game.startStage(4);
