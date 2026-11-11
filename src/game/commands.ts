@@ -16,6 +16,47 @@ export type Command =
     | { type: 'restart' }
     | { type: 'startStage'; id: StageId };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isArray(value: unknown): value is unknown[] {
+    return Array.isArray(value);
+}
+
+function isInput(value: unknown): value is Input {
+    return value === 'left' || value === 'right' || value === 'q' || value === 'e'
+        || value === 'spray' || value === 'forward' || value === 'back';
+}
+
+function isStageId(value: unknown): value is StageId {
+    return value === 1 || value === 2 || value === 3 || value === 4;
+}
+
+/** Parses one command from an external replay and strips fields outside the command contract. */
+export function parseCommand(value: unknown): Command {
+    if (!isRecord(value) || typeof value.type !== 'string') throw new Error('bad command');
+    switch (value.type) {
+        case 'keys': {
+            if (!isArray(value.keys) || value.keys.length > 7 || !value.keys.every(isInput)) throw new Error('bad command keys');
+            return { type: 'keys', keys: [...new Set(value.keys)] };
+        }
+        case 'startStage':
+            if (!isStageId(value.id)) throw new Error('bad command stage');
+            return { type: 'startStage', id: value.id };
+        case 'jump':
+        case 'spray':
+        case 'interact':
+        case 'leaveMeeting':
+        case 'pause':
+        case 'reset':
+        case 'restart':
+            return { type: value.type };
+        default:
+            throw new Error('bad command type');
+    }
+}
+
 // Commands take effect immediately, between fixed steps, even while paused. Writes into `s`;
 // stepGame/applyCommand in step.ts are the pure entry points.
 export function runCommand(s: GameState, command: Command, out: GameEvent[]) {

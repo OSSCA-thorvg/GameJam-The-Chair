@@ -18,6 +18,23 @@ function recordedGame(settings = {}, seed = 21) {
     return { game, recorder, errors, settings: current };
 }
 
+function replayFile(overrides = {}) {
+    const game = R.createGame({ seed: 7 });
+    const start = JSON.parse(game.serialize());
+    return {
+        format: R.REPLAY_FORMAT,
+        version: '',
+        seed: 7,
+        start,
+        commands: [],
+        hashes: [],
+        endTick: start.tick,
+        truncated: false,
+        error: null,
+        ...overrides,
+    };
+}
+
 test('a recorded attempt replays to the same state with matching hashes and markers', () => {
     const { game, recorder } = recordedGame();
     game.startStage(1);
@@ -93,6 +110,12 @@ test('recorder follows its settings: off, command limit and kept attempts', () =
     }
     assert.equal(kept.recorder.attempts().length, 3, 'current plus two finished');
     assert.ok(kept.recorder.attempts().every(file => file.commands.every(([, command]) => command.type !== 'startStage')), 'retry commands are trimmed');
+
+    const bounded = recordedGame();
+    const current = bounded.recorder.attempts()[0];
+    bounded.recorder.onStep({ ...current.start, tick: current.start.tick + R.REPLAY_FILE_LIMITS.ticks + 1 });
+    assert.equal(bounded.recorder.attempts()[0].truncated, true, 'recording stops before synchronous playback becomes unbounded');
+    assert.equal(bounded.recorder.attempts()[0].endTick, current.start.tick + R.REPLAY_FILE_LIMITS.ticks);
 });
 
 test('settings are clamped and files are validated', () => {
@@ -100,6 +123,24 @@ test('settings are clamped and files are validated', () => {
     assert.deepEqual(settings, { ...R.REPLAY_DEFAULTS, enabled: false, hashInterval: 10, keyframeInterval: 240, playbackSpeed: 4 });
     assert.throws(() => R.parseReplay('{}'), /format/);
     assert.throws(() => R.parseReplay('nope'), /JSON/);
+});
+
+test('replay parser rejects malformed states, commands and hashes at the file boundary', () => {
+    const base = replayFile();
+    assert.throws(() => R.parseReplay(JSON.stringify({ ...base, start: { tick: 0, mode: 'play' } })), /start state/);
+    assert.throws(() => R.parseReplay(JSON.stringify({ ...base, start: { ...base.start, padding: 'unexpected' } })), /start state/);
+    assert.throws(() => R.parseReplay(JSON.stringify({ ...base, commands: [[0, { type: 'warp' }]] })), /command/);
+    assert.throws(() => R.parseReplay(JSON.stringify({ ...base, commands: [[0, { type: 'keys', keys: ['right', 'warp'] }]] })), /command/);
+    assert.throws(() => R.parseReplay(JSON.stringify({ ...base, commands: [[0, { type: 'startStage', id: 9 }]] })), /command/);
+    assert.throws(() => R.parseReplay(JSON.stringify({ ...base, hashes: [[0, 17]] })), /hash/);
+});
+
+test('replay parser rejects files that exceed synchronous playback limits', () => {
+    const base = replayFile();
+    const commands = Array.from({ length: R.REPLAY_DEFAULTS.maxCommands + 1 }, () => [base.start.tick, { type: 'pause' }]);
+    assert.throws(() => R.parseReplay(JSON.stringify({ ...base, commands })), /too many commands/);
+    assert.throws(() => R.parseReplay(JSON.stringify({ ...base, endTick: base.start.tick + 120 * 60 * 60 })), /too long/);
+    assert.throws(() => R.buildTimeline({ ...base, endTick: base.start.tick + R.REPLAY_FILE_LIMITS.ticks + 1 }), /too long/);
 });
 
 test('checked-in replay files still play back exactly', () => {
@@ -128,4 +169,6 @@ test('replay data bundles, single files and old error logs all open as replay li
     const errorLog = { kind: 'the-chair-error-log', entries: bundle.errors };
     assert.equal(R.readReplaySources(JSON.stringify(errorLog)).sources.length, 1);
     assert.throws(() => R.readReplaySources('{"kind":"the-chair-replay-data","attempts":[],"errors":[]}'), /no replays/);
+    assert.throws(() => R.readReplaySources('{"kind":"the-chair-replay-data","attempts":{},"errors":[]}'), /attempts/);
+    assert.throws(() => R.readReplaySources('{"kind":"the-chair-replay-data","attempts":[{}],"errors":[]}'), /usable replay/);
 });
