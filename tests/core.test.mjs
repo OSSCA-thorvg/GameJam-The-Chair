@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { applyCommand, balancePolicy, createGame, stepGame } from './replay-harness.mjs';
+import { applyCommand, balancePolicy, createGame, stepGame } from './support/harness.mjs';
 
 function deepFreeze(value) {
     if (value && typeof value === 'object' && !Object.isFrozen(value)) {

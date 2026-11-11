@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { balancePolicy, createGame, replayCommands } from './replay-harness.mjs';
+import { balancePolicy, createGame, replayCommands } from './support/harness.mjs';
 
 // Plays like the browser does: irregular frame times through advance(), menu commands and a pause.
 function playRecorded(seed, stage, frames) {

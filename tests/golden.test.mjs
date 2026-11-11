@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { GOLDEN_SCENARIOS } from './golden.mjs';
+import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 
 // Recorded from main behaviour before splitting systems (step 6) and the core (step 7).
 // Update only for an intended gameplay change: run `npm run golden:update` and say why in the PR.

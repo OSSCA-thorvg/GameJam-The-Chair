@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createGame } from './replay-harness.mjs';
+import { createGame } from './support/harness.mjs';
+import { bundled } from './support/load.mjs';
 
 // The public surface that UI, preview scenes and tests depend on. Keep it stable through the core refactor.
 const PUBLIC_API = [
@@ -17,8 +18,7 @@ test('createGame keeps its public API', () => {
 
 test('game configuration is frozen and versioned', async () => {
     const { build } = await import('esbuild');
-    const bundle = await build({ stdin: { contents: `export { GAME_CONFIG, CONFIG_VERSION, STAGES } from './src/game/stages/index';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
-    const { GAME_CONFIG, CONFIG_VERSION, STAGES } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+    const { GAME_CONFIG, CONFIG_VERSION, STAGES } = await bundled({ stdin: { contents: `export { GAME_CONFIG, CONFIG_VERSION, STAGES } from './src/game/stages/index';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
     assert.match(CONFIG_VERSION, /^[0-9a-f]{8}$/);
     assert.throws(() => { GAME_CONFIG.stageTwo.checkpoints[1].x = 0; });
     assert.throws(() => { GAME_CONFIG.rules.paperPenalty = 0; });

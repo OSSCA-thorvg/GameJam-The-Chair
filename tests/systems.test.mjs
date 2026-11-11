@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { build } from 'esbuild';
+import { bundled } from './support/load.mjs';
 
 // Unit tests for pure system decisions: same input, same answer, no state writes.
-const bundle = await build({
+const sys = await bundled({
     stdin: { contents: `export * from './src/game/stages/office/geyser/decide'; export * from './src/game/stages/office/monitor/decide'; export * from './src/game/stages/office/bin/decide'; export { fellOffFloor } from './src/game/physics'; export * from './src/game/stages/office/cleaning/decide'; export * from './src/game/stages/office/copier/decide'; export * from './src/game/stages/rooftop/course/decide'; export * from './src/game/stages/sky/course/decide'; export * from './src/game/systems/focus/decide'; export * from './src/game/systems/impact/decide'; export * from './src/game/stages/building/corridor/decide';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
-const sys = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 const F = 420;
 
 test('geyser launches only during a burst, near the vent and low enough', () => {

@@ -1,14 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { build } from 'esbuild';
-import { balancePolicy } from './replay-harness.mjs';
+import { balancePolicy } from './support/harness.mjs';
+import { bundled } from './support/load.mjs';
 
-const bundle = await build({
+const R = await bundled({
     stdin: { contents: `export { createGame } from './src/game/game'; export * from './src/game/replay';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
-const R = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 
 // Plays through the shell with recording hooks, like main.ts does.
 function recordedGame(settings = {}, seed = 21) {

@@ -4,7 +4,7 @@
 // Usage: npm run golden:update            (write new values)
 //        npm run golden:update -- --check (only report differences; exit 1 if any)
 import { readFileSync, writeFileSync } from 'node:fs';
-import { GOLDEN_SCENARIOS } from '../tests/golden.mjs';
+import { GOLDEN_SCENARIOS } from '../tests/support/golden.mjs';
 
 const TEST = new URL('../tests/golden.test.mjs', import.meta.url);
 const check = process.argv.includes('--check');

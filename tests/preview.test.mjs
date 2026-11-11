@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { build } from 'esbuild';
+import { bundled } from './support/load.mjs';
 
-const bundle = await build({ entryPoints: ['src/preview-scenes.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
-const { previewScenes } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+const { previewScenes } = await bundled({ entryPoints: ['src/preview-scenes.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
 
 test('cleaner preview seeks backward to the same pose and splash', () => {
     const scene = previewScenes.find(scene => scene.id === 'cleaner-recovery');

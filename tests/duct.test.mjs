@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { build } from 'esbuild';
-const bundle = await build({ stdin: { contents: `export {createCore} from './src/game/state'; export {viewState} from './src/game/game'; export {applyRooftopSpray, applyRooftop} from './src/game/stages/rooftop/course/apply'; export {createRenderCtx} from './src/render/context'; export {rooftopDuct} from './src/render/scene/rooftop-duct';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
-const { createCore, viewState, applyRooftopSpray, applyRooftop, createRenderCtx, rooftopDuct } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+import { bundled } from './support/load.mjs';
+const { createCore, viewState, applyRooftopSpray, applyRooftop, createRenderCtx, rooftopDuct } = await bundled({ stdin: { contents: `export {createCore} from './src/game/state'; export {viewState} from './src/game/game'; export {applyRooftopSpray, applyRooftop} from './src/game/stages/rooftop/course/apply'; export {createRenderCtx} from './src/render/context'; export {rooftopDuct} from './src/render/scene/rooftop-duct';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 function front() {
     const s = createCore({ seed: 0 }); s.stage = 3; s.hasExtinguisher = true;
     s.p = { x: 1600, y: 226, vx: 0, vy: 0, a: 0, w: 0 };

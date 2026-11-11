@@ -1,8 +1,7 @@
-// Shared driver for determinism tests. Uses only the public createGame API.
-import { build } from 'esbuild';
+// Shared drivers for simulation tests. Uses only the public createGame API.
+import { load } from './load.mjs';
 
-const bundle = await build({ entryPoints: ['src/game/game.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
-export const { createGame, replayCommands, stepGame, applyCommand } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+export const { createGame, replayCommands, stepGame, applyCommand } = await load('src/game/game.ts');
 
 // A command is [tick, method, ...args]; it runs before the given fixed step.
 // start = { progress?, stage? } describes the state before the first step.
@@ -79,4 +78,21 @@ export function balancePolicy(state, game) {
     if (correction > .4) keys.push('e');
     game.setInput(...keys);
     if (state.mode === 'dead' || state.mode === 'won') game.reset();
+}
+
+// Rides the building corridor: enters the meeting once, then leaps off the express convoy unless `stayAboard`.
+export function corridorPolicy(stayAboard) {
+    let entered = false;
+    return (state, game) => {
+        const p = state.player;
+        const correction = -p.a * 12 - p.w * 4;
+        const keys = ['right'];
+        if (correction < -.4) keys.push('q');
+        if (correction > .4) keys.push('e');
+        game.setInput(...keys);
+        if (!entered && state.canEnterMeeting) { entered = true; game.interact(); }
+        const { convoy, pace } = state.corridor;
+        if (!stayAboard && convoy === 'carried' && pace === 'express' && state.ground) game.jump();
+        if (state.mode === 'dead') game.reset();
+    };
 }

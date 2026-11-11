@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { build } from 'esbuild';
-import { driveStageThree } from './stage3-route.mjs';
-const bundle = await build({ stdin: { contents: `export { createGame } from './src/game/game'; export { bindInput } from './src/ui/input';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
-const { createGame, bindInput } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+import { driveStageThree } from './support/stage3-route.mjs';
+import { bundled } from './support/load.mjs';
+const { createGame, bindInput } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { bindInput } from './src/ui/input';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
 test('Space holds spray in stage three, releases on keyup/blur, and touch capture releases', async () => {
     const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];

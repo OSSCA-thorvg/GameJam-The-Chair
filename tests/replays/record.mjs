@@ -1,9 +1,8 @@
 // Regenerates the checked-in replay fixtures: node tests/replays/record.mjs
-import { build } from 'esbuild';
 import { writeFileSync } from 'node:fs';
-import { balancePolicy } from '../replay-harness.mjs';
-const bundle = await build({ stdin: { contents: `export { createGame } from './src/game/game'; export * from './src/game/replay';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
-const R = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+import { balancePolicy } from '.../support/harness.mjs';
+import { bundled } from '../support/load.mjs';
+const R = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export * from './src/game/replay';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 const recorder = R.createRecorder(() => R.REPLAY_DEFAULTS, 31);
 const game = R.createGame({ seed: 31, ...recorder });
 game.startStage(1);

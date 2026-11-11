@@ -1,7 +1,7 @@
 // Behaviour fingerprints for the step 6-7 refactor: per-tick mode, player and events, plus the final snapshot.
 // Any change in gameplay order or numbers changes a hash.
 import { createHash } from 'node:crypto';
-import { balancePolicy, createGame, sampleCommands } from './replay-harness.mjs';
+import { balancePolicy, corridorPolicy, createGame, sampleCommands } from './harness.mjs';
 import { driveStageThree } from './stage3-route.mjs';
 
 function traced(game) {
@@ -21,22 +21,6 @@ function traced(game) {
         },
     });
     return { game: wrapper, digest: () => hash.update(JSON.stringify(game.getSnapshot())).digest('hex').slice(0, 16) };
-}
-
-function corridorPolicy(stayAboard) {
-    let entered = false;
-    return (state, game) => {
-        const p = state.player;
-        const correction = -p.a * 12 - p.w * 4;
-        const keys = ['right'];
-        if (correction < -.4) keys.push('q');
-        if (correction > .4) keys.push('e');
-        game.setInput(...keys);
-        if (!entered && state.canEnterMeeting) { entered = true; game.interact(); }
-        const { convoy, pace } = state.corridor;
-        if (!stayAboard && convoy === 'carried' && pace === 'express' && state.ground) game.jump();
-        if (state.mode === 'dead') game.reset();
-    };
 }
 
 function runPolicy(seed, stage, ticks, policy) {
