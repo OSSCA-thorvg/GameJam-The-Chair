@@ -1,10 +1,11 @@
 import type { Player } from '../../../types';
-import { STAGE_THREE, ductTimings, type DuctBurst } from '../data';
+import { STAGE_THREE, ductTimings, inVentBlast, ventPhase, type DuctBurst } from '../data';
 import { STAGE_FOUR } from '../../sky/data';
 
 export type RooftopEntrance = { kind: 'opening'; age: number } | { kind: 'ready' };
 export type FirstFlight = { kind: 'course'; verticalShots: number; lastShotAt: number } | { kind: 'flight'; age: number };
-export type DuctReaction = { kind: 'idle' } | { kind: 'reacting'; age: number; shots: number; bursts: DuctBurst[] } | { kind: 'done'; shots: number };
+// `rest` counts the seconds since the last sneeze; an awake duct gusts again after `gustPeriod`.
+export type DuctReaction = { kind: 'idle' } | { kind: 'reacting'; age: number; shots: number; bursts: DuctBurst[] } | { kind: 'done'; shots: number; rest: number };
 
 const cloneReaction = (reaction: Readonly<DuctReaction>): DuctReaction =>
     reaction.kind === 'reacting' ? { ...reaction, bursts: reaction.bursts.map(burst => ({ ...burst })) } : { ...reaction };
@@ -28,10 +29,16 @@ export function entranceStep(entrance: { kind: 'opening'; age: number }, dt: num
 export type RooftopInput = { p: Readonly<Player>; ground: boolean; hasExtinguisher: boolean; firstFlight: Readonly<FirstFlight>; ductReaction: Readonly<DuctReaction>; time: number };
 export type RooftopResult = { p: Player; ground: boolean; firstFlight: FirstFlight; ductReaction: DuctReaction; pickup: boolean };
 
-// After collisions on the rooftop: the duct's sneeze, the extinguisher pickup, the ceiling and the launch pad.
+// After collisions on the rooftop: the duct's sneeze, the steam vents, the extinguisher pickup, the ceiling
+// and the launch pad.
 export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
     const duct = ductReactionStep(input.ductReaction, input.p, dt);
     const p = duct.p;
+    for (const vent of STAGE_THREE.vents) {
+        if (ventPhase(vent, input.time).kind !== 'blow' || !inVentBlast(vent, p)) continue;
+        if (vent.axis === 'x') p.vx += vent.dir * vent.force * dt;
+        else p.vy += vent.dir * vent.force * dt;
+    }
     const ground = duct.knocked ? false : input.ground;
     const pickup = !input.hasExtinguisher && Math.abs(p.x - STAGE_THREE.pickup.x) < 55 && Math.abs(p.y - STAGE_THREE.pickup.y) < 75;
     if (p.y < STAGE_THREE.ceiling) {
@@ -75,10 +82,15 @@ export function flightStep(flight: { kind: 'flight'; age: number }, p: Readonly<
 }
 
 // Spraying into the front of the rooftop duct makes it sneeze. Repeat sprays queue weaker sneezes.
+// The sleeping duct wakes from further away; once awake it only answers sprays close in front,
+// so it never turns into a wall the rider cannot spray past.
 export function ductSprayed(reaction: Readonly<DuctReaction>, p: Readonly<Player>): DuctReaction {
     const duct = STAGE_THREE.duct;
     const dx = duct.x - p.x;
-    if (dx < -30 || dx > duct.frontReach || Math.abs(p.y - duct.y) > duct.frontHeight) return cloneReaction(reaction);
+    const asleep = reaction.kind === 'idle';
+    const reach = asleep ? duct.wakeReach : duct.frontReach;
+    const height = asleep ? duct.wakeHeight : duct.frontHeight;
+    if (dx < -duct.rearReach || dx > reach || Math.abs(p.y - duct.y) > height) return cloneReaction(reaction);
     if (reaction.kind === 'idle') return { kind: 'reacting', age: 0, shots: 1, bursts: [{ kind: 'first', age: 0 }] };
     if (reaction.kind === 'done') return { kind: 'reacting', age: 10, shots: reaction.shots + 1, bursts: [{ kind: 'repeat', age: 0 }] };
     const next = cloneReaction(reaction) as Extract<DuctReaction, { kind: 'reacting' }>;
@@ -89,9 +101,15 @@ export function ductSprayed(reaction: Readonly<DuctReaction>, p: Readonly<Player
 
 function ductReactionStep(input: Readonly<DuctReaction>, player: Readonly<Player>, dt: number): { reaction: DuctReaction; p: Player; knocked: boolean } {
     const p = { ...player };
-    const reaction = cloneReaction(input);
-    if (reaction.kind !== 'reacting') return { reaction, p, knocked: false };
     const duct = STAGE_THREE.duct;
+    let reaction = cloneReaction(input);
+    if (reaction.kind === 'done') {
+        reaction.rest += dt;
+        if (reaction.rest < duct.gustPeriod) return { reaction, p, knocked: false };
+        // Age 10 keeps the first sneeze's junk settled where it landed.
+        reaction = { kind: 'reacting', age: 10, shots: reaction.shots, bursts: [{ kind: 'gust', age: reaction.rest - duct.gustPeriod }] };
+    }
+    if (reaction.kind !== 'reacting') return { reaction, p, knocked: false };
     let knocked = false;
     reaction.age += dt;
     for (const burst of reaction.bursts) {
@@ -101,11 +119,11 @@ function ductReactionStep(input: Readonly<DuctReaction>, player: Readonly<Player
         burst.age += dt;
         if (before < windAt && burst.age >= windAt
             && p.x >= duct.x - 260 && p.x <= duct.x + 30 && Math.abs(p.y - duct.y) < 180) {
-            const first = burst.kind === 'first';
-            const speed = first ? duct.firstKnockback : duct.repeatKnockback;
+            const strong = burst.kind !== 'repeat';
+            const speed = burst.kind === 'first' ? duct.firstKnockback : burst.kind === 'gust' ? duct.gustKnockback : duct.repeatKnockback;
             p.vx = Math.max(-315, Math.min(-speed, p.vx - speed * .5));
-            p.vy -= first ? 70 : 25;
-            p.w -= first ? .3 : .1;
+            p.vy -= strong ? 70 : 25;
+            p.w -= strong ? .3 : .1;
             knocked = true;
         }
     }
@@ -113,6 +131,6 @@ function ductReactionStep(input: Readonly<DuctReaction>, player: Readonly<Player
         const timing = ductTimings(burst.kind);
         return burst.age < timing.inhale + timing.twitch + timing.sneeze;
     });
-    if (!reaction.bursts.length) return { reaction: { kind: 'done', shots: reaction.shots }, p, knocked };
+    if (!reaction.bursts.length) return { reaction: { kind: 'done', shots: reaction.shots, rest: 0 }, p, knocked };
     return { reaction, p, knocked };
 }

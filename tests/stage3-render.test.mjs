@@ -16,7 +16,7 @@ test('rooftop renders the live course and first flight in both languages and nar
             const name = age < .12 ? 'inhale' : age < .2 ? 'twitch' : 'sneeze';
             if (!frames.has(name)) frames.set(name, state);
         }
-        if (state.checkpoint === 3 && !frames.has('upper')) frames.set('upper', state);
+        if (state.checkpoint === 4 && !frames.has('upper')) frames.set('upper', state);
         if (state.firstFlight.kind === 'flight' && state.firstFlight.age > 1.4 && !frames.has('flight')) frames.set('flight', state);
     });
     assert.equal(frames.size, 9);

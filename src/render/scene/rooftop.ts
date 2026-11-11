@@ -5,8 +5,8 @@ import { checkpointFlag } from './decor';
 import { player } from './player';
 import { sprayPlume } from './spray';
 import { ascentClouds } from './clouds';
-import { rooftopSky, rooftopWalls, rooftopPlatforms } from './rooftop-art';
-import { rooftopDuct } from './rooftop-duct';
+import { rooftopCeilingLight, rooftopSky, rooftopWalls, rooftopPlatforms } from './rooftop-art';
+import { rooftopDuct, rooftopVents } from './rooftop-duct';
 
 export function drawRooftop(ctx: RenderCtx) {
     const state = ctx.state;
@@ -19,6 +19,7 @@ export function drawRooftop(ctx: RenderCtx) {
     rooftopWalls(ctx);
     rooftopPlatforms(ctx);
     rooftopDuct(ctx);
+    rooftopVents(ctx);
     if (state.firstFlight.kind === 'flight') ascentClouds(ctx);
 
     // Empty entrance recess sits behind the hinged door and the existing player.
@@ -60,9 +61,24 @@ export function drawRooftop(ctx: RenderCtx) {
     if (!behindDoor) entranceDoor(ctx);
     player(ctx);
     if (behindDoor) entranceDoor(ctx);
-
+    rooftopCeilingLight(ctx);
 
     sprayPlume(ctx);
+    airSprayGauge(ctx);
+}
+
+// Three charges above the chair: one goes dark per burst in the air, all refill on touching down.
+function airSprayGauge(ctx: RenderCtx) {
+    const state = ctx.state;
+    if (!state.hasExtinguisher || state.firstFlight.kind !== 'course' || (state.ground && state.airSprays === 0)) return;
+    const left = STAGE_THREE.airSprayLimit - state.airSprays;
+    const x = ctx.p.x, y = ctx.p.y - 112;
+    ctx.rect(x - 24, y - 7, 48, 14, '#1d2c3fa8');
+    for (let i = 0; i < STAGE_THREE.airSprayLimit; i++) {
+        const cx = x - 14 + i * 14;
+        ctx.ellipse(cx, y, 4.6, 4.6, i < left ? '#fff2ce' : '#5d6d82');
+        if (i < left) ctx.ellipse(cx - 1.3, y - 1.4, 1.6, 1.4, '#ffffff');
+    }
 }
 
 

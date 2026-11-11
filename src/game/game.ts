@@ -181,6 +181,7 @@ export function viewState(s: Readonly<CoreState>) {
         firstFlight: s.rooftop.flight,
         rooftopEntrance: s.rooftop.entrance,
         ductReaction: s.rooftop.duct,
+        airSprays: s.rooftop.airSprays,
         checkpoint: s.checkpoint,
         furniture: s.building.furniture,
         corridor: s.building.corridor,

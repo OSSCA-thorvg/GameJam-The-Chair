@@ -9,13 +9,21 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when stage code moved into stages/<stage>/: the office copier no longer runs in other stages, so their
 // ticks stop emitting the paper `particles-step` event, and the office no longer creates the building's chairs
 // (unused there). With those two removed from the old run, all six traces matched.
+// Updated when the sleeping rooftop duct started waking from further away (260 instead of 170 in front, 120 instead
+// of 80 vertically): the stage-three route now sets off the first sneeze earlier. Only 'rooftop to sky' changed.
+// Updated when the duct shaft became a zig-zag chimney (alternating ledges, pipes, a parapet slot, steam vents,
+// slippery printouts, an awake duct that keeps gusting and a flag halfway up): 'rooftop to sky' follows the new
+// route, and 'rooftop duct' changes because the duct now gusts on its own after waking.
+// Updated when stage three capped the extinguisher at three bursts per time in the air: both rooftop traces
+// change, and every final snapshot gains `airSprays`. Without that field the four office/building hashes
+// still matched, so their play is unchanged.
 const EXPECTED = {
-    'office route': 'b44f75772237eac8',
-    'office crash': '812fe21e31464a0f',
-    'building exit': '9ea83d27fd4d405c',
-    'building lift': '55c6191b1aca87c7',
-    'rooftop to sky': '57bd0cbd90c70422',
-    'rooftop duct': '5a37466f95ddf268',
+    'office route': '995927ffea4a5796',
+    'office crash': 'e6454bb05e08a208',
+    'building exit': 'db4de9b6bb96890d',
+    'building lift': '97d2abf2c791c11b',
+    'rooftop to sky': '552d0b94896862a5',
+    'rooftop duct': '6727692e86ef84e3',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {
