@@ -1,7 +1,7 @@
 // Browser-side storage for the replay data: the error log survives reloads, and the latest data bundle is
 // kept so the replay tool (/replay.html) can open it from the same browser. Plus download/copy helpers.
 import { CONFIG_VERSION } from '../game/stages/index';
-import type { Recorder, ReplayData, ReplayError, ReplayErrorEntry, ReplayFile } from '../game/replay';
+import { REPLAY_FORMAT, type Recorder, type ReplayData, type ReplayError, type ReplayErrorEntry, type ReplayFile } from '../game/replay';
 
 const ERRORS_KEY = 'the-chair-error-log';
 export const BROWSER_DATA_KEY = 'the-chair-replay-data';
@@ -38,7 +38,7 @@ export type ErrorLog = ReturnType<typeof createErrorLog>;
 export function replayData(recorder: Recorder, errorLog: ErrorLog): ReplayData {
     return {
         kind: 'the-chair-replay-data',
-        format: 1,
+        format: REPLAY_FORMAT,
         version: CONFIG_VERSION,
         exportedAt: new Date().toISOString(),
         userAgent: navigator.userAgent,

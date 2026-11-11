@@ -23,6 +23,8 @@ export const rooftopHooks: StageHooks = {
     },
     // Picking up the extinguisher is flag 1; later flags count only with it in hand.
     checkpointsOpen: s => s.hasExtinguisher,
-    canJump: s => s.rooftopEntrance.kind !== 'opening',
+    canJump: s => s.rooftop.entrance.kind !== 'opening',
+    // No manual sprays once the take-off is under way.
+    canSpray: s => s.rooftop.flight.kind !== 'flight',
     onSpray: (s, direction) => applyRooftopSpray(s, direction),
 };

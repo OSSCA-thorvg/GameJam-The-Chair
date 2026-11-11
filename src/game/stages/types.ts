@@ -49,11 +49,13 @@ export type StageHooks = {
     /** A jump has just started. */
     onJump?(s: GameState): void;
     /** Changes to wheel drive this tick (for example the chair convoy). */
-    drive?(s: GameState, inputDir: number): Partial<Pick<Drive, 'dir' | 'convoyJump' | 'expressJump'>>;
+    drive?(s: GameState, inputDir: number): Partial<Pick<Drive, 'dir' | 'slip' | 'convoyJump' | 'expressJump'>>;
     /** After moving and before collisions. True ends the tick. */
     afterMove?(s: GameState, out: GameEvent[], dt: number, previousX: number): boolean;
     /** After collisions. */
     afterCollide?(s: GameState, out: GameEvent[], dt: number, previousX: number): void;
+    /** After the shared scoring cues, before the fall check (small effects such as wet-floor specks). */
+    afterScore?(s: GameState, out: GameEvent[], dt: number): void;
     /** Whether flags can be saved now. Default: always. */
     checkpointsOpen?(s: GameState): boolean;
     /** Fell far below the floor. Default: count a death and restart from the last flag. */

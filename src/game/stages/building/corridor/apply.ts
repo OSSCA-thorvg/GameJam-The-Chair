@@ -4,24 +4,24 @@ import type { GameEvent } from '../../../types';
 import { STAGES } from '../../index';
 import { MEETING_SEAT, canEnterMeeting, convoyLanding, corridorStep, liftRide, meetingExit, meetingStep } from './decide';
 export function applyConvoyLanding(s: GameState) {
-    const r = convoyLanding(s.corridor, s.furniture, s.p, s.ground);
+    const r = convoyLanding(s.building.corridor, s.building.furniture, s.p, s.ground);
     if (!r) return;
-    s.corridor.convoy = r.convoy;
+    s.building.corridor.convoy = r.convoy;
     if (r.vx !== null) s.p.vx = r.vx;
 }
 
 // Returns true while the lift carries the rider down.
 export function applyLiftRide(s: GameState, out: GameEvent[], dt: number) {
-    const r = liftRide(s.corridor.departure, dt);
+    const r = liftRide(s.building.corridor.departure, dt);
     if (!r) return false;
-    s.corridor.departure = r.departure;
+    s.building.corridor.departure = r.departure;
     setPlayer(s, { x: s.p.x, y: r.y, vx: 0, vy: 0, a: 0, w: 0 });
     s.ground = false;
     s.actualSpeed = 0;
     s.jumpQ = s.coyote = 0;
     if (r.lost) {
-        s.corridor.lift = { kind: 'departed' };
-        s.corridor.convoy = 'free';
+        s.building.corridor.lift = { kind: 'departed' };
+        s.building.corridor.convoy = 'free';
         s.mode = 'dead';
         s.lossReason = 'lift';
         s.deaths++;
@@ -33,12 +33,12 @@ export function applyLiftRide(s: GameState, out: GameEvent[], dt: number) {
 
 export function applyCorridor(s: GameState, dt: number, previousX: number) {
     const r = corridorStep({
-        corridor: s.corridor, furniture: s.furniture, p: s.p, ground: s.ground,
+        corridor: s.building.corridor, furniture: s.building.furniture, p: s.p, ground: s.ground,
         steering: s.keys.includes('left') || s.keys.includes('right'),
         rng: s.rng.cosmetic, length: STAGES[s.stage].length,
     }, dt, previousX);
-    s.corridor = r.corridor;
-    s.furniture = r.furniture;
+    s.building.corridor = r.corridor;
+    s.building.furniture = r.furniture;
     setPlayer(s, r.p);
     s.rng.cosmetic = r.rng;
     if (r.stopRider) s.jumpQ = s.coyote = 0;
@@ -46,31 +46,36 @@ export function applyCorridor(s: GameState, dt: number, previousX: number) {
 
 // Returns true while the meeting scene owns the rider.
 export function applyMeeting(s: GameState, dt: number) {
-    if (s.corridor.room.kind !== 'meeting') return false;
-    const r = meetingStep(s.corridor.room, dt);
-    s.corridor.room = r.room;
+    if (s.building.corridor.room.kind !== 'meeting') return false;
+    const r = meetingStep(s.building.corridor.room, dt);
+    s.building.corridor.room = r.room;
     s.p.x = r.x;
     if (r.leave) applyLeaveMeeting(s, true);
     return true;
 }
 
 export function applyLeaveMeeting(s: GameState, pushed = false) {
-    const room = s.corridor.room;
+    const room = s.building.corridor.room;
     if (room.kind !== 'meeting') return;
     setPlayer(s, meetingExit(room.returnX, pushed));
-    s.corridor.room = { kind: 'corridor' };
+    s.building.corridor.room = { kind: 'corridor' };
     s.keys = [];
     s.jumpQ = 0;
     s.ground = true;
     s.actualSpeed = 0;
 }
 
+/** The rider can roll into the meeting room right now. */
+export function meetingReachable(s: Readonly<GameState>) {
+    return canEnterMeeting({ stage: s.stage, mode: s.mode, corridor: s.building.corridor, p: s.p, ground: s.ground });
+}
+
 export function applyInteract(s: GameState) {
     if (s.mode !== 'play') return;
-    if (s.corridor.room.kind === 'meeting') { applyLeaveMeeting(s); return; }
-    if (!canEnterMeeting(s)) return;
-    s.corridor.room = { kind: 'meeting', age: 0, returnX: s.p.x };
-    s.corridor.meetingVisited = true;
+    if (s.building.corridor.room.kind === 'meeting') { applyLeaveMeeting(s); return; }
+    if (!meetingReachable(s)) return;
+    s.building.corridor.room = { kind: 'meeting', age: 0, returnX: s.p.x };
+    s.building.corridor.meetingVisited = true;
     setPlayer(s, MEETING_SEAT);
     s.keys = [];
     s.jumpQ = 0;

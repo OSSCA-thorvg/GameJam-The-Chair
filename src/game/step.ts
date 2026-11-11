@@ -113,9 +113,10 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     const dir = tweak.dir ?? inputDir;
     const convoyJump = tweak.convoyJump ?? false;
     const expressJump = tweak.expressJump ?? false;
+    const slip = tweak.slip ?? false;
     const balancing = s.keys.includes('q') || s.keys.includes('e');
     const tilt = (s.keys.includes('e') ? 1 : 0) - (s.keys.includes('q') ? 1 : 0) + (was || balancing ? 0 : dir);
-    setPlayer(s, drivePlayer(p, { grounded: was, slip: s.slip, dir, tilt, upright: p.x < PHYSICS.upright.tutorialUntilX || stage.alwaysUpright, convoyJump, expressJump }, dt));
+    setPlayer(s, drivePlayer(p, { grounded: was, slip, dir, tilt, upright: p.x < PHYSICS.upright.tutorialUntilX || stage.alwaysUpright, convoyJump, expressJump }, dt));
     if (hooks.afterMove?.(s, out, dt, prev)) return;
     const hit = collide(p, stageSolids(s));
     setPlayer(s, hit.p);
@@ -158,9 +159,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
             out.push({ type: 'cue', id: 'person-comment', person: { ...n } });
         }
     }
-    if (s.slip && Math.abs(p.vx) > 90 && Math.floor(s.time * 30) !== Math.floor((s.time - dt) * 30)) {
-        out.push({ type: 'speck', x: p.x - 15, vx: -p.vx * .2 });
-    }
+    hooks.afterScore?.(s, out, dt);
     if (fellOffFloor(p)) {
         if (hooks.onFall) hooks.onFall(s, out);
         else {

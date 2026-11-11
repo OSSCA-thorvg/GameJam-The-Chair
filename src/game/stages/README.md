@@ -14,6 +14,7 @@
 ```
 stages/<스테이지>/
   data.ts         레벨 수치와 대사 같은 고정 데이터 (deepFreeze)
+  state.ts        이 스테이지가 시도 중에 바꾸는 값 (state.office / building / rooftop, 하늘은 state.sky)
   definition.ts   StageDefinition: 길이, 목표, 지형, 체크포인트, 등장인물, 규칙 플래그 (데이터만)
   attempt.ts      시도를 새로 만들 때 이 스테이지만의 시작 값
   hooks.ts        StageHooks: 공용 틱 사이에 끼어드는 이 스테이지의 동작
@@ -49,11 +50,13 @@ stages/<스테이지>/
 ## 새 스테이지 추가하기 (예: 5 · 우주)
 
 1. `stages/space/` 폴더에 `data.ts`, `definition.ts`, `attempt.ts`, `hooks.ts`를 만듭니다.
-2. 아래 세 파일에 각각 한 줄씩만 추가합니다.
+2. `stages/space/state.ts`에 `SpaceState`와 `createSpaceState()`를 만듭니다.
+3. 아래 파일에 각각 한두 줄만 추가합니다.
    - `stages/index.ts`: `STAGES`에 `5: space`
    - `stages/hooks.ts`: `case 5: return spaceHooks;`
-   - `stages/attempt.ts`: `case 5: return prepareSpaceAttempt(...)`
-3. `types.ts`의 `StageId`에 `5`를 추가합니다.
+   - `stages/attempt.ts`: `case 5: return prepareSpaceAttempt(...)`, 그리고 `createStageStates`에 `space: createSpaceState()`
+   - `state.ts`의 `Attempt`: `space: SpaceState;`
+4. `types.ts`의 `StageId`에 `5`를 추가합니다.
 
 ## 아직 여러 스테이지가 함께 고치는 파일
 
@@ -61,9 +64,9 @@ stages/<스테이지>/
 
 | 파일 | 고치는 경우 |
 |---|---|
-| `state.ts`의 `Attempt` | 스테이지에 새 상태 값이 필요할 때 (다음 리팩터링 후보: 스테이지별로 묶기) |
+| `state.ts`의 `Attempt` | 새 스테이지를 추가할 때만 한 줄 (스테이지 값은 각 `stages/<스테이지>/state.ts`에 있음) |
 | `types.ts`의 `CueId`, `Input` | 새 연출 신호나 입력이 생길 때 |
-| `game.ts`의 `viewState` | 화면에 새 값을 보여 줄 때 |
+| `game.ts`의 `viewState` | 화면에 새 값을 보여 줄 때 (화면 호환을 위해 예전 필드 이름으로 펼쳐 둠) |
 | `i18n.ts` | 새 문구 |
 | `src/render/scene/*`, `src/ui/hud.ts` | 화면 (렌더는 이미 스테이지별 파일로 나뉘어 있음) |
 

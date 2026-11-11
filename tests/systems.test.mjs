@@ -157,10 +157,6 @@ test('each distraction costs focus once, and focus recovers only when undisturbe
     assert.deepEqual(sys.focusRecovery({ ...hit, focusClock: 1.999 }, true, .01).focus, 70, 'blocked');
     assert.equal(sys.focusRecovery({ ...hit, focusNotice: { kind: 'paper', life: .005 } }, false, .01).focusNotice, null);
     assert.deepEqual(sys.focusLossStep(1.69, .01).over, true);
-    const calm = { paperPenaltyRemaining: 0, lightPenaltyRemaining: 0 };
-    assert.equal(sys.focusBlocked(calm, false), false);
-    assert.equal(sys.focusBlocked({ ...calm, lightPenaltyRemaining: .1 }, false), true);
-    assert.equal(sys.focusBlocked(calm, true), true, 'a stage hazard such as spilled water');
 });
 
 test('a head hit replays the last frames in slow motion, then holds', () => {

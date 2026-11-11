@@ -2,7 +2,7 @@
 import type { GameState } from '../../state';
 import { stageHooks } from '../../stages/hooks';
 import type { GameEvent } from '../../types';
-import { focusAfterHit, focusBlocked, focusLossStep, focusRecovery, type FocusHit } from './decide';
+import { focusAfterHit, focusLossStep, focusRecovery, type FocusHit } from './decide';
 // Returns false once play has stopped, so callers skip the rest of their effects.
 export function applyFocusHit(s: GameState, out: GameEvent[], hit: FocusHit) {
     if (s.mode !== 'play') return false;
@@ -37,9 +37,9 @@ export function applyFocusLoss(s: GameState, out: GameEvent[], dt: number) {
     }
 }
 
-/** Whether focus recovery is paused right now, including the current stage's own distractions. */
+/** Whether focus recovery is paused right now by the current stage's distractions (StageHooks.focusBlocked). */
 export function focusBlockedIn(s: Readonly<GameState>) {
-    return focusBlocked(s, stageHooks(s.stage).focusBlocked?.(s) ?? false);
+    return stageHooks(s.stage).focusBlocked?.(s) ?? false;
 }
 
 export function applyFocusRecovery(s: GameState, dt: number) {

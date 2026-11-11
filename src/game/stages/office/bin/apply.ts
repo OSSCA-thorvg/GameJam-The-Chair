@@ -4,9 +4,9 @@ import type { GameEvent } from '../../../types';
 import { BIN_REST } from './decide';
 export function applyBinFall(s: GameState, out: GameEvent[]) {
     if (s.mode !== 'play') return;
-    s.inBin = true;
-    s.dirty = true;
-    s.binFalls++;
+    s.office.inBin = true;
+    s.office.dirty = true;
+    s.office.binFalls++;
     s.deaths++;
     s.lossReason = 'bin';
     setPlayer(s, BIN_REST);

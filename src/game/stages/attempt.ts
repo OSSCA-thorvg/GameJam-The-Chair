@@ -1,5 +1,9 @@
 // Stage-specific parts of a fresh attempt. One case per stage; each stage keeps its rules in its own folder.
 import type { Attempt } from '../state';
+import { createOfficeState } from './office/state';
+import { createBuildingState } from './building/state';
+import { createRooftopState } from './rooftop/state';
+import { createSky } from './sky/data';
 import type { StageId } from '../types';
 import { prepareOfficeAttempt } from './office/attempt';
 import { prepareBuildingAttempt } from './building/attempt';
@@ -13,4 +17,14 @@ export function prepareStageAttempt(stage: StageId, attempt: Attempt, checkpoint
         case 3: return prepareRooftopAttempt(attempt, checkpoint);
         case 4: return prepareSkyAttempt(attempt, checkpoint);
     }
+}
+
+// Every stage's own state for a fresh attempt (all four exist; only the current stage changes its own).
+export function createStageStates(checkpoint: number, appearanceSeed: number) {
+    return {
+        office: createOfficeState(),
+        building: createBuildingState(checkpoint, appearanceSeed),
+        rooftop: createRooftopState(),
+        sky: createSky(),
+    };
 }

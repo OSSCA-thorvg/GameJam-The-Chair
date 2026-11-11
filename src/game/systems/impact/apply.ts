@@ -3,7 +3,7 @@ import type { GameState } from '../../state';
 import type { GameEvent, Point } from '../../types';
 import { impactReplay, impactStep } from './decide';
 export function applyHeadHit(s: GameState, out: GameEvent[], point: Point) {
-    if (s.mode !== 'play' || s.inBin) return;
+    if (s.mode !== 'play') return;
     s.deaths++;
     s.lossReason = 'head';
     s.keys = [];

@@ -7,11 +7,6 @@ export type Focus = { focus: number; focusClock: number; focusEvents: readonly s
 
 export const FOCUS_LOSS_DURATION = 1.7;
 
-// Focus does not recover while a distraction is still active: a recent hit, or a stage hazard (`stageBlocked`).
-export function focusBlocked(s: { paperPenaltyRemaining: number; lightPenaltyRemaining: number }, stageBlocked: boolean) {
-    return s.paperPenaltyRemaining > 0 || s.lightPenaltyRemaining > 0 || stageBlocked;
-}
-
 // Focus after a distraction, or null if this distraction already counted. `lost` means focus ran out.
 export function focusAfterHit(f: Readonly<Focus>, hit: FocusHit): (Focus & { lost: boolean }) | null {
     const token = hit.kind + ':' + hit.id;

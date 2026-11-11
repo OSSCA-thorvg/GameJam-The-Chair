@@ -9,11 +9,11 @@ export function applyMonitorContact(s: GameState, out: GameEvent[], contact: Mon
     s.p.x = contact.x;
     s.p.vx = contact.vx;
     s.p.w *= .45;
-    s.lightPenaltyRemaining = RULES.lightPenalty;
+    s.office.lightPenaltyRemaining = RULES.lightPenalty;
     out.push({ type: 'light-contact' });
-    if (s.lightCooldown !== 0) return true;
-    s.lightHits++;
-    s.lightCooldown = 1.4;
+    if (s.office.lightCooldown !== 0) return true;
+    s.office.lightHits++;
+    s.office.lightCooldown = 1.4;
     if (!applyFocusHit(s, out, contact.focus)) return false;
     out.push({ type: 'cue', id: 'light-hit' });
     out.push({ type: 'cue', id: 'light-comment', monitorIndex: contact.index });

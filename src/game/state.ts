@@ -1,11 +1,12 @@
 import { LEVEL, RULES } from './level';
 import type { FocusNotice } from './systems/focus/decide';
 import type { Impact } from './systems/impact/decide';
-import type { DuctReaction, FirstFlight, RooftopEntrance } from './stages/rooftop/course/decide';
-import { createSky, type SkyState } from './stages/sky/data';
-import { createCorridor, type Corridor, type Furniture } from './stages/building/data';
+import type { SkyState } from './stages/sky/data';
+import type { OfficeState } from './stages/office/state';
+import type { BuildingState } from './stages/building/state';
+import type { RooftopState } from './stages/rooftop/state';
 import { STAGES, stageSpawn } from './stages/index';
-import { prepareStageAttempt } from './stages/attempt';
+import { createStageStates, prepareStageAttempt } from './stages/attempt';
 import { clonePlain } from './data';
 import { randomUint32, seedRng, type Rng } from './rng';
 import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Snapshot, StageId } from './types';
@@ -27,11 +28,8 @@ export type Progress = {
 // Rebuilt from Progress on every attempt.
 export type Attempt = {
     rng: Rng;
-    sky: SkyState;
+    // Equipment and spray, shared by the stages that use the extinguisher.
     hasExtinguisher: boolean;
-    firstFlight: FirstFlight;
-    rooftopEntrance: RooftopEntrance;
-    ductReaction: DuctReaction;
     sprayCooldown: number;
     sprayBurst: number;
     sprayDir: { x: number; y: number };
@@ -46,45 +44,26 @@ export type Attempt = {
     time: number;
     practiceJump: boolean;
     actualSpeed: number;
+    rollCooldown: number;
+    reverseCooldown: number;
 
-    furniture: Furniture[];
-    corridor: Corridor;
-    copier: { x: number; cool: number; burst: number; next: number; dir: number };
-    cleaning: { x: number; a: number; b: number; spilled: boolean; age: number; followup: boolean; splashDir: number };
-    bucket: { age: number; armed: boolean; spills: number };
-
-    papers: Paper[];
     people: Person[];
     history: Snapshot[];
     impact: Impact | null;
-
-    dirty: boolean;
-    inBin: boolean;
-    binAge: number;
-    binCooldown: number;
-    escapeQueued: boolean;
-    slip: boolean;
-    wetSeen: boolean;
-    slipCooldown: number;
-    paperPenaltyRemaining: number;
-    paperHits: number;
-    bursts: number;
-    binFalls: number;
-    rollCooldown: number;
-    reverseCooldown: number;
-    soakedOnSpill: number;
-    lightPenaltyRemaining: number;
-    lightHits: number;
-    doorHits: number;
-    lightCooldown: number;
 
     focus: number;
     focusClock: number;
     focusEvents: string[];
     focusNotice: FocusNotice | null;
-    volley: number;
     lossReason: LossReason | null;
     focusLossTime: number;
+
+    // Each stage's own values, defined in stages/<stage>/state.ts. All four exist in every attempt;
+    // only the current stage changes its own.
+    office: OfficeState;
+    building: BuildingState;
+    rooftop: RooftopState;
+    sky: SkyState;
 };
 
 // Everything that decides how play continues. Plain JSON: save it and restore it to resume exactly.
@@ -108,11 +87,7 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
     const appearanceSeed = randomUint32(rng, 'cosmetic');
     const attempt: Attempt = {
         rng,
-        sky: createSky(),
         hasExtinguisher: false,
-        firstFlight: { kind: 'course', verticalShots: 0, lastShotAt: -1 },
-        rooftopEntrance: { kind: 'ready' },
-        ductReaction: { kind: 'idle' },
         sprayCooldown: 0,
         sprayBurst: 0,
         sprayDir: { x: 0, y: 1 },
@@ -126,46 +101,23 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
         time: 0,
         practiceJump: false,
         actualSpeed: 0,
-
-        people: STAGES[stage].people.map(person => ({ ...person })),
-        furniture: [],
-        corridor: createCorridor(checkpoint, appearanceSeed),
-        copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 },
-        cleaning: { ...LEVEL.cleaning, spilled: false, age: 0, followup: false, splashDir: 0 },
-        bucket: { age: RULES.bucketReset, armed: true, spills: 0 },
-
-        papers: [],
-        history: [],
-        impact: null,
-
-        dirty: false,
-        inBin: false,
-        binAge: 0,
-        binCooldown: 0,
-        escapeQueued: false,
-        slip: false,
-        wetSeen: false,
-        slipCooldown: 0,
-        paperPenaltyRemaining: 0,
-        paperHits: 0,
-        bursts: 0,
-        binFalls: 0,
         rollCooldown: 0,
         reverseCooldown: 0,
-        soakedOnSpill: 0,
-        lightPenaltyRemaining: 0,
-        lightHits: 0,
-        doorHits: 0,
-        lightCooldown: 0,
+
+        people: STAGES[stage].people.map(person => ({ ...person })),
+        history: [],
+        impact: null,
 
         focus: 100,
         focusClock: 0,
         focusEvents: [],
         focusNotice: null,
-        volley: 0,
         lossReason: null,
         focusLossTime: 0,
+
+        ...createStageStates(checkpoint, appearanceSeed),
     };
+
     // Stage-specific starting values live with each stage (stages/<stage>/attempt.ts).
     prepareStageAttempt(stage, attempt, checkpoint);
     return attempt;

@@ -42,7 +42,7 @@ function jump(s: GameState) {
 
 export function spray(s: GameState, out: GameEvent[]) {
     const hooks = stageHooks(s.stage);
-    if (s.mode !== 'play' || !s.hasExtinguisher || hooks.canSpray?.(s) === false || s.firstFlight.kind === 'flight' || s.sprayCooldown > 0) return;
+    if (s.mode !== 'play' || !s.hasExtinguisher || hooks.canSpray?.(s) === false || s.sprayCooldown > 0) return;
     const dx = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
     const len = Math.hypot(dx, 1);
     s.sprayDir = { x: -dx / len, y: 1 / len };
