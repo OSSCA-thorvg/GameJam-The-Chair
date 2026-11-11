@@ -6,7 +6,7 @@ import { player } from './player';
 import { sprayPlume } from './spray';
 import { ascentClouds } from './clouds';
 import { rooftopCeilingLight, rooftopSky, rooftopWalls, rooftopPlatforms } from './rooftop-art';
-import { rooftopDuct } from './rooftop-duct';
+import { rooftopDuct, rooftopVents } from './rooftop-duct';
 
 export function drawRooftop(ctx: RenderCtx) {
     const state = ctx.state;
@@ -19,6 +19,7 @@ export function drawRooftop(ctx: RenderCtx) {
     rooftopWalls(ctx);
     rooftopPlatforms(ctx);
     rooftopDuct(ctx);
+    rooftopVents(ctx);
     if (state.firstFlight.kind === 'flight') ascentClouds(ctx);
 
     // Empty entrance recess sits behind the hinged door and the existing player.

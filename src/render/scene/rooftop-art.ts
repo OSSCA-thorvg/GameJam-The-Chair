@@ -93,9 +93,10 @@ export function rooftopWalls(ctx: RenderCtx) {
         ctx.gradientFill(450, 300, 309, 300, [[0, '#ffe1a6a0'], [1, '#ffe1a600']]));
     ctx.rect(442, 205, 8, 215, '#f7d8a1');
 
-    wallPanels(ctx, 1240, -460, 540, 856);
+    // The shaft walls run up to a concrete ceiling; the chair's head just fits under it.
+    wallPanels(ctx, 1240, -556, 540, 952);
     column(ctx, 1204, -650, 396);
-    column(ctx, 1770, -460, 396);
+    column(ctx, 1770, -144, 396);
     // Cable runs terminate at junction boxes instead of looking like extra ledges.
     for (const x of [1450, 1470]) {
         ctx.rod(x, -440, x, 345, 3, '#293e55');
@@ -118,7 +119,51 @@ function shelf(ctx: RenderCtx, x: number, y: number, width: number) {
     }
 }
 
+// A lagged steam main sticking out of the wall: round body, flanges and a wall bracket.
+// `from` is 1 when it leaves the left wall, -1 for the right wall.
+function steamPipe(ctx: RenderCtx, x: number, y: number, width: number, height: number, from: number) {
+    ctx.gradientPolygon([[x, y], [x + width, y], [x + width, y + height], [x, y + height]],
+        ctx.gradientFill(0, y, 0, y + height, [[0, '#d5dbe1'], [.3, '#a3b0bf'], [.75, '#617389'], [1, '#3f5068']]));
+    ctx.rect(x, y + 2, width, 2, '#eef2f5');
+    for (let fx = x + 14; fx < x + width - 8; fx += 34) {
+        ctx.rect(fx, y - 2, 6, height + 4, '#8697ab');
+        ctx.rect(fx + 1, y - 2, 2, height + 4, '#c4ccd5');
+    }
+    // The free end is capped; the wall end sits on a bracket.
+    const cap = from > 0 ? x + width : x;
+    ctx.rect(cap - 3, y - 3, 6, height + 6, '#5d6f86');
+    const wall = from > 0 ? x : x + width;
+    ctx.polygon([[wall, y + height], [wall + from * 22, y + height], [wall, y + height + 22]], '#33485f');
+    // A pressure gauge in the red: the whole shaft is under pressure.
+    const gx = x + width / 2;
+    ctx.rod(gx, y, gx, y - 7, 3, '#5d6f86');
+    ctx.ellipse(gx, y - 12, 6, 6, '#e9e4d6');
+    ctx.rod(gx, y - 12, gx + 3.5, y - 15.5, 1.5, '#c8352b');
+}
+
+// The roof edge parapet: concrete with a hazard-striped cap, leaving only a slot under the ceiling.
+function parapet(ctx: RenderCtx, x: number, y: number, width: number, height: number) {
+    ctx.gradientPolygon([[x, y], [x + width, y], [x + width, y + height], [x, y + height]],
+        ctx.gradientFill(x, 0, x + width, 0, [[0, '#8091a5'], [.5, '#5b6f88'], [1, '#3c516a']]));
+    ctx.rect(x - 3, y - 6, width + 6, 8, '#f3bf70');
+    for (let sy = y + 8; sy < y + 40; sy += 12) ctx.polygon([[x, sy], [x + width, sy - 6], [x + width, sy], [x, sy + 6]], '#f2c14e');
+    for (let sy = y + 50; sy < y + height - 10; sy += 46) ctx.rect(x + 3, sy, width - 6, 3, '#2f455c');
+}
+
+// Concrete ceiling over the duct shaft, with a dim caged lamp.
+function shaftCeiling(ctx: RenderCtx) {
+    ctx.gradientPolygon([[1200, -640], [1806, -640], [1806, -552], [1200, -552]],
+        ctx.gradientFill(0, -640, 0, -552, [[0, '#2a3e55'], [1, '#4f6782']]));
+    ctx.rect(1200, -556, 606, 4, '#8193a6');
+    for (let x = 1236; x < 1800; x += 96) ctx.rect(x, -552, 4, 10, '#2d4258');
+    ctx.rod(1510, -552, 1510, -536, 2, '#3a4f66');
+    ctx.ellipse(1510, -530, 7, 6, '#f6d79c');
+    ctx.gradientPolygon([[1503, -526], [1517, -526], [1560, -430], [1460, -430]],
+        ctx.gradientFill(0, -526, 0, -430, [[0, '#ffe2a640'], [1, '#ffe2a600']]));
+}
+
 export function rooftopPlatforms(ctx: RenderCtx) {
+    shaftCeiling(ctx);
     for (const b of STAGE_THREE.blocks) {
         if (b.x > ctx.cam + ctx.VW + 80 || b.x + b.width < ctx.cam - 80) continue;
         if (b.id === 'shaft-left') continue; // The matching structural column was drawn with the wall.
@@ -133,6 +178,14 @@ export function rooftopPlatforms(ctx: RenderCtx) {
                 ctx.rect(x, b.y, 5, b.height, '#c1c7cb');
                 ctx.ellipse(x + 2, b.y + 7, 1.5, 1.5, '#52657a');
             }
+            continue;
+        }
+        if (b.id.startsWith('pipe-')) {
+            steamPipe(ctx, b.x, b.y, b.width, b.height, b.x <= 1240 ? 1 : -1);
+            continue;
+        }
+        if (b.id === 'parapet') {
+            parapet(ctx, b.x, b.y, b.width, b.height);
             continue;
         }
         if (b.id === 'rail') {

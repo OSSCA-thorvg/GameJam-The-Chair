@@ -8,7 +8,7 @@ function front() {
     return s;
 }
 function tick(s, seconds) { for (let i = 0; i < Math.ceil(seconds * 120); i++) applyRooftop(s, [], 1 / 120); }
-// The ejected junk: four energy-drink cans, three coffee cups, an empty badge, two ties and six printouts.
+// The ejected junk: four energy-drink cans, three coffee cups, an empty badge, two ties and twelve printouts.
 function props(s) {
     const ctx = createRenderCtx({}, {}); Object.assign(ctx, { state: viewState(s) }); rooftopDuct(ctx);
     const marks = Object.values(DUCT_PROP_COLORS);
@@ -31,7 +31,7 @@ test('first wind ejects the overtime junk once and subsequent wind is weaker wit
     tick(s, .11); const first = s.p.vx;
     assert.equal(first, -285);
     tick(s, 2); assert.equal(s.rooftop.duct.kind, 'done');
-    const settled = props(s); assert.equal(settled.length, 16);
+    const settled = props(s); assert.equal(settled.length, 22);
     s.p.vx = 0; s.p.vy = 0;
     applyRooftopSpray(s, 0);
     assert.equal(s.rooftop.duct.shots, 2);

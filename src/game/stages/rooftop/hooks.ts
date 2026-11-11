@@ -2,6 +2,7 @@
 import { startStage } from '../../state';
 import type { StageHooks } from '../types';
 import { applyFlight, applyRooftop, applyRooftopEntrance, applyRooftopSpray } from './course/apply';
+import { onSlickPaper } from './data';
 
 export const rooftopHooks: StageHooks = {
     takeover(s, out, dt) {
@@ -18,6 +19,8 @@ export const rooftopHooks: StageHooks = {
         }
         return true;
     },
+    // Once the duct has scattered its printouts, landing on them is like rolling on spilled water.
+    drive: s => s.rooftop.duct.kind !== 'idle' && onSlickPaper(s.p, s.ground) ? { slip: true } : {},
     afterCollide(s, out, dt) {
         applyRooftop(s, out, dt);
     },

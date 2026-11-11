@@ -1,4 +1,4 @@
-import { STAGE_THREE, ductTimings } from '../../game/stages/rooftop/data';
+import { STAGE_THREE, ductTimings, ventPhase } from '../../game/stages/rooftop/data';
 import type { RenderCtx } from '../context';
 import { ART } from '../art';
 
@@ -13,7 +13,8 @@ export function rooftopDuct(ctx: RenderCtx) {
     });
     const shake = twitching ? Math.sin(age * 110) * 2.3 : 0;
     const x = duct.x + shake, y = duct.y;
-    const top = -430;
+    // The tube rises along the building and turns in under the roof edge, leaving the exit slot clear.
+    const top = -150;
     // One continuous bent sheet-metal tube, highlighted across its width.
     ctx.effectPath([x + 20, y - 33], [
         [x + 48, y - 33, x + 85, y - 33, x + 101, y - 33],
@@ -67,7 +68,7 @@ export function rooftopDuct(ctx: RenderCtx) {
         if (sneezeAge >= 0 && sneezeAge < timing.sneeze) {
             // The repeat wind is short, so its steam plays faster to still billow out to a good size.
             const pace = Math.pow(duct.sneezeDuration / timing.sneeze, .6);
-            ductSteam(ctx, x, y, sneezeAge * pace, timing.sneeze * pace, burst.kind === 'first' ? 1 : .85);
+            ductSteam(ctx, x, y, sneezeAge * pace, timing.sneeze * pace, burst.kind === 'first' ? 1 : burst.kind === 'gust' ? .95 : .85);
         }
     }
     // The first sneeze coughs up what years of overtime left inside the duct.
@@ -86,7 +87,7 @@ const smooth = (v: number) => v * v * (3 - 2 * v);
 // The sneeze as a burst of steam: puffs leave the vent fast, slow down under drag, rise as they cool,
 // wobble with turbulence, swell and thin out. Right at the mouth the jet is still clear; it only turns
 // white a short way out, the way real steam condenses.
-function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: number, strength: number) {
+function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: number, strength: number, blurAngle = 180) {
     const count = Math.round(14 + 16 * strength);
     const emit = duration * .42;
     const mouthX = x + 4;
@@ -96,7 +97,7 @@ function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: 
     const jet = Math.max(0, 1 - age / (.22 * Math.max(.5, strength))) * fadeIn;
     if (jet > 0) {
         const len = (150 + 140 * strength) * smooth(Math.min(1, age / .08 + .25));
-        ctx.beginLayer({ key: 'duct-steam-jet', blur: 3, motionBlur: { distance: 10 * ctx.scale, angle: 180 } });
+        ctx.beginLayer({ key: 'duct-steam-jet', blur: 3, motionBlur: { distance: 10 * ctx.scale, angle: blurAngle } });
         ctx.effectPath([mouthX, y - 22], [
             [mouthX - len * .35, y - 30, mouthX - len * .75, y - 44, mouthX - len, y - 34],
             [mouthX - len - 22, y - 8, mouthX - len - 14, y + 30, mouthX - len, y + 36],
@@ -170,33 +171,41 @@ function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: 
 export const DUCT_PROP_COLORS = { can: '#2340a8', cup: '#f4ece0', badge: '#f3f1ea', tie: '#b23a3f', paper: ART.palette.paper } as const;
 
 type PropKind = 'can' | 'cup' | 'spill' | 'badge' | 'tie' | 'paper';
-// Landing spots sit on real ledges: the left pad (top 136, x 1240-1400), the pad in front of the duct
-// (top 276, x 1510-1640) and the shelf above the duct (top -4, x 1510-1780). `to` is the resting centre.
+// Landing spots sit on the shaft ledges: R1 (top 276, x 1480-1660 in front of the duct), L1 (top 106,
+// x 1240-1540), R2 (top -64, x 1480-1780) and L2 (top -234, x 1240-1540). `to` is the resting centre.
+// The printouts cover exactly the slippery spans in STAGE_THREE.slick; everything else lands beside them.
 type Flight = { kind: PropKind; delay: number; time: number; to: [number, number]; arc: number; spin: number; rest: number; bounce: number };
 // Sizes follow the rider (about 1 unit per cm): a can is ~7x21, a takeaway cup ~9x14, the badge card ~11x14
 // and a tie ~35 long like the rider's own.
 const SCALE: Record<PropKind, number> = { can: .45, cup: .55, spill: .55, badge: .38, tie: .62, paper: 1 };
 const PROPS: readonly Flight[] = [
     // Energy drinks: the heaviest, they tumble and rattle to a stop on their side.
-    { kind: 'can', delay: 0, time: .62, to: [1352, 132], arc: 120, spin: 9.4, rest: Math.PI / 2, bounce: 6 },
-    { kind: 'can', delay: .04, time: .7, to: [1388, 132], arc: 140, spin: -11, rest: -Math.PI / 2, bounce: 5 },
-    { kind: 'can', delay: .06, time: .48, to: [1538, 272], arc: 70, spin: -7.9, rest: -Math.PI / 2, bounce: 5 },
-    { kind: 'can', delay: .1, time: .55, to: [1612, 272], arc: 55, spin: 8.6, rest: Math.PI / 2, bounce: 6 },
+    { kind: 'can', delay: 0, time: .7, to: [1300, 102], arc: 120, spin: 9.4, rest: Math.PI / 2, bounce: 6 },
+    { kind: 'can', delay: .04, time: .75, to: [1362, 102], arc: 140, spin: -11, rest: -Math.PI / 2, bounce: 5 },
+    { kind: 'can', delay: .06, time: .4, to: [1640, 272], arc: 50, spin: -7.9, rest: -Math.PI / 2, bounce: 5 },
+    { kind: 'can', delay: .1, time: .8, to: [1712, -68], arc: 140, spin: 8.6, rest: Math.PI / 2, bounce: 6 },
     // Coffee: two cups land upright, one lands on its side and leaks a puddle.
-    { kind: 'cup', delay: .03, time: .66, to: [1318, 129], arc: 130, spin: 6.3, rest: 0, bounce: 3 },
-    { kind: 'cup', delay: .09, time: .9, to: [1548, -11], arc: 150, spin: -6.3, rest: 0, bounce: 3 },
-    { kind: 'spill', delay: .05, time: .52, to: [1578, 272], arc: 80, spin: 7.2, rest: Math.PI / 2, bounce: 2 },
-    // The empty badge, and two ties flung highest onto the shelf above the duct.
-    { kind: 'badge', delay: .08, time: .82, to: [1270, 128], arc: 150, spin: 12.6, rest: 0, bounce: 0 },
-    { kind: 'tie', delay: .02, time: 1.05, to: [1600, -10], arc: 150, spin: 5.2, rest: Math.PI / 2, bounce: 0 },
-    { kind: 'tie', delay: .07, time: 1.15, to: [1672, -10], arc: 170, spin: -4.6, rest: -Math.PI / 2, bounce: 0 },
-    // Printouts, the same sheets the office copier spits out: light, so they float and sway down last.
-    { kind: 'paper', delay: .04, time: 1.3, to: [1312, 130], arc: 110, spin: .5, rest: .06, bounce: 0 },
-    { kind: 'paper', delay: .1, time: 1.55, to: [1722, -10], arc: 230, spin: -.4, rest: -.04, bounce: 0 },
-    { kind: 'paper', delay: .06, time: 1.2, to: [1524, 270], arc: 90, spin: .3, rest: 0, bounce: 0 },
-    { kind: 'paper', delay: .14, time: 1.45, to: [1630, 270], arc: 120, spin: -.6, rest: .05, bounce: 0 },
-    { kind: 'paper', delay: .08, time: 1.7, to: [1636, -10], arc: 200, spin: .4, rest: -.05, bounce: 0 },
-    { kind: 'paper', delay: .18, time: 1.6, to: [1530, -10], arc: 190, spin: -.5, rest: .03, bounce: 0 },
+    { kind: 'cup', delay: .03, time: .72, to: [1270, 99], arc: 130, spin: 6.3, rest: 0, bounce: 3 },
+    { kind: 'cup', delay: .09, time: .9, to: [1648, -71], arc: 150, spin: -6.3, rest: 0, bounce: 3 },
+    { kind: 'spill', delay: .05, time: 1.1, to: [1300, -238], arc: 120, spin: 7.2, rest: Math.PI / 2, bounce: 2 },
+    // The empty badge, and two ties flung onto the ledge above the duct.
+    { kind: 'badge', delay: .08, time: 1.15, to: [1352, -242], arc: 150, spin: 12.6, rest: 0, bounce: 0 },
+    { kind: 'tie', delay: .02, time: 1.05, to: [1672, -70], arc: 150, spin: 5.2, rest: Math.PI / 2, bounce: 0 },
+    { kind: 'tie', delay: .07, time: 1.15, to: [1750, -70], arc: 170, spin: -4.6, rest: -Math.PI / 2, bounce: 0 },
+    // Printouts, the same sheets the office copier spits out: light, so they float and sway down last,
+    // and they settle in overlapping drifts that make the ledges slippery.
+    { kind: 'paper', delay: .04, time: 1.1, to: [1512, 270], arc: 90, spin: .3, rest: 0, bounce: 0 },
+    { kind: 'paper', delay: .12, time: 1.25, to: [1560, 270], arc: 110, spin: -.5, rest: .05, bounce: 0 },
+    { kind: 'paper', delay: .2, time: 1.15, to: [1606, 270], arc: 80, spin: .6, rest: -.04, bounce: 0 },
+    { kind: 'paper', delay: .06, time: 1.4, to: [1402, 100], arc: 130, spin: .5, rest: .06, bounce: 0 },
+    { kind: 'paper', delay: .15, time: 1.5, to: [1458, 100], arc: 150, spin: -.4, rest: -.03, bounce: 0 },
+    { kind: 'paper', delay: .1, time: 1.35, to: [1516, 100], arc: 120, spin: .4, rest: .04, bounce: 0 },
+    { kind: 'paper', delay: .08, time: 1.6, to: [1503, -70], arc: 170, spin: -.6, rest: .05, bounce: 0 },
+    { kind: 'paper', delay: .18, time: 1.7, to: [1550, -70], arc: 190, spin: .5, rest: -.05, bounce: 0 },
+    { kind: 'paper', delay: .14, time: 1.55, to: [1597, -70], arc: 160, spin: -.3, rest: .02, bounce: 0 },
+    { kind: 'paper', delay: .22, time: 1.95, to: [1402, -240], arc: 200, spin: .4, rest: -.04, bounce: 0 },
+    { kind: 'paper', delay: .16, time: 2.05, to: [1460, -240], arc: 220, spin: -.5, rest: .03, bounce: 0 },
+    { kind: 'paper', delay: .26, time: 1.9, to: [1517, -240], arc: 190, spin: .6, rest: .05, bounce: 0 },
 ];
 
 // Where a prop is `age` seconds into the sneeze: a thrown arc, then a damped hop on landing.
@@ -256,7 +265,7 @@ function coffeeSpill(ctx: RenderCtx, x: number, y: number, age: number, f: Fligh
         if (t < 0) continue;
         const h = Math.sin(i * 12.9898) * 43758.5453, r = h - Math.floor(h);
         const start = flight(x, y, release, f);
-        const landX = f.to[0] - 30 + r * 50, landY = 275.5;
+        const landX = f.to[0] - 30 + r * 50, landY = f.to[1] + 3.5;
         const u = Math.min(1, t / (.28 + r * .15));
         if (u >= 1) continue;
         const px = start.x + (landX - start.x) * u;
@@ -267,11 +276,12 @@ function coffeeSpill(ctx: RenderCtx, x: number, y: number, age: number, f: Fligh
     if (after <= 0) return;
     const spread = 1 - Math.exp(-after * 2.2);
     const left = f.to[0] - 10 - 22 * spread, right = f.to[0] + 4 + 8 * spread;
-    ctx.effectPath([left, 276], [
-        [left + 2, 274.4, right - 4, 274.4, right, 276],
-        [right - 2, 276.6, left + 2, 276.6, left, 276],
+    const top = f.to[1] + 4;
+    ctx.effectPath([left, top], [
+        [left + 2, top - 1.6, right - 4, top - 1.6, right, top],
+        [right - 2, top + .6, left + 2, top + .6, left, top],
     ], ctx.gradientFill(left, 0, right, 0, [[0, '#4a2c1890'], [.5, '#5b3a22d8'], [1, '#4a2c18b0']]));
-    ctx.ellipse(left + (right - left) * .4, 275.3, (right - left) * .15, .5, '#c79b6e80');
+    ctx.ellipse(left + (right - left) * .4, top - .7, (right - left) * .15, .5, '#c79b6e80');
 }
 
 // One printed sheet, drawn exactly like the office copier's paper.
@@ -327,3 +337,46 @@ function necktie(ctx: RenderCtx, flutter: number) {
         ctx.rod(-7 + w * k, sy + 4, 7 + w * k, sy - 2, 2.4, '#e3b450');
     }
 }
+
+// Steam vents in the shaft: a grille that rattles and leaks while it hisses, then a jet of steam.
+export function rooftopVents(ctx: RenderCtx) {
+    for (const vent of STAGE_THREE.vents) {
+        const phase = ventPhase(vent, ctx.state.time);
+        const rattle = phase.kind === 'warn' ? Math.sin(phase.age * 90) * (1 + phase.age * 2) : 0;
+        // Draw every vent as if it were on a left-facing wall, then turn it into place.
+        const ox = ctx.ox, oy = ctx.oy, rotation = ctx.rotation, mirror = ctx.mirror;
+        ctx.ox = vent.x + (vent.axis === 'x' ? rattle * .6 : rattle * .4);
+        ctx.oy = vent.y + (vent.axis === 'x' ? rattle * .4 : 0);
+        if (vent.axis === 'y') ctx.rotation = -Math.PI / 2;
+        else if (vent.dir > 0) { ctx.ox = 2 * ctx.ox; ctx.rotation = Math.PI; ctx.mirror = { y: 0, k: 1 }; ctx.oy = 0; }
+        const cx = vent.axis === 'x' && vent.dir > 0 ? vent.x + rattle * .6 : 0;
+        const cy = vent.axis === 'x' && vent.dir > 0 ? vent.y + rattle * .4 : 0;
+        ventGrille(ctx, cx, cy, phase);
+        if (phase.kind === 'warn') {
+            for (let i = 0; i < 4; i++) {
+                const u = (phase.age * (1.5 + phase.age * 2) + i / 4) % 1;
+                ctx.ellipse(cx - 14 - u * 40, cy - 14 + i * 9 - u * 10, 3 + u * 7, 2 + u * 4, ctx.tint('#f4f7f9', .45 * (1 - u)));
+            }
+        }
+        if (phase.kind === 'blow') {
+            const pace = Math.pow(STAGE_THREE.duct.sneezeDuration / vent.blow, .6);
+            const angle = vent.axis === 'y' ? 90 : vent.dir > 0 ? 0 : 180;
+            ductSteam(ctx, cx - 14, cy, phase.age * pace, vent.blow * pace, .9, angle);
+        }
+        ctx.ox = ox; ctx.oy = oy; ctx.rotation = rotation; ctx.mirror = mirror;
+    }
+}
+
+// Mounting plate, louvres and warning lamp of a vent whose face looks toward -x from (x, y).
+function ventGrille(ctx: RenderCtx, x: number, y: number, phase: { kind: string; age: number }) {
+    ctx.polygon([[x, y - 30], [x - 13, y - 26], [x - 13, y + 26], [x, y + 30]], '#9fabb9');
+    ctx.polygon([[x - 2, y - 25], [x - 11, y - 22], [x - 11, y + 22], [x - 2, y + 25]], '#22374e');
+    for (let i = 0; i < 4; i++) {
+        const ly = y - 17 + i * 11;
+        ctx.rod(x - 2, ly + 5, x - 11, ly - 2, 2.5, '#c3ccd6');
+    }
+    for (const by of [y - 27, y + 27]) ctx.ellipse(x - 7, by, 1.6, 1.6, '#566b82');
+    const lit = phase.kind === 'blow' || (phase.kind === 'warn' && Math.sin(phase.age * 26) > 0);
+    ctx.ellipse(x - 7, y - 36, 3, 3, lit ? '#ff5b4a' : '#6a2a27');
+}
+

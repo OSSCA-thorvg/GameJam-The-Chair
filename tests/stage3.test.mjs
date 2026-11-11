@@ -56,14 +56,16 @@ test('continuous thrust carries the chair smoothly into an airborne stage-four s
         flags.add(state.checkpoint);
         reactions.add(state.ductReaction.kind);
         if (state.firstFlight.kind === 'course') shots.add(state.firstFlight.verticalShots);
+        // The shaft's four ledges, zig-zagging up from the duct: R1, L1, R2, L2.
         if (state.ground) {
-            if (state.player.x > 1510 && state.player.x < 1780 && Math.abs(state.player.y - 248) < 18) landings.add('right');
-            if (state.player.x > 1240 && state.player.x < 1400 && Math.abs(state.player.y - 108) < 18) landings.add('left');
-            if (state.player.x > 1510 && state.player.x < 1780 && Math.abs(state.player.y + 32) < 18) landings.add('duct');
+            if (state.player.x > 1480 && state.player.x < 1780 && Math.abs(state.player.y - 248) < 18) landings.add('R1');
+            if (state.player.x > 1240 && state.player.x < 1540 && Math.abs(state.player.y - 78) < 18) landings.add('L1');
+            if (state.player.x > 1480 && state.player.x < 1780 && Math.abs(state.player.y + 92) < 18) landings.add('R2');
+            if (state.player.x > 1240 && state.player.x < 1540 && Math.abs(state.player.y + 262) < 18) landings.add('L2');
         }
     });
-    assert.deepEqual([...flags], [0, 1, 2, 3]);
-    assert.deepEqual(landings, new Set(['right', 'left', 'duct']));
+    assert.deepEqual([...flags], [0, 1, 2, 3, 4]);
+    assert.deepEqual(landings, new Set(['R1', 'L1', 'R2', 'L2']));
     assert.deepEqual([...reactions], ['idle', 'reacting', 'done']);
     assert.equal(flight.mode, 'play');
     assert.equal(flight.deaths, 0);
@@ -140,7 +142,7 @@ test('entrance moves the chair to the first block and closes before enabling con
 
 test('launch requires three consecutive upward shots and ignores directional or delayed bursts', () => {
     const game = createGame(); game.startStage(3);
-    driveStageThree(game, state => state.checkpoint === 3 && state.ground && state.player.x > 2250);
+    driveStageThree(game, state => state.checkpoint === 4 && state.ground && state.player.x > 2250);
     game.clearInput(); game.spray();
     assert.equal(game.getSnapshot().firstFlight.verticalShots, 1);
     for (let i = 0; i < 30; i++) game.step(dt);
