@@ -3,6 +3,7 @@ import { startStage } from '../../state';
 import type { StageHooks } from '../types';
 import { applyFlight, applyRooftop, applyRooftopEntrance, applyRooftopSpray } from './course/apply';
 import { STAGE_THREE, onSlickPaper } from './data';
+import { STAGE_FOUR } from '../sky/data';
 
 export const rooftopHooks: StageHooks = {
     takeover(s, out, dt) {
@@ -12,7 +13,9 @@ export const rooftopHooks: StageHooks = {
         if (flight === 'arrived') {
             // Reaching the clouds clears the rooftop and continues straight into the sky stage.
             if (s.completedStage < 3) s.completedStage = 3;
-            const arrival = { ...s.p };
+            // The sky stage hovers in at its own start column; the camera re-centres on the cut, so the
+            // chair keeps its place on screen.
+            const arrival = { ...s.p, x: STAGE_FOUR.spawn.x };
             startStage(s, 4, out);
             s.p = arrival;
             s.ground = false;

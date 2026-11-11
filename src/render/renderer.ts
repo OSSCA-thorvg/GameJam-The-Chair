@@ -112,7 +112,7 @@ function setup(
         // Nearing the sales-graph billboard the view tilts up to show the whole sign; riding it eases the
         // chair to the sky stage's framing, which the climb keeps.
         const flight = next.firstFlight;
-        const signLook = next.stage === 3 ? 330 + 110 * ctx.clamp((ctx.p.x - 1900) / 250, 0, 1) : 330;
+        const signLook = next.stage === 3 ? 330 + 110 * ctx.clamp((ctx.p.x - 2050) / 300, 0, 1) : 330;
         const focusY = next.stage === 4 || flight.kind === 'flight' ? 265
             : flight.kind === 'ride' ? 440 - 175 * Math.min(1, flight.age / 1.2) : signLook;
         ctx.vertical = next.stage >= 3 ? baseVertical + Math.max(0, focusY - ctx.p.y) : baseVertical;

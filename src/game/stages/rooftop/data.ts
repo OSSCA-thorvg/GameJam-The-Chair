@@ -19,7 +19,8 @@ const blocks = [
     { id: 'pipe-high', x: 1712, y: -262, width: 68, height: 16 },
     { id: 'upper', x: 1780, y: -144, width: 680, height: 944 },
     { id: 'parapet', x: 1780, y: -330, width: 22, height: 186 },
-    { id: 'rail', x: 2440, y: -204, width: 20, height: 60 },
+    // The billboard's maintenance catwalk continues the roof out under the board.
+    { id: 'catwalk', x: 2460, y: -144, width: 480, height: 12 },
 ];
 
 export const STAGE_THREE = deepFreeze({
@@ -49,16 +50,17 @@ export const STAGE_THREE = deepFreeze({
         { left: 1390, right: 1530, y: -234 },
     ],
     edge: 2460,
-    // The company's sales chart: a neon billboard standing on the roof edge. Its line already climbs
+    // The company's sales chart: a rooftop billboard whose board starts at the roof edge and hangs out over
+    // the street, held by a steel tower on the roof and struts from the facade. Its line already climbs
     // from the roof surface toward the top right, ending in an arrow. Rolling (or dropping) onto the line
     // inside the sign (points up to `catchUntil`) makes sales surge: the line carries the chair up, bursts
     // out of the top of the sign and its last stretch points straight up into the climb.
     // The ride accelerates from `startSpeed` to `topSpeed`; the bright line tip leads the chair by `lead`.
     graph: {
         points: [
-            { x: 2170, y: -144 }, { x: 2250, y: -176 }, { x: 2290, y: -164 }, { x: 2370, y: -260 },
-            { x: 2405, y: -240 }, { x: 2475, y: -380 }, { x: 2505, y: -360 }, { x: 2575, y: -540 },
-            { x: 2590, y: -760 }, { x: 2596, y: -1000 },
+            { x: 2460, y: -144 }, { x: 2540, y: -176 }, { x: 2580, y: -164 }, { x: 2660, y: -260 },
+            { x: 2695, y: -240 }, { x: 2765, y: -380 }, { x: 2795, y: -360 }, { x: 2865, y: -540 },
+            { x: 2880, y: -760 }, { x: 2886, y: -1000 },
         ],
         catchUntil: 7,
         catchBelow: 10, catchAbove: 30,

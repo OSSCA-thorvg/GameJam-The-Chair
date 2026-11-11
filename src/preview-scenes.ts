@@ -290,7 +290,7 @@ function rooftopTakeoff(): PreviewScene {
     game.restore(JSON.stringify(saved));
     game.reset();
     const parked = JSON.parse(game.serialize());
-    parked.p = { ...parked.p, x: 1960, y: -172, vx: 0, vy: 0, a: 0, w: 0 };
+    parked.p = { ...parked.p, x: 2150, y: -172, vx: 0, vy: 0, a: 0, w: 0 };
     parked.ground = true;
     parked.hasExtinguisher = true;
     game.restore(JSON.stringify(parked));
@@ -301,8 +301,8 @@ function rooftopTakeoff(): PreviewScene {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return { ...recordedScene('rooftop-takeoff', 'Rooftop · Ride the sales graph up to the sky', 2300,
-        [{ at: 0, label: 'Run-up' }, { at: 1.3, label: 'Boards the graph · Surge' }, { at: 2.6, label: 'Breaks out of the sign' }, { at: 3.4, label: 'Straight up to the clouds' }], frames), follow: true };
+    return { ...recordedScene('rooftop-takeoff', 'Rooftop · Ride the sales graph up to the sky', 2500,
+        [{ at: 0, label: 'Run-up' }, { at: 1.65, label: 'Boards the graph · Surge' }, { at: 3, label: 'Breaks out of the sign' }, { at: 3.4, label: 'Straight up to the clouds' }, { at: 5.6, label: 'Sky stage' }], frames), follow: true };
 }
 
 // The duct shaft's hazards seen from a ledge: the awake duct's gusts and the steam vents' hiss and blast.

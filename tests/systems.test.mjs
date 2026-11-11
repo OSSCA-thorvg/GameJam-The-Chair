@@ -97,10 +97,10 @@ test('rooftop door scene rolls the chair out and hands over control when closed'
 });
 
 test('a chair falling onto the slumping sales graph rides it up and climbs to the sky', () => {
-    const base = { p: { x: 2200, y: -184, vx: 200, vy: 0, a: 0, w: 0 }, ground: false, hasExtinguisher: true, firstFlight: { kind: 'course' }, ductReaction: { kind: 'idle' }, time: 0 };
+    const base = { p: { x: 2500, y: -188, vx: 200, vy: 0, a: 0, w: 0 }, ground: false, hasExtinguisher: true, firstFlight: { kind: 'course' }, ductReaction: { kind: 'idle' }, time: 0 };
     const caught = sys.rooftopStep(base, 1 / 120).firstFlight;
     assert.equal(caught.kind, 'ride');
-    assert.equal(sys.rooftopStep({ ...base, p: { ...base.p, y: -260 } }, 1 / 120).firstFlight.kind, 'course', 'too high above the line');
+    assert.equal(sys.rooftopStep({ ...base, p: { ...base.p, y: -280 } }, 1 / 120).firstFlight.kind, 'course', 'too high above the line');
     assert.equal(sys.rooftopStep({ ...base, p: { ...base.p, vx: -100, vy: -50 } }, 1 / 120).firstFlight.kind, 'course', 'rising away from the line does not board');
     assert.equal(sys.rooftopStep({ ...base, hasExtinguisher: false }, 1 / 120).firstFlight.kind, 'course');
     let flight = caught, p = base.p, top = Infinity, right = 0;
@@ -110,7 +110,7 @@ test('a chair falling onto the slumping sales graph rides it up and climbs to th
         flight = r.flight; p = r.p; top = Math.min(top, p.y); right = Math.max(right, p.x);
     }
     assert.equal(flight.kind, 'flight');
-    assert.ok(top < -900 && p.vy <= -320 && right > 2560, 'the line carries the chair up and to the right');
+    assert.ok(top < -900 && p.vy <= -320 && right > 2850, 'the line carries the chair up and to the right');
     const climb = sys.flightStep({ kind: 'flight', age: 0 }, { ...p, y: -1819, vy: -300 }, 1 / 120);
     assert.equal(climb.arrived, true);
 });

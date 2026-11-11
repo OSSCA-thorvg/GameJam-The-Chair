@@ -167,6 +167,7 @@ export function rooftopPlatforms(ctx: RenderCtx) {
     for (const b of STAGE_THREE.blocks) {
         if (b.x > ctx.cam + ctx.VW + 80 || b.x + b.width < ctx.cam - 80) continue;
         if (b.id === 'shaft-left') continue; // The matching structural column was drawn with the wall.
+        if (b.id === 'catwalk') continue; // Drawn with the billboard (rooftop-graph.ts).
         if (b.id.endsWith('pad') || b.id === 'duct') {
             shelf(ctx, b.x, b.y, b.width);
             continue;

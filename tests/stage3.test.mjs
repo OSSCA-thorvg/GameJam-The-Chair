@@ -73,7 +73,7 @@ test('dropping off the roof onto the sales graph rides it into an airborne stage
     assert.deepEqual([...reactions], ['idle', 'reacting', 'done']);
     assert.equal(ride.mode, 'play');
     assert.equal(ride.deaths, 0);
-    assert.ok(ride.player.x > 2150 && ride.player.x < 2300, 'the chair boards at the start of the graph');
+    assert.ok(ride.player.x > 2400 && ride.player.x < 2560, 'the chair boards where the board meets the roof edge');
     game.drainEvents(); game.spray();
     assert.ok(!game.drainEvents().some(event => event.type === 'cue' && event.id === 'spray'), 'no manual sprays during the ride');
     game.pause(); const paused = game.getSnapshot(); game.advance(1);
@@ -95,7 +95,8 @@ test('dropping off the roof onto the sales graph rides it into an airborne stage
     assert.equal(end.completedStage, 3);
     assert.ok(Math.abs(end.player.y - beforeTransition.player.y) < 5, 'no position jump on entry');
     assert.ok(Math.abs(end.player.vy - beforeTransition.player.vy) < 5, 'velocity carries through the transition');
-    assert.ok(Math.abs(end.player.x - 2596) < 30 && end.player.x < 2640, 'the climb goes straight up from the graph tip into the hover start');
+    assert.equal(end.player.x, 2380, 'the sky stage starts at its hover column');
+    assert.ok(Math.abs(beforeTransition.player.x - 2880) < 30, 'the climb went straight up from the graph tip');
     assert.equal(end.hasExtinguisher, true);
     assert.equal(end.ground, false);
     assert.equal(end.solids.length, 0, 'no landing cloud or floor');
