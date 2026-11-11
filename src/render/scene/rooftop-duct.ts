@@ -63,7 +63,7 @@ export function rooftopDuct(ctx: RenderCtx) {
             }
         }
         const sneezeAge = burst.age - timing.inhale - timing.twitch;
-        if (sneezeAge >= 0 && sneezeAge < timing.sneeze) powderCloud(ctx, x, y, sneezeAge, burst.kind === 'first' ? 1 : .58);
+        if (sneezeAge >= 0 && sneezeAge < timing.sneeze) ductSteam(ctx, x, y, sneezeAge, timing.sneeze, burst.kind === 'first' ? 1 : .58);
     }
     const sneezeAge = age - duct.inhaleDuration - duct.twitchDuration;
     if (sneezeAge >= 0) {
@@ -76,21 +76,95 @@ export function rooftopDuct(ctx: RenderCtx) {
     }
 }
 
-function powderCloud(ctx: RenderCtx, x: number, y: number, age: number, strength: number) {
-    const reach = Math.min(1, age / .3) * 325 * strength;
-    const alpha = Math.min(1, age / .06) * Math.max(0, 1 - age) * strength;
-    ctx.effectPath([x + 8, y - 8], [
-        [x - reach * .3, y - 9, x - reach * .7, y - 84, x - reach, y - 57],
-        [x - reach - 57, y - 9, x - reach - 28, y + 48, x - reach * .8, y + 48],
-        [x - reach * .5, y + 48, x - reach * .2, y + 12, x + 8, y + 10],
-        [x + 8, y + 5, x + 8, y, x + 8, y - 8],
-    ], ctx.gradientFill(x - reach, y, x, y, [[0, '#e5e9ec00'], [.28, '#e5e9ec9a'], [1, '#fff7e5df']], alpha));
-    for (let i = 0; i < 9; i++) {
-        const u = i / 9, px = x - reach * (.22 + u * .8), py = y + Math.sin(i * 2.1) * u * 38;
-        ctx.ellipse(px, py, 16 + u * 25, 10 + u * 22, ctx.tint('#e7e9e8', alpha * .34));
-        ctx.effectPath([x - 10, y + i * 3 - 12], [[x - reach * .3, y - 11 + i * 2, px + 50, py - 8, px, py]],
-            ctx.gradientFill(x, y, px, py, [[0, '#fffbedda'], [1, '#fffbed00']], alpha * .8));
+// Deterministic 0..1 noise per puff, so a sneeze looks the same when replayed or scrubbed.
+function hash(n: number) {
+    const v = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+    return v - Math.floor(v);
+}
+
+const smooth = (v: number) => v * v * (3 - 2 * v);
+
+// The sneeze as a burst of steam: puffs leave the vent fast, slow down under drag, rise as they cool,
+// wobble with turbulence, swell and thin out. Right at the mouth the jet is still clear; it only turns
+// white a short way out, the way real steam condenses.
+function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: number, strength: number) {
+    const count = Math.round(14 + 16 * strength);
+    const emit = duration * .42;
+    const mouthX = x + 4;
+    const fadeIn = Math.min(1, age / .05);
+
+    // A brief, hard jet right at the mouth while the sneeze is at full pressure.
+    const jet = Math.max(0, 1 - age / (.22 * Math.max(.5, strength))) * fadeIn;
+    if (jet > 0) {
+        const len = (150 + 140 * strength) * smooth(Math.min(1, age / .08 + .25));
+        ctx.beginLayer({ key: 'duct-steam-jet', blur: 3, motionBlur: { distance: 10 * ctx.scale, angle: 180 } });
+        ctx.effectPath([mouthX, y - 22], [
+            [mouthX - len * .35, y - 30, mouthX - len * .75, y - 44, mouthX - len, y - 34],
+            [mouthX - len - 22, y - 8, mouthX - len - 14, y + 30, mouthX - len, y + 36],
+            [mouthX - len * .7, y + 40, mouthX - len * .3, y + 30, mouthX, y + 24],
+        ], ctx.gradientFill(mouthX, y, mouthX - len, y, [
+            [0, '#f7fbff00'], [.12, ctx.tint('#f7fbff', .55 * jet)], [.55, ctx.tint('#eef3f6', .38 * jet)], [1, '#eef3f600'],
+        ]));
+        ctx.endLayer();
     }
+
+    ctx.beginLayer({ key: 'duct-steam', blur: 2.2 });
+    for (let i = 0; i < count; i++) {
+        const born = (i / count) * emit;
+        const t = age - born;
+        if (t <= 0) continue;
+        const life = duration - born;
+        const seed = i * 7.31 + strength * 13;
+        // Early puffs carry the full blast; later ones dribble out and mostly drift upward.
+        const late = born / emit;
+        const speed = (780 + hash(seed) * 320) * strength * (1 - late * .78);
+        const drag = 3.1 + hash(seed + 1) * .8;
+        const spread = (hash(seed + 2) - .5) * .5 - late * .35;
+        const travel = speed / drag * (1 - Math.exp(-drag * t));
+        const rise = 46 + hash(seed + 3) * 40;
+        const phase = hash(seed + 4) * Math.PI * 2;
+        const wobble = Math.sin(t * (4 + hash(seed + 5) * 3) + phase) * (6 + 22 * t);
+        const px = mouthX - travel * Math.cos(spread) + Math.sin(t * 2.3 + phase) * 6 * t;
+        const py = y + 4 + travel * Math.sin(spread) - rise * t * t - 20 * late * t + wobble * .5;
+        const r = (10 + 10 * hash(seed + 6)) + (40 + 34 * hash(seed + 7)) * strength * (1 - Math.exp(-2.6 * t)) + 18 * t;
+        const condensed = smooth(Math.min(1, Math.max(0, (mouthX - px - 12) / 70)));
+        const fade = Math.pow(Math.max(0, 1 - t / life), 1.4);
+        const alpha = fadeIn * condensed * fade * (.5 + .25 * hash(seed + 8)) * (.75 + .25 * strength);
+        if (alpha < .01) continue;
+        // Lit from above: the bright core sits high in each puff and the underside goes cool grey.
+        const hx = px - r * .12, hy = py - r * .22;
+        ctx.effectPath([px - r, py], [
+            [px - r, py - r * .55, px - r * .55, py - r, px, py - r],
+            [px + r * .55, py - r, px + r, py - r * .55, px + r, py],
+            [px + r, py + r * .55, px + r * .55, py + r, px, py + r],
+            [px - r * .55, py + r, px - r, py + r * .55, px - r, py],
+        ], ctx.radialFill(hx, hy, r * 1.08, [
+            [0, ctx.tint('#ffffff', alpha)], [.45, ctx.tint('#f1f4f6', alpha * .62)], [.8, ctx.tint('#d9e0e6', alpha * .22)], [1, '#d9e0e600'],
+        ]));
+    }
+    ctx.endLayer();
+
+    // Thin curling filaments trail the leading puffs and give the cloud its torn, turbulent edge.
+    ctx.beginLayer({ key: 'duct-steam-wisps', blur: 2.6 });
+    const strands = Math.round(4 + 4 * strength);
+    for (let i = 0; i < strands; i++) {
+        const seed = 91 + i * 3.7 + strength * 5;
+        const t = age - i * .025;
+        if (t <= 0) continue;
+        const reach = (230 + 120 * hash(seed)) * strength * (1 - Math.exp(-3.2 * t));
+        const lift = 30 * t * t + 16 * (hash(seed + 1) - .5) * reach / 100;
+        const curl = (hash(seed + 2) - .5) * 70 * Math.min(1, t * 2);
+        const fade = fadeIn * Math.pow(Math.max(0, 1 - age / duration), 1.6) * .2;
+        if (fade < .01 || reach < 20) continue;
+        const sx = mouthX - 40, sy = y + (hash(seed + 3) - .5) * 30;
+        const ex = mouthX - reach, ey = sy - lift - reach * .12;
+        ctx.strokePath([sx, sy], [[sx - reach * .35, sy + curl, ex + reach * .25, ey - curl, ex, ey]], {
+            width: 5 + 7 * hash(seed + 4) * strength,
+            color: ctx.tint('#f6f9fb', fade),
+            cap: 'round',
+        }, { trim: [Math.min(.6, t * .5), 1] });
+    }
+    ctx.endLayer();
 }
 
 function glove(ctx: RenderCtx, x: number, y: number, rotation: number) {

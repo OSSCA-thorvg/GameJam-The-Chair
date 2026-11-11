@@ -50,3 +50,15 @@ test('the front trigger excludes the rear, upper shaft and other stages', () => 
         applyRooftopSpray(s, 0); assert.equal(s.rooftop.duct.kind, 'idle');
     }
 });
+
+test('the sleeping duct wakes from further away, but once awake only close sprays retrigger it', () => {
+    const s = front(); s.p.x = 1660 - 250; s.p.y = 226 + 110;
+    applyRooftopSpray(s, 0);
+    assert.equal(s.rooftop.duct.kind, 'reacting', 'a spray 250 away wakes the idle duct');
+    tick(s, 2); assert.equal(s.rooftop.duct.kind, 'done');
+    s.p.x = 1660 - 250; s.p.y = 226; s.p.vx = 0;
+    applyRooftopSpray(s, 0);
+    assert.equal(s.rooftop.duct.kind, 'done', 'the awake duct ignores the same distant spray');
+    s.p.x = 1600; applyRooftopSpray(s, 0);
+    assert.equal(s.rooftop.duct.kind, 'reacting', 'a close spray still retriggers it');
+});
