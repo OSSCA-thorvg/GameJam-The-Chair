@@ -3,7 +3,7 @@ import test from 'node:test';
 import { GOLDEN_SCENARIOS } from './golden.mjs';
 
 // Recorded from main behaviour before splitting systems (step 6) and the core (step 7).
-// Update only for an intended gameplay change, and say why in the PR.
+// Update only for an intended gameplay change: run `npm run golden:update` and say why in the PR.
 // Updated when merging main's stage 4 course: snapshots gained `sky`, and the sky stage itself changed.
 // Stages 1-3 traces were checked to match the previous hashes with `sky` removed.
 // Updated when stage code moved into stages/<stage>/: the office copier no longer runs in other stages, so their
