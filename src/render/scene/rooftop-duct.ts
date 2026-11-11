@@ -166,20 +166,30 @@ function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: 
 }
 
 /** Fill colours that identify each ejected prop (tests count them). */
-export const DUCT_PROP_COLORS = { can: '#2340a8', bottle: '#e08a2c', badge: '#f3f1ea', tie: '#b23a3f' } as const;
+export const DUCT_PROP_COLORS = { can: '#2340a8', cup: '#f4ece0', badge: '#f3f1ea', tie: '#b23a3f' } as const;
 
-// Landing spots sit on real ledges: the left pad (top 136), the pad in front of the duct (top 276)
-// and the shelf above the duct (top -4).
-type Flight = { delay: number; time: number; to: [number, number]; arc: number; spin: number; rest: number; bounce: number; scale: number };
-// Sizes follow the rider (about 1 unit per cm): a can is ~7x21, the badge card ~11x14, the tie ~35 long like the rider's own.
-const PROPS = {
-    canA: { delay: 0, time: .62, to: [1350, 132], arc: 120, spin: 9.4, rest: Math.PI / 2, bounce: 6, scale: .45 },
-    canB: { delay: .05, time: .5, to: [1556, 272], arc: 70, spin: -7.9, rest: -Math.PI / 2, bounce: 5, scale: .45 },
-    bottle: { delay: .03, time: .58, to: [1592, 271], arc: 95, spin: 6.3, rest: Math.PI / 2, bounce: 4, scale: .42 },
-    badge: { delay: .08, time: .82, to: [1286, 128], arc: 150, spin: 12.6, rest: 0, bounce: 0, scale: .38 },
-    // The tie is flung highest and lands on the shelf above the duct.
-    tie: { delay: .02, time: 1.05, to: [1585, -10], arc: 150, spin: 5.2, rest: Math.PI / 2, bounce: 0, scale: .62 },
-} satisfies Record<string, Flight>;
+type PropKind = 'can' | 'cup' | 'spill' | 'badge' | 'tie';
+// Landing spots sit on real ledges: the left pad (top 136, x 1240-1400), the pad in front of the duct
+// (top 276, x 1510-1640) and the shelf above the duct (top -4, x 1510-1780). `to` is the resting centre.
+type Flight = { kind: PropKind; delay: number; time: number; to: [number, number]; arc: number; spin: number; rest: number; bounce: number };
+// Sizes follow the rider (about 1 unit per cm): a can is ~7x21, a takeaway cup ~9x14, the badge card ~11x14
+// and a tie ~35 long like the rider's own.
+const SCALE: Record<PropKind, number> = { can: .45, cup: .55, spill: .55, badge: .38, tie: .62 };
+const PROPS: readonly Flight[] = [
+    // Energy drinks: the heaviest, they tumble and rattle to a stop on their side.
+    { kind: 'can', delay: 0, time: .62, to: [1352, 132], arc: 120, spin: 9.4, rest: Math.PI / 2, bounce: 6 },
+    { kind: 'can', delay: .04, time: .7, to: [1388, 132], arc: 140, spin: -11, rest: -Math.PI / 2, bounce: 5 },
+    { kind: 'can', delay: .06, time: .48, to: [1538, 272], arc: 70, spin: -7.9, rest: -Math.PI / 2, bounce: 5 },
+    { kind: 'can', delay: .1, time: .55, to: [1612, 272], arc: 55, spin: 8.6, rest: Math.PI / 2, bounce: 6 },
+    // Coffee: two cups land upright, one lands on its side and leaks a puddle.
+    { kind: 'cup', delay: .03, time: .66, to: [1318, 129], arc: 130, spin: 6.3, rest: 0, bounce: 3 },
+    { kind: 'cup', delay: .09, time: .9, to: [1548, -11], arc: 150, spin: -6.3, rest: 0, bounce: 3 },
+    { kind: 'spill', delay: .05, time: .52, to: [1578, 272], arc: 80, spin: 7.2, rest: Math.PI / 2, bounce: 2 },
+    // The empty badge, and two ties flung highest onto the shelf above the duct.
+    { kind: 'badge', delay: .08, time: .82, to: [1270, 128], arc: 150, spin: 12.6, rest: 0, bounce: 0 },
+    { kind: 'tie', delay: .02, time: 1.05, to: [1600, -10], arc: 150, spin: 5.2, rest: Math.PI / 2, bounce: 0 },
+    { kind: 'tie', delay: .07, time: 1.15, to: [1672, -10], arc: 170, spin: -4.6, rest: -Math.PI / 2, bounce: 0 },
+];
 
 // Where a prop is `age` seconds into the sneeze: a thrown arc, then a damped hop on landing.
 function flight(x: number, y: number, age: number, f: Flight) {
@@ -192,26 +202,60 @@ function flight(x: number, y: number, age: number, f: Flight) {
     // Spin while airborne and settle into the resting angle as it lands.
     const turns = Math.round((f.spin - f.rest) / (Math.PI * 2)) * Math.PI * 2 + f.rest;
     const rotation = turns * ease + Math.sin(after * 18) * Math.exp(-after * 8) * .25 * Math.sign(f.bounce);
-    return { x: px, y: py, rotation, flying: u < 1, u, after };
-}
-
-function place(ctx: RenderCtx, x: number, y: number, rotation: number, scale = 1) {
-    ctx.ox = x; ctx.oy = y; ctx.rotation = rotation; ctx.localScale = scale;
+    return { x: px, y: py, rotation, flying: u < 1, after };
 }
 
 function ductProps(ctx: RenderCtx, x: number, y: number, age: number) {
     const from = x + 6;
-    const tie = flight(from, y, age, PROPS.tie);
-    const badge = flight(from, y, age, PROPS.badge);
-    const bottle = flight(from, y, age, PROPS.bottle);
-    const cans = [flight(from, y, age, PROPS.canA), flight(from, y, age, PROPS.canB)];
-
-    pills(ctx, from, y, age);
-    place(ctx, tie.x, tie.y, tie.rotation, PROPS.tie.scale); necktie(ctx, tie.flying ? age : -1);
-    place(ctx, badge.x, badge.y, badge.rotation, PROPS.badge.scale); idBadge(ctx, badge.flying ? age : -1);
-    place(ctx, bottle.x, bottle.y, bottle.rotation, PROPS.bottle.scale); pillBottle(ctx);
-    for (const can of cans) { place(ctx, can.x, can.y, can.rotation, PROPS.canA.scale); energyCan(ctx); }
+    // The knocked-over cup leaves coffee behind first, so it sits under everything else.
+    for (const f of PROPS) if (f.kind === 'spill') coffeeSpill(ctx, from, y, age, f);
+    for (const f of PROPS) {
+        const at = flight(from, y, age, f);
+        ctx.ox = at.x; ctx.oy = at.y; ctx.rotation = at.rotation; ctx.localScale = SCALE[f.kind];
+        if (f.kind === 'can') energyCan(ctx);
+        else if (f.kind === 'cup' || f.kind === 'spill') coffeeCup(ctx, f.kind === 'spill' && !at.flying);
+        else if (f.kind === 'badge') idBadge(ctx, at.flying ? age : -1);
+        else necktie(ctx, at.flying ? age + f.delay * 9 : -1);
+    }
     ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
+}
+
+// A takeaway coffee cup: tapered paper body, cardboard sleeve and a snap-on lid.
+function coffeeCup(ctx: RenderCtx, empty: boolean) {
+    ctx.polygon([[-8, -9], [8, -9], [6, 13], [-6, 13]], DUCT_PROP_COLORS.cup);
+    ctx.gradientPolygon([[-8, -9], [8, -9], [6, 13], [-6, 13]],
+        ctx.gradientFill(-8, 0, 8, 0, [[0, '#8a7a6640'], [.35, '#ffffff00'], [.5, '#ffffff50'], [1, '#6f604f55']]));
+    ctx.polygon([[-7.4, -2], [7.4, -2], [6.6, 7], [-6.6, 7]], '#9a6b43');
+    ctx.rect(-4, 1, 8, 2, '#c8a27a');
+    ctx.rect(-9.5, -12, 19, 3.5, '#ece7df');
+    ctx.polygon([[-7, -12], [7, -12], [5, -15], [-5, -15]], '#dcd5ca');
+    ctx.ellipse(3, -14, 1.6, .9, empty ? '#5b3a22' : '#a89f92');
+}
+
+// Coffee shaken out of the tumbling cup, then a puddle spreading from where it lands on its side.
+function coffeeSpill(ctx: RenderCtx, x: number, y: number, age: number, f: Flight) {
+    for (let i = 0; i < 7; i++) {
+        const release = f.delay + .08 + i * .04;
+        const t = age - release;
+        if (t < 0) continue;
+        const h = Math.sin(i * 12.9898) * 43758.5453, r = h - Math.floor(h);
+        const start = flight(x, y, release, f);
+        const landX = f.to[0] - 30 + r * 50, landY = 275.5;
+        const u = Math.min(1, t / (.28 + r * .15));
+        if (u >= 1) continue;
+        const px = start.x + (landX - start.x) * u;
+        const py = start.y + (landY - start.y) * u * u - Math.sin(u * Math.PI) * (8 + r * 12);
+        ctx.ellipse(px, py, 1.4, 1.8, '#5b3a22d0');
+    }
+    const after = age - f.delay - f.time;
+    if (after <= 0) return;
+    const spread = 1 - Math.exp(-after * 2.2);
+    const left = f.to[0] - 10 - 22 * spread, right = f.to[0] + 4 + 8 * spread;
+    ctx.effectPath([left, 276], [
+        [left + 2, 274.4, right - 4, 274.4, right, 276],
+        [right - 2, 276.6, left + 2, 276.6, left, 276],
+    ], ctx.gradientFill(left, 0, right, 0, [[0, '#4a2c1890'], [.5, '#5b3a22d8'], [1, '#4a2c18b0']]));
+    ctx.ellipse(left + (right - left) * .4, 275.3, (right - left) * .15, .5, '#c79b6e80');
 }
 
 // A tall energy-drink can: blue body, lightning bolt, brushed rims and a shine down one side.
@@ -223,36 +267,6 @@ function energyCan(ctx: RenderCtx) {
     ctx.rect(-7, -21, 14, 4, '#c9d0d8');
     ctx.rect(-5, -23, 10, 2, '#e9edf1');
     ctx.rect(-7, 17, 14, 4, '#aab3be');
-}
-
-// A plastic supplement bottle; its pills are drawn separately as they scatter.
-function pillBottle(ctx: RenderCtx) {
-    ctx.gradientPolygon([[-11, -12], [11, -12], [11, 20], [-11, 20]],
-        ctx.gradientFill(-11, 0, 11, 0, [[0, '#b8661ddd'], [.35, ctx.tint(DUCT_PROP_COLORS.bottle, .9)], [.5, '#ffcf8fe0'], [1, '#a95a18dd']]));
-    ctx.rect(-12, -21, 24, 10, '#f6f4ee');
-    for (let i = 0; i < 4; i++) ctx.rect(-12 + i * 6.5, -21, 2, 10, '#d9d6cc');
-    ctx.rect(-9, -2, 18, 13, '#fbfaf5');
-    ctx.rect(-6, 1, 12, 2, '#3a8f5a');
-    ctx.rect(-6, 5, 8, 2, '#c9c5b8');
-}
-
-// Capsules shake out of the bottle mid-flight and skitter across the pad in front of the duct.
-function pills(ctx: RenderCtx, x: number, y: number, age: number) {
-    for (let i = 0; i < 9; i++) {
-        const release = .14 + i * .025;
-        const t = age - release;
-        if (t < 0) continue;
-        const h = Math.sin(i * 12.9898) * 43758.5453, r = h - Math.floor(h);
-        const start = flight(x, y, release, PROPS.bottle);
-        const landX = 1530 + r * 90, landY = 275;
-        const u = Math.min(1, t / (.35 + r * .2));
-        const px = start.x + (landX - start.x) * u;
-        const py = start.y + (landY - start.y) * u * u - Math.sin(u * Math.PI) * (12 + r * 18);
-        const angle = u < 1 ? t * (14 + r * 10) : r * 3;
-        const c = Math.cos(angle) * 1.8, s = Math.sin(angle) * 1.8;
-        ctx.rod(px - c, py - s, px, py, 1.8, i % 3 === 0 ? '#f4f1e8' : '#d8483c');
-        ctx.rod(px, py, px + c, py + s, 1.8, i % 2 ? '#f4f1e8' : '#f2c14e');
-    }
 }
 
 // An employee badge with nobody on it: blank photo, blank name, still on its lanyard.
