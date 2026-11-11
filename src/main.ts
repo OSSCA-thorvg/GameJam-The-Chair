@@ -103,7 +103,7 @@ const feedback = createFeedback(() => locale);
 const player = createReplayPlayer(root, () => locale, () => replaySettings, () => unbind.sync());
 const unbind = bindInput(root, game, { blocked: () => player.active });
 function watchReplay(file: ReplayFile) {
-    if (game.getSnapshot().mode === 'play') game.pause();
+    if (game.status().mode === 'play') game.pause();
     game.clearInput();
     player.open(file);
     unbind.sync();

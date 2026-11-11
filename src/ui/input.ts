@@ -15,7 +15,7 @@ export function bindInput(root: HTMLElement, game: Game, { blocked = () => false
         return [...container.querySelectorAll<HTMLElement>('button:not([disabled]), summary, [tabindex="0"]')].filter(el => el.getClientRects().length > 0);
     }
     function syncMenu() {
-        const paused = game.getSnapshot().mode === 'pause' && !blocked();
+        const paused = game.status().mode === 'pause' && !blocked();
         if (menu) menu.hidden = !paused;
         pauseButton?.setAttribute('aria-expanded', String(paused));
         if (paused && !menuOpen) {
@@ -34,7 +34,7 @@ export function bindInput(root: HTMLElement, game: Game, { blocked = () => false
     }
     function togglePause() {
         if (blocked()) return;
-        if (game.getSnapshot().mode === 'play') returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : pauseButton;
+        if (game.status().mode === 'play') returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : pauseButton;
         game.pause();
         syncMenu();
     }
@@ -42,14 +42,14 @@ export function bindInput(root: HTMLElement, game: Game, { blocked = () => false
         root.querySelector<HTMLElement>(selector)?.addEventListener('click', () => { if (blocked()) return; action(); syncMenu(); }, options);
     }
     button('[data-start]', () => {
-        const state = game.getSnapshot();
+        const state = game.status();
         if (state.mode === 'won' && state.stage === 1) game.startStage(2);
         else if (state.mode === 'won' && state.stage === 2) game.startStage(3);
         else game.reset();
     });
     for (const stage of [1, 2, 3, 4] as const) {
         button(`[data-stage="${stage}"]`, () => {
-            if (stage <= game.getSnapshot().completedStage || (stage === 4 && game.getSnapshot().completedStage >= 3)) game.startStage(stage);
+            if (stage <= game.status().completedStage || (stage === 4 && game.status().completedStage >= 3)) game.startStage(stage);
         });
     }
     button('[data-reset]', game.restart);
@@ -58,7 +58,7 @@ export function bindInput(root: HTMLElement, game: Game, { blocked = () => false
     const accepting = () => root.isConnected && !blocked() && !document.querySelector?.('.startup-splash');
     window.addEventListener('keydown', e => {
         if (e.key !== 'Tab' || !accepting()) return;
-        const state = game.getSnapshot();
+        const state = game.status();
         const dialog = state.mode === 'pause' ? menu : panel && !panel.hidden ? panel : null;
         if (!dialog) return;
         const targets = focusable(dialog);
@@ -75,10 +75,10 @@ export function bindInput(root: HTMLElement, game: Game, { blocked = () => false
         afterRestart: syncMenu,
     }, controller.signal);
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden && game.getSnapshot().mode === 'play') togglePause();
+        if (document.hidden && game.status().mode === 'play') togglePause();
     }, options);
     const observer = new MutationObserver(() => {
-        if ((game.getSnapshot().mode === 'pause' && !blocked()) !== menuOpen || (!!panel && !panel.hidden) !== panelOpen) syncMenu();
+        if ((game.status().mode === 'pause' && !blocked()) !== menuOpen || (!!panel && !panel.hidden) !== panelOpen) syncMenu();
     });
     observer.observe(root, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
     queueMicrotask(syncMenu);

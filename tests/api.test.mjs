@@ -8,7 +8,7 @@ const PUBLIC_API = [
     'reset', 'restart', 'startStage', 'jump', 'spray', 'interact', 'leaveMeeting', 'pause',
     'setInput', 'press', 'release', 'clearInput',
     'step', 'advance', 'advanceImpact', 'advanceFocusLoss',
-    'getSnapshot', 'drainEvents', 'send', 'serialize', 'restore',
+    'getSnapshot', 'status', 'drainEvents', 'send', 'serialize', 'restore',
 ];
 
 test('createGame keeps its public API', () => {
@@ -24,4 +24,13 @@ test('game configuration is frozen and versioned', async () => {
     assert.throws(() => { GAME_CONFIG.rules.paperPenalty = 0; });
     assert.throws(() => { STAGES[3].terrain.push([]); });
     for (const stage of [1, 2, 3, 4]) assert.equal(STAGES[stage].id, stage);
+});
+
+test('status() reads the values UI code needs without copying the state', () => {
+    const game = createGame();
+    game.startStage(4);
+    assert.deepEqual(game.status(), { mode: 'play', stage: 4, completedStage: 0, skyPhase: 'arrival' });
+    const snapshot = game.getSnapshot();
+    assert.equal(game.status().mode, snapshot.mode);
+    assert.equal(game.status().skyPhase, snapshot.sky.phase);
 });

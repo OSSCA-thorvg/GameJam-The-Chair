@@ -1,13 +1,12 @@
-import type { StageId } from './types';
 import { FIXED_STEP, LEVEL, PHYSICS } from './level';
-import type { Input, DeepReadonly, GameEvent } from './types';
+import type { Input, DeepReadonly, GameEvent, Mode, StageId } from './types';
+import type { SkyState } from './stages/sky/data';
 import { clonePlain } from './data';
 import { cloneState, createCore, parseState, serializeState, type GameState as CoreState, type Progress } from './state';
 import type { Command } from './commands';
 import { SIMULATED, applyCommand, stageSolids, stepGame } from './step';
 import { STAGES } from './stages/index';
-import { focusBlockedIn } from './systems/focus/apply';
-import { applyFocusLoss } from './systems/focus/apply';
+import { applyFocusLoss, focusBlockedIn } from './systems/focus/apply';
 import { applyImpact } from './systems/impact/apply';
 import { stageHooks } from './stages/hooks';
 import { monitorsView } from './stages/view';
@@ -30,6 +29,9 @@ export type GameOptions = {
     // Called when a step or command throws. The game keeps its previous state and rethrows.
     onError?: (error: GameError) => void;
 };
+
+/** The few values UI code needs to decide what a key or button does. See Game.status(). */
+export type GameStatus = { mode: Mode; stage: StageId; completedStage: 0 | StageId; skyPhase: SkyState['phase'] };
 
 export type GameError = { tick: number; at: 'step' | 'command'; message: string; stack?: string; command?: Command };
 
@@ -93,6 +95,11 @@ export function createGame(options: GameOptions = {}) {
         emit(out);
     }
 
+    // Cheap read for UI decisions (key handling, menus): no copy, primitives only.
+    function status(): GameStatus {
+        return { mode: s.mode, stage: s.stage, completedStage: s.completedStage, skyPhase: s.sky.phase };
+    }
+
     // Every call returns a copy the caller owns (UI and tests may edit it). States are never modified
     // after a step, so a shared read-only view would be safe for the core, but it would change this contract.
     function getSnapshot() {
@@ -149,6 +156,7 @@ export function createGame(options: GameOptions = {}) {
             s = parseState(json);
             acc = 0;
         },
+        status,
         getSnapshot: getSnapshot as () => DeepReadonly<ReturnType<typeof viewState>>,
         drainEvents() {
             return pending.splice(0);
