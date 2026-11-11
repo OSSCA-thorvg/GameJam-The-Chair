@@ -14,13 +14,16 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when the duct shaft became a zig-zag chimney (alternating ledges, pipes, a parapet slot, steam vents,
 // slippery printouts, an awake duct that keeps gusting and a flag halfway up): 'rooftop to sky' follows the new
 // route, and 'rooftop duct' changes because the duct now gusts on its own after waking.
+// Updated when stage three capped the extinguisher at three bursts per time in the air: both rooftop traces
+// change, and every final snapshot gains `airSprays`. Without that field the four office/building hashes
+// still matched, so their play is unchanged.
 const EXPECTED = {
-    'office route': 'b44f75772237eac8',
-    'office crash': '812fe21e31464a0f',
-    'building exit': '9ea83d27fd4d405c',
-    'building lift': '55c6191b1aca87c7',
-    'rooftop to sky': '6436f809ec845fa0',
-    'rooftop duct': '39fc0690e320b992',
+    'office route': '995927ffea4a5796',
+    'office crash': 'e6454bb05e08a208',
+    'building exit': 'db4de9b6bb96890d',
+    'building lift': '97d2abf2c791c11b',
+    'rooftop to sky': '552d0b94896862a5',
+    'rooftop duct': '6727692e86ef84e3',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

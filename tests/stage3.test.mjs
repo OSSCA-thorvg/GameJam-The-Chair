@@ -25,7 +25,7 @@ test('extinguisher must be collected and does not leak into other stages', () =>
     assert.equal(game.getSnapshot().hasExtinguisher, false);
 });
 
-test('held spray repeats every 0.24 seconds without ammo and right input propels right', () => {
+test('held spray repeats every 0.24 seconds, three bursts per time in the air, and right input propels right', () => {
     const game = createGame(); game.startStage(3);
     driveStageThree(game, state => state.hasExtinguisher);
     game.restart(); game.drainEvents();
@@ -42,11 +42,16 @@ test('held spray repeats every 0.24 seconds without ammo and right input propels
             assert.ok(state.spray.dir.x < 0 && state.spray.dir.y > 0);
         }
     }
-    assert.equal(bursts, 5);
+    assert.equal(bursts, 3, 'the extinguisher stops after three bursts until the chair lands');
+    assert.equal(game.getSnapshot().airSprays, 3);
     for (let i = 1; i < times.length; i++) assert.ok(Math.abs(times[i] - times[i - 1] - .24) < dt);
     game.release('spray');
     for (let i = 0; i < 60; i++) game.step(dt);
     assert.equal(game.getSnapshot().spray.burst, 0);
+    for (let i = 0; i < 600 && !game.getSnapshot().ground; i++) game.step(dt);
+    assert.equal(game.getSnapshot().airSprays, 0, 'landing refills the bursts');
+    game.drainEvents(); game.spray();
+    assert.ok(game.drainEvents().some(event => event.type === 'cue' && event.id === 'spray'));
 });
 
 test('continuous thrust carries the chair smoothly into an airborne stage-four start', () => {

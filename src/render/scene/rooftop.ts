@@ -64,6 +64,21 @@ export function drawRooftop(ctx: RenderCtx) {
     rooftopCeilingLight(ctx);
 
     sprayPlume(ctx);
+    airSprayGauge(ctx);
+}
+
+// Three charges above the chair: one goes dark per burst in the air, all refill on touching down.
+function airSprayGauge(ctx: RenderCtx) {
+    const state = ctx.state;
+    if (!state.hasExtinguisher || state.firstFlight.kind !== 'course' || (state.ground && state.airSprays === 0)) return;
+    const left = STAGE_THREE.airSprayLimit - state.airSprays;
+    const x = ctx.p.x, y = ctx.p.y - 112;
+    ctx.rect(x - 24, y - 7, 48, 14, '#1d2c3fa8');
+    for (let i = 0; i < STAGE_THREE.airSprayLimit; i++) {
+        const cx = x - 14 + i * 14;
+        ctx.ellipse(cx, y, 4.6, 4.6, i < left ? '#fff2ce' : '#5d6d82');
+        if (i < left) ctx.ellipse(cx - 1.3, y - 1.4, 1.6, 1.4, '#ffffff');
+    }
 }
 
 

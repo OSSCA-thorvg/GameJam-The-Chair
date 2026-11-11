@@ -171,8 +171,8 @@ function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: 
 export const DUCT_PROP_COLORS = { can: '#2340a8', cup: '#f4ece0', badge: '#f3f1ea', tie: '#b23a3f', paper: ART.palette.paper } as const;
 
 type PropKind = 'can' | 'cup' | 'spill' | 'badge' | 'tie' | 'paper';
-// Landing spots sit on the shaft ledges: R1 (top 276, x 1480-1660 in front of the duct), L1 (top 106,
-// x 1240-1540), R2 (top -64, x 1480-1780) and L2 (top -234, x 1240-1540). `to` is the resting centre.
+// Landing spots sit on the shaft ledges: R1 (top 276, x 1540-1660 in front of the duct), L1 (top 106,
+// x 1240-1540), R2 (top -64, x 1540-1780) and L2 (top -234, x 1240-1540). `to` is the resting centre.
 // The printouts cover exactly the slippery spans in STAGE_THREE.slick; everything else lands beside them.
 type Flight = { kind: PropKind; delay: number; time: number; to: [number, number]; arc: number; spin: number; rest: number; bounce: number };
 // Sizes follow the rider (about 1 unit per cm): a can is ~7x21, a takeaway cup ~9x14, the badge card ~11x14
@@ -182,27 +182,27 @@ const PROPS: readonly Flight[] = [
     // Energy drinks: the heaviest, they tumble and rattle to a stop on their side.
     { kind: 'can', delay: 0, time: .7, to: [1300, 102], arc: 120, spin: 9.4, rest: Math.PI / 2, bounce: 6 },
     { kind: 'can', delay: .04, time: .75, to: [1362, 102], arc: 140, spin: -11, rest: -Math.PI / 2, bounce: 5 },
-    { kind: 'can', delay: .06, time: .4, to: [1640, 272], arc: 50, spin: -7.9, rest: -Math.PI / 2, bounce: 5 },
+    { kind: 'can', delay: .06, time: .8, to: [1268, -238], arc: 140, spin: -7.9, rest: -Math.PI / 2, bounce: 5 },
     { kind: 'can', delay: .1, time: .8, to: [1712, -68], arc: 140, spin: 8.6, rest: Math.PI / 2, bounce: 6 },
     // Coffee: two cups land upright, one lands on its side and leaks a puddle.
     { kind: 'cup', delay: .03, time: .72, to: [1270, 99], arc: 130, spin: 6.3, rest: 0, bounce: 3 },
-    { kind: 'cup', delay: .09, time: .9, to: [1648, -71], arc: 150, spin: -6.3, rest: 0, bounce: 3 },
+    { kind: 'cup', delay: .09, time: .9, to: [1690, -71], arc: 150, spin: -6.3, rest: 0, bounce: 3 },
     { kind: 'spill', delay: .05, time: 1.1, to: [1300, -238], arc: 120, spin: 7.2, rest: Math.PI / 2, bounce: 2 },
     // The empty badge, and two ties flung onto the ledge above the duct.
     { kind: 'badge', delay: .08, time: 1.15, to: [1352, -242], arc: 150, spin: 12.6, rest: 0, bounce: 0 },
-    { kind: 'tie', delay: .02, time: 1.05, to: [1672, -70], arc: 150, spin: 5.2, rest: Math.PI / 2, bounce: 0 },
-    { kind: 'tie', delay: .07, time: 1.15, to: [1750, -70], arc: 170, spin: -4.6, rest: -Math.PI / 2, bounce: 0 },
+    { kind: 'tie', delay: .02, time: 1.05, to: [1725, -70], arc: 150, spin: 5.2, rest: Math.PI / 2, bounce: 0 },
+    { kind: 'tie', delay: .07, time: 1.15, to: [1762, -70], arc: 170, spin: -4.6, rest: -Math.PI / 2, bounce: 0 },
     // Printouts, the same sheets the office copier spits out: light, so they float and sway down last,
     // and they settle in overlapping drifts that make the ledges slippery.
-    { kind: 'paper', delay: .04, time: 1.1, to: [1512, 270], arc: 90, spin: .3, rest: 0, bounce: 0 },
-    { kind: 'paper', delay: .12, time: 1.25, to: [1560, 270], arc: 110, spin: -.5, rest: .05, bounce: 0 },
-    { kind: 'paper', delay: .2, time: 1.15, to: [1606, 270], arc: 80, spin: .6, rest: -.04, bounce: 0 },
+    { kind: 'paper', delay: .04, time: 1.1, to: [1562, 270], arc: 90, spin: .3, rest: 0, bounce: 0 },
+    { kind: 'paper', delay: .12, time: 1.25, to: [1598, 270], arc: 110, spin: -.5, rest: .05, bounce: 0 },
+    { kind: 'paper', delay: .2, time: 1.15, to: [1630, 270], arc: 80, spin: .6, rest: -.04, bounce: 0 },
     { kind: 'paper', delay: .06, time: 1.4, to: [1402, 100], arc: 130, spin: .5, rest: .06, bounce: 0 },
     { kind: 'paper', delay: .15, time: 1.5, to: [1458, 100], arc: 150, spin: -.4, rest: -.03, bounce: 0 },
     { kind: 'paper', delay: .1, time: 1.35, to: [1516, 100], arc: 120, spin: .4, rest: .04, bounce: 0 },
-    { kind: 'paper', delay: .08, time: 1.6, to: [1503, -70], arc: 170, spin: -.6, rest: .05, bounce: 0 },
-    { kind: 'paper', delay: .18, time: 1.7, to: [1550, -70], arc: 190, spin: .5, rest: -.05, bounce: 0 },
-    { kind: 'paper', delay: .14, time: 1.55, to: [1597, -70], arc: 160, spin: -.3, rest: .02, bounce: 0 },
+    { kind: 'paper', delay: .08, time: 1.6, to: [1562, -70], arc: 170, spin: -.6, rest: .05, bounce: 0 },
+    { kind: 'paper', delay: .18, time: 1.7, to: [1606, -70], arc: 190, spin: .5, rest: -.05, bounce: 0 },
+    { kind: 'paper', delay: .14, time: 1.55, to: [1630, -70], arc: 160, spin: -.3, rest: .02, bounce: 0 },
     { kind: 'paper', delay: .22, time: 1.95, to: [1402, -240], arc: 200, spin: .4, rest: -.04, bounce: 0 },
     { kind: 'paper', delay: .16, time: 2.05, to: [1460, -240], arc: 220, spin: -.5, rest: .03, bounce: 0 },
     { kind: 'paper', delay: .26, time: 1.9, to: [1517, -240], arc: 190, spin: .6, rest: .05, bounce: 0 },

@@ -24,7 +24,7 @@ function firstTime(vent, kind) {
     throw new Error(`vent never ${kind}`);
 }
 
-test('the shaft has no open column: holding spray straight up from the floor never clears the first ledge', () => {
+test('the shaft has no open column: holding spray straight up never gets past the duct ledge', () => {
     for (const x of [1270, 1350, 1450, 1510, 1600, 1700]) {
         const game = createGame({ seed: 1 }); game.startStage(3);
         driveStageThree(game, state => state.checkpoint === 2 && state.ground && state.player.x > 1100);
@@ -34,9 +34,17 @@ test('the shaft has no open column: holding spray straight up from the floor nev
             game.setInput(s.player.x < x ? 'right' : 'left'); game.step(dt);
         }
         game.setInput('spray');
-        let top = Infinity;
-        for (let i = 0; i < 120 * 10; i++) { game.step(dt); game.drainEvents(); top = Math.min(top, game.getSnapshot().player.y); }
-        assert.ok(top > 100, `from x=${x} the chair rose to ${top.toFixed(0)}`);
+        let top = Infinity, stood = Infinity;
+        for (let i = 0; i < 120 * 10; i++) {
+            game.step(dt); game.drainEvents();
+            const s = game.getSnapshot();
+            top = Math.min(top, s.player.y);
+            if (s.ground) stood = Math.min(stood, s.player.y);
+        }
+        // Landing refills the bursts, so the chair may hop onto R1 (centre 248) and float up into the room
+        // above it, but it never stands on a higher ledge nor reaches the L2 storey (bottom -210).
+        assert.ok(stood > 200, `from x=${x} the chair stood at ${stood.toFixed(0)}`);
+        assert.ok(top > -150, `from x=${x} the chair rose to ${top.toFixed(0)}`);
     }
 });
 
