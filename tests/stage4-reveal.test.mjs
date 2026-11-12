@@ -14,36 +14,42 @@ const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, cr
 `);
 
 test('the stage four billboard slogan fills its space without covering the portrait', () => {
-    const renderLabel = (locale, width) => {
+    const renderLabels = (locale, width) => {
         const labels = [];
-        let originX = 0;
+        let originX = 0, originY = 0;
         const lg = {
             save() {}, restore() {}, rotate() {},
-            translate(x) { originX = x; },
+            translate(x, y) { originX = x; originY = y; },
             measureText(text) {
-                const ems = text === '흔들리지 않는 기업' ? 7.7 : 10;
-                return { width: Number.parseFloat(this.font) * ems };
+                const ems = { '흔들리지 않는 기업': 7.7, '흔들리지': 4, '않는 기업': 3.25,
+                    'UNSHAKEABLE INC.': 10, UNSHAKE: 5.2, 'ABLE INC.': 4.8 }[text];
+                return { width: Number(this.font.match(/([\d.]+)px/)?.[1]) * ems };
             },
-            fillText(text) {
+            strokeText() {},
+            fillText(text, x, y) {
                 const measured = this.measureText(text).width;
-                labels.push({ fontSize: Number.parseFloat(this.font), left: originX - measured / 2, right: originX + measured / 2 });
+                labels.push({ text, fontSize: Number(this.font.match(/([\d.]+)px/)?.[1]),
+                    left: originX + x - measured / 2, right: originX + x + measured / 2, y: originY + y });
             },
         };
         const ctx = createRenderCtx({}, lg);
         ctx.locale = locale;
+        ctx.scale = 1 / 1.12;
         skyCoursePlatform(ctx, { id: 'last-sign', kind: 'sign', x: 0, y: 0, width, angle: 0 });
-        return labels[0];
+        return labels;
     };
 
-    const narrowKo = renderLabel('ko', 230);
-    const wideKo = renderLabel('ko', 270);
-    const narrowEn = renderLabel('en', 230);
-    assert.ok(narrowKo.fontSize > 16, 'the Korean slogan grows beyond the previous fixed size');
-    assert.ok(wideKo.fontSize > narrowKo.fontSize, 'a wider billboard uses the extra room');
-    for (const [label, width] of [[narrowKo, 230], [wideKo, 270], [narrowEn, 230]]) {
-        assert.ok(label.left >= 14 - 1e-9, 'the slogan stays inside the left frame');
-        assert.ok(label.right <= width - 66 + 1e-9, 'the slogan leaves room for the portrait');
+    const ko = renderLabels('ko', 230);
+    const en = renderLabels('en', 230);
+    assert.deepEqual(ko.map(label => label.text), ['흔들리지', '않는 기업']);
+    assert.deepEqual(en.map(label => label.text), ['UNSHAKE', 'ABLE INC.']);
+    assert.ok(ko.every(label => label.fontSize >= 30), 'Korean stays large at the stage four camera scale');
+    assert.ok(en.every(label => label.fontSize >= 25), 'English stays large at the stage four camera scale');
+    for (const label of [...ko, ...en]) {
+        assert.ok(label.left >= 14 / 1.12 - 1e-9, 'the slogan stays inside the left frame');
+        assert.ok(label.right <= (230 - 66) / 1.12 + 1e-9, 'the slogan leaves room for the portrait');
     }
+    assert.ok(ko[1].y > ko[0].y, 'the slogan uses the billboard height instead of shrinking into one line');
 });
 
 test('the ending settles before turning and finishes on its timer regardless of held movement', () => {
