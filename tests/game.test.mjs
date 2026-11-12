@@ -15,7 +15,7 @@ const { createEffects, EFFECT_STYLE, createFeedback, createHud, createRenderer, 
         name: 'headless-thorvg',
         setup(build) {
             build.onLoad({ filter: /\/render\/thorvg\.ts$/ }, () => ({
-                contents: "export const loadThorvg = () => Promise.reject(new Error('Exercise Canvas2D fallback'));",
+                contents: "export const loadThorvg = () => Promise.reject(new Error('Exercise Canvas2D fallback')); export const thorvgRenderer = () => 'sw';",
                 loader: 'js',
             }));
         },
