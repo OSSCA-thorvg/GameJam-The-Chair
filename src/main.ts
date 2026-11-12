@@ -15,6 +15,7 @@ import { openingState } from './render/scene/opening/timeline';
 import type { StageId } from './game/stages/building/data';
 import type { Input } from './game/types';
 import markup from './scene.html?raw';
+import { bindOrientation } from './ui/orientation';
 import './style.css';
 const app = document.querySelector('#app');
 if (!app) {
@@ -120,6 +121,7 @@ function watchReplay(file: ReplayFile) {
     player.open(file);
     unbind.sync();
 }
+bindOrientation(root, game);
 bindReplayMenu(root, () => locale, { recorder, errorLog, watch: watchReplay });
 const hud = createHud(root, () => locale);
 let renderer: ReturnType<typeof createRenderer> | null = null;

@@ -19,3 +19,12 @@ html{color-scheme:light dark}body{margin:0;padding:24px;background:light-dark(#f
 #chair-office-one .opening-skip{position:absolute;inset:0;z-index:5;cursor:pointer;outline:none}#chair-office-one .opening-skip span{position:absolute;right:14px;bottom:12px;padding:4px 9px;border-radius:8px;background:#20263480;color:#f5eddc;font-size:12px;letter-spacing:.1em;opacity:.7}#chair-office-one .opening-skip:focus-visible span{opacity:1;outline:2px solid #e8bc7c}
 
 .game-page #chair-office-one{width:var(--fit-w);max-width:none}
+
+/* Phones play in landscape: portrait shows a rotate hint, landscape overlays the touch controls on the game. */
+/* 휴대폰은 가로로 플레이한다: 세로면 회전 안내, 가로면 터치 버튼을 게임 위에 겹친다. */
+#chair-office-one .rotate-hint{display:none}
+@media(pointer:coarse) and (orientation:portrait){.game-page #chair-office-one .rotate-hint{display:flex;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;background:#111418}#chair-office-one .rotate-hint svg{width:min(45vw,220px)}#chair-office-one .rotate-phone{transform-origin:60px 60px;animation:rotate-phone 2.4s cubic-bezier(.6,-.3,.3,1.4) infinite}#chair-office-one .rotate-chair{transform-origin:60px 72px;animation:rotate-chair 2.4s ease-in-out infinite}#chair-office-one .rotate-arrow{animation:rotate-arrow 2.4s ease-in-out infinite}}
+@keyframes rotate-phone{0%,15%{transform:rotate(0)}45%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+@keyframes rotate-chair{0%,40%{transform:translateY(0) rotate(0)}50%{transform:translateY(-9px) rotate(70deg)}60%,85%{transform:translateY(0) rotate(90deg)}100%{transform:rotate(0)}}
+@keyframes rotate-arrow{0%,10%,55%,100%{opacity:0}20%,40%{opacity:1}}
+@media(pointer:coarse) and (orientation:landscape){.game-page #chair-office-one{--controls-h:0px}.game-page #chair-office-one .drive-controls{position:fixed;left:0;right:0;bottom:0;z-index:6;margin:0;padding:0 max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));pointer-events:none;align-items:flex-end}.game-page #chair-office-one .drive-controls>*{flex:0 0 auto;width:min(30vw,190px)}.game-page #chair-office-one .drive-controls button{pointer-events:auto;background:#28303b99;color:#f6eddc;border-color:#f5eddc55;backdrop-filter:blur(2px)}}
