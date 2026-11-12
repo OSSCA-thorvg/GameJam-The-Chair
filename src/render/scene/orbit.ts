@@ -7,6 +7,7 @@ import { orbitSky, orbitCloudBank, doorGlow } from './orbit-atmosphere';
 import { STAGE_FIVE as C } from '../../game/stages/orbit/data';
 
 export function drawOrbit(ctx: RenderCtx) {
+    ctx.commands = [];
     const { orbit, player: p } = ctx.state;
     if (!orbit) return;
     orbitSky(ctx);

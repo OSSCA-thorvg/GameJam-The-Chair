@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Orbit vector rendering benchmark</title>
+<style>body{background:#17232c;color:#eee;font:16px system-ui;max-width:1100px;margin:24px auto}canvas{width:1000px;height:510px}button{font:inherit;padding:12px}pre{white-space:pre-wrap}</style>
+<h1>Orbit vector rendering benchmark</h1>
+<p>Baseline versus optimized cloud entry, using the same moving game snapshots. Both command buffers are cleared, excluding the baseline accumulation bug. Five alternating runs, 40 frames each, at 1000 × 510. Keep this tab visible.</p>
+<button id="run">Run comparison</button><pre id="result">Ready</pre>
+<canvas id="orbit-benchmark" width="1000" height="510"></canvas>
+<script type="module" src="./orbit-render-benchmark.mjs"></script></html>

@@ -106,9 +106,12 @@ test('the orbit preview reaches the office door, seeks backwards, and renders fi
         drawOrbit(ctx);
         assert.deepEqual(frame.state, before);
         assert.ok(ctx.commands.length > 200);
-        assert.ok(ctx.commands.some(cmd => cmd.curves && cmd.stroke), 'hoops and clouds use vector curves');
-        assert.ok(ctx.commands.every(cmd => !cmd.layer?.blur && !cmd.layer?.motionBlur), 'the cloud entry uses no blur');
-        for (const cmd of ctx.commands) for (const point of [...cmd.v, ...(cmd.curves ?? [])]) assert.ok(point.every(Number.isFinite));
+        assert.ok(ctx.commands.reduce((n,c) => n+(c.curves?.length ?? 0), 0) <= 5000, 'cloud entry stays within its curve budget');
+        assert.ok(ctx.commands.filter(c => c.c && typeof c.c === 'object').length <= 140, 'cloud entry stays within its gradient budget');
+        const commands = ctx.commands;
+        assert.ok(commands.some(cmd => cmd.curves && cmd.stroke), 'hoops and clouds use vector curves');
+        assert.ok(commands.every(cmd => !cmd.layer?.blur && !cmd.layer?.motionBlur), 'the cloud entry uses no blur');
+        for (const cmd of commands) for (const point of [...cmd.v, ...(cmd.curves ?? [])]) assert.ok(point.every(Number.isFinite));
     }
 });
 
@@ -142,4 +145,17 @@ test('orbit recordings reproduce steering and thrust and support backwards seek'
     const last = seekTimeline(timeline, file.endTick);
     assert.deepEqual(last.state, JSON.parse(game.serialize()));
     assert.deepEqual(seekTimeline(timeline, 400).state, before[0]);
+});
+
+test('repeated orbit frames do not accumulate previous drawing commands', () => {
+    const scene = previewScenes.find(scene => scene.id === 'orbit-route');
+    const state = scene.sample(3).state;
+    const ctx = createRenderCtx({}, {});
+    Object.assign(ctx, { state, t: state.time, W: 1000, H: 510 });
+    drawOrbit(ctx);
+    const count = ctx.commands.length;
+    for (let frame = 0; frame < 20; frame++) {
+        drawOrbit(ctx);
+        assert.equal(ctx.commands.length, count, `drawing commands accumulated at frame ${frame+2}`);
+    }
 });
