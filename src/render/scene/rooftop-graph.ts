@@ -1,12 +1,13 @@
 import { GRAPH_CORNERS, GRAPH_LENGTH, STAGE_THREE, graphPointAt } from '../../game/stages/rooftop/data';
 import type { RenderCtx } from '../context';
 import type { Curve, Vector } from '../types';
+import { graphTarget } from './graph-target';
 
 // The company's rooftop billboard. A steel tower on the roof and struts from the facade hold a sales
 // board that starts at the roof edge and hangs out over the street, with a logo band on top, a
 // maintenance catwalk underneath and floodlights shining up at it. Its line already climbs toward an
 // arrow; once the chair rolls onto it the line lights up behind the chair, draws itself just ahead
-// (ThorVG trim path), bursts out through the logo band and points straight up into the sky.
+// (ThorVG trim path), then ends just above the logo band while the chair keeps climbing.
 const ROOF = -144;
 const EDGE = STAGE_THREE.edge;
 const PANEL = { left: EDGE, right: 2920, top: -620, bottom: -150 };
@@ -77,31 +78,6 @@ function floodlights(ctx: RenderCtx, since: number | null) {
     });
 }
 
-// A small company monitor showing the same sales chart before the billboard: falling in the machine
-// room, going nowhere in the shaft. Same neon line as the billboard, so the big one reads as its payoff.
-export function salesMonitor(ctx: RenderCtx, x: number, y: number, trend: 'fall' | 'flat') {
-    const w = 104, h = 62;
-    ctx.rod(x + 22, y - 18, x + 22, y, 3, '#3a4f66');
-    ctx.rod(x + w - 22, y - 18, x + w - 22, y, 3, '#3a4f66');
-    ctx.rect(x - 4, y - 4, w + 8, h + 8, '#1c2636');
-    ctx.gradientPolygon(quad(x, y, x + w, y + h), ctx.gradientFill(0, y, 0, y + h, [[0, '#101a2b'], [1, '#1b2a3e']]));
-    for (let gx = x + 20; gx < x + w; gx += 21) ctx.rod(gx, y + 3, gx, y + h - 3, 1, '#2b3d55');
-    const ys = trend === 'fall' ? [.25, .35, .3, .55, .5, .78] : [.55, .45, .6, .5, .58, .52];
-    const pts = ys.map((k, i) => [x + 8 + i * (w - 16) / (ys.length - 1), y + 6 + k * (h - 12)] as Vector);
-    const curves = pts.slice(1).map((b, i) => [pts[i][0], pts[i][1], b[0], b[1], b[0], b[1]] as Curve);
-    const color = trend === 'fall' ? '#ff4d5e' : '#f2c14e';
-    const blink = .6 + .4 * Math.abs(Math.sin(ctx.t * (trend === 'fall' ? 3 : 1.5)));
-    ctx.beginLayer({ key: `sales-monitor-${trend}`, blur: 2, blend: 'add', opacity: .8 * blink });
-    ctx.strokePath(pts[0], curves, { width: 8, color, cap: 'round' });
-    ctx.endLayer();
-    ctx.strokePath(pts[0], curves, { width: 2.5, color: '#fff1e0', cap: 'round' });
-    if (trend === 'fall') {
-        const [a, b] = [pts[pts.length - 2], pts[pts.length - 1]];
-        const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-        tipArrow(ctx, { x: b[0], y: b[1], tx: (b[0] - a[0]) / len, ty: (b[1] - a[1]) / len }, color, .5);
-    }
-}
-
 // The logo band: the company's chair pictogram and a row of lit panels.
 function logoBand(ctx: RenderCtx, surging: boolean) {
     ctx.rect(PANEL.left - 6, BAND.top, PANEL.right - PANEL.left + 12, BAND.bottom - BAND.top, '#e9e2d2');
@@ -118,11 +94,23 @@ function logoBand(ctx: RenderCtx, surging: boolean) {
 export function rooftopGraphSign(ctx: RenderCtx) {
     const flight = ctx.state.firstFlight;
     const surging = flight.kind !== 'course';
-    const shown = flight.kind === 'ride' ? Math.min(GRAPH_LENGTH, flight.dist + STAGE_THREE.graph.lead) : flight.kind === 'flight' ? GRAPH_LENGTH : 0;
-    const t = ctx.t;
-
+    const distance = flight.kind === 'ride' ? flight.dist : flight.kind === 'flight' ? GRAPH_LENGTH : 0;
+    const shown = surging ? Math.min(GRAPH_LENGTH, distance + STAGE_THREE.graph.lead) : 0;
     structure(ctx);
+    board(ctx, surging);
+    logoBand(ctx, surging);
+    catwalk(ctx);
+    floodlights(ctx, flight.kind === 'ride' ? flight.age : flight.kind === 'flight' ? 9 : null);
+    graphTarget(ctx, distance);
+    restingLine(ctx, surging);
+    chartTip(ctx, surging);
+    if (!surging) return;
+    surgeLine(ctx, shown);
+    fallingChips(ctx, shown);
+}
 
+function board(ctx: RenderCtx, surging: boolean) {
+    const t = ctx.t;
     // The board with an LED grid.
     ctx.rect(PANEL.left - 6, PANEL.top, PANEL.right - PANEL.left + 12, PANEL.bottom - PANEL.top + 6, '#2b3242');
     ctx.gradientPolygon(quad(PANEL.left, PANEL.top + 4, PANEL.right, PANEL.bottom),
@@ -136,19 +124,19 @@ export function rooftopGraphSign(ctx: RenderCtx) {
         const h = surging ? Math.min(420, calm * 1.8 + 40 + Math.sin(t * 9 + i) * 8) : calm + Math.sin(t * 2 + i) * 3;
         ctx.rect(x, PANEL.bottom - 6 - h, 16, h, surging ? '#2f8a5ad0' : '#2b5a4ab0');
     }
-    logoBand(ctx, surging);
-    catwalk(ctx);
-    floodlights(ctx, flight.kind === 'ride' ? flight.age : flight.kind === 'flight' ? 9 : null);
+}
 
-    // The resting chart: the climbing line inside the board, pulsing gently, with its arrow.
+function restingLine(ctx: RenderCtx, surging: boolean) {
+    const t = ctx.t;
+    // A crisp centre stays aligned with the fixed ride surface under the halo.
     const inside = lineCurves(0, INSIDE);
     const pulse = .55 + .45 * Math.abs(Math.sin(t * 2.6));
     ctx.beginLayer({ key: 'graph-rest-glow', blur: 3, blend: 'add', opacity: (surging ? .35 : .75) * pulse });
     ctx.strokePath(inside.start, inside.curves, { width: 13, color: '#3cff9a', cap: 'round' });
     ctx.endLayer();
-    ctx.strokePath(inside.start, inside.curves, { width: 4, color: surging ? '#4f8f6c' : '#bdf5d4', cap: 'round' });
+    ctx.strokePath(inside.start, inside.curves, { width: 5, color: '#73e6a2', cap: 'round' });
+    ctx.strokePath(inside.start, inside.curves, { width: 2, color: '#f4fff6', cap: 'round' });
     if (!surging) {
-        tipArrow(ctx, graphPointAt(GRAPH_CORNERS[INSIDE]), '#7dffb5');
         // Chevrons along the start of the line: roll this way.
         if (ctx.p.x > 2150) for (let i = 0; i < 3; i++) {
             const k = (t * .8 + i / 3) % 1;
@@ -157,22 +145,24 @@ export function rooftopGraphSign(ctx: RenderCtx) {
             const x = at.x, y = at.y - 20;
             ctx.polygon([[x - 6, y - 9], [x + 8, y], [x - 6, y + 9]], `#ffe2a8${alpha}`);
         }
-        return;
     }
+}
 
+function surgeLine(ctx: RenderCtx, shown: number) {
     // The surge: the whole line, bright up to just ahead of the chair.
-    const whole = lineCurves(0, STAGE_THREE.graph.points.length - 1);
-    const trim: [number, number] = [0, shown / GRAPH_LENGTH];
+    const whole = lineCurves(0, INSIDE + 1);
+    const trim: [number, number] = [0, Math.min(1, shown / GRAPH_CORNERS[INSIDE + 1])];
     ctx.beginLayer({ key: 'graph-glow', blur: 5, blend: 'add', opacity: .9 });
     ctx.strokePath(whole.start, whole.curves, { width: 22, color: '#2bff88', cap: 'round' }, { trim });
     ctx.endLayer();
     ctx.strokePath(whole.start, whole.curves, { width: 9, color: ctx.gradientFill(0, ROOF, 0, -1000, [[0, '#4dff9a'], [.5, '#c4ff5c'], [1, '#fff27a']]), cap: 'round' }, { trim });
     ctx.strokePath(whole.start, whole.curves, { width: 3, color: '#f4fff6', cap: 'round' }, { trim });
-    tipArrow(ctx, graphPointAt(shown), '#c9ff6a');
+}
 
-    // Where the line burst out through the logo band: a cracked band and falling chips.
+function fallingChips(ctx: RenderCtx, shown: number) {
+    const flight = ctx.state.firstFlight;
+    // A few pale chips fall where the line leaves the logo band.
     if (shown > GRAPH_CORNERS[INSIDE] + 140) {
-        for (const [dx, dy] of [[-24, 12], [20, 16], [-10, 30], [28, 34]]) ctx.rod(BREAK.x, BREAK.y, BREAK.x + dx, BREAK.y + dy, 1.8, '#6b6253');
         const age = flight.kind === 'ride' ? Math.max(0, flight.age - 1.1) : 3;
         for (let i = 0; i < 6; i++) {
             const k = Math.min(age, 1.6);
@@ -180,6 +170,17 @@ export function rooftopGraphSign(ctx: RenderCtx) {
             ctx.polygon([[x, y], [x + 8, y + 3], [x + 2, y + 9]], '#e9e2d2');
         }
     }
+}
+
+// A finite arrow ends just above the sign; camera movement never extends it.
+function chartTip(ctx: RenderCtx, surging: boolean) {
+    const tail = lineCurves(INSIDE, INSIDE + 1);
+    const last = graphPointAt(GRAPH_CORNERS[INSIDE + 1]);
+    ctx.beginLayer({ key: 'graph-tip-glow', blur: 4, blend: 'add', opacity: surging ? .75 : .4 });
+    ctx.strokePath(tail.start, tail.curves, { width: 16, color: '#3cff9a', cap: 'round' });
+    ctx.endLayer();
+    ctx.strokePath(tail.start, tail.curves, { width: 2.5, color: '#bdf5d4', cap: 'round' });
+    tipArrow(ctx, last, '#c9ff6a');
 }
 
 // The arrow head at the end of a chart line, pointing along it.

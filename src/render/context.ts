@@ -5,6 +5,7 @@ import type { DeepReadonly, Mode } from '../game/types';
 import type { Vector, Curve, Color, Gradient, DrawCommand, LayerSpec, Blend, Stroke } from './types';
 import { ART } from './art';
 import type { EffectsState } from './effects';
+import type { PersonalBoxReaction } from './personal-box-motion';
 
 export type RenderCtx = {
     locale: Locale;
@@ -63,6 +64,7 @@ export type RenderCtx = {
     glare: number;
     practiceBurst: number;
     saveFlash: number;
+    personalBox: PersonalBoxReaction;
 
     screenPoint(x: number, y: number): Vector;
     polygon(points: Vector[], color: string | Gradient): void;
@@ -140,6 +142,7 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         glare: 0,
         practiceBurst: 0,
         saveFlash: 0,
+        personalBox: { kind: 'idle' },
     } as unknown as RenderCtx;
 
     ctx.screenPoint = (x, y) => {

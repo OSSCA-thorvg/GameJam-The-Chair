@@ -2,6 +2,7 @@ import { LEVEL } from '../game/level';
 import type { GameEvent } from '../game/types';
 import { EFFECT_STYLE } from './art';
 import { WATER_GRAVITY, bucketMouth, pourFlow, pourLaunch } from './bucket';
+import { createPersonalBoxObserver } from './personal-box-motion';
 export { EFFECT_STYLE } from './art';
 export type Speck = {
     x: number;
@@ -54,6 +55,7 @@ export type WaterPuddle = {
 };
 // Changing these values changes appearance only, never focus recovery or damage.
 export function createEffects() {
+    const personalBox = createPersonalBoxObserver();
     const F = LEVEL.floor;
     let specks: Speck[] = [];
     let waterDrops: WaterDrop[] = [];
@@ -236,6 +238,9 @@ export function createEffects() {
         }
     }
 
-    return { receive, snapshot: () => ({ specks, waterDrops, waterRipples, waterPour, waterPuddle, paperFace, glare, copierFlash, practiceBurst, saveFlash }) };
+    return { receive, observe: personalBox.observe, restorePersonalBox: personalBox.restore,
+        snapshot: () => ({ specks, waterDrops, waterRipples, waterPour, waterPuddle, paperFace, glare, copierFlash, practiceBurst, saveFlash,
+            personalBox: personalBox.snapshot() }),
+    };
 }
 export type EffectsState = ReturnType<ReturnType<typeof createEffects>['snapshot']>;

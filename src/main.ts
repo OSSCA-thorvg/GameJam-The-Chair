@@ -76,6 +76,7 @@ const errorLog = createErrorLog(replaySettings.maxErrors);
 // The newest data stays in this browser so the replay tool (/replay.html) can open it directly.
 const keepBrowserData = () => saveBrowserData(replayData(recorder, errorLog));
 let lastStage: number | null = null;
+const effects = createEffects();
 const game = createGame({
     seed,
     progress: { deaths: savedDeaths, completedStage: savedCompletedStage },
@@ -84,7 +85,10 @@ const game = createGame({
         keepBrowserData();
     },
     onCommand: recorder.onCommand,
-    onStep: recorder.onStep,
+    onStep(state) {
+        recorder.onStep(state);
+        effects.observe({ stage: state.stage, deaths: state.deaths, time: state.time, player: state.p });
+    },
     onError(error) {
         recorder.onError(error);
         errorLog.add(error, lastStage, recorder.attempts()[0] ?? null);
@@ -100,7 +104,6 @@ function logWindowError(value: unknown) {
 }
 window.addEventListener('error', event => logWindowError(event.error ?? event.message));
 window.addEventListener('unhandledrejection', event => logWindowError(event.reason));
-const effects = createEffects();
 const feedback = createFeedback(() => locale);
 const player = createReplayPlayer(root, () => locale, () => replaySettings, () => unbind.sync());
 // The opening cutscene plays once per browser over the first fresh game; the game waits until it ends.
@@ -147,6 +150,7 @@ function draw() {
     try {
         // The replay player feeds its own effects and feedback, so live and replayed cues never mix.
         if (!replay) {
+            effects.observe(state);
             for (const event of events) {
                 effects.receive(event);
                 feedback.receive(event, state);

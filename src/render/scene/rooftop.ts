@@ -7,7 +7,9 @@ import { sprayPlume } from './spray';
 import { ascentClouds } from './clouds';
 import { rooftopCeilingLight, rooftopSky, rooftopWalls, rooftopPlatforms } from './rooftop-art';
 import { rooftopDuct, rooftopVents } from './rooftop-duct';
-import { rooftopGraphSign, salesMonitor } from './rooftop-graph';
+import { rooftopGraphSign } from './rooftop-graph';
+import { employeeBoard } from './employee-board';
+import { personalBox } from './personal-box';
 
 export function drawRooftop(ctx: RenderCtx) {
     const state = ctx.state;
@@ -18,9 +20,8 @@ export function drawRooftop(ctx: RenderCtx) {
 
     rooftopSky(ctx);
     rooftopWalls(ctx);
-    // The company's sales on small monitors before the billboard: falling, then going nowhere.
-    salesMonitor(ctx, 66, 140, 'fall');
-    salesMonitor(ctx, 1268, 170, 'flat');
+    employeeBoard(ctx);
+    personalBox(ctx);
     rooftopPlatforms(ctx);
     rooftopDuct(ctx);
     rooftopVents(ctx);

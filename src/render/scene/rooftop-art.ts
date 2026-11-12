@@ -86,19 +86,19 @@ const CEILING_LAMPS = [-180, -30, 120, 270];
 // Drawn after the entrance door and cabinets so the beams fall across them instead of being cut off.
 export function rooftopCeilingLight(ctx: RenderCtx) {
     for (const x of CEILING_LAMPS) {
-        ctx.gradientPolygon([[x - 4, 121], [x + 70, 121], [x + 117, 312], [x - 51, 312]],
-            ctx.gradientFill(0, 121, 0, 312, [[0, '#ffe0a426'], [1, '#ffe0a400']]));
+        ctx.gradientPolygon([[x - 4, -39], [x + 70, -39], [x + 117, 312], [x - 51, 312]],
+            ctx.gradientFill(0, -39, 0, 312, [[0, '#ffe0a426'], [1, '#ffe0a400']]));
     }
 }
 
 export function rooftopWalls(ctx: RenderCtx) {
-    wallPanels(ctx, -400, 88, 850, 332);
-    ctx.rect(-400, 88, 850, 14, '#273d56');
-    ctx.rod(-300, 122, 420, 122, 12, '#8192a4');
-    ctx.rod(-300, 118, 420, 118, 3, '#b0b9c4');
+    wallPanels(ctx, -400, -72, 850, 492);
+    ctx.rect(-400, -72, 850, 14, '#273d56');
+    ctx.rod(-300, -38, 420, -38, 12, '#8192a4');
+    ctx.rod(-300, -42, 420, -42, 3, '#b0b9c4');
     for (const x of CEILING_LAMPS) {
-        ctx.rect(x - 5, 106, 76, 15, '#26394f');
-        ctx.rect(x, 110, 66, 5, '#f8d8a2');
+        ctx.rect(x - 5, -54, 76, 15, '#26394f');
+        ctx.rect(x, -50, 66, 5, '#f8d8a2');
     }
     // Closed equipment cabinets and conduits keep the room visibly unoccupied.
     for (const x of [-110, 218, 341]) {
@@ -108,7 +108,7 @@ export function rooftopWalls(ctx: RenderCtx) {
         ctx.rect(x + 41, 322, 4, 21, '#bcc2bd');
         for (let i = 0; i < 4; i++) ctx.rect(x + 17, 276 + i * 7, 26, 2, '#2d455d');
     }
-    column(ctx, 423, 88, 420);
+    column(ctx, 423, -72, 420);
     ctx.rect(365, 202, 85, 218, '#253b52');
     ctx.gradientPolygon([[441, 205], [450, 205], [450, 420], [309, 420]],
         ctx.gradientFill(450, 300, 309, 300, [[0, '#ffe1a6a0'], [1, '#ffe1a600']]));

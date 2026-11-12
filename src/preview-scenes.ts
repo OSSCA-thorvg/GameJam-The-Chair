@@ -3,7 +3,7 @@ import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { STAGE_TWO } from './game/stages/building/data';
-import { ductTimings, STAGE_THREE } from './game/stages/rooftop/data';
+import { ductTimings, STAGE_THREE, GRAPH_CORNERS } from './game/stages/rooftop/data';
 import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/stages/office/monitor/decide';
@@ -44,6 +44,7 @@ function capture(game: Game, effects: ReturnType<typeof createEffects>, state: G
 function stepGame(game: Game, effects: ReturnType<typeof createEffects>) {
     for (let i = 0; i < 2; i++) {
         game.step(FIXED_STEP);
+        effects.observe(game.getSnapshot());
         for (const event of game.drainEvents()) effects.receive(event);
     }
 }
@@ -220,12 +221,39 @@ function rooftopEntrance(): PreviewScene {
     game.startStage(3);
     const effects = createEffects();
     const frames = [capture(game, effects)];
-    for (let i = 0; i < 168; i++) {
+    for (let i = 0; i < 300; i++) {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('rooftop-entrance', 'Rooftop · Hinged entrance', 400,
-        [{ at: 0, label: 'Closed' }, { at: .4, label: 'Door opens' }, { at: 1.1, label: 'Chair emerges' }, { at: 1.8, label: 'At the block' }, { at: 2.6, label: 'Door closed · Controls ready' }], frames);
+    return recordedScene('rooftop-entrance', 'Rooftop · Entrance & slipping portrait', 400,
+        [{ at: 0, label: 'Closed · Portrait straight' }, { at: .4, label: 'Door opens' },
+            { at: 1.1, label: 'Chair emerges · Portrait straight' }, { at: 1.8, label: 'At the block' },
+            { at: 2.6, label: 'Door shuts · Portrait jolts' }, { at: 2.8, label: 'Portrait drops' },
+            { at: 2.96, label: 'Caught · Swinging' }, { at: 3.9, label: 'Swing overshoot' },
+            { at: 4.2, label: 'Settled at 40 degrees' }], frames);
+}
+
+function personalBelongings(): PreviewScene {
+    const game = createGame();
+    game.startStage(3);
+    const base = game.getSnapshot();
+    const effects = createEffects();
+    const frames: PreviewFrame[] = [];
+    for (let tick = 0; tick <= 960; tick++) {
+        const time = tick * FIXED_STEP;
+        const x = time < 1 ? 1000 : time < 3 ? 1000 + (time - 1) * 265
+            : time < 4 ? 1530 + (time - 3) * 170 : time < 5 ? 1700 : 1700 - Math.min(1, (time - 5) / 2) * 700;
+        const state: GameState = { ...base, time, hasExtinguisher: true, rooftopEntrance: { kind: 'ready' },
+            player: { ...base.player, x, y: 368 },
+        };
+        effects.observe(state);
+        if (tick % 2 === 0) frames.push(capture(game, effects, state));
+    }
+    return recordedScene('personal-belongings', 'Rooftop · Plant bow & badge farewell', 1350,
+        [{ at: 0, label: 'Blue glasses · Badge front' }, { at: 2.7, label: 'Chair still overlaps' },
+            { at: 2.85, label: 'Chair clear · Wait 0.2 seconds' }, { at: 3.6, label: 'Farewell bow & flip' },
+            { at: 4, label: 'Blank badge back' }, { at: 5, label: 'Still' },
+            { at: 6.5, label: 'Return · No second farewell' }], frames);
 }
 
 function focusLoss(): PreviewScene {
@@ -306,8 +334,26 @@ function rooftopTakeoff(): PreviewScene {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return { ...recordedScene('rooftop-takeoff', 'Rooftop · Clouds warm into bread on ascent', 2500,
-        [{ at: 0, label: 'Run-up' }, { at: 1.65, label: 'Boards the graph · Surge' }, { at: 3, label: 'Breaks out of the sign' }, { at: 3.4, label: 'White clouds' }, { at: 4.5, label: 'Colour changing' }, { at: 5.6, label: 'Bread at sky' }], frames), follow: true };
+    const markers = [
+        { at: 0, label: 'Run-up' }, { at: 1.65, label: 'Boards the graph · Surge' },
+        ...graphTargetMarkers(frames), { at: 3, label: 'Breaks out of the sign' },
+        { at: 3.4, label: 'Short arrow · Chair keeps climbing · White clouds' },
+        { at: 4.5, label: 'Colour changing' }, { at: 5.6, label: 'Bread at sky' },
+    ].sort((a, b) => a.at - b.at);
+    return { ...recordedScene('rooftop-takeoff', 'Rooftop · Sales graph ride & bread cloud ascent', 2500,
+        markers, frames), follow: true };
+}
+
+function graphTargetMarkers(frames: PreviewFrame[]): PreviewScene['markers'] {
+    return [
+        { distance: GRAPH_CORNERS[1] + 24, label: 'First peak · Green check' },
+        { distance: GRAPH_CORNERS[1] + 100, label: 'Target starts moving · Rail stays fixed' },
+        { distance: GRAPH_CORNERS[1] + 220, label: 'Target higher · Check becomes an empty circle' },
+    ].map(marker => ({
+        at: Math.max(0, frames.findIndex(frame => frame.state.firstFlight.kind === 'ride'
+            && frame.state.firstFlight.dist >= marker.distance)) * FRAME_TIME,
+        label: marker.label,
+    }));
 }
 
 // The duct shaft's hazards seen from a ledge: the awake duct's gusts and the steam vents' hiss and blast.
@@ -493,6 +539,7 @@ export const previewScenes: readonly PreviewScene[] = [
     headImpact(),
     focusLoss(),
     rooftopEntrance(),
+    personalBelongings(),
     extinguisherSpray(),
     ductSneeze(),
     ductSneeze(true),

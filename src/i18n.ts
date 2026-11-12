@@ -62,6 +62,7 @@ const messages = {
     'copier.urgent':             { en: 'URGENT! PTUI-PTUI!!',                                            ko: '긴급! 퉤퉤퉤!!' },
     'world.exit':                { en: 'Exit →',                                                         ko: '출구 →' },
     'world.rooftop':             { en: 'Rooftop →',                                                      ko: '옥상 →' },
+    'world.employeeBoard':       { en: 'EMPLOYEES OF THE MONTH',                                         ko: '이달의 우수사원' },
     'world.mechanicalArrow':     { en: 'Mechanical room →',                                              ko: '기계실 →' },
     'world.mechanical':          { en: 'Mechanical room',                                                ko: '기계실' },
 
