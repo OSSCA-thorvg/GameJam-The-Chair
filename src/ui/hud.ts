@@ -27,6 +27,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         const { player: p, mode, focus } = state;
         const { cam, scale, vertical, width } = view;
         const active = mode === 'play';
+        const ending = state.stage === 4 && (state.sky.phase === 'reveal' || state.sky.phase === 'depth');
         const paused = mode === 'pause';
         const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
         if (state.stage !== lastStage || state.time < lastTime) {
@@ -41,7 +42,8 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         previousFocus = focus;
         lastStage = state.stage;
         lastTime = state.time;
-        hidden('[data-play-hud]', mode === 'intro');
+        hidden('[data-play-hud]', mode === 'intro' || ending);
+        hidden('.drive-controls', ending);
         hidden('[data-pause]', !active && !paused);
         hidden('[data-pause-menu]', !paused);
         q('[data-pause]')?.setAttribute('aria-expanded', String(paused));
@@ -55,7 +57,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         q('[data-focus-meter]')?.setAttribute('aria-valuenow', String(focus));
         text('[data-focus]', focus + '%');
         text('[data-status]', feedback.status);
-        hidden('[data-interact]', state.stage !== 2 && !(state.stage === 4 && state.sky.phase === 'depth'));
+        hidden('[data-interact]', state.stage !== 2);
         hidden('[data-meeting-help]', state.stage !== 2);
         hidden('[data-spray-help]', !state.hasExtinguisher);
         hidden('[data-spray]', !state.hasExtinguisher);
