@@ -3,7 +3,7 @@ import { PLAYER_OUTLINES } from './player-art';
 import type { Vector } from '../types';
 import type { Point3, SkyProjection } from './sky-projection';
 
-export function endingChair(view: SkyProjection, elapsed: number) {
+export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
     const C = ART.palette;
     const bob = Math.sin(elapsed * 1.6) * 1.5;
     const point = (x: number, y: number, z = 0): Point3 => [x, -y - 35 + bob, z];
@@ -79,10 +79,10 @@ export function endingChair(view: SkyProjection, elapsed: number) {
     rod([-46, -37, 0], [-46, -26, 0], 8.2, '#eee5cd');
     rod([-46, -52, 0], [-46, -59, 0], 2, '#394657');
     rod([-49, -59, 0], [-35, -59, 0], 1.5, '#394657');
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; spray > 0 && i < 5; i++) {
         const age = (elapsed * 1.5 + i * .19) % 1;
         const alpha = Math.round(100 * (1 - age)).toString(16).padStart(2, '0');
-        oval(-46 - age * 4, -7 + age * 50, 0, 3 + age * 7, 4 + age * 9, 3 + age * 6, '#f6e6df' + alpha);
+        oval(-46 - age * 4, -7 + age * 50 * spray, 0, 3 + age * 7, 4 + age * 9, 3 + age * 6, '#f6e6df' + alpha);
     }
 }
 

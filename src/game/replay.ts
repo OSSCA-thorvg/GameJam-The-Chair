@@ -8,8 +8,8 @@ import type { GameState } from './state';
 import type { GameEvent } from './types';
 import { assertGameState } from './validation';
 
-// 2: stage values grouped under state.office / building / rooftop / sky.
-export const REPLAY_FORMAT = 2;
+// 3: adds the orbit stage state and continuous braking input.
+export const REPLAY_FORMAT = 3;
 
 // Tunable from the pause menu. Ticks are fixed 1/120 s steps.
 export type ReplaySettings = {

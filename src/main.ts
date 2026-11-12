@@ -45,7 +45,8 @@ function applyLocale() {
     }
 }
 applyLocale();
-showStartupSplash(root, () => locale);
+const directOrbit = import.meta.env.DEV && new URLSearchParams(location.search).get('stage') === '5';
+if (!directOrbit) showStartupSplash(root, () => locale);
 for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) {
     button.addEventListener('click', () => {
         const selected = button.dataset.locale;
@@ -96,6 +97,7 @@ const game = createGame({
         keepBrowserData();
     },
 });
+if (directOrbit) game.startStage(5);
 document.addEventListener('visibilitychange', () => { if (document.hidden) keepBrowserData(); });
 window.addEventListener('pagehide', keepBrowserData);
 const describeError = (value: unknown) => value instanceof Error ? { message: value.message, stack: value.stack } : { message: String(value) };

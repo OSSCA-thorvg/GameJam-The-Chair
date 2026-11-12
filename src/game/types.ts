@@ -33,7 +33,7 @@ export type Paper = {
     // A stapled bundle of reports is bigger, heavier and shoves the chair back.
     kind: 'sheet' | 'bundle';
 };
-export type Input = 'left' | 'right' | 'q' | 'e' | 'spray' | 'forward' | 'back';
+export type Input = 'left' | 'right' | 'q' | 'e' | 'spray' | 'forward' | 'back' | 'brake';
 export type DeepReadonly<T> = T extends object ? {
     readonly [K in keyof T]: DeepReadonly<T[K]>;
 } : T;
@@ -73,4 +73,4 @@ export type GameEvent = {
 };
 export type Mode = 'intro' | 'play' | 'pause' | 'impact' | 'focuslost' | 'dead' | 'won';
 export type LossReason = 'head' | 'bin' | 'focus' | 'lift';
-export type StageId = 1 | 2 | 3 | 4;
+export type StageId = 1 | 2 | 3 | 4 | 5;

@@ -3,6 +3,8 @@ import type { Attempt } from '../state';
 import { createOfficeState } from './office/state';
 import { createBuildingState } from './building/state';
 import { createRooftopState } from './rooftop/state';
+import { createOrbitState } from './orbit/state';
+import { prepareOrbitAttempt } from './orbit/attempt';
 import { createSky } from './sky/data';
 import type { StageId } from '../types';
 import { prepareOfficeAttempt } from './office/attempt';
@@ -16,6 +18,7 @@ export function prepareStageAttempt(stage: StageId, attempt: Attempt, checkpoint
         case 2: return prepareBuildingAttempt(attempt, checkpoint);
         case 3: return prepareRooftopAttempt(attempt, checkpoint);
         case 4: return prepareSkyAttempt(attempt, checkpoint);
+        case 5: return prepareOrbitAttempt(attempt, checkpoint);
     }
 }
 
@@ -26,5 +29,6 @@ export function createStageStates(checkpoint: number, appearanceSeed: number) {
         building: createBuildingState(checkpoint, appearanceSeed),
         rooftop: createRooftopState(),
         sky: createSky(),
+        orbit: createOrbitState(),
     };
 }

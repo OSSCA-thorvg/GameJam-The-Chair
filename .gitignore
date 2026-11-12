@@ -22,3 +22,6 @@ blob-report/
 test-results/
 playwright/.cache/
 playwright/.auth/
+
+# Generated renderer benchmark baseline
+scripts/.benchmark/

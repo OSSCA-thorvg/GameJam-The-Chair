@@ -13,7 +13,7 @@ export const startMark = (point: Point): Checkpoint => ({ ...point, area: { left
 // lives in the stage's hooks.ts and attempt.ts.
 export type StageDefinition = {
     id: StageId;
-    name: 'office-stage-one' | 'building-stage-two' | 'rooftop-stage-three' | 'cloud-stage-four';
+    name: 'office-stage-one' | 'building-stage-two' | 'rooftop-stage-three' | 'cloud-stage-four' | 'orbit-stage-five';
     length: number;
     goal: number;
     terrain: Point[][];

@@ -27,11 +27,11 @@ function isArray(value: unknown): value is unknown[] {
 
 function isInput(value: unknown): value is Input {
     return value === 'left' || value === 'right' || value === 'q' || value === 'e'
-        || value === 'spray' || value === 'forward' || value === 'back';
+        || value === 'spray' || value === 'forward' || value === 'back' || value === 'brake';
 }
 
 function isStageId(value: unknown): value is StageId {
-    return value === 1 || value === 2 || value === 3 || value === 4;
+    return value === 1 || value === 2 || value === 3 || value === 4 || value === 5;
 }
 
 /** Parses one command from an external replay and strips fields outside the command contract. */
@@ -39,7 +39,7 @@ export function parseCommand(value: unknown): Command {
     if (!isRecord(value) || typeof value.type !== 'string') throw new Error('bad command');
     switch (value.type) {
         case 'keys': {
-            if (!isArray(value.keys) || value.keys.length > 7 || !value.keys.every(isInput)) throw new Error('bad command keys');
+            if (!isArray(value.keys) || value.keys.length > 8 || !value.keys.every(isInput)) throw new Error('bad command keys');
             return { type: 'keys', keys: [...new Set(value.keys)] };
         }
         case 'startStage':

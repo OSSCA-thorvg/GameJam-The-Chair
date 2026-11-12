@@ -189,3 +189,8 @@ export function puffCloud(ctx: RenderCtx, x: number, y: number, size: number, se
 
     ctx.ox = ox; ctx.oy = oy; ctx.localScale = scale; ctx.rotation = rotation;
 }
+
+/** Shared stage-four bread appearance, including the transparent underside. */
+export function breadCloud(ctx: RenderCtx, x: number, y: number, size: number, seed: number, near = false) {
+    puffCloud(ctx, x, y, size, seed, CLOUD_TONES.bread, { alpha: near ? .95 : .72, fade: true });
+}

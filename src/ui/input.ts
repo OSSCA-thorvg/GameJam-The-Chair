@@ -51,9 +51,9 @@ export function bindInput(root: HTMLElement, game: Game, { blocked = () => false
             if (state.mode === 'intro') onStart?.();
         }
     });
-    for (const stage of [1, 2, 3, 4] as const) {
+    for (const stage of [1, 2, 3, 4, 5] as const) {
         button(`[data-stage="${stage}"]`, () => {
-            if (stage <= game.status().completedStage || (stage === 4 && game.status().completedStage >= 3)) game.startStage(stage);
+            if (stage <= game.status().completedStage || (stage >= 4 && game.status().completedStage >= stage - 1)) game.startStage(stage);
         });
     }
     button('[data-reset]', game.restart);

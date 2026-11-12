@@ -43,13 +43,13 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         previousFocus = focus;
         lastStage = state.stage;
         lastTime = state.time;
-        hidden('[data-play-hud]', mode === 'intro' || ending || cutscene);
+        hidden('[data-play-hud]', mode === 'intro' || ending || state.stage === 5 || cutscene);
         hidden('.drive-controls', ending || cutscene);
         hidden('[data-pause]', !active && !paused);
         hidden('[data-pause-menu]', !paused);
         q('[data-pause]')?.setAttribute('aria-expanded', String(paused));
         hidden('[data-stage-label]', !active || state.time > 2.2);
-        text('[data-stage-label]', t(state.stage === 1 ? 'stageLabel.stage1' : state.stage === 2 ? 'stageLabel.stage2' : state.stage === 3 ? 'stageLabel.stage3' : 'stageLabel.stage4'));
+        text('[data-stage-label]', t(state.stage === 1 ? 'stageLabel.stage1' : state.stage === 2 ? 'stageLabel.stage2' : state.stage === 3 ? 'stageLabel.stage3' : state.stage === 4 ? 'stageLabel.stage4' : 'stageLabel.stage5'));
         hidden('[data-focus-intro]', !active || !focusIntroduced || state.time > introduceUntil);
         style('[data-focus-fill]', 'width', focus + '%');
         style('[data-focus-trail]', 'width', focus + '%');
@@ -59,12 +59,16 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         text('[data-focus]', focus + '%');
         text('[data-status]', feedback.status);
         hidden('[data-interact]', state.stage !== 2);
+        hidden('[data-orbit-controls]', state.stage !== 5);
+        hidden('[data-orbit-help]', state.stage !== 5);
+        hidden('[data-jump]', state.stage === 5);
+        hidden('.balance-controls', state.stage === 5);
         hidden('[data-meeting-help]', state.stage !== 2);
         hidden('[data-spray-help]', !state.hasExtinguisher);
         hidden('[data-spray]', !state.hasExtinguisher);
         hidden('[data-stage-menu]', state.completedStage === 0);
-        for (const stage of [1, 2, 3, 4]) {
-            hidden(`[data-stage="${stage}"]`, stage === 4 ? state.completedStage < 3 : stage > state.completedStage);
+        for (const stage of [1, 2, 3, 4, 5]) {
+            hidden(`[data-stage="${stage}"]`, stage >= 4 ? state.completedStage < stage - 1 : stage > state.completedStage);
         }
         const panel = feedback.panel;
         hidden('[data-overlay]', cutscene || (mode !== 'intro' && !panel));

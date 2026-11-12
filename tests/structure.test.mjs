@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, normalize, relative } from 'node:path';
 
 // Keeps stage work independent: people editing different stages should not need to touch the same files.
-const STAGES = ['office', 'building', 'rooftop', 'sky'];
+const STAGES = ['office', 'building', 'rooftop', 'sky', 'orbit'];
 const STAGE_ROOT = 'src/game/stages';
 // Files that list every stage once (one line or one case per stage).
 const STAGE_INDEXES = ['src/game/stages/index.ts', 'src/game/stages/hooks.ts', 'src/game/stages/attempt.ts', 'src/game/stages/view.ts'];
