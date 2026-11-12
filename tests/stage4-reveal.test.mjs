@@ -13,16 +13,37 @@ const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, cr
     export { skyCoursePlatform } from './src/render/scene/sky-course-art';
 `);
 
-test('the stage four billboard slogan is large enough to read', () => {
-    const labels = [];
-    const lg = {
-        save() {}, restore() {}, translate() {}, rotate() {},
-        fillText(text) { labels.push({ text, font: this.font }); },
+test('the stage four billboard slogan fills its space without covering the portrait', () => {
+    const renderLabel = (locale, width) => {
+        const labels = [];
+        let originX = 0;
+        const lg = {
+            save() {}, restore() {}, rotate() {},
+            translate(x) { originX = x; },
+            measureText(text) {
+                const ems = text === '흔들리지 않는 기업' ? 7.7 : 10;
+                return { width: Number.parseFloat(this.font) * ems };
+            },
+            fillText(text) {
+                const measured = this.measureText(text).width;
+                labels.push({ fontSize: Number.parseFloat(this.font), left: originX - measured / 2, right: originX + measured / 2 });
+            },
+        };
+        const ctx = createRenderCtx({}, lg);
+        ctx.locale = locale;
+        skyCoursePlatform(ctx, { id: 'last-sign', kind: 'sign', x: 0, y: 0, width, angle: 0 });
+        return labels[0];
     };
-    const ctx = createRenderCtx({}, lg);
-    ctx.locale = 'ko';
-    skyCoursePlatform(ctx, { id: 'last-sign', kind: 'sign', x: 0, y: 0, width: 230, angle: 0 });
-    assert.deepEqual(labels, [{ text: '흔들리지 않는 기업', font: '16px system-ui,sans-serif' }]);
+
+    const narrowKo = renderLabel('ko', 230);
+    const wideKo = renderLabel('ko', 270);
+    const narrowEn = renderLabel('en', 230);
+    assert.ok(narrowKo.fontSize > 16, 'the Korean slogan grows beyond the previous fixed size');
+    assert.ok(wideKo.fontSize > narrowKo.fontSize, 'a wider billboard uses the extra room');
+    for (const [label, width] of [[narrowKo, 230], [wideKo, 270], [narrowEn, 230]]) {
+        assert.ok(label.left >= 14 - 1e-9, 'the slogan stays inside the left frame');
+        assert.ok(label.right <= width - 66 + 1e-9, 'the slogan leaves room for the portrait');
+    }
 });
 
 test('the ending settles before turning and finishes on its timer regardless of held movement', () => {
