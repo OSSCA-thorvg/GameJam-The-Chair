@@ -4,6 +4,26 @@ import { driveStageThree } from './support/stage3-route.mjs';
 import { bundled } from './support/load.mjs';
 const { createGame, createRenderCtx, drawRooftop, drawCloudStart, STAGE_THREE, STAGE_FOUR } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { createRenderCtx } from './src/render/context'; export { drawRooftop } from './src/render/scene/rooftop'; export { drawCloudStart } from './src/render/scene/clouds'; export { STAGE_THREE } from './src/game/stages/rooftop/data'; export { STAGE_FOUR } from './src/game/stages/sky/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
+test('the rooftop sales chart has no information banner above it', () => {
+    const game = createGame();
+    game.startStage(3);
+    const state = game.getSnapshot();
+    const ctx = createRenderCtx({}, { fillText() {} });
+    Object.assign(ctx, { state, p: state.player, mode: state.mode });
+
+    drawRooftop(ctx);
+
+    const banner = ctx.commands.find(command => {
+        if (command.c !== '#e9e2d2' || command.v.length !== 4) return false;
+        const xs = command.v.map(([x]) => x);
+        const ys = command.v.map(([, y]) => y);
+        return Math.max(...xs) - Math.min(...xs) > 450
+            && Math.max(...ys) - Math.min(...ys) > 40
+            && Math.max(...ys) <= -600;
+    });
+    assert.equal(banner, undefined);
+});
+
 test('entrance replaces the falling chart with an employee board with an initially tidy row', () => {
     const game = createGame();
     game.startStage(3);
