@@ -1,4 +1,5 @@
 import type { Point } from './types';
+import * as Det from './math';
 
 export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
@@ -20,7 +21,7 @@ export function contact(cx: number, cy: number, r: number, poly: readonly Readon
         const u = clamp(((cx - a.x) * ex + (cy - a.y) * ey) / den, 0, 1);
         const dx = cx - a.x - u * ex;
         const dy = cy - a.y - u * ey;
-        const d = Math.hypot(dx, dy);
+        const d = Det.hypot(dx, dy);
         if (ex * (cy - a.y) - ey * (cx - a.x) < 0) {
             inside = false;
         }
