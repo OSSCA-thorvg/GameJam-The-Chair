@@ -19,6 +19,8 @@ const messages = {
 
     'player.firstVolley':        { en: 'Why is this report printing into my face…',                      ko: '보고서가 왜 얼굴로 출력돼…' },
     'player.paperHit':           { en: 'Those are my monthly results…',                                  ko: '이거 이번 달 실적인데…' },
+    'player.urgentVolley':       { en: 'Urgent reports… was it due yesterday?',                          ko: '긴급 보고서… 마감이 어제였나?' },
+    'player.bundleHit':          { en: 'The whole quarter, stapled…',                                    ko: '분기 실적을 통째로 찍어 버렸어…' },
     'player.lightHit':           { en: "Too bright… I can't see my numbers!",                            ko: '눈부셔… 실적 칸이 안 보여!' },
     'player.approved':           { en: 'Approved',                                                       ko: '결재 완료' },
     'player.laptop':             { en: 'My laptop?!',                                                    ko: '노트북은?!' },
@@ -56,6 +58,7 @@ const messages = {
     'button.resume':             { en: 'Resume',                                                         ko: '계속' },
 
     'copier.printer':            { en: 'PTUI! PTUI!!',                                                   ko: '퉤! 퉷!!' },
+    'copier.urgent':             { en: 'URGENT! PTUI-PTUI!!',                                            ko: '긴급! 퉤퉤퉤!!' },
     'world.exit':                { en: 'Exit →',                                                         ko: '출구 →' },
     'world.rooftop':             { en: 'Rooftop →',                                                      ko: '옥상 →' },
     'world.mechanicalArrow':     { en: 'Mechanical room →',                                              ko: '기계실 →' },
