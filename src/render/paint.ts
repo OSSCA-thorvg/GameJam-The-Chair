@@ -179,6 +179,14 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         signature += '+';
     }
     signature += pool.top.length;
+    // ThorVG 1.1.3 crashes ("null function") when a scene that is already on the canvas gets new children and
+    // is then removed before the next update. Empty the canvas first, so this frame's new children are only
+    // ever added to scenes that are off the canvas.
+    const reorder = signature !== pool.signature;
+    if (reorder) {
+        pool.signature = '';
+        tvg.remove();
+    }
 
     let topIndex = 0;
     const order: (Shape | Scene)[] = [];
@@ -258,11 +266,12 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
     }
     for (let i = topIndex; i < pool.top.length; i++) pool.top[i].visible(false);
 
-    if (signature !== pool.signature) {
-        pool.signature = signature;
-        tvg.remove();
+    if (reorder) {
         for (const paint of order) tvg.add(paint);
         for (let i = topIndex; i < pool.top.length; i++) tvg.add(pool.top[i]);
+        // Only a completed rebuild counts: if anything above throws, the next frame rebuilds again instead of
+        // drawing an empty canvas until the layer set happens to change.
+        pool.signature = signature;
     }
     tvg.update().render();
 }
