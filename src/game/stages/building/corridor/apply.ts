@@ -43,11 +43,14 @@ export function applyCorridor(s: GameState, out: GameEvent[], dt: number, previo
     setPlayer(s, r.p);
     s.rng.cosmetic = r.rng;
     if (r.stopRider) s.jumpQ = s.coyote = 0;
-    if (r.bump !== null) {
+    if (r.kick) {
         s.ground = false;
         s.coyote = 0;
+        s.jumpQ = 0;
+    }
+    if (r.kick === 'bump') {
         out.push({ type: 'cue', id: 'convoy-bump' });
-        applyFocusHit(s, out, { kind: 'bump', id: r.bump, damage: 10 });
+        applyFocusHit(s, out, { kind: 'bump', id: 0, damage: 10 });
     }
 }
 

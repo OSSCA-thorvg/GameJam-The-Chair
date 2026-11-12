@@ -17,13 +17,13 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when stage three capped the extinguisher at three bursts per time in the air: both rooftop traces
 // change, and every final snapshot gains `airSprays`. Without that field the four office/building hashes
 // still matched, so their play is unchanged.
-// Updated when the stage-two express got its rush-hour corridor (cable covers to hop, a construction hole to
-// leap, the lift and exit moved on): both building routes now ride across it. Office and rooftop hashes stay.
+// Updated when the stage-two express got its rush-hour corridor (one speed bump to hop, a launch ramp the
+// convoy flies off over a construction hole, the lift and exit moved on): both building routes now ride it.
 const EXPECTED = {
     'office route': '995927ffea4a5796',
     'office crash': 'e6454bb05e08a208',
-    'building exit': '18bfe2d59bf7049b',
-    'building lift': '627998f39ec91c32',
+    'building exit': 'a6285dd75729053d',
+    'building lift': '9ef9332d9cfbe7ab',
     'rooftop to sky': '552d0b94896862a5',
     'rooftop duct': '6727692e86ef84e3',
 };

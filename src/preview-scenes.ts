@@ -328,32 +328,33 @@ function shaftHazards(id: string, label: string, at: { x: number; y: number }, s
     return recordedScene(id, label, at.x, markers, frames);
 }
 
-// The rush-hour express from the flag before it. `hop` hops each cable cover, `leap` leaps the hole.
-function expressRun(id: string, label: string, opts: { hop: boolean; leap: boolean }, markers: PreviewScene['markers'], focusX: number): PreviewScene {
+// The rush-hour express from the flag before it: `hop` hops the speed bump; the convoy then takes the
+// launch ramp over the construction hole, and the rider jumps off it again before the lift.
+function expressRun(id: string, label: string, hop: boolean, markers: PreviewScene['markers']): PreviewScene {
     const game = createGame();
     game.startStage(2);
     const saved = JSON.parse(game.serialize());
     saved.checkpoint = 2;
     game.restore(JSON.stringify(saved));
     game.reset();
-    const { bumps, pit } = STAGE_TWO.express;
+    const { bump, pit } = STAGE_TWO.express;
     const effects = createEffects();
     const frames = [capture(game, effects)];
-    let leapt = false;
-    for (let i = 0; i < 330; i++) {
+    let off = false;
+    for (let i = 0; i < 300; i++) {
         const state = game.getSnapshot(), p = state.player, c = state.corridor;
         let keys: Input[] = [];
-        if (c.convoy === 'carried' && c.pace === 'express' && state.ground) {
-            const next = bumps.map(x => x - p.x).find(d => d > 0);
-            if (opts.hop && next !== undefined && next < 70) game.jump();
-            if (opts.leap && !leapt && pit.left - p.x > 0 && pit.left - p.x < 60) { game.jump(); leapt = true; keys = ['right']; }
-        } else if (leapt || (c.convoy === 'free' && state.ground && p.x > pit.right)) keys = ['right'];
+        if (off || c.convoy === 'free') keys = ['right'];
+        else if (c.convoy === 'carried' && state.ground) {
+            if (hop && bump - p.x > 0 && bump - p.x < 70) game.jump();
+            if (p.x > pit.right + 120) { game.jump(); off = true; keys = ['right']; }
+        }
         game.setInput(...keys);
         stepGame(game, effects);
         frames.push(capture(game, effects));
         if (game.getSnapshot().deaths > 0) break;
     }
-    return { ...recordedScene(id, label, focusX, markers, frames), follow: true };
+    return { ...recordedScene(id, label, 2600, markers, frames), follow: true };
 }
 
 function cloudEntry(): PreviewScene {
@@ -431,12 +432,10 @@ export const previewScenes: readonly PreviewScene[] = [
         [{ at: 1.6, label: 'Vent hiss' }, { at: 2.4, label: 'Vent blast' }, { at: 3.45, label: 'Duct inhale' }, { at: 4.05, label: 'Duct gust' }]),
     shaftHazards('rooftop-shaft-high', 'Rooftop · Shaft vent & ceiling downdraft', { x: 1400, y: -262 }, 1.2,
         [{ at: .3, label: 'Downdraft' }, { at: 1.5, label: 'Wall vent hiss' }, { at: 2.25, label: 'Wall vent blast' }, { at: 2.65, label: 'Ceiling hiss' }, { at: 3.4, label: 'Downdraft' }]),
-    expressRun('express-hop', 'Building · Express: hopping the cable covers', { hop: true, leap: true },
-        [{ at: .7, label: 'Front chair bounces' }, { at: .8, label: 'Hop' }, { at: 1.6, label: 'Pit shout' }, { at: 2.6, label: 'Leap' }], 2500),
-    expressRun('express-bump', 'Building · Express: kicked off by a cable cover', { hop: false, leap: false },
-        [{ at: .8, label: 'Clunk' }, { at: 1.5, label: 'Left behind' }], 2500),
-    expressRun('express-plank', 'Building · Express: the plank will not hold a human', { hop: true, leap: false },
-        [{ at: 1.6, label: 'Pit shout' }, { at: 2.6, label: 'Plank snaps' }], 3100),
+    expressRun('express-ramp', 'Building · Express: hop the bump, fly off the ramp', true,
+        [{ at: .7, label: 'Front chair bounces' }, { at: .8, label: 'Hop' }, { at: 1.8, label: 'Ramp shout' }, { at: 2.5, label: 'Convoy takes off' }]),
+    expressRun('express-bump', 'Building · Express: thrown off by the speed bump', false,
+        [{ at: .8, label: 'Clunk' }, { at: 1.5, label: 'Chairs roll on' }, { at: 2.6, label: 'Short on foot' }]),
     rooftopTakeoff(),
     cloudEntry(),
     officeTyping(),

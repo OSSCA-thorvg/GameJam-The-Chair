@@ -80,34 +80,26 @@ export function balancePolicy(state, game) {
     if (state.mode === 'dead' || state.mode === 'won') game.reset();
 }
 
-const EXPRESS = { bumps: [2480, 2760, 2900], pit: { left: 3080, right: 3420 } };
-// Rides the express convoy through the rush-hour corridor: hops each cable cover (a jump without pushing
-// on lands back on the chairs), leaps the construction hole (a jump while pushing on). With `stayAboard`
-// the leap is short and the rider hops in place past the hole until the chairs sweep it into the lift.
+const EXPRESS = { bump: 2480, pit: { left: 3080, right: 3420 } };
+// Rides the express convoy through the rush-hour corridor: hops the speed bump (a jump without pushing on
+// lands back on the chairs), flies off the launch ramp with the convoy, then jumps off it again with a push
+// before the lift. With `stayAboard` it stays on the chairs and gets swept into the lift.
 // Returns the keys to hold this tick, or null when the convoy is not involved.
 export function createExpressRider(stayAboard = false) {
-    let leapAt = null;
+    let off = false;
     return (state, game) => {
         const p = state.player, { convoy, pace } = state.corridor;
-        if (pace !== 'express') return null;
-        if (leapAt === null) {
-            if (convoy === 'airborne') return [];
-            if (convoy !== 'carried') return null;
-            const next = EXPRESS.bumps.map(x => x - p.x).find(d => d > 0);
-            if (state.ground && next !== undefined && next < 70) game.jump();
-            const toPit = EXPRESS.pit.left - p.x;
-            if (state.ground && toPit > 0 && toPit < 60) { game.jump(); leapAt = state.time; return ['right']; }
-            return [];
-        }
-        if (!stayAboard) return ['right'];
-        if (state.time - leapAt < .08) return ['right'];
-        // Past the hole: keep hopping in place until the chairs roll in underneath.
-        if (convoy === 'free' && p.x > EXPRESS.pit.right && state.ground && Math.abs(p.vx) < 40) game.jump();
+        if (off) return ['right'];
+        if (pace !== 'express' || convoy === 'free') return null;
+        if (convoy !== 'carried' || !state.ground) return [];
+        const toBump = EXPRESS.bump - p.x;
+        if (toBump > 0 && toBump < 70) game.jump();
+        if (!stayAboard && p.x > EXPRESS.pit.right + 120) { game.jump(); off = true; return ['right']; }
         return [];
     };
 }
 
-// Rides the building corridor: enters the meeting once, then rides the express convoy across the hole and
+// Rides the building corridor: enters the meeting once, then rides the express convoy over the ramp and
 // off it again, unless `stayAboard`.
 export function corridorPolicy(stayAboard) {
     let entered = false;

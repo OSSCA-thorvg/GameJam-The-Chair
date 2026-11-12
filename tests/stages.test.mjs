@@ -49,8 +49,8 @@ test('stage2 completes through chair dispatch and the clock-out lift', () => {
     assert.deepEqual([...seen.checkpoints], [0, 1, 2, 3]);
     assert.ok(state.furniture.every(chair => chair.released));
     assert.ok(seen.express, 'the convoy speeds up before the lift');
-    assert.equal(seen.bumps, 0, 'every cable cover was hopped');
-    assert.ok(seen.chats.has('pit'), 'the chairs shout back about the plank before the hole');
+    assert.equal(seen.bumps, 0, 'the speed bump was hopped');
+    assert.ok(seen.chats.has('ramp'), 'the chairs shout back about the ramp');
     assert.notEqual(state.corridor.departure.kind, 'none', 'the chairs head into the lift');
     assert.notEqual(state.corridor.departure.reason, 'abduction', 'the rider is not taken along');
     assert.equal(state.bursts, 0);
@@ -69,7 +69,7 @@ test('staying aboard the express convoy ends in a forced clock-out', () => {
     assert.equal(game.getSnapshot().checkpoint, 2, 'retry starts from the last flag before the lift');
 });
 
-test('hopping the covers and leaping the hole reaches the exit without losing focus', () => {
+test('hopping the bump and flying off the ramp with the convoy reaches the exit without losing focus', () => {
     const game = createGame(); game.startStage(2);
     const { state } = drive(game);
     assert.equal(state.mode, 'won');
@@ -78,7 +78,7 @@ test('hopping the covers and leaping the hole reaches the exit without losing fo
     assert.ok(state.player.x >= state.level.goal);
 });
 
-test('riding the express without hopping: a cover kicks the rookie off and the hole takes it', () => {
+test('riding the express without hopping: the bump throws the rookie off and on foot the ramp falls short', () => {
     const game = createGame(); game.startStage(2);
     drive(game, state => state.corridor.pace === 'express' && state.corridor.convoy === 'carried');
     game.clearInput();
@@ -90,13 +90,14 @@ test('riding the express without hopping: a cover kicks the rookie off and the h
         for (const event of game.drainEvents()) if (event.type === 'cue') cues.push(event.id);
         if (kicked === null && cues.includes('convoy-bump')) kicked = state;
         // Back on its wheels, it chases the chairs on foot.
-        if (kicked && state.ground && state.corridor.convoy === 'free') game.setInput('right');
+        if (kicked && state.ground && state.corridor.convoy !== 'carried') game.setInput('right');
     }
-    assert.ok(kicked, 'the first cable cover kicks the carried rider');
-    assert.ok(kicked.player.vy < 0 && kicked.player.vx < 200, 'up and slowed: no brakes for the rookie');
+    assert.ok(kicked, 'the speed bump kicks the carried rider');
+    assert.ok(kicked.player.vy < 0 && kicked.player.vx < 100, 'up and slowed: no brakes for the rookie');
+    assert.equal(kicked.corridor.convoy, 'dropped', 'thrown out of the convoy');
     assert.equal(kicked.focus, 90);
     const state = game.getSnapshot();
-    assert.equal(state.deaths, 1, 'left behind, the rider rolls into the construction hole');
+    assert.equal(state.deaths, 1, 'left behind, the rider rolls off the ramp into the construction hole');
     assert.equal(state.checkpoint, 2);
     assert.equal(state.player.x, 2200, 'the retry starts at the flag before the rush');
 });
