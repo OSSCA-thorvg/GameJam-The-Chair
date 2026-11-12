@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, createSkyProjection, endingChair } = await loadSource(`
+const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, createSkyProjection, endingChair, skyCoursePlatform } = await loadSource(`
     export { createGame } from './src/game/game';
     export { createSky, STAGE_FOUR } from './src/game/stages/sky/data';
     export { skyStep } from './src/game/stages/sky/course/decide';
@@ -10,7 +10,20 @@ const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, cr
     export { drawSky } from './src/render/scene/sky';
     export { createSkyProjection } from './src/render/scene/sky-projection';
     export { endingChair } from './src/render/scene/sky-ending-art';
+    export { skyCoursePlatform } from './src/render/scene/sky-course-art';
 `);
+
+test('the stage four billboard slogan is large enough to read', () => {
+    const labels = [];
+    const lg = {
+        save() {}, restore() {}, translate() {}, rotate() {},
+        fillText(text) { labels.push({ text, font: this.font }); },
+    };
+    const ctx = createRenderCtx({}, lg);
+    ctx.locale = 'ko';
+    skyCoursePlatform(ctx, { id: 'last-sign', kind: 'sign', x: 0, y: 0, width: 230, angle: 0 });
+    assert.deepEqual(labels, [{ text: '흔들리지 않는 기업', font: '16px system-ui,sans-serif' }]);
+});
 
 test('the ending settles before turning and finishes on its timer regardless of held movement', () => {
     const input = {

@@ -91,7 +91,7 @@ function billboard(ctx: RenderCtx, width: number) {
     if (Math.abs(ctx.rotation) < .65) {
         const [sx, sy] = ctx.screenPoint(-20, 45);
         ctx.lg.save(); ctx.lg.translate(sx, sy); ctx.lg.rotate(ctx.rotation);
-        ctx.lg.font = `${11 * ctx.scale * ctx.localScale}px system-ui,sans-serif`;
+        ctx.lg.font = `${16 * ctx.scale * ctx.localScale}px system-ui,sans-serif`;
         ctx.lg.fillStyle = '#f7e5c6'; ctx.lg.textAlign = 'center';
         ctx.lg.fillText(ctx.locale === 'ko' ? '흔들리지 않는 기업' : 'UNSHAKEABLE INC.', 0, 0);
         ctx.lg.restore();
