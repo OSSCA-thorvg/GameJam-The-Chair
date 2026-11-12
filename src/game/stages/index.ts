@@ -36,6 +36,9 @@ export function inCheckpointArea(mark: DeepReadonly<Checkpoint>, p: Point) {
 
 // Everything that shapes a run besides state and commands. Replays record CONFIG_VERSION.
 export const GAME_CONFIG = deepFreeze({
+    // Which transcendental functions the core uses. 'deterministic-1' = src/game/math.ts (bit-exact in
+    // every engine); replays recorded with the browser's own Math functions are flagged as another version.
+    math: 'deterministic-1',
     fixedStep: FIXED_STEP,
     rules: RULES,
     physics: PHYSICS,

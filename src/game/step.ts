@@ -7,6 +7,7 @@ import { runCommand, spray, type Command } from './commands';
 import { collide, drivePlayer, fellOffFloor } from './physics';
 import { applyFocusLoss, applyFocusRecovery } from './systems/focus/apply';
 import { applyHeadHit, applyImpact } from './systems/impact/apply';
+import * as Det from './math';
 
 // Modes in which fixed steps advance the game. Others wait for a command.
 export const SIMULATED: readonly Mode[] = ['play', 'impact', 'focuslost'];
@@ -130,7 +131,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     if (hooks.checkpointsOpen?.(s) ?? true) reachCheckpoints(s, out);
     applyFocusRecovery(s, dt);
     if (s.ground) {
-        p.w -= Math.sin(p.a) * dt;
+        p.w -= Det.sin(p.a) * dt;
     }
     if (p.x < 40) {
         p.x = 40;
@@ -141,7 +142,7 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
         s.lessons.jumped = true;
         out.push({ type: 'cue', id: 'practice-cleared' });
     }
-    s.actualSpeed += (Math.abs(p.x - prev) / dt - s.actualSpeed) * (1 - Math.exp(-dt / .12));
+    s.actualSpeed += (Math.abs(p.x - prev) / dt - s.actualSpeed) * (1 - Det.exp(-dt / .12));
     if (s.ground && dir && Math.abs(p.vx) > 95 && s.rollCooldown === 0) {
         out.push({ type: 'cue', id: 'rolling' });
         s.rollCooldown = 9;

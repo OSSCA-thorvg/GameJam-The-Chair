@@ -1,6 +1,7 @@
 import { LEVEL, PHYSICS } from './level';
 import { clamp, contact } from './geometry';
 import type { DeepReadonly, Player, Point } from './types';
+import * as Det from './math';
 
 // How the chair is driven this tick. Built by the play step from keys and stage rules.
 export type Drive = {
@@ -20,7 +21,7 @@ export function drivePlayer(player: Readonly<Player>, d: Drive, dt: number): Pla
     const was = d.grounded;
     p.w += d.tilt * (was ? lean.ground : lean.air) * dt;
     if (d.upright) {
-        p.w += (-Math.sin(p.a) * upright.pull - p.w * upright.damping) * dt;
+        p.w += (-Det.sin(p.a) * upright.pull - p.w * upright.damping) * dt;
     }
     if (d.convoyJump && d.dir) {
         p.vx += d.dir * (d.expressJump ? drive.express : drive.convoy) * dt;
@@ -30,8 +31,8 @@ export function drivePlayer(player: Readonly<Player>, d: Drive, dt: number): Pla
         p.vx += d.dir * drive.air * dt;
     }
     p.vy += PHYSICS.gravity * dt;
-    p.vx *= Math.exp(-(d.convoyJump ? 0 : was ? (d.slip ? drag.slip : drag.ground) : drag.air) * dt);
-    p.w *= Math.exp(-(was ? (d.slip ? spinDrag.slip : spinDrag.ground) : spinDrag.air) * dt);
+    p.vx *= Det.exp(-(d.convoyJump ? 0 : was ? (d.slip ? drag.slip : drag.ground) : drag.air) * dt);
+    p.w *= Det.exp(-(was ? (d.slip ? spinDrag.slip : spinDrag.ground) : spinDrag.air) * dt);
     const horizontalLimit = d.expressJump ? limits.expressVx : d.convoyJump ? limits.convoyVx : limits.vx;
     p.vx = clamp(p.vx, -horizontalLimit, horizontalLimit);
     p.vy = clamp(p.vy, -limits.rise, limits.fall);
@@ -51,8 +52,8 @@ export function collide(player: Readonly<Player>, solids: readonly DeepReadonly<
     const p = { ...player };
     const parts = LEVEL.playerContacts;
     let ground = false;
-    let c = Math.cos(p.a);
-    let sn = Math.sin(p.a);
+    let c = Det.cos(p.a);
+    let sn = Det.sin(p.a);
     const head = parts[7];
     const hx = p.x - head.y * sn;
     const hy = p.y + head.y * c;
@@ -62,8 +63,8 @@ export function collide(player: Readonly<Player>, solids: readonly DeepReadonly<
     }
     for (let iter = 0; iter < iterations; iter++) {
         for (const part of parts) {
-            c = Math.cos(p.a);
-            sn = Math.sin(p.a);
+            c = Det.cos(p.a);
+            sn = Det.sin(p.a);
             const rx = part.x * c - part.y * sn;
             const ry = part.x * sn + part.y * c;
             for (const ob of solids) {

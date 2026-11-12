@@ -22,6 +22,7 @@
 `npm run lint`와 테스트는 다음 제한을 검사합니다.
 
 - `src/game`에서 `Math.random`, `Date`, `performance`, `requestAnimationFrame`, `localStorage`를 쓰지 않습니다. 난수는 `rng.ts`를 통해 `state.rng`에서 얻습니다.
+- `src/game`에서 엔진마다 근사가 다른 `Math` 함수(`sin`, `cos`, `tan`, `exp`, `atan2`, `hypot`, `pow`/`**`, `log` 등)를 쓰지 않습니다. 브라우저마다 마지막 비트가 달라 한 브라우저에서 녹화한 리플레이가 다른 브라우저에서 어긋납니다. `math.ts`의 비트 단위 결정적 함수(`import * as Det from './math'`)를 사용합니다. `+ - * /`, `Math.sqrt`, `round`, `floor`, `abs`, `min`, `max`는 모든 엔진에서 정확합니다.
 - 시스템의 `decide.ts`는 필요한 값만 받아 결정을 반환합니다. 짝을 이루는 `apply.ts`가 결과를 state에 씁니다.
 - 스테이지는 다른 스테이지의 `data.ts`만 가져올 수 있습니다. 자세한 내용은 [스테이지 안내](stages/README-ko.md)를 참조합니다.
 
@@ -36,6 +37,7 @@
 | `systems/<system>/` | 여러 스테이지가 공유하는 집중력과 충돌 시스템. `decide.ts`와 `apply.ts`로 분리 |
 | `stages/<stage>/` | 스테이지별 데이터, state, hook, system |
 | `rng.ts` | seed 기반 `physics`와 `cosmetic` 난수 흐름 |
+| `math.ts` | 모든 브라우저에서 같은 비트를 내는 `sin`, `cos`, `tan`, `exp`, `atan2`, `hypot` |
 | `replay.ts` | 리플레이 기록, 검증, 타임라인 |
 | `game.ts` | `createGame` facade. state 보관, 고정 틱 누적, 기록 hook, event, 화면 snapshot 담당 |
 
