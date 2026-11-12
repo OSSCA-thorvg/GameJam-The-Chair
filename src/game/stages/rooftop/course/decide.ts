@@ -1,6 +1,7 @@
 import type { Player } from '../../../types';
 import { GRAPH_LENGTH, STAGE_THREE, ductTimings, graphCatch, graphPointAt, inVentBlast, ventPhase, type DuctBurst } from '../data';
 import { STAGE_FOUR } from '../../sky/data';
+import * as Det from '../../../math';
 
 export type RooftopEntrance = { kind: 'opening'; age: number } | { kind: 'ready' };
 // 'course' is normal play; 'ride' carries the chair up the sales graph (`dist` along the line);
@@ -64,9 +65,9 @@ export function graphRideStep(ride: Readonly<Extract<FirstFlight, { kind: 'ride'
     const dist = ride.dist + speed * dt;
     const at = graphPointAt(dist);
     // The chair turns smoothly into each corner; the seat sits above the line along its own tilt.
-    const target = Math.max(-g.maxTilt, Math.min(g.maxTilt, Math.atan2(at.ty, at.tx)));
-    const a = p.a + (target - p.a) * (1 - Math.exp(-10 * dt));
-    const next = { ...p, x: at.x + Math.sin(a) * 28, y: at.y - Math.cos(a) * 28, vx: at.tx * speed, vy: at.ty * speed, a, w: 0 };
+    const target = Math.max(-g.maxTilt, Math.min(g.maxTilt, Det.atan2(at.ty, at.tx)));
+    const a = p.a + (target - p.a) * (1 - Det.exp(-10 * dt));
+    const next = { ...p, x: at.x + Det.sin(a) * 28, y: at.y - Det.cos(a) * 28, vx: at.tx * speed, vy: at.ty * speed, a, w: 0 };
     if (dist < GRAPH_LENGTH) return { flight: { kind: 'ride', dist, speed, age: ride.age + dt }, p: next };
     next.vy = Math.min(next.vy, -320);
     return { flight: { kind: 'flight', age: 0 }, p: next };
@@ -75,11 +76,11 @@ export function graphRideStep(ride: Readonly<Extract<FirstFlight, { kind: 'ride'
 // The straight climb from the graph's tip up to the sky stage.
 export function flightStep(flight: { kind: 'flight'; age: number }, p: Readonly<Player>, dt: number): { flight: FirstFlight; p: Player; arrived: boolean } {
     const next = { ...p };
-    next.vx *= Math.exp(-3 * dt);
+    next.vx *= Det.exp(-3 * dt);
     next.x += next.vx * dt;
     const remaining = Math.max(0, next.y - STAGE_FOUR.arrivalY);
     const targetSpeed = -Math.min(300, Math.max(35, remaining * 1.5));
-    next.vy += (targetSpeed - next.vy) * (1 - Math.exp(-2.5 * dt));
+    next.vy += (targetSpeed - next.vy) * (1 - Det.exp(-2.5 * dt));
     next.y += next.vy * dt;
     next.a += (0 - next.a) * dt * 5;
     return { flight: { kind: 'flight', age: flight.age + dt }, p: next, arrived: next.y <= STAGE_FOUR.arrivalY };

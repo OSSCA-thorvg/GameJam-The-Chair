@@ -2,7 +2,8 @@ import type { Game } from '../game/game';
 import { bindControls } from './controls';
 // Menu buttons, dialog focus and pause syncing. Gameplay keys and touch controls live in ./controls.
 // `blocked` (e.g. while a replay plays) hides the pause menu and ignores every live-game control.
-export function bindInput(root: HTMLElement, game: Game, { blocked = () => false }: { blocked?: () => boolean } = {}) {
+// `onStart` runs after Start begins a fresh game from the title panel (the opening cutscene hooks in here).
+export function bindInput(root: HTMLElement, game: Game, { blocked = () => false, onStart }: { blocked?: () => boolean; onStart?: () => void } = {}) {
     const controller = new AbortController();
     const options = { signal: controller.signal };
     const menu = root.querySelector<HTMLElement>('[data-pause-menu]');
@@ -45,7 +46,10 @@ export function bindInput(root: HTMLElement, game: Game, { blocked = () => false
         const state = game.status();
         if (state.mode === 'won' && state.stage === 1) game.startStage(2);
         else if (state.mode === 'won' && state.stage === 2) game.startStage(3);
-        else game.reset();
+        else {
+            game.reset();
+            if (state.mode === 'intro') onStart?.();
+        }
     });
     for (const stage of [1, 2, 3, 4] as const) {
         button(`[data-stage="${stage}"]`, () => {

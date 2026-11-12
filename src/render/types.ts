@@ -50,6 +50,8 @@ export type LayerSpec = {
     clip?: DrawCommand;
     /** Screen-space shape whose fill alpha masks the layer (ThorVG MaskMethod.Alpha). */
     mask?: DrawCommand;
+    /** Keep the layer where the mask is transparent instead (ThorVG MaskMethod.InvAlpha). */
+    maskInvert?: boolean;
 };
 export type DrawCommand = {
     v: Vector[];

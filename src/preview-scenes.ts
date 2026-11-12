@@ -8,6 +8,7 @@ import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/stages/office/monitor/decide';
 import { SPLASH_DURATION } from './ui/splash-meta';
+import { OPENING_BEATS, OPENING_DURATION, openingFrame, openingState, type OpeningFrame } from './render/scene/opening/timeline';
 
 export type PreviewScene = {
     id: string;
@@ -18,6 +19,8 @@ export type PreviewScene = {
     follow?: boolean;
     markers: readonly { at: number; label: string }[];
     sample(time: number): { state: GameState; effects: EffectsState };
+    // Cutscene frames draw with their own camera and overlays instead of the stage scene.
+    opening?(time: number): OpeningFrame;
 };
 
 type PreviewFrame = { state: GameState; effects: EffectsState };
@@ -456,6 +459,25 @@ function officeTyping(): PreviewScene {
     };
 }
 
+function opening(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const B = OPENING_BEATS;
+    return {
+        id: 'opening', label: 'Intro · Opening: overtime until 9 pm', duration: OPENING_DURATION, focusX: base.player.x,
+        markers: [
+            { at: B.sixPm, label: '6 pm' }, { at: B.irisOpen, label: 'Into the office' }, { at: B.riderOvertime, label: 'Worker: overtime' },
+            { at: B.riderSales, label: 'Worker: sales' }, { at: B.pushIn, label: 'Push in' }, { at: B.chairHope, label: 'Chair hopes' },
+            { at: B.irisClose, label: 'Back to clock' }, { at: B.spinToEight, label: '7 → 8 pm' }, { at: B.spinToNine, label: '8 → 9 pm' },
+            { at: B.darkChair, label: 'Dark chair' }, { at: B.rage, label: 'Rage' }, { at: B.handoff, label: 'Handoff' },
+        ],
+        sample: time => ({ state: openingState(base, openingFrame(time)), effects }),
+        opening: openingFrame,
+    };
+}
+
 export const previewScenes: readonly PreviewScene[] = [
     {
         id: 'startup-splash', label: 'Intro · ThorVG splash', duration: SPLASH_DURATION,
@@ -463,6 +485,7 @@ export const previewScenes: readonly PreviewScene[] = [
         markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
+    opening(),
     bucketPour(),
     cleanerRecovery(),
     monitorLight(),

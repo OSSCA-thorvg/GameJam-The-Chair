@@ -28,13 +28,16 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // sneeze `firstSneezeAt` into the attempt, then a gust every `gustPeriod`): the idle duct state gained `rest`,
 // so every final snapshot changes, and both rooftop traces follow the new duct timing. The office replay
 // fixture was re-recorded for the same `rest` field.
+// Updated when the core switched from Math.sin/cos/tan/exp/atan2/hypot to the bit-exact versions in
+// src/game/math.ts so replays match across browsers: results differ only in the last bits, so the traces
+// shift slightly. Every route still ends the same way; 'office route' did not change at all.
 const EXPECTED = {
     'office route': '6d4e4ff9cb972640',
-    'office crash': 'ffcea9a999e97afd',
-    'building exit': '262bf2bedd003e8a',
-    'building lift': '1df1eef9e4fcc9de',
-    'rooftop to sky': 'dd3c527edcf3b54b',
-    'rooftop duct': '766afd664a275c9b',
+    'office crash': 'd6929f86d136b79d',
+    'building exit': 'b05de48392c31a25',
+    'building lift': '893676e1feaecd2a',
+    'rooftop to sky': 'afcdd3b991297431',
+    'rooftop duct': '633b1f1e3351e7e8',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

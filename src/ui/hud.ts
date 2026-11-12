@@ -22,11 +22,12 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
     let previousFocus = 100;
     let focusIntroduced = false;
     let introduceUntil = 0;
-    function draw(state: GameState, feedback: FeedbackState, _effects: EffectsState, view: Viewport) {
+    // `cutscene`: the opening is playing over a fresh game, so every game HUD element stays out of the way.
+    function draw(state: GameState, feedback: FeedbackState, _effects: EffectsState, view: Viewport, cutscene = false) {
         const t = (message: Message) => translate(message, getLocale());
         const { player: p, mode, focus } = state;
         const { cam, scale, vertical, width } = view;
-        const active = mode === 'play';
+        const active = mode === 'play' && !cutscene;
         const ending = state.stage === 4 && (state.sky.phase === 'reveal' || state.sky.phase === 'depth');
         const paused = mode === 'pause';
         const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
@@ -42,8 +43,8 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         previousFocus = focus;
         lastStage = state.stage;
         lastTime = state.time;
-        hidden('[data-play-hud]', mode === 'intro' || ending);
-        hidden('.drive-controls', ending);
+        hidden('[data-play-hud]', mode === 'intro' || ending || cutscene);
+        hidden('.drive-controls', ending || cutscene);
         hidden('[data-pause]', !active && !paused);
         hidden('[data-pause-menu]', !paused);
         q('[data-pause]')?.setAttribute('aria-expanded', String(paused));
@@ -66,7 +67,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
             hidden(`[data-stage="${stage}"]`, stage === 4 ? state.completedStage < 3 : stage > state.completedStage);
         }
         const panel = feedback.panel;
-        hidden('[data-overlay]', mode !== 'intro' && !panel);
+        hidden('[data-overlay]', cutscene || (mode !== 'intro' && !panel));
         if (mode === 'intro') {
             text('[data-title]', 'THE CHAIR');
             text('[data-desc]', t('intro.desc'));
@@ -96,7 +97,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         }
         const speech = feedback.speech;
         const speechX = speech ? (speech.x - cam) * scale : 0;
-        const speaking = state.stage === 1 && !!speech && ['play', 'impact', 'dead'].includes(mode)
+        const speaking = !cutscene && state.stage === 1 && !!speech && ['play', 'impact', 'dead'].includes(mode)
             && speechX > 0 && speechX < width;
         hidden('[data-npc]', !speaking);
         if (speaking && speech) {
