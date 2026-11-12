@@ -20,7 +20,7 @@ function atmosphere(ctx: RenderCtx) {
         ctx.radialFill(ctx.cam + ctx.VW * .78, top + height * .2, height * .8, [[0, '#ffdfb549'], [.5, '#fff2db15'], [1, '#fff2db00']]));
     ctx.endLayer();
     // Small, low-contrast buildings are seen through gaps far BELOW the furniture.
-    ctx.beginLayer({ key: 'sky-distant-city', opacity: .25, blur: 1.1 });
+    ctx.beginLayer({ key: 'sky-distant-city', opacity: .25 });
     const cityY = bottom - height * .035;
     for (let i = -10; i < 11; i++) {
         const x = ctx.cam + ctx.VW * .52 + i * 12 - (ctx.cam * .04 % 12);
