@@ -4,18 +4,15 @@ import type { Curve, Vector } from '../types';
 import { graphTarget } from './graph-target';
 
 // The company's rooftop billboard. A steel tower on the roof and struts from the facade hold a sales
-// board that starts at the roof edge and hangs out over the street, with a logo band on top, a
-// maintenance catwalk underneath and floodlights shining up at it. Its line already climbs toward an
+// board that starts at the roof edge and hangs out over the street, with a maintenance catwalk
+// underneath and floodlights shining up at it. Its line already climbs toward an
 // arrow; once the chair rolls onto it the line lights up behind the chair, draws itself just ahead
-// (ThorVG trim path), then ends just above the logo band while the chair keeps climbing.
+// (ThorVG trim path), then ends above the board while the chair keeps climbing.
 const ROOF = -144;
 const EDGE = STAGE_THREE.edge;
 const PANEL = { left: EDGE, right: 2920, top: -620, bottom: -150 };
-const BAND = { top: -668, bottom: PANEL.top };
-const TOWER = { left: 2370, right: EDGE };
+const TOWER = { left: 2370, right: EDGE, top: PANEL.top + 10, bays: 5 };
 const INSIDE = STAGE_THREE.graph.catchUntil;
-// Where the line breaks through the top of the logo band.
-const BREAK = { x: 2873, y: BAND.top };
 const LAMPS = [2560, 2700, 2840];
 
 function lineCurves(from: number, to: number): { start: Vector; curves: Curve[] } {
@@ -33,19 +30,23 @@ function quad(left: number, top: number, right: number, bottom: number) {
 // Steel lattice tower on the roof behind the board, and struts from the facade under the overhang.
 function structure(ctx: RenderCtx) {
     const steel = '#4a5568', dark = '#353e4d';
-    for (const x of [TOWER.left, TOWER.right - 6]) ctx.rect(x, BAND.top + 10, 8, ROOF - BAND.top - 10, steel);
-    for (let y = ROOF; y > BAND.top + 40; y -= 104) {
-        ctx.rod(TOWER.left + 4, y, TOWER.right - 2, y - 104, 3, dark);
-        ctx.rod(TOWER.right - 2, y, TOWER.left + 4, y - 104, 3, dark);
+    for (const x of [TOWER.left, TOWER.right - 6]) ctx.rect(x, TOWER.top, 8, ROOF - TOWER.top, steel);
+    const bayHeight = (ROOF - TOWER.top) / TOWER.bays;
+    for (let i = 0; i < TOWER.bays; i++) {
+        const y = ROOF - i * bayHeight;
+        const nextY = y - bayHeight;
+        ctx.rod(TOWER.left + 4, y, TOWER.right - 2, nextY, 3, dark);
+        ctx.rod(TOWER.right - 2, y, TOWER.left + 4, nextY, 3, dark);
         ctx.rod(TOWER.left + 4, y, TOWER.right - 2, y, 4, steel);
     }
+    ctx.rod(TOWER.left + 4, TOWER.top, TOWER.right - 2, TOWER.top, 4, steel);
     // Base plates bolted to the roof.
     for (const x of [TOWER.left - 6, TOWER.right - 14]) ctx.rect(x, ROOF - 6, 20, 6, '#2c3442');
     // Facade brackets and struts carrying the overhanging board.
     ctx.rect(EDGE, ROOF + 96, 14, 26, dark);
     for (const x of [2640, 2830]) ctx.rod(EDGE + 6, ROOF + 108, x, PANEL.bottom + 6, 6, steel);
     // Stay cables from the tower top to the board's free end.
-    ctx.rod(TOWER.left + 4, BAND.top + 14, PANEL.right - 10, BAND.top + 20, 1.6, '#7c8799');
+    ctx.rod(TOWER.left + 4, TOWER.top + 4, PANEL.right - 10, TOWER.top + 10, 1.6, '#7c8799');
 }
 
 // The catwalk under the board: grating, toe board and an end guard rail.
@@ -78,19 +79,6 @@ function floodlights(ctx: RenderCtx, since: number | null) {
     });
 }
 
-// The logo band: the company's chair pictogram and a row of lit panels.
-function logoBand(ctx: RenderCtx, surging: boolean) {
-    ctx.rect(PANEL.left - 6, BAND.top, PANEL.right - PANEL.left + 12, BAND.bottom - BAND.top, '#e9e2d2');
-    ctx.rect(PANEL.left - 6, BAND.bottom - 5, PANEL.right - PANEL.left + 12, 5, '#b6ad99');
-    const cx = PANEL.left + 34, cy = (BAND.top + BAND.bottom) / 2;
-    ctx.ellipse(cx, cy, 20, 20, '#2f5fb3');
-    ctx.rect(cx - 8, cy - 12, 5, 18, '#f4efe3');
-    ctx.rect(cx - 8, cy + 2, 16, 4, '#f4efe3');
-    ctx.rod(cx - 2, cy + 6, cx - 2, cy + 12, 2, '#f4efe3');
-    ctx.rod(cx - 8, cy + 13, cx + 6, cy + 13, 2, '#f4efe3');
-    for (let i = 0; i < 6; i++) ctx.rect(PANEL.left + 70 + i * 62, cy - 6, 48, 12, surging ? '#2f8a5a' : '#2f5fb3');
-}
-
 export function rooftopGraphSign(ctx: RenderCtx) {
     const flight = ctx.state.firstFlight;
     const surging = flight.kind !== 'course';
@@ -98,7 +86,6 @@ export function rooftopGraphSign(ctx: RenderCtx) {
     const shown = surging ? Math.min(GRAPH_LENGTH, distance + STAGE_THREE.graph.lead) : 0;
     structure(ctx);
     board(ctx, surging);
-    logoBand(ctx, surging);
     catwalk(ctx);
     floodlights(ctx, flight.kind === 'ride' ? flight.age : flight.kind === 'flight' ? 9 : null);
     graphTarget(ctx, distance);
@@ -106,7 +93,6 @@ export function rooftopGraphSign(ctx: RenderCtx) {
     chartTip(ctx, surging);
     if (!surging) return;
     surgeLine(ctx, shown);
-    fallingChips(ctx, shown);
 }
 
 function board(ctx: RenderCtx, surging: boolean) {
@@ -157,19 +143,6 @@ function surgeLine(ctx: RenderCtx, shown: number) {
     ctx.endLayer();
     ctx.strokePath(whole.start, whole.curves, { width: 9, color: ctx.gradientFill(0, ROOF, 0, -1000, [[0, '#4dff9a'], [.5, '#c4ff5c'], [1, '#fff27a']]), cap: 'round' }, { trim });
     ctx.strokePath(whole.start, whole.curves, { width: 3, color: '#f4fff6', cap: 'round' }, { trim });
-}
-
-function fallingChips(ctx: RenderCtx, shown: number) {
-    const flight = ctx.state.firstFlight;
-    // A few pale chips fall where the line leaves the logo band.
-    if (shown > GRAPH_CORNERS[INSIDE] + 140) {
-        const age = flight.kind === 'ride' ? Math.max(0, flight.age - 1.1) : 3;
-        for (let i = 0; i < 6; i++) {
-            const k = Math.min(age, 1.6);
-            const x = BREAK.x + (i - 2.5) * 22 * k, y = BREAK.y - 60 * k + 260 * k * k;
-            ctx.polygon([[x, y], [x + 8, y + 3], [x + 2, y + 9]], '#e9e2d2');
-        }
-    }
 }
 
 // A finite arrow ends just above the sign; camera movement never extends it.
