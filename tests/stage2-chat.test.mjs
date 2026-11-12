@@ -19,7 +19,7 @@ function crowd() {
 }
 function tick(s) {
     const player = { ...s.p };
-    applyCorridor(s, dt, s.p.x - s.p.vx * dt);
+    applyCorridor(s, [], dt, s.p.x - s.p.vx * dt);
     if (s.building.corridor.convoy === 'free') assert.deepEqual(s.p, player, 'free riders keep control while chairs make room');
     for (let i = 1; i < 3; i++) assert.ok(s.building.furniture[i - 1].x - s.building.furniture[i].x >= 79.99);
 }

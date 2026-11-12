@@ -22,11 +22,13 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when stage-one printers moved from proximity triggers to fixed timers, urgent output became three
 // batches, and distraction focus damage was reduced. The level constants also change every replay version,
 // so all final fingerprints intentionally change even when the route does not visit the office.
+// Updated when the stage-two express got its rush-hour corridor (one speed bump to hop, a launch ramp the
+// convoy flies off over a construction hole, the lift and exit moved on): both building routes now ride it.
 const EXPECTED = {
     'office route': 'd41d1de617a863e2',
     'office crash': '30365888ef38ccc5',
-    'building exit': '55821047e5744eb0',
-    'building lift': '136e302ee9f1fe5e',
+    'building exit': '7a6598139ae4a309',
+    'building lift': '3fe01948291e4e0a',
     'rooftop to sky': '6d3aa99199117ba1',
     'rooftop duct': '0f71b0c9c56311d8',
 };

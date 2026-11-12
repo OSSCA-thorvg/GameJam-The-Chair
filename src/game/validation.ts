@@ -132,7 +132,7 @@ function room(value: unknown, path: string) {
 
 function chat(value: unknown, path: string) {
     const data = record(value, path);
-    const kind = choice(data.kind, ['waiting', 'gossip', 'wary', 'dismissed', 'realizing', 'welcoming', 'companions', 'rush'], `${path}.kind`);
+    const kind = choice(data.kind, ['waiting', 'gossip', 'wary', 'dismissed', 'realizing', 'welcoming', 'companions', 'rush', 'ramp'], `${path}.kind`);
     exact(data, kind === 'waiting' ? ['kind'] : ['kind', 'age'], path);
     if (kind !== 'waiting') finite(data.age, `${path}.age`);
 }
@@ -173,7 +173,7 @@ function building(value: unknown, path: string) {
     finite(corridor.dispatchAge, `${path}.corridor.dispatchAge`);
     boolean(corridor.dispatchStarted, `${path}.corridor.dispatchStarted`);
     chat(corridor.chat, `${path}.corridor.chat`);
-    choice(corridor.convoy, ['free', 'carried', 'airborne'], `${path}.corridor.convoy`);
+    choice(corridor.convoy, ['free', 'carried', 'airborne', 'dropped'], `${path}.corridor.convoy`);
     choice(corridor.pace, ['casual', 'express'], `${path}.corridor.pace`);
     departure(corridor.departure, `${path}.corridor.departure`);
     lift(corridor.lift, `${path}.corridor.lift`);
@@ -284,7 +284,7 @@ export function assertGameState(value: unknown, path = 'state'): asserts value i
     if (data.focusNotice !== null) {
         const notice = record(data.focusNotice, `${path}.focusNotice`);
         exact(notice, ['kind', 'life'], `${path}.focusNotice`);
-        choice(notice.kind, ['paper', 'water', 'light', 'door'], `${path}.focusNotice.kind`);
+        choice(notice.kind, ['paper', 'water', 'light', 'door', 'bump'], `${path}.focusNotice.kind`);
         finite(notice.life, `${path}.focusNotice.life`);
     }
     if (data.lossReason !== null) choice(data.lossReason, ['head', 'bin', 'focus', 'lift'], `${path}.lossReason`);
