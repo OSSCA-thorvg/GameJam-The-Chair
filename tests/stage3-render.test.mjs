@@ -30,6 +30,11 @@ test('rooftop renders the live course and first flight in both languages and nar
         if (state.stage === 4) drawCloudStart(ctx);
         else drawRooftop(ctx);
         assert.ok(ctx.commands.some(command => typeof command.c !== 'string'), 'ThorVG retains gradient fills');
+        const gradientHas = rgb => ctx.commands.some(command => command.c && typeof command.c !== 'string'
+            && command.c.stops.some(([, color]) => rgb.every((channel, index) => color[index] === channel)));
+        if (state.stage === 4) assert.ok(gradientHas([248, 217, 141]), 'stage four replaces clouds with golden bread');
+        else assert.equal(gradientHas([248, 217, 141]), false, 'stage three keeps its clouds');
+        if (name === 'flight') assert.ok(gradientHas([253, 248, 239]), 'the stage-three ascent still uses cloud crowns');
         if (state.stage === 3) assert.ok(ctx.commands.some(command => command.curves?.length), 'rooftop retains curved effects');
         for (const command of ctx.commands) {
             for (const point of [...command.v, ...(command.curves ?? [])]) assert.ok(point.every(Number.isFinite));

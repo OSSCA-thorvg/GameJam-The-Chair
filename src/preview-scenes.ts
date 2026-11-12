@@ -389,8 +389,8 @@ function cloudEntry(): PreviewScene {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('cloud-entry', 'Sky · Stage 4 hovering start', 2380,
-        [{ at: 0, label: 'Arrival' }, { at: 1, label: 'Continuous spray · Hovering' }], frames);
+    return recordedScene('cloud-entry', 'Sky · Stage 4 bread clouds', 2380,
+        [{ at: 0, label: 'Arrival · Clouds become bread' }, { at: 1, label: 'Continuous spray · Hovering' }], frames);
 }
 
 function skyEnding(): PreviewScene {
