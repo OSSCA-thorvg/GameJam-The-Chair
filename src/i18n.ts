@@ -131,6 +131,8 @@ const messages = {
     'replay.speed':               { en: "Speed", ko: "속도" },
     'replay.loop':                { en: "Loop", ko: "반복" },
     'replay.exit':                { en: "Exit replay", ko: "리플레이 종료" },
+    'perf.title':                 { en: "Performance", ko: "성능" },
+    'perf.copy':                  { en: "Copy metrics", ko: "지표 복사" },
     'tool.title':                 { en: "Replay tool", ko: "리플레이 도구" },
     'tool.backToGame':            { en: "← Game", ko: "← 게임" },
     'tool.browserData':           { en: "This browser's data", ko: "이 브라우저 데이터" },

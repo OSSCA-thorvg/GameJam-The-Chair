@@ -16,6 +16,7 @@ import type { StageId } from './game/stages/building/data';
 import type { Input } from './game/types';
 import markup from './scene.html?raw';
 import { bindOrientation } from './ui/orientation';
+import { createPerfOverlay } from './ui/perf-overlay';
 import './style.css';
 const app = document.querySelector('#app');
 if (!app) {
@@ -133,6 +134,12 @@ try {
 catch (error) {
     console.error('Renderer unavailable', error);
 }
+// Developer metrics (F3 / ` / ?debug=1). Timing stays here and in the renderer, never in the game core.
+const perf = createPerfOverlay(root, () => locale, {
+    profile: stats => renderer?.profile(stats),
+    surface: () => renderer?.surface() ?? null,
+});
+let hudMs = 0;
 let presentationErrorReported = false;
 function draw() {
     const live = game.getSnapshot();
@@ -164,7 +171,9 @@ function draw() {
         const cutscene = replay ? null : opening.frame();
         const view = (cutscene ? renderer?.draw(openingState(state, cutscene), visual, undefined, cutscene) : renderer?.draw(state, visual))
             ?? { cam: 0, scale: 1, vertical: 0, width: 800 };
+        const hudStart = perf.enabled ? performance.now() : 0;
         hud.draw(state, replay ? player.feedback() : feedback.snapshot(), visual, view, !!cutscene);
+        if (perf.enabled) hudMs = performance.now() - hudStart;
     }
     catch (error) {
         if (!presentationErrorReported) {
@@ -180,14 +189,21 @@ function frame(ms: number) {
         opening.destroy();
         player.destroy();
         renderer?.destroy();
+        perf.destroy();
         return;
     }
     const dt = last === null ? 0 : Math.max(0, (ms - last) / 1000);
     last = ms;
+    const profiling = perf.enabled;
+    const simStart = profiling ? performance.now() : 0;
+    let advanced = { ticks: 0, dropped: 0 };
     if (player.active) player.advance(dt);
     else if (opening.active) opening.advance(dt);
-    else game.advance(dt);
+    else advanced = game.advance(dt);
+    const simMs = profiling ? performance.now() - simStart : 0;
+    hudMs = 0;
     draw();
+    if (profiling) perf.record({ frameMs: dt * 1000, simMs, ticks: advanced.ticks, droppedMs: advanced.dropped * 1000, hudMs });
     requestAnimationFrame(frame);
 }
 // Retain the existing browser debugging API without exposing live game state.
@@ -196,6 +212,7 @@ const officeStageOne = {
     interact: game.interact, leaveMeeting: game.leaveMeeting, reset: game.reset, startStage: game.startStage, step: game.step, jump: game.jump, pause: game.pause, draw,
     advanceImpact: game.advanceImpact, advanceFocusLoss: game.advanceFocusLoss,
     setInput: (...v: Input[]) => game.setInput(...v),
+    perf: { toggle: perf.toggle, snapshot: perf.snapshot },
     state: () => ({ ...game.getSnapshot(), ...effects.snapshot(), ...renderer?.info(), reaction: feedback.snapshot().reaction }),
     replay: {
         latest: () => recorder.latest(),

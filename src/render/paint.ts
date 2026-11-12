@@ -1,6 +1,7 @@
 import type { Canvas, LinearGradient, RadialGradient, Scene, Shape, ThorVGNamespace } from '@thorvg/webcanvas';
 import type { RenderCtx } from './context';
 import type { Blend, DrawCommand, Gradient, LayerSpec } from './types';
+import type { RenderStats } from './perf';
 
 type LayerSlot = { scene: Scene; shapes: Shape[]; clip: Shape | null; mask: Shape | null; maskInvert: boolean };
 type Item = { cmd: DrawCommand } | { layer: LayerSpec; key: string; cmds: DrawCommand[] };
@@ -30,7 +31,7 @@ export function createPaintPool(): PaintPool {
  * union to the canvas's top-left corner, and hidden children still count. Off-canvas commands draw
  * nothing anyway, so they are left out of layers.
  */
-function canvasBox(cmd: DrawCommand, width: number, height: number): [number, number] | null {
+function canvasBox(cmd: DrawCommand, width: number, height: number, extent?: number[]): [number, number] | null {
     if (cmd.c === null && !cmd.stroke) return null;
     // The polygon and Bézier control points enclose the whole path.
     let xMin = Infinity, yMin = Infinity, xMax = -Infinity, yMax = -Infinity;
@@ -46,6 +47,13 @@ function canvasBox(cmd: DrawCommand, width: number, height: number): [number, nu
     }
     const pad = (cmd.stroke?.width ?? 0) / 2 + 1;
     if (xMax + pad <= 0 || yMax + pad <= 0 || xMin - pad >= width || yMin - pad >= height) return null;
+    // Profiling only: grow `extent` ([xMin, yMin, xMax, yMax]) by this command's on-canvas box.
+    if (extent) {
+        extent[0] = Math.min(extent[0], Math.max(0, xMin - pad));
+        extent[1] = Math.min(extent[1], Math.max(0, yMin - pad));
+        extent[2] = Math.max(extent[2], Math.min(width, xMax + pad));
+        extent[3] = Math.max(extent[3], Math.min(height, yMax + pad));
+    }
     // A point that lies both on the canvas and inside this command's box.
     return [Math.max(0, Math.min(width - 1, xMin)), Math.max(0, Math.min(height - 1, yMin))];
 }
@@ -77,24 +85,31 @@ export function paint(
     TVG: ThorVGNamespace | null,
     tvg: Canvas | null,
     pool: PaintPool,
+    stats?: RenderStats,
 ) {
     const commands = ctx.commands;
+    if (stats) stats.commands = commands.length;
     if (tvg && TVG) {
-        paintThorvg(ctx, TVG, tvg, pool, collect(commands));
+        paintThorvg(ctx, TVG, tvg, pool, collect(commands), stats);
     } else {
+        const start = stats ? performance.now() : 0;
         const bg = ctx.bg;
         bg.setTransform(ctx.dpr, 0, 0, ctx.dpr, 0, 0);
         bg.clearRect(0, 0, ctx.W, ctx.H);
         paintCanvas(ctx, bg, commands);
+        if (stats) stats.renderMs = performance.now() - start;
     }
+    const labelsStart = stats ? performance.now() : 0;
     const lg = ctx.lg;
     lg.save();
     // System-font labels sit above the vector canvas, including its actors.
     paintCanvas(ctx, lg, ctx.foregroundActors);
     lg.restore();
+    if (stats) stats.labelsMs = performance.now() - labelsStart;
 }
 
-function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: PaintPool, items: Item[]) {
+function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: PaintPool, items: Item[], stats?: RenderStats) {
+    const syncStart = stats ? performance.now() : 0;
     const blendOf = (blend: Blend | undefined) => {
         switch (blend) {
             case 'multiply': return TVG.BlendMethod.Multiply;
@@ -203,10 +218,13 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
             pool.layers.set(item.key, slot);
         }
         const { scene, shapes } = slot;
+        const spec = item.layer;
+        const blurred = !!spec.blur || (!!spec.motionBlur && spec.motionBlur.distance > .5);
+        const extent = stats && blurred ? [Infinity, Infinity, -Infinity, -Infinity] : undefined;
         let i = 0;
         let anchor: [number, number] | null = null;
         for (const cmd of item.cmds) {
-            const box = canvasBox(cmd, ctx.W, ctx.H);
+            const box = canvasBox(cmd, ctx.W, ctx.H, extent);
             if (!box) continue;
             anchor ??= box;
             let s = shapes[i];
@@ -221,9 +239,26 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         // Spare shapes stay in the scene (re-adding leaks a ThorVG reference each time) but are parked as a
         // near-transparent pixel inside the drawn area: hiding them or emptying them would widen the region.
         const [px, py] = anchor ?? [0, 0];
+        if (stats) {
+            stats.layers++;
+            stats.layerShapes += shapes.length;
+            stats.parkedShapes += shapes.length - i;
+            if (spec.clip) stats.clips++;
+            if (spec.mask) stats.masks++;
+            if (spec.blur) {
+                stats.gaussianBlurs++;
+                stats.blurAmount += spec.blur;
+            }
+            if (spec.motionBlur && spec.motionBlur.distance > .5) {
+                stats.motionBlurs++;
+                stats.blurAmount += spec.motionBlur.distance;
+            }
+            if (extent && extent[2] > extent[0] && extent[3] > extent[1]) {
+                stats.blurArea += (extent[2] - extent[0]) * (extent[3] - extent[1]);
+            }
+        }
         for (; i < shapes.length; i++) apply(shapes[i], { v: [[px, py], [px + 1, py], [px + 1, py + 1], [px, py + 1]], c: '#00000001' });
 
-        const spec = item.layer;
         scene.resetEffects();
         if (spec.blur) scene.gaussianBlur(spec.blur, 0, 0, 45);
         if (spec.motionBlur && spec.motionBlur.distance > .5) {
@@ -275,6 +310,17 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         // Only a completed rebuild counts: if anything above throws, the next frame rebuilds again instead of
         // drawing an empty canvas until the layer set happens to change.
         pool.signature = signature;
+    }
+    if (stats) {
+        stats.topShapes = topIndex;
+        stats.poolTop = pool.top.length;
+        stats.layerSlots = pool.layers.size;
+        stats.reorder = reorder;
+        const renderStart = performance.now();
+        stats.syncMs = renderStart - syncStart;
+        tvg.update().render();
+        stats.renderMs = performance.now() - renderStart;
+        return;
     }
     tvg.update().render();
 }

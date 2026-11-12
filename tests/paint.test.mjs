@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { paint, createPaintPool, createRenderCtx } = await loadSource(`
+const { paint, createPaintPool, createRenderCtx, createRenderStats, resetRenderStats } = await loadSource(`
     export { paint, createPaintPool } from './src/render/paint';
+    export { createRenderStats, resetRenderStats } from './src/render/perf';
     export { createRenderCtx } from './src/render/context';
 `);
 
@@ -108,4 +109,46 @@ test('a failed rebuild is retried on the next frame instead of leaving the canva
     // Same picture next frame: it must be put back on the canvas.
     paint(ctx, TVG, canvas, pool);
     assert.ok(canvas.paints.length > 0, 'the next frame rebuilds the emptied canvas');
+});
+
+test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds without changing the picture', () => {
+    const { TVG, canvas } = fakeThorvg();
+    const lg = { save() {}, restore() {} };
+    const ctx = createRenderCtx({}, lg);
+    Object.assign(ctx, { W: 400, H: 300 });
+    const pool = createPaintPool();
+    const stats = createRenderStats();
+    const blurred = { key: 'glow', blur: 4, motionBlur: { distance: 6, angle: 0 }, clip: square(0), mask: square(0) };
+    ctx.commands = [square(20, blurred), square(40, blurred), square(200), square(220), square(1000)];
+    ctx.foregroundActors = [];
+
+    paint(ctx, TVG, canvas, pool, stats);
+    assert.equal(stats.commands, 5);
+    assert.equal(stats.topShapes, 3);
+    assert.equal(stats.poolTop, 3);
+    assert.equal(stats.layers, 1);
+    assert.equal(stats.layerSlots, 1);
+    assert.equal(stats.layerShapes, 2);
+    assert.equal(stats.parkedShapes, 0);
+    assert.equal(stats.reorder, true);
+    assert.equal(stats.gaussianBlurs, 1);
+    assert.equal(stats.motionBlurs, 1);
+    assert.equal(stats.blurAmount, 10);
+    assert.equal(stats.masks, 1);
+    assert.equal(stats.clips, 1);
+    // Two 10×10 squares at x 20 and 40 (each padded by 1 px): x 19–51, y 9–21.
+    assert.equal(stats.blurArea, 32 * 12);
+    assert.ok(stats.syncMs >= 0 && stats.renderMs >= 0 && stats.labelsMs >= 0);
+
+    // The frame after the pool grew rebuilds once more; a steady layout after that does not.
+    resetRenderStats(stats);
+    paint(ctx, TVG, canvas, pool, stats);
+    resetRenderStats(stats);
+    paint(ctx, TVG, canvas, pool, stats);
+    assert.equal(stats.reorder, false);
+    // One layer child gone: it is parked inside the scene, not removed.
+    ctx.commands = [square(20, blurred), square(200), square(220), square(1000)];
+    resetRenderStats(stats);
+    paint(ctx, TVG, canvas, pool, stats);
+    assert.equal(stats.parkedShapes, 1);
 });

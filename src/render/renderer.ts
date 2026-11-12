@@ -12,6 +12,7 @@ import { drawRooftop } from './scene/rooftop';
 import { drawCloudStart } from './scene/clouds';
 import { createPaintPool, paint } from './paint';
 import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
+import { resetRenderStats, type RenderStats } from './perf';
 
 /**
  * Logical game view. The scene keeps this aspect ratio and scales uniformly to fill the screen, so a
@@ -50,6 +51,8 @@ function setup(
     let tvg: Canvas | null = null;
     let renderer = 'canvas2d';
     let renderError: string | null = null;
+    // Set only while the developer performance overlay is open. 성능 오버레이가 켜졌을 때만 설정.
+    let stats: RenderStats | null = null;
 
     function size() {
         ctx.W = Math.max(1, base.clientWidth || VIEW_WIDTH);
@@ -130,6 +133,7 @@ function setup(
         if (opening) openingCamera(opening, baseWidth, baseVertical);
         lastStage = next.stage;
         lastTime = t;
+        const buildStart = stats ? performance.now() : 0;
         lg.setTransform(ctx.dpr, 0, 0, ctx.dpr, 0, 0);
         lg.clearRect(0, 0, ctx.W, ctx.H);
         ctx.foregroundActors = [];
@@ -146,7 +150,11 @@ function setup(
         } else {
             drawWorld(ctx);
         }
-        paint(ctx, TVG, tvg, pool);
+        if (stats) {
+            resetRenderStats(stats);
+            stats.buildMs = performance.now() - buildStart;
+        }
+        paint(ctx, TVG, tvg, pool, stats ?? undefined);
         return { cam: ctx.cam, scale: ctx.scale, vertical: ctx.vertical, width: ctx.W };
     }
 
@@ -186,6 +194,18 @@ function setup(
         draw,
         ready,
         info: () => ({ renderer, renderError, commands: ctx.commands.length }),
+        /** Start (or with null, stop) filling render counters each frame. */
+        profile(next: RenderStats | null) {
+            stats = next;
+        },
+        /** Backend and canvas size for the performance overlay. */
+        surface: () => ({
+            backend: tvg ? `thorvg-${tvg.renderer}` : renderer,
+            renderError,
+            width: ctx.W,
+            height: ctx.H,
+            dpr: ctx.dpr,
+        }),
         destroy() {
             observer.disconnect();
             tvg?.destroy();
