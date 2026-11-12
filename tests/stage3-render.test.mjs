@@ -4,6 +4,73 @@ import { driveStageThree } from './support/stage3-route.mjs';
 import { bundled } from './support/load.mjs';
 const { createGame, createRenderCtx, drawRooftop, drawCloudStart } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { createRenderCtx } from './src/render/context'; export { drawRooftop } from './src/render/scene/rooftop'; export { drawCloudStart } from './src/render/scene/clouds';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
+test('entrance replaces the falling chart with an employee board with an initially tidy row', () => {
+    const game = createGame();
+    game.startStage(3);
+    const state = game.getSnapshot();
+    for (const locale of ['en', 'ko']) for (const width of [540, 1000]) {
+        const labels = [];
+        const ctx = createRenderCtx({}, { fillText: (text, x, y) => labels.push({ text, x, y }) });
+        Object.assign(ctx, { state, p: state.player, mode: state.mode, locale, VW: width, W: width });
+        drawRooftop(ctx);
+        assert.ok(labels.some(label => label.text === (locale === 'en' ? 'EMPLOYEES OF THE MONTH' : '이달의 우수사원')));
+        assert.ok(labels.every(label => label.text !== 'JIN' && label.text !== '진'));
+        const portraits = ctx.commands.filter(command => command.c === '#f4ecd7'
+            && command.v.length === 4 && command.v[1][0] - command.v[0][0] === 40
+            && command.v[2][1] - command.v[1][1] === 49);
+        assert.deepEqual(portraits.map(command => command.v[0]), [[62, 118], [111, 118], [160, 118]]);
+        assert.ok(!ctx.commands.some(command => command.layer?.key === 'sales-monitor-fall'));
+        assert.ok(ctx.commands.some(command => command.layer?.key === 'sales-monitor-flat'));
+        const beam = ctx.commands.find(command => command.layer?.key === 'employee-board-light');
+        assert.ok(beam && typeof beam.c !== 'string');
+        assert.ok(Math.min(...beam.v.map(point => point[1])) < 82, 'light starts above the board');
+        assert.ok(Math.max(...beam.v.map(point => point[1])) >= 210, 'light reaches the board bottom');
+        assert.ok(ctx.commands.some(command => command.v.some(([x, y]) => x === -400 && y === -72)), 'entrance wall extends above the board and lamp');
+    }
+});
+
+test('the shut door jolts only the player portrait into a drop and swing, with repeatable seeking', () => {
+    const game = createGame();
+    game.startStage(3);
+    const frames = new Map([[0, game.getSnapshot()]]);
+    for (let tick = 1; tick <= 600; tick++) {
+        game.step();
+        if ([132, 300, 318, 336, 360, 468, 540, 600].includes(tick)) frames.set(tick, game.getSnapshot());
+    }
+    const render = tick => {
+        const state = frames.get(tick);
+        const ctx = createRenderCtx({}, { fillText() {} });
+        Object.assign(ctx, { state, p: state.player, mode: state.mode });
+        drawRooftop(ctx);
+        return ctx.commands.filter(command => command.c === '#f4ecd7' && command.v.length === 4
+            && Math.abs(Math.hypot(command.v[1][0] - command.v[0][0], command.v[1][1] - command.v[0][1]) - 40) < 1e-8
+            && Math.abs(Math.hypot(command.v[2][0] - command.v[1][0], command.v[2][1] - command.v[1][1]) - 49) < 1e-8);
+    };
+    const angle = portraits => {
+        const [a, b] = portraits[2].v;
+        return Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
+    };
+    const start = render(0);
+    assert.equal(angle(start), 0);
+    for (const tick of [132, 300]) assert.deepEqual(render(tick), start, 'photo stays in the row until the door shuts');
+    assert.notEqual(angle(render(318)), 0, 'door impact rattles the photo');
+    const pivotY = portraits => {
+        const [a, b] = portraits[2].v;
+        return (a[1] + b[1]) / 2 + Math.cos(angle(portraits) * Math.PI / 180);
+    };
+    const falling = render(336);
+    assert.ok(pivotY(falling) > 119 && pivotY(falling) < 154, 'photo falls out of the row');
+    assert.ok(pivotY(render(360)) > 154, 'photo bounces when caught');
+    assert.ok(angle(render(468)) > 40, 'photo swings past its resting angle');
+    for (const tick of [540, 600]) {
+        const tilted = render(tick);
+        assert.ok(Math.abs(angle(tilted) - 40) < 1e-8);
+        assert.deepEqual(tilted.slice(0, 2), start.slice(0, 2), 'other employees stay upright');
+    }
+    assert.deepEqual(render(0), start);
+    assert.deepEqual(render(336), falling);
+});
+
 test('rooftop renders the live course and first flight in both languages and narrow views', () => {
     const game = createGame(); game.startStage(3);
     const frames = new Map([['room', game.getSnapshot()]]);

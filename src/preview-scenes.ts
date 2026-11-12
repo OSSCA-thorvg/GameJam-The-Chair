@@ -217,12 +217,16 @@ function rooftopEntrance(): PreviewScene {
     game.startStage(3);
     const effects = createEffects();
     const frames = [capture(game, effects)];
-    for (let i = 0; i < 168; i++) {
+    for (let i = 0; i < 300; i++) {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('rooftop-entrance', 'Rooftop · Hinged entrance', 400,
-        [{ at: 0, label: 'Closed' }, { at: .4, label: 'Door opens' }, { at: 1.1, label: 'Chair emerges' }, { at: 1.8, label: 'At the block' }, { at: 2.6, label: 'Door closed · Controls ready' }], frames);
+    return recordedScene('rooftop-entrance', 'Rooftop · Entrance & slipping portrait', 400,
+        [{ at: 0, label: 'Closed · Portrait straight' }, { at: .4, label: 'Door opens' },
+            { at: 1.1, label: 'Chair emerges · Portrait straight' }, { at: 1.8, label: 'At the block' },
+            { at: 2.6, label: 'Door shuts · Portrait jolts' }, { at: 2.8, label: 'Portrait drops' },
+            { at: 2.96, label: 'Caught · Swinging' }, { at: 3.9, label: 'Swing overshoot' },
+            { at: 4.2, label: 'Settled at 40 degrees' }], frames);
 }
 
 function focusLoss(): PreviewScene {
