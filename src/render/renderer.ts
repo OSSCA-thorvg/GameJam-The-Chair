@@ -5,6 +5,7 @@ import type { GameState } from '../game/game';
 import { ART } from './art';
 import type { EffectsState } from './effects';
 import { createRenderCtx } from './context';
+import { drawOrbit } from './scene/orbit';
 import { drawWorld } from './scene/world';
 import { drawBuilding } from './scene/building';
 import { drawRooftop } from './scene/rooftop';
@@ -126,6 +127,8 @@ function setup(
         ctx.foregroundActors = [];
         if (opening) {
             drawOpening(ctx, opening);
+        } else if (next.stage === 5) {
+            drawOrbit(ctx);
         } else if (next.stage === 4) {
             drawCloudStart(ctx);
         } else if (next.stage === 3) {

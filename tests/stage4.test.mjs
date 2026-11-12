@@ -19,6 +19,8 @@ test('stage 4 traverses growing building, gust sign, nested desk and depth revea
             assert.ok(Math.abs(state.player.y + 28 - surface) < .01, 'chair rests on the moving sign face');
         }
     });
+    assert.equal(end.stage, 5);
+    assert.equal(end.mode, 'play');
     assert.equal(end.completedStage, 4); assert.equal(end.deaths, 0);
     assert.deepEqual([...flags], [0, 1, 2, 3]);
     assert.deepEqual([...phases], ['arrival', 'course', 'reveal', 'depth']);
@@ -29,8 +31,9 @@ test('stage 4 traverses growing building, gust sign, nested desk and depth revea
 
 test('saved sky flags restore a safe landing and do not leak props into earlier stages', () => {
     const game = createGame(); game.startStage(4);
-    let checked = false;
+    let checked = false, savedSky;
     driveStageFour(game, state => {
+        if (state.checkpoint === 3 && !savedSky) savedSky = game.serialize();
         if (state.checkpoint === 2 && !checked) {
             checked = true; game.pause(); const frozen = game.getSnapshot(); game.advance(2);
             assert.deepEqual(game.getSnapshot(), frozen); game.pause();
@@ -38,6 +41,8 @@ test('saved sky flags restore a safe landing and do not leak props into earlier 
         }
     });
     assert.ok(checked);
+    assert.ok(savedSky);
+    game.restore(savedSky);
     game.restart();
     const retry = game.getSnapshot();
     assert.equal(retry.checkpoint, 3); assert.equal(retry.player.x, 4510);

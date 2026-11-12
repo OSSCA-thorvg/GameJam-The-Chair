@@ -1,6 +1,7 @@
 import { createGame, type Game, type GameState } from './game/game';
 import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
+import { STAGE_FIVE } from './game/stages/orbit/data';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { STAGE_TWO } from './game/stages/building/data';
 import { ductTimings, STAGE_THREE, GRAPH_CORNERS } from './game/stages/rooftop/data';
@@ -464,6 +465,33 @@ function skyEnding(): PreviewScene {
     };
 }
 
+function orbitRoute(): PreviewScene {
+    const game = createGame();
+    game.startStage(5);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    const markers = [{ at: 0, label: 'Stage 4 rear view' }];
+    let previous = '';
+    for (let i = 0; i < 3600; i++) {
+        const state = game.getSnapshot(), orbit = state.orbit;
+        if (!orbit) break;
+        const target = STAGE_FIVE.rings[orbit.rings] ?? STAGE_FIVE.door;
+        const p = state.player;
+        const keys: Input[] = [];
+        if (target.x - p.x > p.vx * .65 + 6) keys.push('right');
+        if (target.x - p.x < p.vx * .65 - 6) keys.push('left');
+        if (target.y - p.y > p.vy * .65 + 6) keys.push('forward');
+        if (target.y - p.y < p.vy * .65 - 6) keys.push('back');
+        game.setInput(...keys);
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+        const phase = `${orbit.phase}-${orbit.rings}`;
+        if (phase !== previous) { markers.push({ at: i / 60, label: phase }); previous = phase; }
+        if (orbit.phase === 'parked') break;
+    }
+    return recordedScene('orbit-route', 'Orbit · Concept 01: cloud basin & office door', 0, markers, frames);
+}
+
 // The duct's timed sneezes: the first big one that spits out the overtime junk, and the later gusts.
 function ductSneeze(gust = false): PreviewScene {
     const game = createGame();
@@ -558,5 +586,6 @@ export const previewScenes: readonly PreviewScene[] = [
     rooftopTakeoff(),
     cloudEntry(),
     skyEnding(),
+    orbitRoute(),
     officeTyping(),
 ];

@@ -7,11 +7,12 @@ import type { Checkpoint, StageDefinition } from './types';
 import { office, officeConfig } from './office/definition';
 import { building, buildingConfig } from './building/definition';
 import { rooftop, rooftopConfig } from './rooftop/definition';
+import { orbit, orbitConfig } from './orbit/definition';
 import { sky, skyConfig } from './sky/definition';
 
 export type { Checkpoint, StageDefinition, StageHooks } from './types';
 
-export const STAGES: DeepReadonly<Record<StageId, StageDefinition>> = deepFreeze({ 1: office, 2: building, 3: rooftop, 4: sky });
+export const STAGES: DeepReadonly<Record<StageId, StageDefinition>> = deepFreeze({ 1: office, 2: building, 3: rooftop, 4: sky, 5: orbit });
 
 const F = LEVEL.floor;
 const pile = LEVEL.practicePaper;
@@ -49,5 +50,6 @@ export const GAME_CONFIG = deepFreeze({
     building: buildingConfig,
     rooftop: rooftopConfig,
     sky: skyConfig,
+    orbit: orbitConfig,
 });
 export const CONFIG_VERSION = configHash(GAME_CONFIG);
