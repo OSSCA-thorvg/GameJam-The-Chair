@@ -229,8 +229,8 @@ test('urgent sheets: skimming ones need a jump, a stapled bundle shoves the chai
     const jumping = () => ({ x: copier.x - 180, y: F - 28 - 76 });
     assert.ok(flyAt(low, standing).length > 0, 'skimming sheets hit a chair on the floor');
     assert.equal(flyAt(sys.urgentShot(copier), jumping).length, 0, 'a jump clears them');
-    const bundle = sys.urgentShot({ ...copier, volley: 4, burst: 0 });
-    assert.equal(bundle.length, 1);
+    const bundle = sys.urgentShot({ ...copier, volley: 4, burst: 1 });
+    assert.equal(bundle.length, 1, 'the bundle flies alone, its loose pages follow in the next shot');
     assert.equal(bundle[0].kind, 'bundle');
     const hit = flyAt(bundle, standing)[0];
     assert.ok(hit.heavy && hit.focus.damage === 25 && hit.vx < 0);

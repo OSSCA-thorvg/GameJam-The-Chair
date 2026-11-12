@@ -60,7 +60,7 @@ export function urgentPattern(volley: number): UrgentPattern {
     const order: UrgentPattern[] = ['low', 'lob', 'fan', 'bundle'];
     return volley <= order.length ? order[Math.max(0, volley - 1)] : order[2 + (volley - order.length - 1) % 2];
 }
-const URGENT_SHOTS: Record<UrgentPattern, number> = { low: 2, lob: 1, fan: 2, bundle: 1 };
+const URGENT_SHOTS: Record<UrgentPattern, number> = { low: 3, lob: 2, fan: 3, bundle: 2 };
 // Focus ids of urgent volleys, apart from the office copier's.
 export const URGENT_VOLLEY_ID = 1000;
 
@@ -109,13 +109,15 @@ export function urgentShot(copier: Readonly<UrgentCopier>): Paper[] {
         life: 5, hit: false, landed: false, volley, safe: false, kind,
     });
     // Skimming just above the floor: only a jump clears them.
-    const low = () => [0, 1, 2].map(i => sheet(F - 38 - i * 3, 290 + i * 25, -70 - i * 6, i));
+    // Each later shot of a volley flies a little faster, so the stream spreads out instead of stacking.
+    const low = () => [0, 1, 2, 3].map(i => sheet(F - 38 - i * 3, 285 + i * 22 + shot * 15, -70 - i * 6, i));
     // Lobbed high, raining down a little ahead of the printer.
-    const lob = (count: number) => Array.from({ length: count }, (_, i) => sheet(F - 120, 150 + i * 45, -230 - i * 20, i));
+    const lob = (count: number) => Array.from({ length: count }, (_, i) => sheet(F - 120, 130 + i * 40 + shot * 25, -230 - i * 18, i));
     if (pattern === 'low') return low();
-    if (pattern === 'lob') return lob(3);
-    if (pattern === 'fan') return shot === 0 ? low() : lob(2);
-    return [sheet(F - 55, 230, -90, 0, 'bundle')];
+    if (pattern === 'lob') return lob(4);
+    if (pattern === 'fan') return shot === 1 ? lob(3) : low();
+    // The bundle comes first, then loose pages from the same report rain after it.
+    return shot === 0 ? [sheet(F - 55, 230, -90, 0, 'bundle')] : lob(3);
 }
 
 // Moves every sheet one step and reports the ones that hit the rider, in order.
