@@ -12,6 +12,14 @@ import { drawCloudStart } from './scene/clouds';
 import { createPaintPool, paint } from './paint';
 import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
 
+/**
+ * Logical game view. The scene keeps this aspect ratio and scales uniformly to fill the screen, so a
+ * bigger window shows the same framing larger instead of revealing more of the level.
+ * 논리 화면 크기. 화면이 커져도 같은 구도를 비율 그대로 크게 보여 준다.
+ */
+export const VIEW_WIDTH = 1000;
+export const VIEW_HEIGHT = 510;
+
 export function createRenderer(root: HTMLElement, getLocale: () => Locale = () => 'en') {
     const base = root.querySelector<HTMLCanvasElement>('[data-base]');
     const cn = root.querySelector<HTMLCanvasElement>('[data-tvg]');
@@ -43,11 +51,11 @@ function setup(
     let renderError: string | null = null;
 
     function size() {
-        ctx.W = Math.max(300, base.clientWidth || 800);
-        ctx.H = base.clientHeight || 510;
-        ctx.VW = ctx.W < 520 ? 540 : Math.max(760, ctx.W);
+        ctx.W = Math.max(1, base.clientWidth || VIEW_WIDTH);
+        ctx.H = base.clientHeight || VIEW_HEIGHT;
+        ctx.VW = VIEW_WIDTH;
         ctx.scale = ctx.W / ctx.VW;
-        ctx.vertical = Math.max(0, ctx.H / ctx.scale - 510) * .7;
+        ctx.vertical = Math.max(0, ctx.H / ctx.scale - VIEW_HEIGHT) * .7;
         ctx.dpr = Math.min(devicePixelRatio || 1, 2);
         for (const c of [base, labels]) {
             c.width = Math.round(ctx.W * ctx.dpr);
@@ -89,7 +97,7 @@ function setup(
         ctx.saveFlash = effects.saveFlash;
         ctx.personalBox = effects.personalBox;
 
-        const baseWidth = ctx.W < 520 ? 540 : Math.max(760, ctx.W);
+        const baseWidth = VIEW_WIDTH;
         ctx.VW = next.stage === 4 ? baseWidth * 1.12 : baseWidth;
         ctx.scale = ctx.W / ctx.VW;
         const t = ctx.t;
@@ -110,7 +118,7 @@ function setup(
             ctx.cam += (targetCamera - ctx.cam) * Math.min(1, dt * 7);
             ctx.wheel += ctx.p.vx * dt / 8;
         }
-        const baseVertical = Math.max(0, ctx.H / ctx.scale - 510) * .7;
+        const baseVertical = Math.max(0, ctx.H / ctx.scale - VIEW_HEIGHT) * .7;
         // Nearing the sales-graph billboard the view tilts up to show the whole sign; riding it eases the
         // chair to the sky stage's framing, which the climb keeps.
         const flight = next.firstFlight;
