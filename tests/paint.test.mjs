@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { paint, createPaintPool, createRenderCtx, createRenderStats, resetRenderStats } = await loadSource(`
+const { paint, createPaintPool, createRenderCtx, createRenderStats, resetRenderStats, createLayerOverrides } = await loadSource(`
     export { paint, createPaintPool } from './src/render/paint';
-    export { createRenderStats, resetRenderStats } from './src/render/perf';
+    export { createRenderStats, resetRenderStats, createLayerOverrides } from './src/render/perf';
     export { createRenderCtx } from './src/render/context';
 `);
 
@@ -138,6 +138,7 @@ test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds w
     assert.equal(stats.clips, 1);
     // Two 10×10 squares at x 20 and 40 (each padded by 1 px): x 19–51, y 9–21.
     assert.equal(stats.blurArea, 32 * 12);
+    assert.deepEqual(stats.layerList, [{ key: 'glow', shapes: 2, area: 32 * 12, effects: ['blur4', 'motion', 'clip', 'mask'] }]);
     assert.ok(stats.syncMs >= 0 && stats.renderMs >= 0 && stats.labelsMs >= 0);
 
     // The frame after the pool grew rebuilds once more; a steady layout after that does not.
@@ -151,4 +152,35 @@ test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds w
     resetRenderStats(stats);
     paint(ctx, TVG, canvas, pool, stats);
     assert.equal(stats.parkedShapes, 1);
+});
+
+test('debug layer overrides hide a layer or draw it as plain shapes, and leave other layers alone', () => {
+    const { TVG, canvas } = fakeThorvg();
+    const lg = { save() {}, restore() {} };
+    const ctx = createRenderCtx({}, lg);
+    Object.assign(ctx, { W: 400, H: 300 });
+    const pool = createPaintPool();
+    const stats = createRenderStats();
+    const overrides = createLayerOverrides();
+    const sun = { key: 'sun', blend: 'screen', opacity: .5 };
+    const fog = { key: 'fog', blur: 2 };
+    ctx.commands = [square(20, sun), square(40, fog), square(60, fog), square(200)];
+    ctx.foregroundActors = [];
+    const run = () => {
+        resetRenderStats(stats);
+        paint(ctx, TVG, canvas, pool, stats, overrides);
+        return { keys: stats.layerList.map(layer => layer.key), top: stats.topShapes, commands: stats.commands };
+    };
+
+    assert.deepEqual(run(), { keys: ['sun', 'fog'], top: 1, commands: 4 });
+    assert.deepEqual(stats.layerList[0].effects, ['α0.50', 'screen']);
+    overrides.hidden.add('fog');
+    assert.deepEqual(run(), { keys: ['sun'], top: 1, commands: 2 });
+    overrides.flat.add('sun');
+    assert.deepEqual(run(), { keys: [], top: 2, commands: 2 });
+    overrides.hidden.clear();
+    overrides.flat.clear();
+    assert.deepEqual(run(), { keys: ['sun', 'fog'], top: 1, commands: 4 });
+    // The scene's own commands are never changed by an override.
+    assert.equal(ctx.commands[0].layer, sun);
 });

@@ -1,5 +1,6 @@
 import { translate, type Locale } from '../i18n';
-import { createRenderStats, type RenderStats } from '../render/perf';
+import { createLayerOverrides, createRenderStats, type LayerOverrides, type RenderStats } from '../render/perf';
+import { createLayerPanel } from './perf-layers';
 
 /**
  * Developer performance overlay (toggle with F3 or `, or open with `?debug=1`).
@@ -25,11 +26,22 @@ export type FrameSample = {
     hudMs: number;
 };
 
-export type PerfSurface = { backend: string; renderError: string | null; width: number; height: number; dpr: number };
+export type PerfSurface = {
+    backend: string;
+    renderError: string | null;
+    /** Canvas size in CSS px and the game's own DPR (used by the Canvas2D layers). */
+    width: number;
+    height: number;
+    dpr: number;
+    /** Pixels the vector renderer actually rasterizes, and the DPR it applied. */
+    raster: { width: number; height: number; dpr: number };
+};
 
 type PerfDeps = {
     /** Starts (stats) or stops (null) the renderer's per-frame counters. */
     profile(stats: RenderStats | null): void;
+    /** Applies (or with null, removes) debug layer hiding and flattening. */
+    layerOverrides(overrides: LayerOverrides | null): void;
     surface(): PerfSurface | null;
 };
 
@@ -104,7 +116,9 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
         legend.append(item);
     }
     const text = document.createElement('pre');
-    panel.append(header, graph, legend, text);
+    const overrides = createLayerOverrides();
+    const layers = createLayerPanel(getLocale, overrides);
+    panel.append(header, graph, legend, text, layers.element);
     (root.querySelector('[data-scene]') ?? root).append(panel);
     const g = graph.getContext('2d');
 
@@ -112,6 +126,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
         const locale = getLocale();
         title.textContent = translate('perf.title', locale);
         copy.textContent = translate('perf.copy', locale);
+        layers.applyLocale();
     }
 
     function setOpen(next: boolean) {
@@ -119,6 +134,9 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
         open = next;
         panel.hidden = !open;
         deps.profile(open ? stats : null);
+        // Layer switches only live while the overlay is open, so a closed overlay never hides scenery.
+        layers.clear();
+        deps.layerOverrides(open ? overrides : null);
         count = 0;
         head = 0;
         reorders = 0;
@@ -170,6 +188,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
             surface: deps.surface(),
             window: window1s(),
             render: { ...stats, reordersInHistory: reorders },
+            layerOverrides: { hidden: [...overrides.hidden], flat: [...overrides.flat] },
             memory: {
                 jsHeap: heap,
                 jsHeapPeak: heapPeak || null,
@@ -239,7 +258,8 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
             `render ${ms(seg.render)}  labels ${ms(seg.labels)}  hud ${ms(seg.hud)}`,
             `ticks/frame ${w.ticks.avg.toFixed(2)} (max ${w.ticks.max})  dropped ${ms(w.droppedMs)} ms/s`,
             `backend ${s?.backend ?? 'none'}${s?.renderError ? ' (fallback)' : ''}`,
-            s ? `canvas ${s.width}×${s.height} css · dpr ${s.dpr} · ${(s.width * s.height / 1e6).toFixed(2)} Mpx tvg` : 'canvas n/a',
+            s ? `canvas ${s.width}×${s.height} css · page dpr ${devicePixelRatio}` : 'canvas n/a',
+            s ? `raster ${s.raster.width}×${s.raster.height} · ${(s.raster.width * s.raster.height / 1e6).toFixed(2)} Mpx · dpr ${+s.raster.dpr.toFixed(3)}` : 'raster n/a',
             `cmds ${stats.commands}  shapes ${stats.topShapes}/${stats.poolTop}`,
             `layers ${stats.layers}/${stats.layerSlots}  layer shapes ${stats.layerShapes} (parked ${stats.parkedShapes})`,
             `reorder ${stats.reorder ? 'YES' : 'no'}  (${reorders}/${count} frames)`,
@@ -251,6 +271,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
             `overlay ${ms(w.overlayMs)} ms`,
         ];
         text.textContent = lines.join('\n');
+        layers.update(stats.layerList, s ? s.width * s.height : 0, seg.render, performance.now());
     }
 
     function record(sample: FrameSample) {
@@ -310,11 +331,20 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
             return open;
         },
         toggle: (next = !open) => setOpen(next),
+        /** Console access to the layer switches (the overlay must be open). */
+        layers: {
+            hide: (key: string, on = true) => layers.set(key, 'hide', on),
+            flatten: (key: string, on = true) => layers.set(key, 'flat', on),
+            reset: () => layers.clear(),
+            list: () => layers.keys(),
+        },
         record,
         snapshot,
         destroy() {
             window.removeEventListener('keydown', onKey);
             deps.profile(null);
+            deps.layerOverrides(null);
+            layers.destroy();
             panel.remove();
         },
     };

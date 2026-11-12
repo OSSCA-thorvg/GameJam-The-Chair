@@ -137,6 +137,7 @@ catch (error) {
 // Developer metrics (F3 / ` / ?debug=1). Timing stays here and in the renderer, never in the game core.
 const perf = createPerfOverlay(root, () => locale, {
     profile: stats => renderer?.profile(stats),
+    layerOverrides: overrides => renderer?.layerOverrides(overrides),
     surface: () => renderer?.surface() ?? null,
 });
 let hudMs = 0;
@@ -212,7 +213,7 @@ const officeStageOne = {
     interact: game.interact, leaveMeeting: game.leaveMeeting, reset: game.reset, startStage: game.startStage, step: game.step, jump: game.jump, pause: game.pause, draw,
     advanceImpact: game.advanceImpact, advanceFocusLoss: game.advanceFocusLoss,
     setInput: (...v: Input[]) => game.setInput(...v),
-    perf: { toggle: perf.toggle, snapshot: perf.snapshot },
+    perf: { toggle: perf.toggle, snapshot: perf.snapshot, layers: perf.layers },
     state: () => ({ ...game.getSnapshot(), ...effects.snapshot(), ...renderer?.info(), reaction: feedback.snapshot().reaction }),
     replay: {
         latest: () => recorder.latest(),

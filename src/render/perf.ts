@@ -1,3 +1,17 @@
+import type { DrawCommand } from './types';
+
+/** One layer scene drawn this frame. 이번 프레임에 그린 layer 하나. */
+export type LayerInfo = {
+    /** `LayerSpec.key`; a key used twice in one frame appears twice. */
+    key: string;
+    /** Children drawn this frame (off-canvas commands excluded). */
+    shapes: number;
+    /** On-canvas bounding-box area of the children, CSS px². */
+    area: number;
+    /** Short effect tags: opacity, blend, blur, motion blur, clip, mask. */
+    effects: string[];
+};
+
 /**
  * Per-frame render counters for the developer performance overlay. Only filled while the overlay is on;
  * the game core never sees them. Times are milliseconds from `performance.now()`.
@@ -32,7 +46,35 @@ export type RenderStats = {
     blurArea: number;
     masks: number;
     clips: number;
+    /** Every layer drawn this frame, in paint order. */
+    layerList: LayerInfo[];
 };
+
+/**
+ * Debug-only layer switches, by `LayerSpec.key`: `hidden` layers are not drawn, `flat` layers draw their
+ * commands as plain shapes (no scene, so no opacity, blend, blur, clip or mask). Comparing frame times
+ * with a layer on, flattened and hidden shows what that layer costs.
+ * 디버그 전용 layer 스위치. hidden은 그리지 않고, flat은 scene 없이 일반 shape로 그린다.
+ */
+export type LayerOverrides = { hidden: Set<string>; flat: Set<string> };
+
+export function createLayerOverrides(): LayerOverrides {
+    return { hidden: new Set(), flat: new Set() };
+}
+
+/** The commands with layer overrides applied; the same array when nothing is overridden. */
+export function applyLayerOverrides(commands: DrawCommand[], overrides: LayerOverrides | undefined): DrawCommand[] {
+    if (!overrides || (!overrides.hidden.size && !overrides.flat.size)) return commands;
+    const out: DrawCommand[] = [];
+    for (const cmd of commands) {
+        const key = cmd.layer?.key;
+        if (key === undefined) out.push(cmd);
+        else if (overrides.hidden.has(key)) continue;
+        else if (overrides.flat.has(key)) out.push({ ...cmd, layer: undefined });
+        else out.push(cmd);
+    }
+    return out;
+}
 
 export function createRenderStats(): RenderStats {
     const stats = {} as RenderStats;
@@ -47,4 +89,5 @@ export function resetRenderStats(stats: RenderStats) {
     stats.reorder = false;
     stats.gaussianBlurs = stats.motionBlurs = stats.blurAmount = stats.blurArea = 0;
     stats.masks = stats.clips = 0;
+    stats.layerList = [];
 }

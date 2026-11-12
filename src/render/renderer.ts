@@ -12,7 +12,7 @@ import { drawRooftop } from './scene/rooftop';
 import { drawCloudStart } from './scene/clouds';
 import { createPaintPool, paint } from './paint';
 import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
-import { resetRenderStats, type RenderStats } from './perf';
+import { resetRenderStats, type LayerOverrides, type RenderStats } from './perf';
 
 /**
  * Logical game view. The scene keeps this aspect ratio and scales uniformly to fill the screen, so a
@@ -53,6 +53,7 @@ function setup(
     let renderError: string | null = null;
     // Set only while the developer performance overlay is open. 성능 오버레이가 켜졌을 때만 설정.
     let stats: RenderStats | null = null;
+    let overrides: LayerOverrides | null = null;
 
     function size() {
         ctx.W = Math.max(1, base.clientWidth || VIEW_WIDTH);
@@ -154,7 +155,7 @@ function setup(
             resetRenderStats(stats);
             stats.buildMs = performance.now() - buildStart;
         }
-        paint(ctx, TVG, tvg, pool, stats ?? undefined);
+        paint(ctx, TVG, tvg, pool, stats ?? undefined, overrides ?? undefined);
         return { cam: ctx.cam, scale: ctx.scale, vertical: ctx.vertical, width: ctx.W };
     }
 
@@ -198,6 +199,10 @@ function setup(
         profile(next: RenderStats | null) {
             stats = next;
         },
+        /** Debug-only layer hiding and flattening; null draws every layer normally. */
+        layerOverrides(next: LayerOverrides | null) {
+            overrides = next;
+        },
         /** Backend and canvas size for the performance overlay. */
         surface: () => ({
             backend: tvg ? `thorvg-${tvg.renderer}` : renderer,
@@ -205,6 +210,8 @@ function setup(
             width: ctx.W,
             height: ctx.H,
             dpr: ctx.dpr,
+            // The pixels actually rasterized. ThorVG scales its canvas by its own DPR (1 + (dpr - 1) × 0.75).
+            raster: tvg ? { width: cn.width, height: cn.height, dpr: tvg.dpr } : { width: base.width, height: base.height, dpr: ctx.dpr },
         }),
         destroy() {
             observer.disconnect();
