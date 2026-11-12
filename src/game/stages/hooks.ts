@@ -4,6 +4,7 @@ import type { StageHooks } from './types';
 import { officeHooks } from './office/hooks';
 import { buildingHooks } from './building/hooks';
 import { rooftopHooks } from './rooftop/hooks';
+import { orbitHooks } from './orbit/hooks';
 import { skyHooks } from './sky/hooks';
 
 export function stageHooks(stage: StageId): StageHooks {
@@ -12,5 +13,6 @@ export function stageHooks(stage: StageId): StageHooks {
         case 2: return buildingHooks;
         case 3: return rooftopHooks;
         case 4: return skyHooks;
+        case 5: return orbitHooks;
     }
 }

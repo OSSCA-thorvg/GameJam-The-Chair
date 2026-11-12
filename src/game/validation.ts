@@ -243,14 +243,22 @@ function sky(value: unknown, path: string) {
     if (data.standing !== null) string(data.standing, `${path}.standing`, 100);
 }
 
+function orbit(value: unknown, path: string) {
+    const data = record(value, path);
+    exact(data, ['phase', 'age', 'z', 'speed', 'rings', 'settled'], path);
+    choice(data.phase, ['entry', 'rings', 'drawer', 'parked'], `${path}.phase`);
+    for (const key of ['age', 'z', 'speed', 'settled']) finite(data[key], `${path}.${key}`);
+    integer(data.rings, `${path}.rings`, 0, 2);
+}
+
 /** Validates the complete serialized core state before untrusted data enters replay logic. */
 export function assertGameState(value: unknown, path = 'state'): asserts value is GameState {
     const data = record(value, path);
     exact(data, ['stage', 'checkpoint', 'lessons', 'deaths', 'completedStage', 'skylineSeed', 'tick', 'rng', 'hasExtinguisher',
         'sprayCooldown', 'sprayBurst', 'sprayDir', 'mode', 'p', 'keys', 'ground', 'coyote', 'jumpQ', 'time', 'practiceJump', 'actualSpeed',
         'rollCooldown', 'reverseCooldown', 'people', 'history', 'impact', 'focus', 'focusClock', 'focusEvents', 'focusNotice', 'lossReason',
-        'focusLossTime', 'office', 'building', 'rooftop', 'sky'], path);
-    choice(data.stage, [1, 2, 3, 4], `${path}.stage`);
+        'focusLossTime', 'office', 'building', 'rooftop', 'sky', 'orbit'], path);
+    choice(data.stage, [1, 2, 3, 4, 5], `${path}.stage`);
     // The rooftop has the most flags: the start plus four (index 4 is the upper roof).
     integer(data.checkpoint, `${path}.checkpoint`, 0, 4);
     const lessons = record(data.lessons, `${path}.lessons`);
@@ -258,7 +266,7 @@ export function assertGameState(value: unknown, path = 'state'): asserts value i
     boolean(lessons.moved, `${path}.lessons.moved`);
     boolean(lessons.jumped, `${path}.lessons.jumped`);
     integer(data.deaths, `${path}.deaths`);
-    choice(data.completedStage, [0, 1, 2, 3, 4], `${path}.completedStage`);
+    choice(data.completedStage, [0, 1, 2, 3, 4, 5], `${path}.completedStage`);
     integer(data.skylineSeed, `${path}.skylineSeed`, 0, 0xffffffff);
     integer(data.tick, `${path}.tick`);
 
@@ -271,7 +279,7 @@ export function assertGameState(value: unknown, path = 'state'): asserts value i
     point(data.sprayDir, `${path}.sprayDir`);
     choice(data.mode, ['intro', 'play', 'pause', 'impact', 'focuslost', 'dead', 'won'], `${path}.mode`);
     player(data.p, `${path}.p`);
-    array(data.keys, `${path}.keys`, 7).forEach((key, index) => choice(key, ['left', 'right', 'q', 'e', 'spray', 'forward', 'back'], `${path}.keys[${index}]`));
+    array(data.keys, `${path}.keys`, 8).forEach((key, index) => choice(key, ['left', 'right', 'q', 'e', 'spray', 'forward', 'back', 'brake'], `${path}.keys[${index}]`));
     boolean(data.ground, `${path}.ground`);
     for (const key of ['coyote', 'jumpQ', 'time', 'actualSpeed', 'rollCooldown', 'reverseCooldown']) finite(data[key], `${path}.${key}`);
     boolean(data.practiceJump, `${path}.practiceJump`);
@@ -297,4 +305,5 @@ export function assertGameState(value: unknown, path = 'state'): asserts value i
     building(data.building, `${path}.building`);
     rooftop(data.rooftop, `${path}.rooftop`);
     sky(data.sky, `${path}.sky`);
+    orbit(data.orbit, `${path}.orbit`);
 }

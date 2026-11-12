@@ -33,8 +33,9 @@ test('stage 4 ending completes automatically and gameplay buttons do not change 
         assert.equal(depthAfter(), 0, 'touch cannot move the automatic camera');
         jumpButton.dispatchEvent(new Event('pointerup'));
         assert.equal(depthAfter(), 0, 'releasing the button stops');
-        for (let i = 0; i < 600 && game.getSnapshot().mode === 'play'; i++) game.step(1 / 120);
-        assert.equal(game.getSnapshot().mode, 'won');
+        for (let i = 0; i < 600 && game.getSnapshot().stage === 4; i++) game.step(1 / 120);
+        assert.equal(game.getSnapshot().stage, 5);
+        assert.equal(game.getSnapshot().mode, 'play');
         assert.equal(game.getSnapshot().completedStage, 4);
         await Promise.resolve();
     } finally {

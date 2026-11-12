@@ -176,6 +176,7 @@ export function viewState(s: Readonly<CoreState>) {
         tutorialAssist: s.mode === 'play' && s.p.x < PHYSICS.upright.tutorialUntilX,
         stage: s.stage,
         sky: s.sky,
+        orbit: s.stage === 5 ? s.orbit : undefined,
         completedStage: s.completedStage,
         hasExtinguisher: s.hasExtinguisher,
         firstFlight: s.rooftop.flight,

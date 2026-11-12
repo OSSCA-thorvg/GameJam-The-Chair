@@ -1,6 +1,7 @@
 import { LEVEL, RULES } from './level';
 import type { FocusNotice } from './systems/focus/decide';
 import type { Impact } from './systems/impact/decide';
+import type { OrbitState } from './stages/orbit/state';
 import type { SkyState } from './stages/sky/data';
 import type { OfficeState } from './stages/office/state';
 import type { BuildingState } from './stages/building/state';
@@ -65,6 +66,7 @@ export type Attempt = {
     building: BuildingState;
     rooftop: RooftopState;
     sky: SkyState;
+    orbit: OrbitState;
 };
 
 // Everything that decides how play continues. Plain JSON: save it and restore it to resume exactly.

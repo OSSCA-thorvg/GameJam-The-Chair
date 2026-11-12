@@ -7,7 +7,7 @@ const mul = (a: Point3, s: number): Point3 => [a[0] * s, a[1] * s, a[2] * s];
 const dot = (a: Point3, b: Point3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: Point3, b: Point3): Point3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const norm = (a: Point3) => mul(a, 1 / Math.max(.0001, Math.hypot(...a)));
-export function createSkyProjection(width: number, height: number, orbit: number) {
+export function createSkyProjection(width: number, height: number, orbit: number, framing: { zoom?: number; centerY?: number; offsetX?: number; roll?: number } = {}) {
     const angle = orbit * Math.PI / 2;
     const distance = 480;
     const target: Point3 = [0, 15, 0];
@@ -16,11 +16,15 @@ export function createSkyProjection(width: number, height: number, orbit: number
     const right = norm(cross(forward, [0, 1, 0]));
     const up = norm(cross(right, forward));
     // Keep the chair at a steady distance while the camera moves from its side to its back.
-    const focal = Math.min(height * 1.65, width * .94);
+    const focal = Math.min(height * 1.65, width * .94) * (framing.zoom ?? 1);
     const depth = (p: Point3) => dot(sub(p, camera), forward);
     const project = (p: Point3): Vector => {
         const relative = sub(p, camera), distance = depth(p);
-        return [width / 2 + dot(relative, right) * focal / distance, height / 2 - dot(relative, up) * focal / distance];
+        const x = dot(relative, right) * focal / distance;
+        const y = -dot(relative, up) * focal / distance;
+        const roll = framing.roll ?? 0;
+        return [width / 2 + (framing.offsetX ?? 0) + x * Math.cos(roll) - y * Math.sin(roll),
+            height * (framing.centerY ?? .5) + x * Math.sin(roll) + y * Math.cos(roll)];
     };
     const faces: { points: Point3[]; color: string; depth: number }[] = [];
     const curves: { command: DrawCommand; depth: number }[] = [];

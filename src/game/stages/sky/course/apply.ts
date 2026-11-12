@@ -1,5 +1,5 @@
 // Writes the decisions from ./decide into game state. The only place this system changes state.
-import { setPlayer, type GameState } from '../../../state';
+import { startStage, setPlayer, type GameState } from '../../../state';
 import type { GameEvent, Input } from '../../../types';
 import { STAGES } from '../../index';
 import { skyStep } from './decide';
@@ -23,8 +23,8 @@ export function applySky(s: GameState, out: GameEvent[], dt: number) {
     if (r.fell) s.deaths++;
     if (r.won) {
         s.completedStage = 4;
-        s.mode = 'won';
-        s.keys = [];
-        out.push({ type: 'cue', id: 'stage-clear' });
+        const time = s.time;
+        startStage(s, 5, out);
+        s.time = time;
     }
 }

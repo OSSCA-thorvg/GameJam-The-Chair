@@ -3,6 +3,7 @@ export function driveStageFour(game, visit = () => {}) {
     let targetIndex = 0;
     for (let frame = 0; frame < 120 * 160; frame++) {
         const state = game.getSnapshot(), p = state.player, sky = state.sky;
+        if (state.stage === 5) return state;
         visit(state, targetIndex);
         if (state.mode === 'won') return state;
         if (state.deaths > 0) throw new Error(`Fall approaching ${route[targetIndex]} at ${JSON.stringify(p)}`);

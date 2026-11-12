@@ -464,6 +464,34 @@ function skyEnding(): PreviewScene {
     };
 }
 
+function orbitRoute(): PreviewScene {
+    const game = createGame();
+    game.startStage(5);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    const markers = [{ at: 0, label: 'Stage 4 rear view' }];
+    let previous = '';
+    for (let i = 0; i < 3600; i++) {
+        const state = game.getSnapshot(), orbit = state.orbit;
+        if (!orbit) break;
+        const target = orbit.rings === 1 ? { x: 240, y: 160 } : orbit.rings === 2 ? { x: 0, y: 40 } : { x: 0, y: 0 };
+        const p = state.player;
+        const keys: Input[] = [];
+        if (target.x - p.x > p.vx * .65 + 6) keys.push('right');
+        if (target.x - p.x < p.vx * .65 - 6) keys.push('left');
+        if (target.y - p.y > p.vy * .65 + 6) keys.push('forward');
+        if (target.y - p.y < p.vy * .65 - 6) keys.push('back');
+        if (orbit.z > 5100) keys.push('brake');
+        game.setInput(...keys);
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+        const phase = `${orbit.phase}-${orbit.rings}`;
+        if (phase !== previous) { markers.push({ at: i / 60, label: phase }); previous = phase; }
+        if (orbit.phase === 'parked') break;
+    }
+    return recordedScene('orbit-route', 'Orbit · Cloud hoops & drawer braking', 0, markers, frames);
+}
+
 // The duct's timed sneezes: the first big one that spits out the overtime junk, and the later gusts.
 function ductSneeze(gust = false): PreviewScene {
     const game = createGame();
@@ -558,5 +586,6 @@ export const previewScenes: readonly PreviewScene[] = [
     rooftopTakeoff(),
     cloudEntry(),
     skyEnding(),
+    orbitRoute(),
     officeTyping(),
 ];
