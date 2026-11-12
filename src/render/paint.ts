@@ -2,7 +2,7 @@ import type { Canvas, LinearGradient, RadialGradient, Scene, Shape, ThorVGNamesp
 import type { RenderCtx } from './context';
 import type { Blend, DrawCommand, Gradient, LayerSpec } from './types';
 
-type LayerSlot = { scene: Scene; shapes: Shape[]; clip: Shape | null; mask: Shape | null };
+type LayerSlot = { scene: Scene; shapes: Shape[]; clip: Shape | null; mask: Shape | null; maskInvert: boolean };
 type Item = { cmd: DrawCommand } | { layer: LayerSpec; key: string; cmds: DrawCommand[] };
 
 // Shapes are pooled and reused; these bits remember which non-default
@@ -191,7 +191,7 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         }
         let slot = pool.layers.get(item.key);
         if (!slot) {
-            slot = { scene: new TVG.Scene(), shapes: [], clip: null, mask: null };
+            slot = { scene: new TVG.Scene(), shapes: [], clip: null, mask: null, maskInvert: false };
             pool.layers.set(item.key, slot);
         }
         const { scene, shapes } = slot;
@@ -235,9 +235,11 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
             slot.clip.appendRect(-1e4, -1e4, 2e4, 2e4);
         }
         if (spec.mask) {
-            if (!slot.mask) {
-                slot.mask = new TVG.Shape();
-                scene.mask(slot.mask, TVG.MaskMethod.Alpha);
+            const invert = !!spec.maskInvert;
+            if (!slot.mask || slot.maskInvert !== invert) {
+                slot.mask ??= new TVG.Shape();
+                slot.maskInvert = invert;
+                scene.mask(slot.mask, invert ? TVG.MaskMethod.InvAlpha : TVG.MaskMethod.Alpha);
             }
             const fill = spec.mask.c;
             tracePath(slot.mask, spec.mask);
@@ -249,9 +251,10 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
                 g.dispose();
             }
         } else if (slot.mask) {
+            // A spent mask must let the whole layer through: everything for alpha, nothing for inverse alpha.
             slot.mask.reset();
             slot.mask.appendRect(-1e4, -1e4, 2e4, 2e4);
-            slot.mask.fill(255, 255, 255, 255);
+            slot.mask.fill(255, 255, 255, slot.maskInvert ? 0 : 255);
         }
         scene.visible(true);
         order.push(scene);
@@ -300,6 +303,12 @@ function paintCanvas(ctx: RenderCtx, bg: CanvasRenderingContext2D, commands: Dra
             if (layer?.clip) {
                 tracePath2d(bg, layer.clip);
                 bg.clip();
+            }
+            // An inverted mask punches a hole: clip to the canvas minus the mask path.
+            if (layer?.mask && layer.maskInvert) {
+                tracePath2d(bg, layer.mask);
+                bg.rect(0, 0, ctx.W, ctx.H);
+                bg.clip('evenodd');
             }
             if (layer?.opacity !== undefined) bg.globalAlpha = layer.opacity;
             if (layer?.blur) bg.filter = `blur(${layer.blur}px)`;
