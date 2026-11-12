@@ -7,7 +7,7 @@ export function applySky(s: GameState, out: GameEvent[], dt: number) {
     const held = (input: Input) => s.keys.includes(input) ? 1 : 0;
     const r = skyStep({
         sky: s.sky, p: s.p, ground: s.ground, coyote: s.coyote, jumpQ: s.jumpQ, checkpoint: s.checkpoint, time: s.time,
-        direction: held('right') - held('left'), depthDir: held('forward') - held('back'),
+        direction: held('right') - held('left'),
         length: STAGES[s.stage].length, sprayBurst: s.sprayBurst, sprayDir: s.sprayDir,
     }, dt);
     s.sky = r.sky;
@@ -22,10 +22,9 @@ export function applySky(s: GameState, out: GameEvent[], dt: number) {
     if (r.reached) out.push({ type: 'cue', id: 'checkpoint' });
     if (r.fell) s.deaths++;
     if (r.won) {
+        s.completedStage = 4;
         s.mode = 'won';
         s.keys = [];
         out.push({ type: 'cue', id: 'stage-clear' });
     }
-    // Reaching the depth reveal and moving through it counts as clearing the sky.
-    if (s.sky.depthTravel > .65 && s.completedStage < 4) s.completedStage = 4;
 }

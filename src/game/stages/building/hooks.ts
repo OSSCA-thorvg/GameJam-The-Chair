@@ -18,8 +18,8 @@ export const buildingHooks: StageHooks = {
             expressJump: convoyJump && s.building.corridor.pace === 'express',
         };
     },
-    afterMove(s, _out, dt, previousX) {
-        applyCorridor(s, dt, previousX);
+    afterMove(s, out, dt, previousX) {
+        applyCorridor(s, out, dt, previousX);
         return false;
     },
     afterCollide(s) {

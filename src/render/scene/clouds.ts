@@ -19,7 +19,7 @@ const ASCENT: readonly Placement[] = (() => {
 
 // The clouds the chair punches through on its climb from the rooftop.
 export function ascentClouds(ctx: RenderCtx) {
-    ctx.beginLayer({ key: 'ascent-clouds', blur: 1 });
+    ctx.beginLayer({ key: 'ascent-clouds' });
     for (const c of ASCENT) {
         puffCloud(ctx, ctx.cam - 120 + c.x * (ctx.VW + 240), c.y, c.size, c.seed, CLOUD_TONES.ascent, { alpha: .62 });
     }

@@ -25,14 +25,21 @@ function render(state, locale, width) {
     ctx.commands.forEach((c, i) => {
         for (const point of c.v) for (const n of point) assert.ok(Number.isFinite(n));
         for (const curve of c.curves ?? []) for (const n of curve) assert.ok(Number.isFinite(n));
+        const d = `M${c.v[0].join(',')} ${c.v.slice(1).map(v => `L${v.join(',')}`).join(' ')} ${(c.curves ?? []).map(v => `C${v.join(',')}`).join(' ')}`;
+        if (c.c == null) {
+            // A stroked ThorVG path (the ramp plank) has no fill.
+            assert.ok(c.stroke && Number.isFinite(c.stroke.width));
+            const stroke = typeof c.stroke.color === 'string' ? c.stroke.color : '#888';
+            shapes += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${c.stroke.width}"/>`;
+            return;
+        }
         let fill = c.c;
         if (typeof fill !== 'string') {
             assert.ok(fill.stops.every(([, color]) => color.every(Number.isFinite)));
             defs += `<linearGradient id="g${i}" gradientUnits="userSpaceOnUse" x1="${fill.from[0]}" y1="${fill.from[1]}" x2="${fill.to[0]}" y2="${fill.to[1]}">${fill.stops.map(([at, [r,g,b,a]]) => `<stop offset="${at}" stop-color="rgb(${r},${g},${b})" stop-opacity="${a/255}"/>`).join('')}</linearGradient>`;
             fill = `url(#g${i})`;
         }
-        const d = `M${c.v[0].join(',')} ${c.v.slice(1).map(v => `L${v.join(',')}`).join(' ')} ${(c.curves ?? []).map(v => `C${v.join(',')}`).join(' ')} Z`;
-        shapes += `<path d="${d}" fill="${fill}"/>`;
+        shapes += `<path d="${d} Z" fill="${fill}"/>`;
     });
     for (const label of labels) {
         assert.ok(Number.isFinite(label.x) && Number.isFinite(label.y));

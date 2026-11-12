@@ -1,6 +1,7 @@
 // Writes the decisions from ./decide into game state. The only place this system changes state.
 import { setPlayer, type GameState } from '../../../state';
 import type { GameEvent } from '../../../types';
+import { applyFocusHit } from '../../../systems/focus/apply';
 import { STAGES } from '../../index';
 import { MEETING_SEAT, canEnterMeeting, convoyLanding, corridorStep, liftRide, meetingExit, meetingStep } from './decide';
 export function applyConvoyLanding(s: GameState) {
@@ -31,7 +32,7 @@ export function applyLiftRide(s: GameState, out: GameEvent[], dt: number) {
     return true;
 }
 
-export function applyCorridor(s: GameState, dt: number, previousX: number) {
+export function applyCorridor(s: GameState, out: GameEvent[], dt: number, previousX: number) {
     const r = corridorStep({
         corridor: s.building.corridor, furniture: s.building.furniture, p: s.p, ground: s.ground,
         steering: s.keys.includes('left') || s.keys.includes('right'),
@@ -42,6 +43,15 @@ export function applyCorridor(s: GameState, dt: number, previousX: number) {
     setPlayer(s, r.p);
     s.rng.cosmetic = r.rng;
     if (r.stopRider) s.jumpQ = s.coyote = 0;
+    if (r.kick) {
+        s.ground = false;
+        s.coyote = 0;
+        s.jumpQ = 0;
+    }
+    if (r.kick === 'bump') {
+        out.push({ type: 'cue', id: 'convoy-bump' });
+        applyFocusHit(s, out, { kind: 'bump', id: 0, damage: 10 });
+    }
 }
 
 // Returns true while the meeting scene owns the rider.

@@ -80,19 +80,38 @@ export function balancePolicy(state, game) {
     if (state.mode === 'dead' || state.mode === 'won') game.reset();
 }
 
-// Rides the building corridor: enters the meeting once, then leaps off the express convoy unless `stayAboard`.
+const EXPRESS = { bump: 2480, pit: { left: 3080, right: 3420 } };
+// Rides the express convoy through the rush-hour corridor: hops the speed bump (a jump without pushing on
+// lands back on the chairs), flies off the launch ramp with the convoy, then jumps off it again with a push
+// before the lift. With `stayAboard` it stays on the chairs and gets swept into the lift.
+// Returns the keys to hold this tick, or null when the convoy is not involved.
+export function createExpressRider(stayAboard = false) {
+    let off = false;
+    return (state, game) => {
+        const p = state.player, { convoy, pace } = state.corridor;
+        if (off) return ['right'];
+        if (pace !== 'express' || convoy === 'free') return null;
+        if (convoy !== 'carried' || !state.ground) return [];
+        const toBump = EXPRESS.bump - p.x;
+        if (toBump > 0 && toBump < 70) game.jump();
+        if (!stayAboard && p.x > EXPRESS.pit.right + 120) { game.jump(); off = true; return ['right']; }
+        return [];
+    };
+}
+
+// Rides the building corridor: enters the meeting once, then rides the express convoy over the ramp and
+// off it again, unless `stayAboard`.
 export function corridorPolicy(stayAboard) {
     let entered = false;
+    const express = createExpressRider(stayAboard);
     return (state, game) => {
         const p = state.player;
         const correction = -p.a * 12 - p.w * 4;
-        const keys = ['right'];
+        const keys = express(state, game) ?? ['right'];
         if (correction < -.4) keys.push('q');
         if (correction > .4) keys.push('e');
         game.setInput(...keys);
         if (!entered && state.canEnterMeeting) { entered = true; game.interact(); }
-        const { convoy, pace } = state.corridor;
-        if (!stayAboard && convoy === 'carried' && pace === 'express' && state.ground) game.jump();
         if (state.mode === 'dead') game.reset();
     };
 }

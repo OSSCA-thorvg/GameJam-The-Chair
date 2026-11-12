@@ -1,5 +1,6 @@
 import { LEVEL } from '../../game/level';
 import { ART } from '../art';
+import { PLAYER_OUTLINES } from './player-art';
 import type { RenderCtx } from '../context';
 
 export function player(ctx: RenderCtx) {
@@ -29,26 +30,26 @@ export function player(ctx: RenderCtx) {
         ctx.rod(x - 3 * Math.cos(ctx.wheel), 23 - 3 * Math.sin(ctx.wheel), x + 3 * Math.cos(ctx.wheel), 23 + 3 * Math.sin(ctx.wheel), 1, '#9197a2');
     }
     ctx.rod(-24, -10, -31, -61, 7, '#515665');
-    ctx.polygon([[-40, -69], [-24, -68], [-23, -20], [-37, -20]], '#666d80');
+    ctx.polygon(PLAYER_OUTLINES.backrest, '#666d80');
     ctx.rect(-30, -15, 62, 12, '#6f7687');
     ctx.rod(-15, -22, -15, -8, 3, C.steel);
     ctx.rod(20, -22, 20, -8, 3, C.steel);
-    ctx.polygon([[-10, -25], [22, -25], [32, -22], [43, 4], [35, 6], [23, -13], [-9, -15]], '#4e5b70');
+    ctx.polygon(PLAYER_OUTLINES.farLeg, '#4e5b70');
     ctx.polygon([[35, 3], [42, 3], [50, 6], [55, 9], [52, 10], [35, 7]], '#383f4e');
-    ctx.polygon([[-14, -26], [22, -25], [29, -21], [34, 11], [26, 13], [21, -12], [-13, -16]], '#5b6b80');
+    ctx.polygon(PLAYER_OUTLINES.nearLeg, '#5b6b80');
     ctx.polygon([[-11, -25], [20, -24], [26, -21], [7, -20], [-10, -21]], '#6d7b8e');
     ctx.polygon([[25, -18], [27, -17], [31, 10], [29, 10]], '#49586c');
     ctx.polygon([[26, 11], [33, 10], [35, 15], [26, 16]], '#383f4e');
 
-    ctx.polygon([[-17, -63], [-6, -64], [5, -60], [9, -25], [-17, -23]], C.shirt);
+    ctx.polygon(PLAYER_OUTLINES.shirt, C.shirt);
     ctx.polygon([[-17, -62], [-11, -61], [-11, -24], [-17, -23]], '#d9d6c5');
     ctx.polygon([[-7, -70], [4, -68], [5, -60], [1, -56], [-7, -62]], '#d5b18b');
     ctx.polygon([[-9, -65], [0, -60], [6, -60], [4, -55], [0, -52], [-6, -57]], '#fff6de');
     ctx.polygon([[1, -58], [5, -57], [5, -54], [8, -36], [6, -33], [1, -34], [2, -54]], '#a65e44');
 
-    ctx.polygon([[-13, -87], [-4, -95], [10, -91], [13, -84], [14, -79], [17, -75], [13, -74], [11, -66], [2, -66], [-9, -69], [-12, -77]], C.skin);
+    ctx.polygon(PLAYER_OUTLINES.head, C.skin);
     ctx.polygon([[-11, -76], [-7, -72], [1, -69], [11, -69], [11, -66], [2, -66], [-9, -69]], '#d3b18c');
-    ctx.polygon([[-15, -87], [-5, -100], [10, -97], [16, -88], [3, -87], [-3, -83], [-10, -77]], '#3c424f');
+    ctx.polygon(PLAYER_OUTLINES.hair, '#3c424f');
     ctx.polygon([[-7, -93], [-4, -98], [3, -96]], '#687380');
     const glance = state.lossReason === 'focus' ? .5 + .5 * Math.sin(state.focusLossTime * 6) : state.focusNotice ? Math.sin((1.7 - state.focusNotice.life) / 1.7 * Math.PI) : 0;
     ctx.ellipse(-7, -81, 2.7, 3.4, C.skin);
@@ -63,7 +64,7 @@ export function player(ctx: RenderCtx) {
     ctx.polygon([[-19, -39], [-8, -39], [-8, -34], [-19, -33]], '#fff6de');
     ctx.polygon([[-16, -34], [-9, -35], [23, -36], [25, -32], [-15, -27]], C.skin);
     ctx.polygon([[-15, -29], [23, -33], [24, -32], [-15, -27]], '#d3aa80');
-    ctx.polygon([[21, -31], [54, -31], [65, -59], [33, -59]], '#555f70');
+    ctx.polygon(PLAYER_OUTLINES.laptop, '#555f70');
     ctx.polygon([[35, -55], [59, -55], [51, -35], [27, -35]], '#a8b9c3');
 
     ctx.rod(18, -29, 55, -29, 3, C.steel);

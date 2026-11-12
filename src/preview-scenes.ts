@@ -1,5 +1,7 @@
 import { createGame, type Game, type GameState } from './game/game';
+import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
+import { STAGE_FOUR } from './game/stages/sky/data';
 import { STAGE_TWO } from './game/stages/building/data';
 import { ductTimings, STAGE_THREE } from './game/stages/rooftop/data';
 import { createEffects, type EffectsState } from './render/effects';
@@ -329,6 +331,55 @@ function shaftHazards(id: string, label: string, at: { x: number; y: number }, s
     return recordedScene(id, label, at.x, markers, frames);
 }
 
+// The rush-hour express from the flag before it: `hop` hops the speed bump; the convoy then takes the
+// launch ramp over the construction hole, and the rider jumps off it again before the lift.
+function expressRun(id: string, label: string, hop: boolean, markers: PreviewScene['markers']): PreviewScene {
+    const game = createGame();
+    game.startStage(2);
+    const saved = JSON.parse(game.serialize());
+    saved.checkpoint = 2;
+    game.restore(JSON.stringify(saved));
+    game.reset();
+    const { bump, pit } = STAGE_TWO.express;
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    let off = false;
+    for (let i = 0; i < 300; i++) {
+        const state = game.getSnapshot(), p = state.player, c = state.corridor;
+        let keys: Input[] = [];
+        if (off || c.convoy === 'free') keys = ['right'];
+        else if (c.convoy === 'carried' && state.ground) {
+            if (hop && bump - p.x > 0 && bump - p.x < 70) game.jump();
+            if (p.x > pit.right + 120) { game.jump(); off = true; keys = ['right']; }
+        }
+        game.setInput(...keys);
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+        if (game.getSnapshot().deaths > 0) break;
+    }
+    return { ...recordedScene(id, label, 2600, markers, frames), follow: true };
+}
+
+// The executive printer's urgent volleys, one scene per pattern, seen from a chair parked in front of it.
+function urgentCopier(volley: number, id: string, label: string): PreviewScene {
+    const game = createGame();
+    game.startStage(1);
+    const saved = JSON.parse(game.serialize());
+    saved.lessons = { moved: true, jumped: true };
+    saved.p = { ...saved.p, x: LEVEL.urgentCopier.x - 330, y: LEVEL.floor - 28, vx: 0, vy: 0, a: 0, w: 0 };
+    saved.ground = true;
+    saved.office.urgent = { ...saved.office.urgent, volley: volley - 1 };
+    game.restore(JSON.stringify(saved));
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    for (let i = 0; i < 150; i++) {
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene(id, label, LEVEL.urgentCopier.x - 150,
+        [{ at: 0, label: 'Scan · Tray glows' }, { at: .6, label: 'Volley' }], frames);
+}
+
 function cloudEntry(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -340,6 +391,28 @@ function cloudEntry(): PreviewScene {
     }
     return recordedScene('cloud-entry', 'Sky · Stage 4 hovering start', 2380,
         [{ at: 0, label: 'Arrival' }, { at: 1, label: 'Continuous spray · Hovering' }], frames);
+}
+
+function skyEnding(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const { settle, turn, hold } = STAGE_FOUR.reveal;
+    const duration = settle + turn + hold;
+    return {
+        id: 'sky-ending', label: 'Sky · Side to back', duration, focusX: STAGE_FOUR.goal,
+        markers: [{ at: 0, label: 'Side view' }, { at: settle + turn / 2, label: 'Camera turning' },
+            { at: settle + turn, label: 'Back view' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            const depth = at >= settle + turn;
+            return { state: { ...base, time: at,
+                sky: { ...base.sky, phase: depth ? 'depth' : 'reveal', age: depth ? at - settle - turn : at },
+                player: { ...base.player, x: 5045, y: -2338 }, ground: false,
+            }, effects };
+        },
+    };
 }
 
 function ductSneeze(repeat = false): PreviewScene {
@@ -404,7 +477,16 @@ export const previewScenes: readonly PreviewScene[] = [
         [{ at: 1.6, label: 'Vent hiss' }, { at: 2.4, label: 'Vent blast' }, { at: 3.45, label: 'Duct inhale' }, { at: 4.05, label: 'Duct gust' }]),
     shaftHazards('rooftop-shaft-high', 'Rooftop · Shaft vent & ceiling downdraft', { x: 1400, y: -262 }, 1.2,
         [{ at: .3, label: 'Downdraft' }, { at: 1.5, label: 'Wall vent hiss' }, { at: 2.25, label: 'Wall vent blast' }, { at: 2.65, label: 'Ceiling hiss' }, { at: 3.4, label: 'Downdraft' }]),
+    expressRun('express-ramp', 'Building · Express: hop the bump, fly off the ramp', true,
+        [{ at: .7, label: 'Front chair bounces' }, { at: .8, label: 'Hop' }, { at: 1.8, label: 'Ramp shout' }, { at: 2.5, label: 'Convoy takes off' }]),
+    expressRun('express-bump', 'Building · Express: thrown off by the speed bump', false,
+        [{ at: .8, label: 'Clunk' }, { at: 1.5, label: 'Chairs roll on' }, { at: 2.6, label: 'Short on foot' }]),
+    urgentCopier(1, 'urgent-copier-low', 'Office · Urgent reports: skimming sheets'),
+    urgentCopier(2, 'urgent-copier-lob', 'Office · Urgent reports: lobbed sheets'),
+    urgentCopier(3, 'urgent-copier-fan', 'Office · Urgent reports: both at once'),
+    urgentCopier(4, 'urgent-copier-bundle', 'Office · Urgent reports: stapled bundle'),
     rooftopTakeoff(),
     cloudEntry(),
+    skyEnding(),
     officeTyping(),
 ];

@@ -10,12 +10,11 @@ export type SkyInput = {
     checkpoint: number;
     time: number;
     direction: number;  // -1, 0, 1 left/right
-    depthDir: number;   // -1, 0, 1 back/forward during the depth reveal
     length: number;
     sprayBurst: number;
     sprayDir: Readonly<Point>;
 };
-export type SkyResult = Omit<SkyInput, 'time' | 'direction' | 'depthDir' | 'length' | 'sky' | 'p' | 'sprayDir'> & {
+export type SkyResult = Omit<SkyInput, 'time' | 'direction' | 'length' | 'sky' | 'p' | 'sprayDir'> & {
     sky: SkyState;
     p: Player;
     sprayDir: Point;
@@ -26,7 +25,7 @@ export type SkyResult = Omit<SkyInput, 'time' | 'direction' | 'depthDir' | 'leng
 };
 
 // Stage 4 above the clouds: hover in, hop across growing windows, a gusting sign and floating desks,
-// then the reveal where Up/Down move through depth. Works on its own copies.
+// then an automatic side-to-back camera turn and final hold. Works on its own copies.
 export function skyStep(input: SkyInput, dt: number): SkyResult {
     const sky = { ...input.sky };
     const p = { ...input.p };
@@ -44,14 +43,15 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
         p.y = -2338 + Math.sin(time) * 6;
         p.a *= Math.exp(-4 * dt);
         ground = false;
-        if (sky.phase === 'reveal' && sky.age > 5) { sky.phase = 'depth'; sky.age = 0; }
-        if (sky.phase === 'depth') {
-            const before = sky.depth;
-            sky.depth = Math.max(-1, Math.min(1, sky.depth + input.depthDir * dt * .65));
-            sky.depthTravel += Math.abs(sky.depth - before);
-            if (sky.depthTravel > .65) won = true;
+        p.x += (5045 - p.x) * (1 - Math.exp(-4 * dt));
+        sprayDir = { x: 0, y: 1 };
+        coyote = jumpQ = 0;
+        if (sky.phase === 'reveal' && sky.age >= STAGE_FOUR.reveal.settle + STAGE_FOUR.reveal.turn) {
+            sky.phase = 'depth';
+            sky.age = 0;
         }
-        return result(null);
+        if (sky.phase === 'depth' && sky.age >= STAGE_FOUR.reveal.hold) won = true;
+        return result(0);
     }
     if (sky.phase === 'arrival') {
         p.vx += direction * 220 * dt;

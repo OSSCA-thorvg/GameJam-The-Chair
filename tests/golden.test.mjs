@@ -20,13 +20,17 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when the rooftop's three-spray launch pad was replaced by dropping off the roof onto the sales
 // graph: every final snapshot's `rooftop.flight` lost `verticalShots`/`lastShotAt`, and 'rooftop to sky'
 // now rolls off the roof edge onto the billboard's graph and rides it straight up.
+// Updated when the office gained the executive printer's urgent-report mode: every final snapshot gains
+// `office.urgent` and paper `kind`, and the office routes now pass its volleys.
+// Updated when the stage-two express got its rush-hour corridor (one speed bump to hop, a launch ramp the
+// convoy flies off over a construction hole, the lift and exit moved on): both building routes now ride it.
 const EXPECTED = {
-    'office route': '5e268dc8d025bc4c',
-    'office crash': '0a33170f70fc527a',
-    'building exit': '21eeedbb9f9afb54',
-    'building lift': 'b1aa567a5ded73e4',
-    'rooftop to sky': 'ca2cb832ad623b23',
-    'rooftop duct': 'd6263a3f61786d87',
+    'office route': '4391fc44ee9dd9d5',
+    'office crash': '989bf75e6942f5f1',
+    'building exit': 'b239b9fcd17b77fc',
+    'building lift': 'f946772e1497003e',
+    'rooftop to sky': '3bf00ce8878f245d',
+    'rooftop duct': '457498ca5afe1960',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

@@ -4,7 +4,7 @@ import { driveStageFour } from './support/stage4-route.mjs';
 import { bundled } from './support/load.mjs';
 const { createGame, bindInput } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { bindInput } from './src/ui/input';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
-test('stage 4 depth flight maps Up/Down keys and touch buttons to held forward/back', async () => {
+test('stage 4 ending completes automatically and gameplay buttons do not change its depth', async () => {
     const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];
     const saved = names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
     const window = new EventTarget(), document = new EventTarget();
@@ -23,16 +23,19 @@ test('stage 4 depth flight maps Up/Down keys and touch buttons to held forward/b
     try {
         assert.equal(game.getSnapshot().sky.phase, 'depth');
         assert.ok(key('keydown', 'ArrowUp').defaultPrevented);
-        assert.ok(depthAfter() > 0, 'Up moves forward');
+        assert.equal(depthAfter(), 0, 'Up cannot move the automatic camera');
         key('keyup', 'ArrowUp');
         assert.equal(depthAfter(), 0, 'releasing Up stops');
         key('keydown', 'ArrowDown');
-        assert.ok(depthAfter() < 0, 'Down moves back');
+        assert.equal(depthAfter(), 0, 'Down cannot move the automatic camera');
         key('keyup', 'ArrowDown');
         jumpButton.dispatchEvent(new Event('pointerdown', { cancelable: true }));
-        assert.ok(depthAfter() > 0, 'jump button holds forward');
+        assert.equal(depthAfter(), 0, 'touch cannot move the automatic camera');
         jumpButton.dispatchEvent(new Event('pointerup'));
         assert.equal(depthAfter(), 0, 'releasing the button stops');
+        for (let i = 0; i < 600 && game.getSnapshot().mode === 'play'; i++) game.step(1 / 120);
+        assert.equal(game.getSnapshot().mode, 'won');
+        assert.equal(game.getSnapshot().completedStage, 4);
         await Promise.resolve();
     } finally {
         unbind();

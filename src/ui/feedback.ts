@@ -72,6 +72,15 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
                 case 'paper-hit':
                     say('player.paperHit');
                     break;
+                case 'convoy-bump':
+                    say('player.bumpHit');
+                    break;
+                case 'urgent-volley':
+                    say('player.urgentVolley');
+                    break;
+                case 'bundle-hit':
+                    say('player.bundleHit');
+                    break;
                 case 'light-hit':
                     say('player.lightHit');
                     break;

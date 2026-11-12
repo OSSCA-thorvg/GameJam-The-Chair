@@ -2,6 +2,7 @@ import { translate, type Message } from '../../i18n';
 import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES, chairChatLine } from '../../game/stages/building/data';
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
+import { chairLift, expressFloor } from './express';
 import { practiceFloor, checkpointFlag } from './decor';
 import { player } from './player';
 
@@ -282,6 +283,7 @@ export function drawBuilding(ctx: RenderCtx) {
     ctx.rod(cam, 422, cam + VW, 422, 4, '#586f75');
     for (let x = Math.floor(cam / 120) * 120; x < cam + VW; x += 120) ctx.rod(x, 428, x + 100, 520, 1, '#a7b2aa');
     if (c.room.kind === 'meeting') { room(ctx); return; }
+    expressFloor(ctx);
     for (const [officeIndex, office] of c.offices.entries()) {
         const x = office.x;
         ctx.rect(x - 110, 174, 220, 181, '#617983');
@@ -373,7 +375,7 @@ export function drawBuilding(ctx: RenderCtx) {
         if (!item.released || departure.kind === 'gone' || departure.kind === 'lost') return;
         const reacting = c.chat.kind === 'wary' || c.chat.kind === 'realizing' || c.chat.kind === 'welcoming';
         const bob = departure.kind === 'boarding' ? Math.sin(departure.age * 9 + i) * 2 : reacting ? Math.sin(c.chat.age * 7 + i) * 2 : Math.sin(ctx.t * 5 + i) * .7;
-        chair(ctx, item.x, item.y + drop + bob);
+        chair(ctx, item.x, item.y + drop + bob - chairLift(item.x));
     });
     if (departure.kind !== 'lost') {
         const actorStart = ctx.commands.length;

@@ -18,7 +18,7 @@ npm run dev
 
 Open http://127.0.0.1:5173/.
 
-To inspect the cleaner, bucket, copier, head impact, or extinguisher animation, open http://127.0.0.1:5173/preview.html while the development server is running. Choose a scene, drag the time slider, step one frame at a time, or play the loop. The URL keeps the selected scene and time across reloads.
+To inspect the cleaner, bucket, copier, duct, head impact, extinguisher animation, or sky ending, open http://127.0.0.1:5173/preview.html while the development server is running. Choose a scene, drag the time slider, step one frame at a time, or play the loop. The URL keeps the selected scene and time across reloads. For the stage 4 ending, open http://127.0.0.1:5173/preview.html?motion=sky-ending. The chair stays in side view for one second, the camera turns behind it over seven seconds, and the back view holds for two seconds before the stage clears.
 
 ## Play
 
@@ -32,6 +32,12 @@ Use Left/Right or A/D to move, Space/Up to jump, and Q/E to balance. In stage 3,
 Near the stage 2 meeting door, press Down to enter. Press Down again to leave early. Touch controls use the same down arrow. At the badge scanner, release the movement keys and wait for approval.
 
 Stages 1 and 2 start with a safe jump practice area. R retries from the last flag: before the trash bin in stage 1, or the last checkpoint in stage 2. Retries restore full focus and a dry chair. Selecting a stage starts it from the beginning.
+
+## Code structure
+
+Base new code and changes on the refactored structure and style present when the task starts. Follow the [game core rules](src/game/README.md), [stage layout](src/game/stages/README.md), and [shared test tools](tests/support/README.md).
+
+Keep stage behaviour in its stage folder. Separate pure decisions in `decide.ts` from state updates in `apply.ts`. Render and UI code consume game snapshots. Use the existing golden tests to check that refactors preserve gameplay.
 
 ## Test
 

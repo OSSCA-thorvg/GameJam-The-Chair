@@ -76,6 +76,7 @@ function setup(
         ctx.monitors = next.monitors.map((monitor, index) => ({ ...monitor, ...ART.monitors[index] }));
         ctx.bin = { ...next.bin, bottom: ART.binBottom };
         ctx.copier = { ...next.copier, flash: effects.copierFlash };
+        ctx.urgentCopier = next.urgentCopier;
         ctx.waterDrops = effects.waterDrops;
         ctx.waterRipples = effects.waterRipples;
         ctx.waterPour = effects.waterPour;
@@ -86,10 +87,8 @@ function setup(
         ctx.practiceBurst = effects.practiceBurst;
         ctx.saveFlash = effects.saveFlash;
 
-        const ending = next.stage === 4 && (next.sky.phase === 'reveal' || next.sky.phase === 'depth');
-        const pullback = ending ? (next.sky.phase === 'depth' ? 1 : Math.min(1, next.sky.age / 5)) : 0;
         const baseWidth = ctx.W < 520 ? 540 : Math.max(760, ctx.W);
-        ctx.VW = next.stage === 4 ? baseWidth * (1.12 + pullback * .65) : baseWidth;
+        ctx.VW = next.stage === 4 ? baseWidth * 1.12 : baseWidth;
         ctx.scale = ctx.W / ctx.VW;
         const t = ctx.t;
         const dt = Math.max(0, t - lastTime);
@@ -105,7 +104,8 @@ function setup(
             ctx.cam = ctx.clamp(camera, 0, Math.max(0, ctx.LEN - ctx.VW));
         } else if (ctx.mode === 'play' || (next.stage === 4 && ctx.mode === 'won')) {
             const focusX = ctx.p.x - ctx.VW * lead;
-            ctx.cam += (ctx.clamp(focusX, 0, Math.max(0, ctx.LEN - ctx.VW)) - ctx.cam) * Math.min(1, dt * 7);
+            const targetCamera = ctx.clamp(focusX, 0, Math.max(0, ctx.LEN - ctx.VW));
+            ctx.cam += (targetCamera - ctx.cam) * Math.min(1, dt * 7);
             ctx.wheel += ctx.p.vx * dt / 8;
         }
         const baseVertical = Math.max(0, ctx.H / ctx.scale - 510) * .7;

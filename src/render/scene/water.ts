@@ -232,7 +232,7 @@ function sheetOutline(sheet: Sheet, age: number): { outline: Path; front: SheetP
  * - the falling sheet, softened with a motion blur along the flow (no stripes to read as scales)
  *   and faded out at its torn front with an alpha mask;
  * - steady edge highlights in a Screen scene;
- * - spray and crowns in a softly blurred scene; loose drops in a motion-blurred scene.
+ * - spray and crowns in one scene; loose drops in a motion-blurred scene.
  */
 export function drawPour(ctx: RenderCtx) {
     const cleaning = ctx.cleaning;
@@ -270,7 +270,6 @@ export function drawPour(ctx: RenderCtx) {
         }
         ctx.beginLayer({
             key: 'water-sheet',
-            blur: .5 * ctx.scale,
             motionBlur: { distance: 4 * ctx.scale, angle: Math.atan2(dy, dx) * 180 / Math.PI },
             mask,
         });
@@ -320,7 +319,7 @@ export function drawPour(ctx: RenderCtx) {
     }
 
     if (spray.length || crowns.length) {
-        ctx.beginLayer({ key: 'water-body', blur: .75 * ctx.scale });
+        ctx.beginLayer({ key: 'water-body' });
         for (const c of crowns) {
             const u = c.age / c.life;
             const h = c.r * 2.8 * Math.sin(u * Math.PI);
