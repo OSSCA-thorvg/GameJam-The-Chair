@@ -9,6 +9,8 @@ import { EFFECT_STYLE } from '../art';
 import type { Vector } from '../types';
 import { LEVEL } from '../../game/level';
 import { geyserPhase } from '../../game/stages/office/geyser/decide';
+import { URGENT_VOLLEY_ID } from '../../game/stages/office/copier/decide';
+import { urgentCopierDraw, urgentPapersDraw } from './urgent-copier';
 
 export function drawWorld(ctx: RenderCtx) {
     const F = ctx.F;
@@ -112,7 +114,9 @@ export function drawWorld(ctx: RenderCtx) {
     for (let j = 0; j < 3; j++) {
         ctx.rect(x - 37, F - 70 + j * 11, 22, 3, '#737f87');
     }
+    urgentCopierDraw(ctx);
     for (const z of papers) {
+        if (z.volley >= URGENT_VOLLEY_ID) continue;
         ctx.ox = z.x;
         ctx.oy = z.y;
         ctx.rotation = z.a;
@@ -121,6 +125,7 @@ export function drawWorld(ctx: RenderCtx) {
         ctx.rod(-6, 2, 3, 2, 1, '#b3b3a7');
         ctx.ox = ctx.oy = ctx.rotation = 0;
     }
+    urgentPapersDraw(ctx, papers);
     monitorDraw(ctx);
     for (const g of LEVEL.geysers) {
         if (g.x < left - 80 || g.x > right + 80) continue;

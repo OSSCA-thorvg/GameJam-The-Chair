@@ -11,6 +11,10 @@ export const LEVEL = Object.freeze({
         Object.freeze({ wall: 2980, period: 3.5, offset: 1.0 }),
     ]),
     copier: Object.freeze({ x: 750 }),
+    // The executive multifunction printer between the glaring monitors. Once the chair's chaos counts as
+    // results, it prints urgent reports: a scan (`scan` s, the warning), then a fixed pattern of shots
+    // `shotGap` apart, then `rest`. It only fires while the chair is within `wake` of it.
+    urgentCopier: Object.freeze({ x: 2460, wake: 420, scan: .6, shotGap: .16, rest: 1.1 }),
     cleaning: Object.freeze({ x: 1095, a: 1035, b: 1360 }),
     bin: Object.freeze({ x: 1660, a: 1580, b: 1740, rim: 402 }),
     geysers: Object.freeze([
@@ -25,7 +29,7 @@ export const LEVEL = Object.freeze({
     ].map(part => Object.freeze(part)))
 });
 // Rule durations are independent from the visual effect durations in render/effects.ts.
-export const FOCUS_DAMAGE = Object.freeze({ paper: 30, water: 30, light: 30, door: 30, copier: 15 });
+export const FOCUS_DAMAGE = Object.freeze({ paper: 30, water: 30, light: 30, door: 30, copier: 15, bundle: 25 });
 export const RULES = Object.freeze({ paperPenalty: 2.4, lightPenalty: 1.65, waterExposure: 1.3, bucketReset: 2.2 });
 export const FIXED_STEP = 1 / 120;
 // Chair handling shared by every stage. Changing a value changes CONFIG_VERSION (older replays then warn).

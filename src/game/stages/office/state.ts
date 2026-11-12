@@ -1,11 +1,12 @@
 import { LEVEL, RULES } from '../../level';
 import type { Paper } from '../../types';
-import type { Copier } from './copier/decide';
+import { createUrgentCopier, type Copier, type UrgentCopier } from './copier/decide';
 import type { Bucket, Cleaning } from './cleaning/decide';
 
 // Everything the office changes during an attempt. Lives in state.office.
 export type OfficeState = {
     copier: Copier;
+    urgent: UrgentCopier;      // the executive printer's urgent reports
     volley: number;            // copier volleys fired
     bursts: number;            // paper shots fired
     papers: Paper[];
@@ -31,6 +32,7 @@ export type OfficeState = {
 export function createOfficeState(): OfficeState {
     return {
         copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 },
+        urgent: createUrgentCopier(),
         volley: 0,
         bursts: 0,
         papers: [],

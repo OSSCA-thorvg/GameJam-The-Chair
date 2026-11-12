@@ -76,6 +76,7 @@ function setup(
         ctx.monitors = next.monitors.map((monitor, index) => ({ ...monitor, ...ART.monitors[index] }));
         ctx.bin = { ...next.bin, bottom: ART.binBottom };
         ctx.copier = { ...next.copier, flash: effects.copierFlash };
+        ctx.urgentCopier = next.urgentCopier;
         ctx.waterDrops = effects.waterDrops;
         ctx.waterRipples = effects.waterRipples;
         ctx.waterPour = effects.waterPour;

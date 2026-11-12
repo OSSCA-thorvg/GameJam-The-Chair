@@ -4,7 +4,7 @@ import type { FocusHit } from '../../../systems/focus/decide';
 
 export type Copier = { x: number; cool: number; burst: number; next: number; dir: number };
 export type CopierResult = { copier: Copier; volley: number; fire: boolean };
-export type PaperHit = { index: number; vx: number; focus: FocusHit };
+export type PaperHit = { index: number; vx: number; heavy: boolean; focus: FocusHit };
 
 // The office copier wakes when the chair comes near, aims, and fires bursts of four sheets.
 export function copierStep(copier: Readonly<Copier>, volley: number, playerX: number, office: boolean, dt: number): CopierResult {
@@ -44,7 +44,78 @@ export function paperShot(copier: Readonly<Copier>, volley: number, bursts: numb
         landed: false,
         volley,
         safe: volley === 1 && bursts === 0,
+        kind: 'sheet' as const,
     }));
+}
+
+// The executive printer's urgent-report mode. `scan` counts down the warning sweep before a volley,
+// `burst` the shots left in it; `volley` counts urgent volleys and picks the pattern.
+export type UrgentCopier = { x: number; scan: number; cool: number; burst: number; next: number; dir: number; volley: number };
+export type UrgentPattern = 'low' | 'lob' | 'fan' | 'bundle';
+export type UrgentResult = { copier: UrgentCopier; fire: boolean; started: boolean };
+
+// A fixed order to learn: skimming sheets (jump), lobbed sheets (wait or dash), both at once, a heavy
+// bundle; then the last two take turns.
+export function urgentPattern(volley: number): UrgentPattern {
+    const order: UrgentPattern[] = ['low', 'lob', 'fan', 'bundle'];
+    return volley <= order.length ? order[Math.max(0, volley - 1)] : order[2 + (volley - order.length - 1) % 2];
+}
+const URGENT_SHOTS: Record<UrgentPattern, number> = { low: 2, lob: 1, fan: 2, bundle: 1 };
+// Focus ids of urgent volleys, apart from the office copier's.
+export const URGENT_VOLLEY_ID = 1000;
+
+export function createUrgentCopier(): UrgentCopier {
+    return { x: LEVEL.urgentCopier.x, scan: 0, cool: 0, burst: 0, next: 0, dir: -1, volley: 0 };
+}
+
+// Wakes while the chair is near, scans (the warning), then fires the volley's pattern and rests.
+export function urgentCopierStep(copier: Readonly<UrgentCopier>, playerX: number, dt: number): UrgentResult {
+    const spec = LEVEL.urgentCopier;
+    const next = { ...copier, cool: Math.max(0, copier.cool - dt) };
+    let fire = false, started = false;
+    if (next.scan === 0 && next.burst === 0 && next.cool === 0 && Math.abs(playerX - next.x) < spec.wake) {
+        next.dir = playerX < next.x ? -1 : 1;
+        next.volley++;
+        next.scan = spec.scan;
+        started = true;
+    } else if (next.scan > 0) {
+        next.scan = Math.max(0, next.scan - dt);
+        if (next.scan === 0) {
+            next.burst = URGENT_SHOTS[urgentPattern(next.volley)];
+            next.next = 0;
+        }
+    }
+    if (next.burst > 0 && next.scan === 0) {
+        next.next -= dt;
+        if (next.next <= 0) {
+            fire = true;
+            next.burst--;
+            next.next = spec.shotGap;
+            if (next.burst === 0) next.cool = spec.rest;
+        }
+    }
+    return { copier: next, fire, started };
+}
+
+// The urgent shot just fired by `copier` (its `burst` already counts it out).
+export function urgentShot(copier: Readonly<UrgentCopier>): Paper[] {
+    const F = LEVEL.floor;
+    const dir = copier.dir;
+    const pattern = urgentPattern(copier.volley);
+    const shot = URGENT_SHOTS[pattern] - 1 - copier.burst;
+    const volley = URGENT_VOLLEY_ID + copier.volley;
+    const sheet = (y: number, vx: number, vy: number, i: number, kind: Paper['kind'] = 'sheet'): Paper => ({
+        x: copier.x + dir * 60, y, vx: dir * vx, vy, a: i * .7, w: dir * (kind === 'bundle' ? 1.5 : 4 + i),
+        life: 5, hit: false, landed: false, volley, safe: false, kind,
+    });
+    // Skimming just above the floor: only a jump clears them.
+    const low = () => [0, 1, 2].map(i => sheet(F - 38 - i * 3, 290 + i * 25, -70 - i * 6, i));
+    // Lobbed high, raining down a little ahead of the printer.
+    const lob = (count: number) => Array.from({ length: count }, (_, i) => sheet(F - 120, 150 + i * 45, -230 - i * 20, i));
+    if (pattern === 'low') return low();
+    if (pattern === 'lob') return lob(3);
+    if (pattern === 'fan') return shot === 0 ? low() : lob(2);
+    return [sheet(F - 55, 230, -90, 0, 'bundle')];
 }
 
 // Moves every sheet one step and reports the ones that hit the rider, in order.
@@ -68,9 +139,10 @@ export function papersStep(papers: readonly Readonly<Paper>[], p: Readonly<Point
             z.w *= .9;
             z.landed = true;
         }
-        if (!z.safe && !z.hit && !z.landed && !inBin && Math.hypot(z.x - p.x, z.y - (p.y - 50)) < 48) {
+        const heavy = z.kind === 'bundle';
+        if (!z.safe && !z.hit && !z.landed && !inBin && Math.hypot(z.x - p.x, z.y - (p.y - 50)) < (heavy ? 60 : 48)) {
             z.hit = true;
-            hits.push({ index, vx: z.vx, focus: { kind: 'paper', id: z.volley, damage: FOCUS_DAMAGE.copier } });
+            hits.push({ index, vx: z.vx, heavy, focus: { kind: 'paper', id: z.volley, damage: heavy ? FOCUS_DAMAGE.bundle : FOCUS_DAMAGE.copier } });
         }
         return z;
     });
