@@ -1,5 +1,6 @@
 import type { Point } from '../../types';
 import { deepFreeze } from '../../data';
+import * as Det from '../../math';
 
 // The duct shaft (x 1240-1780) is a zig-zag chimney: ledges alternate from the left and right walls and
 // meet at x 1540, so every column is roofed by some ledge and the spray cannot be held straight up through.
@@ -122,7 +123,7 @@ export function onSlickPaper(p: Readonly<Point>, ground: boolean) {
 // The sales graph as a polyline: cumulative length at each point.
 const GRAPH = STAGE_THREE.graph.points;
 const GRAPH_DIST = GRAPH.reduce<number[]>((acc, point, i) => {
-    acc.push(i === 0 ? 0 : acc[i - 1] + Math.hypot(point.x - GRAPH[i - 1].x, point.y - GRAPH[i - 1].y));
+    acc.push(i === 0 ? 0 : acc[i - 1] + Det.hypot(point.x - GRAPH[i - 1].x, point.y - GRAPH[i - 1].y));
     return acc;
 }, []);
 export const GRAPH_LENGTH = GRAPH_DIST[GRAPH_DIST.length - 1];
@@ -150,7 +151,7 @@ export function graphCatch(p: Readonly<Point>): number | null {
         const k = (p.x - a.x) / (b.x - a.x);
         const wheels = p.y + 28, line = a.y + (b.y - a.y) * k;
         if (wheels < line - g.catchBelow || wheels > line + g.catchAbove) return null;
-        return GRAPH_DIST[i - 1] + Math.hypot(p.x - a.x, line - a.y);
+        return GRAPH_DIST[i - 1] + Det.hypot(p.x - a.x, line - a.y);
     }
     return null;
 }

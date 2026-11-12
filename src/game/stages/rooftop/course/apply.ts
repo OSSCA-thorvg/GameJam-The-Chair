@@ -2,6 +2,7 @@
 import { setPlayer, type GameState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { ductSprayed, entranceStep, flightStep, graphRideStep, rooftopStep } from './decide';
+import * as Det from '../../../math';
 // Returns true while the rooftop door scene owns the chair.
 export function applyRooftopEntrance(s: GameState, dt: number) {
     if (s.rooftop.entrance.kind !== 'opening') return false;
@@ -55,7 +56,7 @@ export function applyFlight(s: GameState, dt: number): false | 'flight' | 'arriv
         s.ground = false;
         // The extinguisher roars backwards along the line like a booster.
         s.sprayBurst = .24;
-        s.sprayDir = { x: -r.p.vx / Math.max(1, Math.hypot(r.p.vx, r.p.vy)), y: -r.p.vy / Math.max(1, Math.hypot(r.p.vx, r.p.vy)) };
+        s.sprayDir = { x: -r.p.vx / Math.max(1, Det.hypot(r.p.vx, r.p.vy)), y: -r.p.vy / Math.max(1, Det.hypot(r.p.vx, r.p.vy)) };
         return 'flight';
     }
     const r = flightStep(flight, s.p, dt);

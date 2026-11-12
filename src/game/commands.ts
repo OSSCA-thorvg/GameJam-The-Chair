@@ -3,6 +3,7 @@ import type { StageId } from './types';
 import type { GameEvent, Input } from './types';
 import { stageHooks } from './stages/hooks';
 import { PHYSICS } from './level';
+import * as Det from './math';
 
 // Every way the outside world changes the game. Recorded with the tick it arrived on.
 export type Command =
@@ -85,7 +86,7 @@ export function spray(s: GameState, out: GameEvent[]) {
     const hooks = stageHooks(s.stage);
     if (s.mode !== 'play' || !s.hasExtinguisher || hooks.canSpray?.(s) === false || s.sprayCooldown > 0) return;
     const dx = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
-    const len = Math.hypot(dx, 1);
+    const len = Det.hypot(dx, 1);
     s.sprayDir = { x: -dx / len, y: 1 / len };
     s.p.vx += dx * 150;
     s.p.vy = Math.max(-500, Math.min(0, s.p.vy) - (dx ? 430 : 470));
