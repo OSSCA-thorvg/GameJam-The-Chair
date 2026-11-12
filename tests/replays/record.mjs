@@ -1,6 +1,6 @@
 // Regenerates the checked-in replay fixtures: node tests/replays/record.mjs
 import { writeFileSync } from 'node:fs';
-import { balancePolicy } from '.../support/harness.mjs';
+import { balancePolicy } from '../support/harness.mjs';
 import { bundled } from '../support/load.mjs';
 const R = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export * from './src/game/replay';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 const recorder = R.createRecorder(() => R.REPLAY_DEFAULTS, 31);

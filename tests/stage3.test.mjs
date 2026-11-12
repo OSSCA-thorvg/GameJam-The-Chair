@@ -25,7 +25,7 @@ test('extinguisher must be collected and does not leak into other stages', () =>
     assert.equal(game.getSnapshot().hasExtinguisher, false);
 });
 
-test('held spray repeats every 0.24 seconds without ammo and right input propels right', () => {
+test('held spray repeats every 0.24 seconds, three bursts per time in the air, and right input propels right', () => {
     const game = createGame(); game.startStage(3);
     driveStageThree(game, state => state.hasExtinguisher);
     game.restart(); game.drainEvents();
@@ -42,11 +42,16 @@ test('held spray repeats every 0.24 seconds without ammo and right input propels
             assert.ok(state.spray.dir.x < 0 && state.spray.dir.y > 0);
         }
     }
-    assert.equal(bursts, 5);
+    assert.equal(bursts, 3, 'the extinguisher stops after three bursts until the chair lands');
+    assert.equal(game.getSnapshot().airSprays, 3);
     for (let i = 1; i < times.length; i++) assert.ok(Math.abs(times[i] - times[i - 1] - .24) < dt);
     game.release('spray');
     for (let i = 0; i < 60; i++) game.step(dt);
     assert.equal(game.getSnapshot().spray.burst, 0);
+    for (let i = 0; i < 600 && !game.getSnapshot().ground; i++) game.step(dt);
+    assert.equal(game.getSnapshot().airSprays, 0, 'landing refills the bursts');
+    game.drainEvents(); game.spray();
+    assert.ok(game.drainEvents().some(event => event.type === 'cue' && event.id === 'spray'));
 });
 
 test('continuous thrust carries the chair smoothly into an airborne stage-four start', () => {
@@ -56,14 +61,16 @@ test('continuous thrust carries the chair smoothly into an airborne stage-four s
         flags.add(state.checkpoint);
         reactions.add(state.ductReaction.kind);
         if (state.firstFlight.kind === 'course') shots.add(state.firstFlight.verticalShots);
+        // The shaft's four ledges, zig-zagging up from the duct: R1, L1, R2, L2.
         if (state.ground) {
-            if (state.player.x > 1510 && state.player.x < 1780 && Math.abs(state.player.y - 248) < 18) landings.add('right');
-            if (state.player.x > 1240 && state.player.x < 1400 && Math.abs(state.player.y - 108) < 18) landings.add('left');
-            if (state.player.x > 1510 && state.player.x < 1780 && Math.abs(state.player.y + 32) < 18) landings.add('duct');
+            if (state.player.x > 1480 && state.player.x < 1780 && Math.abs(state.player.y - 248) < 18) landings.add('R1');
+            if (state.player.x > 1240 && state.player.x < 1540 && Math.abs(state.player.y - 78) < 18) landings.add('L1');
+            if (state.player.x > 1480 && state.player.x < 1780 && Math.abs(state.player.y + 92) < 18) landings.add('R2');
+            if (state.player.x > 1240 && state.player.x < 1540 && Math.abs(state.player.y + 262) < 18) landings.add('L2');
         }
     });
-    assert.deepEqual([...flags], [0, 1, 2, 3]);
-    assert.deepEqual(landings, new Set(['right', 'left', 'duct']));
+    assert.deepEqual([...flags], [0, 1, 2, 3, 4]);
+    assert.deepEqual(landings, new Set(['R1', 'L1', 'R2', 'L2']));
     assert.deepEqual([...reactions], ['idle', 'reacting', 'done']);
     assert.equal(flight.mode, 'play');
     assert.equal(flight.deaths, 0);
@@ -140,7 +147,7 @@ test('entrance moves the chair to the first block and closes before enabling con
 
 test('launch requires three consecutive upward shots and ignores directional or delayed bursts', () => {
     const game = createGame(); game.startStage(3);
-    driveStageThree(game, state => state.checkpoint === 3 && state.ground && state.player.x > 2250);
+    driveStageThree(game, state => state.checkpoint === 4 && state.ground && state.player.x > 2250);
     game.clearInput(); game.spray();
     assert.equal(game.getSnapshot().firstFlight.verticalShots, 1);
     for (let i = 0; i < 30; i++) game.step(dt);

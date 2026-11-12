@@ -302,6 +302,30 @@ function rooftopTakeoff(): PreviewScene {
         [{ at: 0, label: 'Take-off' }, { at: 2.2, label: 'Cloud layers' }, { at: 4, label: 'Above the clouds' }], frames);
 }
 
+// The duct shaft's hazards seen from a ledge: the awake duct's gusts and the steam vents' hiss and blast.
+// Starts from the shaft flag (the duct already awake) with the chair parked on a ledge, then lets time run.
+// `startTime` shifts the attempt clock so the vents' cycle begins where the scene wants it.
+function shaftHazards(id: string, label: string, at: { x: number; y: number }, startTime: number, markers: PreviewScene['markers']): PreviewScene {
+    const game = createGame();
+    game.startStage(3);
+    const saved = JSON.parse(game.serialize());
+    saved.checkpoint = STAGE_THREE.checkpoints.findIndex(mark => mark.x === 1310);
+    game.restore(JSON.stringify(saved));
+    game.reset();
+    const parked = JSON.parse(game.serialize());
+    parked.p = { ...parked.p, x: at.x, y: at.y, vx: 0, vy: 0, a: 0, w: 0 };
+    parked.ground = true;
+    parked.time = startTime;
+    game.restore(JSON.stringify(parked));
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    for (let i = 0; i < 400; i++) {
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene(id, label, at.x, markers, frames);
+}
+
 function cloudEntry(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -385,5 +409,22 @@ export const previewScenes: readonly PreviewScene[] = [
         markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
-    bucketPour(), cleanerRecovery(), monitorLight(), copierVolley(), headImpact(), focusLoss(), rooftopEntrance(), extinguisherSpray(), ductSneeze(), ductSneeze(true), rooftopTakeoff(), cloudEntry(), skyEnding(), officeTyping(),
+    bucketPour(),
+    cleanerRecovery(),
+    monitorLight(),
+    copierVolley(),
+    headImpact(),
+    focusLoss(),
+    rooftopEntrance(),
+    extinguisherSpray(),
+    ductSneeze(),
+    ductSneeze(true),
+    shaftHazards('rooftop-shaft-low', 'Rooftop · Shaft duct gust & side vent', { x: 1420, y: 78 }, 0,
+        [{ at: 1.6, label: 'Vent hiss' }, { at: 2.4, label: 'Vent blast' }, { at: 3.45, label: 'Duct inhale' }, { at: 4.05, label: 'Duct gust' }]),
+    shaftHazards('rooftop-shaft-high', 'Rooftop · Shaft vent & ceiling downdraft', { x: 1400, y: -262 }, 1.2,
+        [{ at: .3, label: 'Downdraft' }, { at: 1.5, label: 'Wall vent hiss' }, { at: 2.25, label: 'Wall vent blast' }, { at: 2.65, label: 'Ceiling hiss' }, { at: 3.4, label: 'Downdraft' }]),
+    rooftopTakeoff(),
+    cloudEntry(),
+    skyEnding(),
+    officeTyping(),
 ];
