@@ -334,7 +334,7 @@ function urgentCopier(volley: number, id: string, label: string): PreviewScene {
     saved.lessons = { moved: true, jumped: true };
     saved.p = { ...saved.p, x: LEVEL.urgentCopier.x - 330, y: LEVEL.floor - 28, vx: 0, vy: 0, a: 0, w: 0 };
     saved.ground = true;
-    saved.office.urgent = { ...saved.office.urgent, volley: volley - 1 };
+    saved.office.urgent = { ...saved.office.urgent, cool: 0, volley: volley - 1 };
     game.restore(JSON.stringify(saved));
     const effects = createEffects();
     const frames = [capture(game, effects)];
@@ -343,7 +343,7 @@ function urgentCopier(volley: number, id: string, label: string): PreviewScene {
         frames.push(capture(game, effects));
     }
     return recordedScene(id, label, LEVEL.urgentCopier.x - 150,
-        [{ at: 0, label: 'Scan · Tray glows' }, { at: .6, label: 'Volley' }], frames);
+        [{ at: 0, label: 'Emergency scan · Tray glows' }, { at: .8, label: 'Three print batches' }], frames);
 }
 
 function cloudEntry(): PreviewScene {

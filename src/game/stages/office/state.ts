@@ -31,7 +31,7 @@ export type OfficeState = {
 
 export function createOfficeState(): OfficeState {
     return {
-        copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 },
+        copier: { x: LEVEL.copier.x, cool: LEVEL.copier.initialDelay, burst: 0, next: 0, dir: -1 },
         urgent: createUrgentCopier(),
         volley: 0,
         bursts: 0,

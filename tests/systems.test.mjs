@@ -9,6 +9,13 @@ const sys = await bundled({
 });
 const F = 420;
 
+test('steam and monitor light phases repeat from elapsed time alone', () => {
+    const steam = { period: 3.5, offset: 1.2 };
+    const monitor = { wall: 2110, period: 3.5, offset: 2.1 };
+    assert.equal(sys.geyserPhase(steam, .4).kind, sys.geyserPhase(steam, 3.9).kind);
+    assert.equal(sys.monitorPhase(monitor, .4).active, sys.monitorPhase(monitor, 3.9).active);
+});
+
 test('geyser launches only during a burst, near the vent and low enough', () => {
     const burstAt = 3.2; // geyser 0: period 3.5, offset 0, burst from 3.1
     assert.equal(sys.geyserHits({ x: 2600, y: F - 28 }, 1, 7).length, 0, 'resting');
@@ -19,14 +26,14 @@ test('geyser launches only during a burst, near the vent and low enough', () => 
     assert.ok(Math.abs(hit.spin) <= 3);
     assert.notEqual(hit.rng, 7, 'spin consumes the physics stream');
     assert.deepEqual(sys.geyserHits({ x: 2590, y: F - 28 }, burstAt, 7), [hit], 'deterministic');
-    assert.deepEqual(hit.focus, { kind: 'paper', id: 1000, damage: 30 });
+    assert.deepEqual(hit.focus, { kind: 'paper', id: 1000, damage: 20 });
 });
 
 test('a lit monitor pushes the chair back the way it came', () => {
     const lit = 1; // monitor 0: active from .8 to 2.1
     assert.equal(sys.monitorContact({ x: 2110, y: 392 }, 2100, .2), null, 'warning only');
     assert.equal(sys.monitorContact({ x: 2110, y: 200 }, 2100, lit), null, 'above the screens');
-    assert.deepEqual(sys.monitorContact({ x: 2110, y: 392 }, 2100, lit), { index: 0, x: 2065, vx: -65, focus: { kind: 'light', id: 0, damage: 30 } });
+    assert.deepEqual(sys.monitorContact({ x: 2110, y: 392 }, 2100, lit), { index: 0, x: 2065, vx: -65, focus: { kind: 'light', id: 0, damage: 20 } });
     assert.equal(sys.monitorContact({ x: 2110, y: 392 }, 2120, lit).vx, 65, 'from the right');
 });
 
@@ -48,7 +55,7 @@ test('the bucket tips once when approached, splashes nearby riders and must refi
     const first = sys.cleaningStep(input, 1 / 120);
     assert.equal(first.splash, true);
     assert.equal(first.cleaning.splashDir, -1);
-    assert.deepEqual(first.soak, { kind: 'water', id: 1, damage: 30 });
+    assert.deepEqual(first.soak, { kind: 'water', id: 1, damage: 20 });
     assert.equal(cleaning.spilled, false, 'input untouched');
     const again = sys.cleaningStep({ ...input, cleaning: first.cleaning, bucket: first.bucket, soakedOnSpill: 1 }, 1 / 120);
     assert.equal(again.splash, false, 'not refilled yet');
@@ -57,19 +64,17 @@ test('the bucket tips once when approached, splashes nearby riders and must refi
     assert.equal(far.splash, false);
 });
 
-test('the copier aims, waits, then fires a four-sheet burst; the first shot is harmless', () => {
-    const copier = { x: 750, cool: 0, burst: 0, next: 0, dir: -1 };
-    assert.equal(sys.copierStep(copier, 0, 200, true, 1 / 120).volley, 0, 'too far to notice');
-    assert.equal(sys.copierStep(copier, 0, 500, false, 1 / 120).volley, 0, 'only in the office');
+test('the copier fires on a fixed cycle without reading the player position', () => {
+    const copier = { x: 750, cool: 1.2, burst: 0, next: 0, dir: -1 };
     let state = { copier, volley: 0 };
     let shots = 0;
-    for (let i = 0; i < 200; i++) {
-        const r = sys.copierStep(state.copier, state.volley, 500, true, 1 / 120);
+    for (let i = 0; i < 120 * 4; i++) {
+        const r = sys.copierStep(state.copier, state.volley, 1 / 120);
         state = r;
         if (r.fire) shots++;
     }
     assert.equal(state.volley, 1);
-    assert.equal(state.copier.dir, -1);
+    assert.equal(state.copier.dir, -1, 'the output direction is fixed instead of aiming at the chair');
     assert.equal(shots, 4);
     const first = sys.paperShot(state.copier, 1, 0);
     assert.equal(first.length, 4);
@@ -198,22 +203,26 @@ test('corridor decisions: convoy landing, lift ride, meeting and chatter use the
     assert.equal(base.offices[0].life, 0, 'input untouched');
 });
 
-test('the executive printer scans before every urgent volley and follows a fixed pattern order', () => {
+test('the executive printer starts on its timer, warns, then prints in three batches', () => {
     assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map(sys.urgentPattern), ['low', 'lob', 'fan', 'bundle', 'fan', 'bundle', 'fan']);
     let c = sys.createUrgentCopier();
     const dt = 1 / 120;
-    assert.equal(sys.urgentCopierStep(c, c.x - 600, dt).copier.volley, 0, 'asleep while the chair is far away');
-    let r = sys.urgentCopierStep(c, c.x - 300, dt);
-    assert.equal(r.started, true);
-    assert.equal(r.copier.dir, -1, 'faces the approaching chair');
-    c = r.copier;
+    let r;
+    let startedAt = null;
     let firstShot = null;
-    for (let i = 1; i < 240 && firstShot === null; i++) {
-        r = sys.urgentCopierStep(c, c.x - 300, dt);
+    let shots = 0;
+    for (let i = 0; i < 120 * 5; i++) {
+        r = sys.urgentCopierStep(c, dt);
         c = r.copier;
-        if (r.fire) firstShot = i * dt;
+        if (r.started) startedAt = i * dt;
+        if (r.fire) {
+            firstShot ??= i * dt;
+            shots++;
+        }
     }
-    assert.ok(firstShot >= .6 - dt && firstShot < .62, `the scan warns for 0.6 s (fired at ${firstShot})`);
+    assert.ok(startedAt >= 2.4 - dt && startedAt <= 2.4, `the timer starts the warning at ${startedAt}`);
+    assert.ok(firstShot - startedAt >= .8 - dt, `the emergency warning precedes printing by 0.8 s`);
+    assert.equal(shots, 3);
 });
 
 test('urgent sheets: skimming ones need a jump, a stapled bundle shoves the chair back', () => {
@@ -229,27 +238,24 @@ test('urgent sheets: skimming ones need a jump, a stapled bundle shoves the chai
     const jumping = () => ({ x: copier.x - 180, y: F - 28 - 76 });
     assert.ok(flyAt(low, standing).length > 0, 'skimming sheets hit a chair on the floor');
     assert.equal(flyAt(sys.urgentShot(copier), jumping).length, 0, 'a jump clears them');
-    const bundle = sys.urgentShot({ ...copier, volley: 4, burst: 3 });
+    const bundle = sys.urgentShot({ ...copier, volley: 4, burst: 2 });
     assert.equal(bundle.length, 1, 'the bundle flies alone, its loose pages follow in the next shot');
     assert.equal(bundle[0].kind, 'bundle');
     const hit = flyAt(bundle, standing)[0];
-    assert.ok(hit.heavy && hit.focus.damage === 20 && hit.vx < 0, 'a bundle costs eight sheets\' worth');
+    assert.ok(hit.heavy && hit.focus.damage === 12 && hit.vx < 0, 'a bundle has reduced focus damage');
     assert.ok(hit.focus.id > 1000, 'urgent volleys count apart from the office copier');
 });
 
-test('every urgent volley is 20 sheets\' worth, and each sheet that hits costs focus on its own', () => {
+test('every urgent volley is split into three batches, and each sheet that hits costs reduced focus', () => {
     for (let volley = 1; volley <= 4; volley++) {
-        const shots = { 1: 5, 2: 4, 3: 5, 4: 4 }[volley];
         const papers = [];
-        for (let burst = shots - 1; burst >= 0; burst--) papers.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley, burst }));
-        const worth = papers.reduce((sum, z) => sum + (z.kind === 'bundle' ? 8 : 1), 0);
-        assert.equal(worth, 20, `volley ${volley}`);
+        for (let burst = 2; burst >= 0; burst--) papers.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley, burst }));
         assert.equal(new Set(papers.map(z => z.volley)).size, papers.length, 'each sheet has its own focus id');
     }
     const focus = { focus: 100, focusClock: 0, focusEvents: [], focusNotice: null };
     let f = focus;
     const sheets = [];
-    for (let burst = 4; burst >= 0; burst--) sheets.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley: 1, burst }));
-    for (const z of sheets) f = { ...f, ...sys.focusAfterHit(f, { kind: 'paper', id: z.volley, damage: 2.5 }) };
-    assert.equal(f.focus, 50, 'a whole volley takes half the focus bar');
+    for (let burst = 2; burst >= 0; burst--) sheets.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley: 1, burst }));
+    for (const z of sheets) f = { ...f, ...sys.focusAfterHit(f, { kind: 'paper', id: z.volley, damage: 1.5 }) };
+    assert.equal(f.focus, 82, 'all twelve sheets now cost eighteen focus total');
 });

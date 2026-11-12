@@ -13,7 +13,6 @@ import { monitorContact } from './monitor/decide';
 
 export const officeHooks: StageHooks = {
     timers(s, dt) {
-        s.office.copier.cool = Math.max(0, s.office.copier.cool - dt);
         s.office.binCooldown = Math.max(0, s.office.binCooldown - dt);
         s.office.paperPenaltyRemaining = Math.max(0, s.office.paperPenaltyRemaining - dt);
         s.office.slipCooldown = Math.max(0, s.office.slipCooldown - dt);
@@ -21,8 +20,8 @@ export const officeHooks: StageHooks = {
         s.office.lightCooldown = Math.max(0, s.office.lightCooldown - dt);
     },
     hazards(s, out, dt) {
-        applyCopier(s, out, copierStep(s.office.copier, s.office.volley, s.p.x, true, dt));
-        applyUrgentCopier(s, out, urgentCopierStep(s.office.urgent, s.p.x, dt));
+        applyCopier(s, out, copierStep(s.office.copier, s.office.volley, dt));
+        applyUrgentCopier(s, out, urgentCopierStep(s.office.urgent, dt));
         if (!applyPapers(s, out, papersStep(s.office.papers, s.p, s.office.inBin, dt), dt)) return false;
         const { cleaning, bucket, soakedOnSpill } = s.office;
         applyCleaning(s, out, cleaningStep({ p: s.p, cleaning, bucket, soakedOnSpill }, dt), dt);

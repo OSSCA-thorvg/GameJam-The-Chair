@@ -340,13 +340,13 @@ test('holding right runs into the copier papers while the copier keeps firing', 
             firstHitX = state.player.x;
             firstHitFocus = state.focus;
         }
-        if (state.player.x > state.copier.x + 350 && state.bursts >= 8) break;
+        if (state.player.x > state.copier.x + 350 && state.bursts >= 5) break;
     }
     const state = game.getSnapshot();
     assert.ok(firstHitX !== undefined && firstHitX < state.copier.x, 'the rider must meet hazardous paper before passing the copier');
-    assert.equal(firstHitFocus, 85, 'the first copier hit costs 15 focus once per volley');
+    assert.equal(firstHitFocus, 90, 'the first copier hit costs 10 focus once per volley');
     assert.ok(state.player.x > state.copier.x + 350);
-    assert.ok(state.bursts >= 8, 'the copier must fire another volley after the rider leaves its trigger range');
+    assert.ok(state.bursts >= 5, 'the copier must start another volley after the rider passes it');
 });
 
 

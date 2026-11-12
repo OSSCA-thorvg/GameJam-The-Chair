@@ -82,8 +82,8 @@ export function urgentCopierDraw(ctx: RenderCtx) {
         ctx.endLayer();
     }
 
-    // "URGENT!" burst while it scans, like the office copier's spit.
-    if (scanning && ctx.mode === 'play') speechBurst(ctx, x, F - 262, translate('copier.urgent', ctx.locale), Math.min(1, progress * 6));
+    // Keep the emergency state visible from the warning scan through all three print batches.
+    if (awake && ctx.mode === 'play') speechBurst(ctx, x, F - 262, translate('copier.urgent', ctx.locale), scanning ? Math.min(1, progress * 6) : 1);
 }
 
 function tray(ctx: RenderCtx, x: number, y: number, side: number, glow: number) {

@@ -141,12 +141,15 @@ test('renderer consumes snapshots and supports changed art without editing physi
 test('head impact and focus loss finish without any UI', () => {
     const head = createGame(); head.reset();
     const jumping = { kind: 'jump', interval: 90 };
-    for (let i = 0; i < 500 && head.getSnapshot().mode === 'play'; i++) {
+    for (let i = 0; i < 800 && head.getSnapshot().mode === 'play'; i++) {
         applyInput(head, jumping, i); head.step(1 / 120); head.drainEvents();
     }
     assert.equal(head.getSnapshot().mode, 'impact');
     head.advanceImpact(10); assert.equal(head.getSnapshot().mode, 'dead');
     const focus = createGame(); focus.reset();
+    const lowFocus = JSON.parse(focus.serialize());
+    lowFocus.focus = 10;
+    focus.restore(JSON.stringify(lowFocus));
     const camping = { kind: 'camp', ticks: 6000 };
     for (let i = 0; i < camping.ticks && focus.getSnapshot().mode === 'play'; i++) {
         applyInput(focus, camping, i); focus.step(1 / 120); focus.drainEvents();

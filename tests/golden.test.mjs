@@ -19,13 +19,16 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // still matched, so their play is unchanged.
 // Updated when the office gained the executive printer's urgent-report mode: every final snapshot gains
 // `office.urgent` and paper `kind`, and the office routes now pass its volleys.
+// Updated when stage-one printers moved from proximity triggers to fixed timers, urgent output became three
+// batches, and distraction focus damage was reduced. The level constants also change every replay version,
+// so all final fingerprints intentionally change even when the route does not visit the office.
 const EXPECTED = {
-    'office route': '384df579e67b7be8',
-    'office crash': '95beeba2d857d4c1',
-    'building exit': 'd9977bb81547d1ab',
-    'building lift': '8073926b292ed8fb',
-    'rooftop to sky': '6eaed670ba29c3b7',
-    'rooftop duct': '7b197da464e60d87',
+    'office route': 'd41d1de617a863e2',
+    'office crash': '30365888ef38ccc5',
+    'building exit': '55821047e5744eb0',
+    'building lift': '136e302ee9f1fe5e',
+    'rooftop to sky': '6d3aa99199117ba1',
+    'rooftop duct': '0f71b0c9c56311d8',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

@@ -6,16 +6,16 @@ export type Copier = { x: number; cool: number; burst: number; next: number; dir
 export type CopierResult = { copier: Copier; volley: number; fire: boolean };
 export type PaperHit = { index: number; vx: number; heavy: boolean; focus: FocusHit };
 
-// The office copier wakes when the chair comes near, aims, and fires bursts of four sheets.
-export function copierStep(copier: Readonly<Copier>, volley: number, playerX: number, office: boolean, dt: number): CopierResult {
-    const next = { ...copier };
+// The office copier fires left on a fixed cycle, independently of the chair.
+export function copierStep(copier: Readonly<Copier>, volley: number, dt: number): CopierResult {
+    const next = { ...copier, cool: Math.max(0, copier.cool - dt) };
     let fire = false;
-    if (office && (volley > 0 || Math.abs(playerX - next.x) < 350) && next.cool === 0 && next.burst === 0) {
-        next.dir = playerX < next.x ? -1 : 1;
+    if (next.cool === 0 && next.burst === 0) {
+        next.dir = -1;
         volley++;
         next.burst = 4;
         next.next = .75;
-        next.cool = 1.45;
+        next.cool = LEVEL.copier.period;
     }
     if (next.burst > 0) {
         next.next -= dt;
@@ -60,29 +60,30 @@ export function urgentPattern(volley: number): UrgentPattern {
     const order: UrgentPattern[] = ['low', 'lob', 'fan', 'bundle'];
     return volley <= order.length ? order[Math.max(0, volley - 1)] : order[2 + (volley - order.length - 1) % 2];
 }
-const URGENT_SHOTS: Record<UrgentPattern, number> = { low: 5, lob: 4, fan: 5, bundle: 4 };
+const URGENT_BATCHES = 3;
 // Urgent sheets carry their own focus id from here up (volley * 100 + shot * 10 + sheet), so each sheet
 // that hits counts, apart from the office copier's once-per-volley hits.
 export const URGENT_VOLLEY_ID = 1000;
 
 export function createUrgentCopier(): UrgentCopier {
-    return { x: LEVEL.urgentCopier.x, scan: 0, cool: 0, burst: 0, next: 0, dir: -1, volley: 0 };
+    return { x: LEVEL.urgentCopier.x, scan: 0, cool: LEVEL.urgentCopier.initialDelay, burst: 0, next: 0, dir: -1, volley: 0 };
 }
 
-// Wakes while the chair is near, scans (the warning), then fires the volley's pattern and rests.
-export function urgentCopierStep(copier: Readonly<UrgentCopier>, playerX: number, dt: number): UrgentResult {
+// Starts on its own timer, scans as an emergency warning, then emits exactly three batches.
+export function urgentCopierStep(copier: Readonly<UrgentCopier>, dt: number): UrgentResult {
     const spec = LEVEL.urgentCopier;
     const next = { ...copier, cool: Math.max(0, copier.cool - dt) };
     let fire = false, started = false;
-    if (next.scan === 0 && next.burst === 0 && next.cool === 0 && Math.abs(playerX - next.x) < spec.wake) {
-        next.dir = playerX < next.x ? -1 : 1;
+    if (next.scan === 0 && next.burst === 0 && next.cool === 0) {
+        next.dir = -1;
         next.volley++;
         next.scan = spec.scan;
+        next.cool = spec.period;
         started = true;
     } else if (next.scan > 0) {
         next.scan = Math.max(0, next.scan - dt);
         if (next.scan === 0) {
-            next.burst = URGENT_SHOTS[urgentPattern(next.volley)];
+            next.burst = URGENT_BATCHES;
             next.next = 0;
         }
     }
@@ -92,7 +93,6 @@ export function urgentCopierStep(copier: Readonly<UrgentCopier>, playerX: number
             fire = true;
             next.burst--;
             next.next = spec.shotGap;
-            if (next.burst === 0) next.cool = spec.rest;
         }
     }
     return { copier: next, fire, started };
@@ -103,7 +103,7 @@ export function urgentShot(copier: Readonly<UrgentCopier>): Paper[] {
     const F = LEVEL.floor;
     const dir = copier.dir;
     const pattern = urgentPattern(copier.volley);
-    const shot = URGENT_SHOTS[pattern] - 1 - copier.burst;
+    const shot = URGENT_BATCHES - 1 - copier.burst;
     const sheet = (y: number, vx: number, vy: number, i: number, kind: Paper['kind'] = 'sheet'): Paper => ({
         x: copier.x + dir * 60, y, vx: dir * vx, vy, a: i * .7, w: dir * (kind === 'bundle' ? 1.5 : 4 + i),
         life: LEVEL.urgentCopier.life, hit: false, landed: false, safe: false, kind,
@@ -114,7 +114,7 @@ export function urgentShot(copier: Readonly<UrgentCopier>): Paper[] {
     const low = () => [0, 1, 2, 3].map(i => sheet(F - 38 - i * 3, 285 + i * 22 + (shot % 3) * 15, -70 - i * 6, i));
     // Lobbed high, raining down a little ahead of the printer.
     const lob = (count: number) => Array.from({ length: count }, (_, i) => sheet(F - 120, 130 + i * 40 + (shot % 3) * 25, -230 - i * 18, i));
-    // 20 sheets' worth each: low 5×4, lob 4×5, fan low/lob alternating 5×4, bundle (8) + 3×4 loose pages.
+    // Every emergency cycle is visibly split into three batches; each pattern changes their trajectory.
     if (pattern === 'low') return low();
     if (pattern === 'lob') return lob(5);
     if (pattern === 'fan') return shot % 2 === 1 ? lob(4) : low();
