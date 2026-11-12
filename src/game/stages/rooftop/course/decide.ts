@@ -1,9 +1,11 @@
 import type { Player } from '../../../types';
-import { STAGE_THREE, ductTimings, inVentBlast, ventPhase, type DuctBurst } from '../data';
+import { GRAPH_LENGTH, STAGE_THREE, ductTimings, graphCatch, graphPointAt, inVentBlast, ventPhase, type DuctBurst } from '../data';
 import { STAGE_FOUR } from '../../sky/data';
 
 export type RooftopEntrance = { kind: 'opening'; age: number } | { kind: 'ready' };
-export type FirstFlight = { kind: 'course'; verticalShots: number; lastShotAt: number } | { kind: 'flight'; age: number };
+// 'course' is normal play; 'ride' carries the chair up the sales graph (`dist` along the line);
+// 'flight' is the climb from the graph's tip up to the sky stage.
+export type FirstFlight = { kind: 'course' } | { kind: 'ride'; dist: number; speed: number; age: number } | { kind: 'flight'; age: number };
 // `rest` counts the seconds since the last sneeze; an awake duct gusts again after `gustPeriod`.
 export type DuctReaction = { kind: 'idle' } | { kind: 'reacting'; age: number; shots: number; bursts: DuctBurst[] } | { kind: 'done'; shots: number; rest: number };
 
@@ -30,7 +32,7 @@ export type RooftopInput = { p: Readonly<Player>; ground: boolean; hasExtinguish
 export type RooftopResult = { p: Player; ground: boolean; firstFlight: FirstFlight; ductReaction: DuctReaction; pickup: boolean };
 
 // After collisions on the rooftop: the duct's sneeze, the steam vents, the extinguisher pickup, the ceiling
-// and the launch pad.
+// and the catch onto the sales graph.
 export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
     const duct = ductReactionStep(input.ductReaction, input.p, dt);
     const p = duct.p;
@@ -45,34 +47,34 @@ export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
         p.y = STAGE_THREE.ceiling;
         p.vy = Math.max(0, p.vy);
     }
-    let firstFlight = input.firstFlight.kind === 'course' ? { ...input.firstFlight } : { ...input.firstFlight };
-    const launch = STAGE_THREE.launch;
-    if (firstFlight.kind === 'course' && (p.x < launch.left || p.x > launch.right || input.time - firstFlight.lastShotAt > launch.shotWindow)) {
-        firstFlight = { ...firstFlight, verticalShots: 0 };
-    }
+    let firstFlight: FirstFlight = { ...input.firstFlight };
+    // Rolling right onto the sales graph (or landing on it) starts the ride.
+    const caught = firstFlight.kind === 'course' && input.hasExtinguisher && (p.vx > 20 || p.vy >= 0) ? graphCatch(p) : null;
+    if (caught !== null) firstFlight = { kind: 'ride', dist: caught, speed: Math.max(STAGE_THREE.graph.startSpeed, Math.abs(p.vx)), age: 0 };
     return { p, ground, firstFlight, ductReaction: duct.reaction, pickup };
 }
 
-// Three straight-down sprays in a row on the launch pad send the chair up into the sky.
-export function launchShot(firstFlight: Readonly<FirstFlight>, p: Readonly<Player>, time: number, direction: number): { firstFlight: FirstFlight; p: Player; takeoff: boolean } {
-    const next = { ...p };
-    if (firstFlight.kind !== 'course') return { firstFlight: { ...firstFlight }, p: next, takeoff: false };
-    const launch = STAGE_THREE.launch;
-    if (direction !== 0 || p.y > -144 || p.x < launch.left || p.x > launch.right) {
-        return { firstFlight: { ...firstFlight, verticalShots: 0 }, p: next, takeoff: false };
-    }
-    const consecutive = time - firstFlight.lastShotAt <= launch.shotWindow;
-    const verticalShots = consecutive ? firstFlight.verticalShots + 1 : 1;
-    next.vx = 0;
-    if (verticalShots !== 3) return { firstFlight: { kind: 'course', verticalShots, lastShotAt: time }, p: next, takeoff: false };
+// The chair rides the surging sales graph: it sticks to the line, speeds up, and leaves the tip
+// heading straight up into the climb.
+export function graphRideStep(ride: Readonly<Extract<FirstFlight, { kind: 'ride' }>>, p: Readonly<Player>, dt: number): { flight: FirstFlight; p: Player } {
+    const g = STAGE_THREE.graph;
+    const speed = Math.min(g.topSpeed, ride.speed + g.accel * dt);
+    const dist = ride.dist + speed * dt;
+    const at = graphPointAt(dist);
+    // The chair turns smoothly into each corner; the seat sits above the line along its own tilt.
+    const target = Math.max(-g.maxTilt, Math.min(g.maxTilt, Math.atan2(at.ty, at.tx)));
+    const a = p.a + (target - p.a) * (1 - Math.exp(-10 * dt));
+    const next = { ...p, x: at.x + Math.sin(a) * 28, y: at.y - Math.cos(a) * 28, vx: at.tx * speed, vy: at.ty * speed, a, w: 0 };
+    if (dist < GRAPH_LENGTH) return { flight: { kind: 'ride', dist, speed, age: ride.age + dt }, p: next };
     next.vy = Math.min(next.vy, -320);
-    next.w = 0;
-    return { firstFlight: { kind: 'flight', age: 0 }, p: next, takeoff: true };
+    return { flight: { kind: 'flight', age: 0 }, p: next };
 }
 
-// The scripted climb from the launch pad up to the sky stage.
+// The straight climb from the graph's tip up to the sky stage.
 export function flightStep(flight: { kind: 'flight'; age: number }, p: Readonly<Player>, dt: number): { flight: FirstFlight; p: Player; arrived: boolean } {
-    const next = { ...p, vx: 0 };
+    const next = { ...p };
+    next.vx *= Math.exp(-3 * dt);
+    next.x += next.vx * dt;
     const remaining = Math.max(0, next.y - STAGE_FOUR.arrivalY);
     const targetSpeed = -Math.min(300, Math.max(35, remaining * 1.5));
     next.vy += (targetSpeed - next.vy) * (1 - Math.exp(-2.5 * dt));

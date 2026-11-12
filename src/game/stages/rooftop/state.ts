@@ -10,5 +10,5 @@ export type RooftopState = {
 };
 
 export function createRooftopState(): RooftopState {
-    return { entrance: { kind: 'ready' }, duct: { kind: 'idle' }, flight: { kind: 'course', verticalShots: 0, lastShotAt: -1 }, airSprays: 0 };
+    return { entrance: { kind: 'ready' }, duct: { kind: 'idle' }, flight: { kind: 'course' }, airSprays: 0 };
 }

@@ -12,7 +12,7 @@ const { createGame, createCore, rooftopStep, rooftopHooks, STAGE_THREE, ventPhas
 `, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 const dt = 1 / 120;
 const SHAFT_FLAG = STAGE_THREE.checkpoints.findIndex(mark => mark.x === 1310);
-const course = { kind: 'course', verticalShots: 0, lastShotAt: -1 };
+const course = { kind: 'course' };
 
 function rooftop(p, { time = 0, duct = { kind: 'idle' }, ground = true } = {}) {
     return { p: { vx: 0, vy: 0, a: 0, w: 0, ...p }, ground, hasExtinguisher: true, firstFlight: course, ductReaction: duct, time };

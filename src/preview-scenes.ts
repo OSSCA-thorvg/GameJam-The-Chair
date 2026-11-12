@@ -4,7 +4,6 @@ import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { STAGE_TWO } from './game/stages/building/data';
 import { ductTimings, STAGE_THREE } from './game/stages/rooftop/data';
-import { flightStep } from './game/stages/rooftop/course/decide';
 import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/stages/office/monitor/decide';
@@ -284,25 +283,28 @@ function extinguisherSpray(): PreviewScene {
         [{ at: 0, label: 'Spray' }, { at: .16, label: 'Recoil' }, { at: .24, label: 'Plume ends' }, { at: .6, label: 'Landing' }], frames);
 }
 
-// The scripted climb from the rooftop, through the cloud layers, up to the sky stage.
+// Rolling onto the sales-graph billboard, up the surging line, out of the sign and straight up to the sky stage.
 function rooftopTakeoff(): PreviewScene {
     const game = createGame();
     game.startStage(3);
-    const base = game.getSnapshot();
-    const effects = createEffects().snapshot();
-    const pad = STAGE_THREE.checkpoints[STAGE_THREE.checkpoints.length - 1];
-    let flight = { kind: 'flight' as const, age: 0 };
-    let p = { ...base.player, x: 2330, y: pad.y, vy: -320 };
-    const frames: PreviewFrame[] = [];
-    for (let i = 0; i < 600; i++) {
-        frames.push({ state: { ...base, hasExtinguisher: true, ground: false, time: i * FRAME_TIME, firstFlight: { ...flight }, player: { ...p } }, effects });
-        const next = flightStep(flight, p, FRAME_TIME);
-        if (next.arrived || next.flight.kind !== 'flight') break;
-        flight = next.flight;
-        p = next.p;
+    const saved = JSON.parse(game.serialize());
+    saved.checkpoint = STAGE_THREE.checkpoints.length - 1;
+    game.restore(JSON.stringify(saved));
+    game.reset();
+    const parked = JSON.parse(game.serialize());
+    parked.p = { ...parked.p, x: 2150, y: -172, vx: 0, vy: 0, a: 0, w: 0 };
+    parked.ground = true;
+    parked.hasExtinguisher = true;
+    game.restore(JSON.stringify(parked));
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    game.setInput('right');
+    for (let i = 0; i < 600 && game.getSnapshot().stage === 3; i++) {
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
     }
-    return recordedScene('rooftop-takeoff', 'Rooftop · Take-off through the clouds', 2330,
-        [{ at: 0, label: 'Take-off' }, { at: 2.2, label: 'Cloud layers' }, { at: 4, label: 'Above the clouds' }], frames);
+    return { ...recordedScene('rooftop-takeoff', 'Rooftop · Ride the sales graph up to the sky', 2500,
+        [{ at: 0, label: 'Run-up' }, { at: 1.65, label: 'Boards the graph · Surge' }, { at: 3, label: 'Breaks out of the sign' }, { at: 3.4, label: 'Straight up to the clouds' }, { at: 5.6, label: 'Sky stage' }], frames), follow: true };
 }
 
 // The duct shaft's hazards seen from a ledge: the awake duct's gusts and the steam vents' hiss and blast.

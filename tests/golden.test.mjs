@@ -17,17 +17,20 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when stage three capped the extinguisher at three bursts per time in the air: both rooftop traces
 // change, and every final snapshot gains `airSprays`. Without that field the four office/building hashes
 // still matched, so their play is unchanged.
+// Updated when the rooftop's three-spray launch pad was replaced by dropping off the roof onto the sales
+// graph: every final snapshot's `rooftop.flight` lost `verticalShots`/`lastShotAt`, and 'rooftop to sky'
+// now rolls off the roof edge onto the billboard's graph and rides it straight up.
 // Updated when the office gained the executive printer's urgent-report mode: every final snapshot gains
 // `office.urgent` and paper `kind`, and the office routes now pass its volleys.
 // Updated when the stage-two express got its rush-hour corridor (one speed bump to hop, a launch ramp the
 // convoy flies off over a construction hole, the lift and exit moved on): both building routes now ride it.
 const EXPECTED = {
-    'office route': '384df579e67b7be8',
-    'office crash': '95beeba2d857d4c1',
-    'building exit': '68eff7944f536a19',
-    'building lift': '562b82b07313ef79',
-    'rooftop to sky': '6eaed670ba29c3b7',
-    'rooftop duct': '7b197da464e60d87',
+    'office route': '4391fc44ee9dd9d5',
+    'office crash': '989bf75e6942f5f1',
+    'building exit': 'b239b9fcd17b77fc',
+    'building lift': 'f946772e1497003e',
+    'rooftop to sky': '3bf00ce8878f245d',
+    'rooftop duct': '457498ca5afe1960',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

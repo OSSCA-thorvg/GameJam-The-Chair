@@ -23,4 +23,3 @@ export function billboard(ctx: RenderCtx, width: number, text: string, label: bo
         ctx.lg.fillText(text, 0, 0); ctx.lg.restore();
     }
 }
-

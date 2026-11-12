@@ -2,10 +2,31 @@ import { STAGE_THREE } from '../../game/stages/rooftop/data';
 import type { RenderCtx } from '../context';
 import { CLOUD_TONES, puffCloud } from './cloud-art';
 
+// The dusk over the roof, and the day sky of stage four it turns into on the climb.
+const DUSK: [number, string][] = [[0, '#8798b5'], [.45, '#ccb0b9'], [.8, '#f3c8a6'], [1, '#ffddac']];
+const DAY: [number, string][] = [[0, '#658eaf'], [.45, '#90bacb'], [.8, '#b6cfd4'], [1, '#c6d5d6']];
+// From the top of the billboard to the sky stage's height the sky turns from dusk to day.
+const DAY_FROM = -650, DAY_AT = -1820;
+
+function mixHex(a: string, b: string, k: number) {
+    const channel = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+    return '#' + [0, 1, 2].map(i => Math.round(channel(a, i) + (channel(b, i) - channel(a, i)) * k).toString(16).padStart(2, '0')).join('');
+}
+
 export function rooftopSky(ctx: RenderCtx) {
     const top = -ctx.vertical, bottom = ctx.H / ctx.scale - ctx.vertical;
+    const day = ctx.state.firstFlight.kind === 'course' ? 0 : ctx.clamp((ctx.p.y - DAY_FROM) / (DAY_AT - DAY_FROM), 0, 1);
+    const eased = day * day * (3 - 2 * day);
     ctx.gradientPolygon([[ctx.cam, top], [ctx.cam + ctx.VW, top], [ctx.cam + ctx.VW, bottom], [ctx.cam, bottom]],
-        ctx.gradientFill(0, top, 0, bottom, [[0, '#8798b5'], [.45, '#ccb0b9'], [.8, '#f3c8a6'], [1, '#ffddac']]));
+        ctx.gradientFill(0, top, 0, bottom, DUSK.map(([at, color], i) => [at, mixHex(color, DAY[i][1], eased)] as [number, string])));
+    if (eased > 0) {
+        // The sky stage's sun glow fades in as the chair nears it.
+        const height = bottom - top;
+        ctx.beginLayer({ key: 'rooftop-sun', blend: 'screen', opacity: eased });
+        ctx.gradientPolygon([[ctx.cam, top], [ctx.cam + ctx.VW, top], [ctx.cam + ctx.VW, bottom], [ctx.cam, bottom]],
+            ctx.radialFill(ctx.cam + ctx.VW * .78, top + height * .2, height * .8, [[0, '#ffdfb549'], [.5, '#fff2db15'], [1, '#fff2db00']]));
+        ctx.endLayer();
+    }
     // The skyline recedes in three layers as the chair climbs out of the city.
     for (let layer = 0; layer < 3; layer++) {
         const spacing = 88 + layer * 23, parallax = .12 + layer * .11;
@@ -167,6 +188,7 @@ export function rooftopPlatforms(ctx: RenderCtx) {
     for (const b of STAGE_THREE.blocks) {
         if (b.x > ctx.cam + ctx.VW + 80 || b.x + b.width < ctx.cam - 80) continue;
         if (b.id === 'shaft-left') continue; // The matching structural column was drawn with the wall.
+        if (b.id === 'catwalk') continue; // Drawn with the billboard (rooftop-graph.ts).
         if (b.id.endsWith('pad') || b.id === 'duct') {
             shelf(ctx, b.x, b.y, b.width);
             continue;
