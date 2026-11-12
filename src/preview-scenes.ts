@@ -306,8 +306,8 @@ function rooftopTakeoff(): PreviewScene {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return { ...recordedScene('rooftop-takeoff', 'Rooftop · Ride the sales graph up to the sky', 2500,
-        [{ at: 0, label: 'Run-up' }, { at: 1.65, label: 'Boards the graph · Surge' }, { at: 3, label: 'Breaks out of the sign' }, { at: 3.4, label: 'Straight up to the clouds' }, { at: 5.6, label: 'Sky stage' }], frames), follow: true };
+    return { ...recordedScene('rooftop-takeoff', 'Rooftop · Clouds warm into bread on ascent', 2500,
+        [{ at: 0, label: 'Run-up' }, { at: 1.65, label: 'Boards the graph · Surge' }, { at: 3, label: 'Breaks out of the sign' }, { at: 3.4, label: 'White clouds' }, { at: 4.5, label: 'Colour changing' }, { at: 5.6, label: 'Bread at sky' }], frames), follow: true };
 }
 
 // The duct shaft's hazards seen from a ledge: the awake duct's gusts and the steam vents' hiss and blast.
@@ -392,8 +392,8 @@ function cloudEntry(): PreviewScene {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('cloud-entry', 'Sky · Stage 4 hovering start', 2380,
-        [{ at: 0, label: 'Arrival' }, { at: 1, label: 'Continuous spray · Hovering' }], frames);
+    return recordedScene('cloud-entry', 'Sky · Stage 4 bread clouds', 2380,
+        [{ at: 0, label: 'Bread on arrival' }, { at: 1, label: 'Continuous spray' }], frames);
 }
 
 function skyEnding(): PreviewScene {
