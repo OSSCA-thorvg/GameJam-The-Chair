@@ -27,6 +27,10 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // so all final fingerprints intentionally change even when the route does not visit the office.
 // Updated when the stage-two express got its rush-hour corridor (one speed bump to hop, a launch ramp the
 // convoy flies off over a construction hole, the lift and exit moved on): both building routes now ride it.
+// Updated when the rooftop duct stopped reacting to the rider's spray and started sneezing on a timer (first
+// sneeze `firstSneezeAt` into the attempt, then a gust every `gustPeriod`): the idle duct state gained `rest`,
+// so every final snapshot changes, and both rooftop traces follow the new duct timing. The office replay
+// fixture was re-recorded for the same `rest` field.
 // Updated when the core switched from Math.sin/cos/tan/exp/atan2/hypot to the bit-exact versions in
 // src/game/math.ts so replays match across browsers: results differ only in the last bits, so the traces
 // shift slightly. Every route still ends the same way; 'office route' did not change at all.
@@ -34,13 +38,14 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // harmless sheets: only the office crash trace reaches that volley and changes.
 // Re-recorded when merging main's bit-exact math into the timed stage-one hazards: both changes together
 // move every trace, and the office replay fixture was re-recorded with them.
+// Re-recorded again when merging main's timed rooftop duct (idle duct gained `rest`): every trace changes.
 const EXPECTED = {
-    'office route': 'b81544d943eba2d7',
-    'office crash': '1ad42f39fa482ff0',
-    'building exit': 'a89216fb6ef49cf4',
-    'building lift': '25d2534258d66f66',
-    'rooftop to sky': 'b289fc5846b6656a',
-    'rooftop duct': '34c51c521b4c075a',
+    'office route': '006cb4efd9fc598f',
+    'office crash': 'a65f9f927881bc82',
+    'building exit': '029dd5b4357c72c5',
+    'building lift': '582c0139b92d204c',
+    'rooftop to sky': '2a6adc5381775779',
+    'rooftop duct': '2b613460f1c2fa79',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

@@ -82,8 +82,7 @@ test('duct preview seeks between powder intake, twitch and sneeze', () => {
     const scene = previewScenes.find(scene => scene.id === 'duct-sneeze');
     assert.ok(scene);
     assert.equal(scene.markers.length, 4);
-    assert.ok(scene.sample(.05).state.spray.burst > 0);
-    assert.equal(scene.sample(.52).state.spray.burst, 0);
+    assert.equal(scene.sample(.05).state.spray.burst, 0, 'the duct sneezes on its own timer, not at a spray');
     assert.ok(scene.sample(1.1).state.ductReaction.age > .2);
     assert.equal(scene.sample(1.1).state.hasExtinguisher, true);
     const sneeze = scene.sample(1.1);
@@ -94,7 +93,7 @@ test('duct preview seeks between powder intake, twitch and sneeze', () => {
 test('merged preview registry keeps water, focus loss and rooftop scenes without the removed fan', () => {
     const ids = previewScenes.map(scene => scene.id);
     assert.equal(new Set(ids).size, ids.length);
-    for (const id of ['bucket-pour', 'focus-loss', 'rooftop-entrance', 'duct-sneeze', 'duct-repeat', 'cloud-entry']) {
+    for (const id of ['bucket-pour', 'focus-loss', 'rooftop-entrance', 'duct-sneeze', 'duct-gust', 'cloud-entry']) {
         assert.ok(ids.includes(id), `missing preview: ${id}`);
     }
     assert.equal(ids.includes('fan-ride'), false);

@@ -1,7 +1,7 @@
 // Stage 3 · Rooftop: the door scene, the duct, the extinguisher pickup and the ride up the sales graph to the sky.
 import { startStage } from '../../state';
 import type { StageHooks } from '../types';
-import { applyFlight, applyRooftop, applyRooftopEntrance, applyRooftopSpray } from './course/apply';
+import { applyFlight, applyRooftop, applyRooftopEntrance } from './course/apply';
 import { STAGE_THREE, onSlickPaper } from './data';
 import { STAGE_FOUR } from '../sky/data';
 
@@ -33,8 +33,5 @@ export const rooftopHooks: StageHooks = {
     canJump: s => s.rooftop.entrance.kind !== 'opening',
     // No manual sprays once the graph ride is under way, and at most three per time in the air.
     canSpray: s => s.rooftop.flight.kind === 'course' && s.rooftop.airSprays < STAGE_THREE.airSprayLimit,
-    onSpray: s => {
-        s.rooftop.airSprays++;
-        applyRooftopSpray(s);
-    },
+    onSpray: s => { s.rooftop.airSprays++; },
 };
