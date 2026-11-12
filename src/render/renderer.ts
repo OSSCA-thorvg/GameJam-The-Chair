@@ -10,6 +10,7 @@ import { drawBuilding } from './scene/building';
 import { drawRooftop } from './scene/rooftop';
 import { drawCloudStart } from './scene/clouds';
 import { createPaintPool, paint } from './paint';
+import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
 
 export function createRenderer(root: HTMLElement, getLocale: () => Locale = () => 'en') {
     const base = root.querySelector<HTMLCanvasElement>('[data-base]');
@@ -58,7 +59,7 @@ function setup(
     observer.observe(base);
     size();
 
-    function draw(next: GameState, effects: EffectsState, camera?: number) {
+    function draw(next: GameState, effects: EffectsState, camera?: number, opening?: OpeningFrame) {
         ctx.locale = getLocale();
         ctx.state = next;
         ctx.LEN = next.level.length;
@@ -116,12 +117,15 @@ function setup(
         const focusY = next.stage === 4 || flight.kind === 'flight' ? 265
             : flight.kind === 'ride' ? 440 - 175 * Math.min(1, flight.age / 1.2) : signLook;
         ctx.vertical = next.stage >= 3 ? baseVertical + Math.max(0, focusY - ctx.p.y) : baseVertical;
+        if (opening) openingCamera(opening, baseWidth, baseVertical);
         lastStage = next.stage;
         lastTime = t;
         lg.setTransform(ctx.dpr, 0, 0, ctx.dpr, 0, 0);
         lg.clearRect(0, 0, ctx.W, ctx.H);
         ctx.foregroundActors = [];
-        if (next.stage === 4) {
+        if (opening) {
+            drawOpening(ctx, opening);
+        } else if (next.stage === 4) {
             drawCloudStart(ctx);
         } else if (next.stage === 3) {
             drawRooftop(ctx);
@@ -132,6 +136,24 @@ function setup(
         }
         paint(ctx, TVG, tvg, pool);
         return { cam: ctx.cam, scale: ctx.scale, vertical: ctx.vertical, width: ctx.W };
+    }
+
+    /**
+     * Cutscene camera: the chair stays at the centre while the view zooms (a narrower world width), then
+     * blends back to the gameplay framing on handoff so the first playable frame matches.
+     */
+    function openingCamera(frame: OpeningFrame, baseWidth: number, baseVertical: number) {
+        const width = baseWidth / frame.zoom;
+        const scale = ctx.W / width;
+        const cam = ctx.p.x - width / 2;
+        const vertical = ctx.H / (2 * scale) - openingFocusY(frame, ctx.p.y);
+        const playCam = ctx.clamp(ctx.p.x - baseWidth * .35, 0, Math.max(0, ctx.LEN - baseWidth));
+        const u = frame.handoff;
+        ctx.VW = width + (baseWidth - width) * u;
+        ctx.scale = ctx.W / ctx.VW;
+        ctx.cam = cam + (playCam - cam) * u + frame.shake[0] / ctx.scale;
+        ctx.vertical = vertical + (baseVertical - vertical) * u + frame.shake[1] / ctx.scale;
+        ctx.wheel = 0;
     }
 
     async function initRenderer() {
