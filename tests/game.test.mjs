@@ -87,6 +87,14 @@ test('fixed-step simulation is independent of render frequency', () => {
     assert.equal(fast.serialize(), slow.serialize());
 });
 
+test('advance reports how many fixed ticks ran for the performance overlay', () => {
+    const game = createGame(); game.reset();
+    assert.deepEqual(game.advance(4 / 120 + 1e-9), { ticks: 4, dropped: 0 });
+    assert.deepEqual(game.advance(1 / 240), { ticks: 0, dropped: 0 });
+    game.pause();
+    assert.equal(game.advance(1).ticks, 0);
+});
+
 test('pause, restart and focus-loss/impact progression remain headless', () => {
     const game = createGame({ progress: { deaths: 3 } }); game.reset(); game.setInput('right');
     game.advance(.5); game.pause(); const paused = game.getSnapshot();

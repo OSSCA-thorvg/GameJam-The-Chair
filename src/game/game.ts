@@ -33,6 +33,9 @@ export type GameOptions = {
 /** The few values UI code needs to decide what a key or button does. See Game.status(). */
 export type GameStatus = { mode: Mode; stage: StageId; completedStage: 0 | StageId; skyPhase: SkyState['phase'] };
 
+/** Fixed ticks run by one `advance()` call, and seconds of accumulated time discarded on a mode change. */
+export type AdvanceResult = { ticks: number; dropped: number };
+
 export type GameError = { tick: number; at: 'step' | 'command'; message: string; stack?: string; command?: Command };
 
 function describe(error: unknown) {
@@ -105,23 +108,30 @@ export function createGame(options: GameOptions = {}) {
     function getSnapshot() {
         return viewState(s);
     }
-    function advance(dt: number) {
-        if (!Number.isFinite(dt) || dt < 0) return;
+    /** Runs the fixed ticks that fit in `dt` and reports how many ran and how much time was discarded. */
+    function advance(dt: number): AdvanceResult {
+        if (!Number.isFinite(dt) || dt < 0) return { ticks: 0, dropped: 0 };
         if (!SIMULATED.includes(s.mode)) {
+            const dropped = acc;
             acc = 0;
-            return;
+            return { ticks: 0, dropped };
         }
         acc += dt;
+        let ticks = 0;
+        let dropped = 0;
         while (acc >= FIXED_STEP) {
             const mode = s.mode;
             tick();
+            ticks++;
             acc -= FIXED_STEP;
             // A new mode starts counting from the next frame, as before fixed ticks.
             if (s.mode !== mode) {
+                dropped = acc;
                 acc = 0;
                 break;
             }
         }
+        return { ticks, dropped };
     }
 
     options.onAttemptStart?.(serializeState(s));
