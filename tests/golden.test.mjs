@@ -19,11 +19,13 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // still matched, so their play is unchanged.
 // Updated when the office gained the executive printer's urgent-report mode: every final snapshot gains
 // `office.urgent` and paper `kind`, and the office routes now pass its volleys.
+// Updated when the stage-two express got its rush-hour corridor (one speed bump to hop, a launch ramp the
+// convoy flies off over a construction hole, the lift and exit moved on): both building routes now ride it.
 const EXPECTED = {
     'office route': '384df579e67b7be8',
     'office crash': '95beeba2d857d4c1',
-    'building exit': 'd9977bb81547d1ab',
-    'building lift': '8073926b292ed8fb',
+    'building exit': '68eff7944f536a19',
+    'building lift': '562b82b07313ef79',
     'rooftop to sky': '6eaed670ba29c3b7',
     'rooftop duct': '7b197da464e60d87',
 };

@@ -19,6 +19,7 @@ const messages = {
 
     'player.firstVolley':        { en: 'Why is this report printing into my face…',                      ko: '보고서가 왜 얼굴로 출력돼…' },
     'player.paperHit':           { en: 'Those are my monthly results…',                                  ko: '이거 이번 달 실적인데…' },
+    'player.bumpHit':            { en: 'Bump… my spreadsheet cells shifted!',                            ko: '덜컹… 엑셀 칸이 밀렸어!' },
     'player.urgentVolley':       { en: 'Urgent reports… was it due yesterday?',                          ko: '긴급 보고서… 마감이 어제였나?' },
     'player.bundleHit':          { en: 'The whole quarter, stapled…',                                    ko: '분기 실적을 통째로 찍어 버렸어…' },
     'player.lightHit':           { en: "Too bright… I can't see my numbers!",                            ko: '눈부셔… 실적 칸이 안 보여!' },
@@ -169,6 +170,8 @@ const messages = {
     'chair.rush.1':             { en: 'Late! Hold on to your humans!', ko: '늦겠다! 사람 꽉 잡아!' },
     'chair.rush.2':             { en: 'The rookie is coming too!', ko: '신입도 같이 탄다!' },
     'chair.rush.3':             { en: 'No brakes till clock-out!', ko: '퇴근 전엔 브레이크 없다!' },
+    'chair.ramp.1':             { en: 'Ramp ahead! Everybody fly!', ko: '앞에 발판이다! 다 같이 날자!' },
+    'chair.ramp.2':             { en: 'Rookie, you won\'t make it on foot!', ko: '신입! 떨어지면 혼자선 못 건넌다!' },
 
     'chair.abduction.1':        { en: 'Rookie! Your human clocks out too!', ko: '신입! 사람도 같이 퇴근이야!' },
     'chair.abduction.2':        { en: 'Load the human. Sort it out downstairs!', ko: '사람도 일단 싣고 내려!' },
