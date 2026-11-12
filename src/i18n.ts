@@ -100,6 +100,7 @@ const messages = {
     'menu.restartRule':          { en: 'Restarting at a flag restores full focus and dries you off.',    ko: '깃발에서 다시 출발하면 집중도 100%, 물기는 사라집니다.' },
     'menu.pauseMenu':            { en: 'Pause menu',                                                     ko: '일시정지 메뉴' },
     'menu.touchControls':        { en: 'Touch controls',                                                 ko: '터치 조작' },
+    'menu.rotate':               { en: 'Rotate your phone to landscape',                                 ko: '휴대폰을 가로로 돌려 주세요' },
     'menu.reverse':              { en: 'Reverse',                                                        ko: '후진' },
     'menu.forward':              { en: 'Forward',                                                        ko: '전진' },
     'menu.balanceControls':      { en: 'Balance controls',                                               ko: '균형 조절' },
