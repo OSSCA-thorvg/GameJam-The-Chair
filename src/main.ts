@@ -10,6 +10,8 @@ import { createErrorLog, replayData, saveBrowserData } from './ui/replay-store';
 import { bindReplayMenu } from './ui/replay-menu';
 import { createReplayPlayer } from './ui/replay-player';
 import { showStartupSplash } from './ui/splash';
+import { createOpening, openingSeen } from './ui/opening';
+import { openingState } from './render/scene/opening/timeline';
 import type { StageId } from './game/stages/building/data';
 import type { Input } from './game/types';
 import markup from './scene.html?raw';
@@ -104,7 +106,14 @@ window.addEventListener('error', event => logWindowError(event.error ?? event.me
 window.addEventListener('unhandledrejection', event => logWindowError(event.reason));
 const feedback = createFeedback(() => locale);
 const player = createReplayPlayer(root, () => locale, () => replaySettings, () => unbind.sync());
-const unbind = bindInput(root, game, { blocked: () => player.active });
+// The opening cutscene plays once per browser over the first fresh game; the game waits until it ends.
+const opening = createOpening(root, () => locale);
+const unbind = bindInput(root, game, {
+    blocked: () => player.active || opening.active,
+    onStart() {
+        if (!openingSeen()) opening.start(() => unbind.sync());
+    },
+});
 function watchReplay(file: ReplayFile) {
     if (game.status().mode === 'play') game.pause();
     game.clearInput();
@@ -148,8 +157,10 @@ function draw() {
             }
         }
         const visual = replay ? player.effects() : effects.snapshot();
-        const view = renderer?.draw(state, visual) ?? { cam: 0, scale: 1, vertical: 0, width: 800 };
-        hud.draw(state, replay ? player.feedback() : feedback.snapshot(), visual, view);
+        const cutscene = replay ? null : opening.frame();
+        const view = (cutscene ? renderer?.draw(openingState(state, cutscene), visual, undefined, cutscene) : renderer?.draw(state, visual))
+            ?? { cam: 0, scale: 1, vertical: 0, width: 800 };
+        hud.draw(state, replay ? player.feedback() : feedback.snapshot(), visual, view, !!cutscene);
     }
     catch (error) {
         if (!presentationErrorReported) {
@@ -162,6 +173,7 @@ let last: number | null = null;
 function frame(ms: number) {
     if (!root.isConnected) {
         unbind();
+        opening.destroy();
         player.destroy();
         renderer?.destroy();
         return;
@@ -169,12 +181,14 @@ function frame(ms: number) {
     const dt = last === null ? 0 : Math.max(0, (ms - last) / 1000);
     last = ms;
     if (player.active) player.advance(dt);
+    else if (opening.active) opening.advance(dt);
     else game.advance(dt);
     draw();
     requestAnimationFrame(frame);
 }
 // Retain the existing browser debugging API without exposing live game state.
 const officeStageOne = {
+    skipOpening: () => opening.skip(),
     interact: game.interact, leaveMeeting: game.leaveMeeting, reset: game.reset, startStage: game.startStage, step: game.step, jump: game.jump, pause: game.pause, draw,
     advanceImpact: game.advanceImpact, advanceFocusLoss: game.advanceFocusLoss,
     setInput: (...v: Input[]) => game.setInput(...v),

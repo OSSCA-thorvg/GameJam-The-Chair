@@ -2,7 +2,7 @@ import type { Canvas, LinearGradient, RadialGradient, Scene, Shape, ThorVGNamesp
 import type { RenderCtx } from './context';
 import type { Blend, DrawCommand, Gradient, LayerSpec } from './types';
 
-type LayerSlot = { scene: Scene; shapes: Shape[]; clip: Shape | null; mask: Shape | null };
+type LayerSlot = { scene: Scene; shapes: Shape[]; clip: Shape | null; mask: Shape | null; maskInvert: boolean };
 type Item = { cmd: DrawCommand } | { layer: LayerSpec; key: string; cmds: DrawCommand[] };
 
 // Shapes are pooled and reused; these bits remember which non-default
@@ -179,6 +179,14 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         signature += '+';
     }
     signature += pool.top.length;
+    // ThorVG 1.1.3 crashes ("null function") when a scene that is already on the canvas gets new children and
+    // is then removed before the next update. Empty the canvas first, so this frame's new children are only
+    // ever added to scenes that are off the canvas.
+    const reorder = signature !== pool.signature;
+    if (reorder) {
+        pool.signature = '';
+        tvg.remove();
+    }
 
     let topIndex = 0;
     const order: (Shape | Scene)[] = [];
@@ -191,7 +199,7 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         }
         let slot = pool.layers.get(item.key);
         if (!slot) {
-            slot = { scene: new TVG.Scene(), shapes: [], clip: null, mask: null };
+            slot = { scene: new TVG.Scene(), shapes: [], clip: null, mask: null, maskInvert: false };
             pool.layers.set(item.key, slot);
         }
         const { scene, shapes } = slot;
@@ -235,9 +243,11 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
             slot.clip.appendRect(-1e4, -1e4, 2e4, 2e4);
         }
         if (spec.mask) {
-            if (!slot.mask) {
-                slot.mask = new TVG.Shape();
-                scene.mask(slot.mask, TVG.MaskMethod.Alpha);
+            const invert = !!spec.maskInvert;
+            if (!slot.mask || slot.maskInvert !== invert) {
+                slot.mask ??= new TVG.Shape();
+                slot.maskInvert = invert;
+                scene.mask(slot.mask, invert ? TVG.MaskMethod.InvAlpha : TVG.MaskMethod.Alpha);
             }
             const fill = spec.mask.c;
             tracePath(slot.mask, spec.mask);
@@ -249,20 +259,22 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
                 g.dispose();
             }
         } else if (slot.mask) {
+            // A spent mask must let the whole layer through: everything for alpha, nothing for inverse alpha.
             slot.mask.reset();
             slot.mask.appendRect(-1e4, -1e4, 2e4, 2e4);
-            slot.mask.fill(255, 255, 255, 255);
+            slot.mask.fill(255, 255, 255, slot.maskInvert ? 0 : 255);
         }
         scene.visible(true);
         order.push(scene);
     }
     for (let i = topIndex; i < pool.top.length; i++) pool.top[i].visible(false);
 
-    if (signature !== pool.signature) {
-        pool.signature = signature;
-        tvg.remove();
+    if (reorder) {
         for (const paint of order) tvg.add(paint);
         for (let i = topIndex; i < pool.top.length; i++) tvg.add(pool.top[i]);
+        // Only a completed rebuild counts: if anything above throws, the next frame rebuilds again instead of
+        // drawing an empty canvas until the layer set happens to change.
+        pool.signature = signature;
     }
     tvg.update().render();
 }
@@ -300,6 +312,12 @@ function paintCanvas(ctx: RenderCtx, bg: CanvasRenderingContext2D, commands: Dra
             if (layer?.clip) {
                 tracePath2d(bg, layer.clip);
                 bg.clip();
+            }
+            // An inverted mask punches a hole: clip to the canvas minus the mask path.
+            if (layer?.mask && layer.maskInvert) {
+                tracePath2d(bg, layer.mask);
+                bg.rect(0, 0, ctx.W, ctx.H);
+                bg.clip('evenodd');
             }
             if (layer?.opacity !== undefined) bg.globalAlpha = layer.opacity;
             if (layer?.blur) bg.filter = `blur(${layer.blur}px)`;

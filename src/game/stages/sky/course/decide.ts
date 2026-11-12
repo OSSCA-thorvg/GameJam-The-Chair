@@ -1,5 +1,6 @@
 import { STAGE_FOUR, skyPlatforms, skySurface, skyWind, type SkyState } from '../data';
 import type { Player, Point } from '../../../types';
+import * as Det from '../../../math';
 
 export type SkyInput = {
     sky: Readonly<SkyState>;
@@ -38,12 +39,12 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
     jumpQ = Math.max(0, jumpQ - dt);
     if (sky.phase === 'reveal' || sky.phase === 'depth') {
         sprayBurst = .24;
-        p.vx *= Math.exp(-4 * dt);
+        p.vx *= Det.exp(-4 * dt);
         p.vy = 0;
-        p.y = -2338 + Math.sin(time) * 6;
-        p.a *= Math.exp(-4 * dt);
+        p.y = -2338 + Det.sin(time) * 6;
+        p.a *= Det.exp(-4 * dt);
         ground = false;
-        p.x += (5045 - p.x) * (1 - Math.exp(-4 * dt));
+        p.x += (5045 - p.x) * (1 - Det.exp(-4 * dt));
         sprayDir = { x: 0, y: 1 };
         coyote = jumpQ = 0;
         if (sky.phase === 'reveal' && sky.age >= STAGE_FOUR.reveal.settle + STAGE_FOUR.reveal.turn) {
@@ -55,10 +56,10 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
     }
     if (sky.phase === 'arrival') {
         p.vx += direction * 220 * dt;
-        p.vx *= Math.exp(-1.4 * dt);
+        p.vx *= Det.exp(-1.4 * dt);
         p.x += p.vx * dt;
-        const hoverY = STAGE_FOUR.spawn.y + Math.sin(time * 1.3) * 6;
-        p.vy += ((hoverY - p.y) * 2 - p.vy) * (1 - Math.exp(-2.5 * dt));
+        const hoverY = STAGE_FOUR.spawn.y + Det.sin(time * 1.3) * 6;
+        p.vy += ((hoverY - p.y) * 2 - p.vy) * (1 - Det.exp(-2.5 * dt));
         p.y += p.vy * dt;
         sprayBurst = .24;
         sprayDir = { x: -direction * .33, y: 1 };
@@ -76,7 +77,7 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
             sky.drawer = Math.min(1, sky.drawer + dt * 1.5);
             const lean = (p.x - 4205) / 135;
             sky.deskTilt += (lean * .16 - sky.deskTilt) * Math.min(1, dt * 3);
-        } else sky.deskTilt *= Math.exp(-dt);
+        } else sky.deskTilt *= Det.exp(-dt);
         const platforms = skyPlatforms(sky, time);
         const standing = platforms.find(platform => platform.id === sky.standing);
         if (ground && oldStanding && standing) p.y += skySurface(standing, p.x) - skySurface(oldStanding, p.x);
@@ -85,8 +86,8 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
         const oldFoot = p.y + 28;
         const oldX = p.x;
         p.vx += (direction * (ground ? 390 : 250) + (p.x > 3380 && p.x < 3890 ? wind * 65 : 0)) * dt;
-        if (ground && standing) p.vx += Math.sin(standing.angle) * 190 * dt;
-        p.vx *= Math.exp(-(ground ? 1.8 : .6) * dt);
+        if (ground && standing) p.vx += Det.sin(standing.angle) * 190 * dt;
+        p.vx *= Det.exp(-(ground ? 1.8 : .6) * dt);
         p.vx = Math.max(-260, Math.min(260, p.vx));
         p.vy = Math.min(580, p.vy + (p.x > 3970 ? 410 : 650) * dt);
         p.x += p.vx * dt;
@@ -114,7 +115,7 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
     }
     p.x = Math.max(2250, Math.min(input.length - 80, p.x));
     const targetAngle = ground ? skyPlatforms(sky, time).find(item => item.id === sky.standing)?.angle ?? 0 : direction * .08;
-    p.a += (targetAngle - p.a) * (1 - Math.exp(-5 * dt));
+    p.a += (targetAngle - p.a) * (1 - Det.exp(-5 * dt));
     p.w = 0;
     return result(Math.abs(p.vx));
 }

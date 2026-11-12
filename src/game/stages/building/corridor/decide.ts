@@ -3,6 +3,7 @@ import { nextRandom } from '../../../rng';
 import { clonePlain } from '../../../data';
 import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine, overPit, type ChairDeparture, type Corridor, type Furniture } from '../data';
 import type { Mode } from '../../../types';
+import * as Det from '../../../math';
 
 function insideConvoy(p: Readonly<Point>, furniture: readonly Readonly<Furniture>[]) {
     return p.y > 360 && p.x > furniture[2].x + 28 && p.x < furniture[0].x - 28;
@@ -118,7 +119,7 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
         if (c.departure.kind === 'boarding') {
             const target = STAGE_TWO.lift + CHAIR_DEPARTURE.slots[index];
             const speed = Math.max(-300, Math.min(300, (target - chair.x) * 4));
-            chair.vx += (speed - chair.vx) * (1 - Math.exp(-8 * dt));
+            chair.vx += (speed - chair.vx) * (1 - Det.exp(-8 * dt));
             chair.x += chair.vx * dt;
             chair.y = 420;
             continue;
@@ -126,11 +127,11 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
         const target = front.x - index * 130;
         const cruise = c.pace === 'express' ? 360 : 185;
         const speed = index === 0 ? cruise : Math.max(minimumSpeed, Math.min(cruise + 170, cruise + (target - chair.x) * 2));
-        chair.vx += (speed - chair.vx) * (1 - Math.exp(-4 * dt));
+        chair.vx += (speed - chair.vx) * (1 - Det.exp(-4 * dt));
         chair.x = Math.min(input.length + 450 + index * 130, chair.x + chair.vx * dt);
         if (c.convoy === 'free' && p.y > 350 && Math.abs(p.x - chair.x) < 58) {
             const side = previousX < chair.x ? 1 : -1;
-            chair.x += side * (58 - Math.abs(p.x - chair.x)) * (1 - Math.exp(-14 * dt));
+            chair.x += side * (58 - Math.abs(p.x - chair.x)) * (1 - Det.exp(-14 * dt));
         }
         if (index > 0 && furniture[index - 1].released) chair.x = Math.min(chair.x, furniture[index - 1].x - 80);
         chair.y = 420;

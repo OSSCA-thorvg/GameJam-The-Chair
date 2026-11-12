@@ -1,13 +1,16 @@
 import type { Player } from '../../../types';
 import { GRAPH_LENGTH, STAGE_THREE, ductTimings, graphCatch, graphPointAt, inVentBlast, ventPhase, type DuctBurst } from '../data';
 import { STAGE_FOUR } from '../../sky/data';
+import * as Det from '../../../math';
 
 export type RooftopEntrance = { kind: 'opening'; age: number } | { kind: 'ready' };
 // 'course' is normal play; 'ride' carries the chair up the sales graph (`dist` along the line);
 // 'flight' is the climb from the graph's tip up to the sky stage.
 export type FirstFlight = { kind: 'course' } | { kind: 'ride'; dist: number; speed: number; age: number } | { kind: 'flight'; age: number };
-// `rest` counts the seconds since the last sneeze; an awake duct gusts again after `gustPeriod`.
-export type DuctReaction = { kind: 'idle' } | { kind: 'reacting'; age: number; shots: number; bursts: DuctBurst[] } | { kind: 'done'; shots: number; rest: number };
+// The duct sneezes on a timer, never because of the rider. `rest` counts seconds: while idle, since the
+// attempt began (the first sneeze comes at `firstSneezeAt`); once done, since the last sneeze (the next
+// gust comes after `gustPeriod`).
+export type DuctReaction = { kind: 'idle'; rest: number } | { kind: 'reacting'; age: number; shots: number; bursts: DuctBurst[] } | { kind: 'done'; shots: number; rest: number };
 
 const cloneReaction = (reaction: Readonly<DuctReaction>): DuctReaction =>
     reaction.kind === 'reacting' ? { ...reaction, bursts: reaction.bursts.map(burst => ({ ...burst })) } : { ...reaction };
@@ -62,9 +65,9 @@ export function graphRideStep(ride: Readonly<Extract<FirstFlight, { kind: 'ride'
     const dist = ride.dist + speed * dt;
     const at = graphPointAt(dist);
     // The chair turns smoothly into each corner; the seat sits above the line along its own tilt.
-    const target = Math.max(-g.maxTilt, Math.min(g.maxTilt, Math.atan2(at.ty, at.tx)));
-    const a = p.a + (target - p.a) * (1 - Math.exp(-10 * dt));
-    const next = { ...p, x: at.x + Math.sin(a) * 28, y: at.y - Math.cos(a) * 28, vx: at.tx * speed, vy: at.ty * speed, a, w: 0 };
+    const target = Math.max(-g.maxTilt, Math.min(g.maxTilt, Det.atan2(at.ty, at.tx)));
+    const a = p.a + (target - p.a) * (1 - Det.exp(-10 * dt));
+    const next = { ...p, x: at.x + Det.sin(a) * 28, y: at.y - Det.cos(a) * 28, vx: at.tx * speed, vy: at.ty * speed, a, w: 0 };
     if (dist < GRAPH_LENGTH) return { flight: { kind: 'ride', dist, speed, age: ride.age + dt }, p: next };
     next.vy = Math.min(next.vy, -320);
     return { flight: { kind: 'flight', age: 0 }, p: next };
@@ -73,43 +76,29 @@ export function graphRideStep(ride: Readonly<Extract<FirstFlight, { kind: 'ride'
 // The straight climb from the graph's tip up to the sky stage.
 export function flightStep(flight: { kind: 'flight'; age: number }, p: Readonly<Player>, dt: number): { flight: FirstFlight; p: Player; arrived: boolean } {
     const next = { ...p };
-    next.vx *= Math.exp(-3 * dt);
+    next.vx *= Det.exp(-3 * dt);
     next.x += next.vx * dt;
     const remaining = Math.max(0, next.y - STAGE_FOUR.arrivalY);
     const targetSpeed = -Math.min(300, Math.max(35, remaining * 1.5));
-    next.vy += (targetSpeed - next.vy) * (1 - Math.exp(-2.5 * dt));
+    next.vy += (targetSpeed - next.vy) * (1 - Det.exp(-2.5 * dt));
     next.y += next.vy * dt;
     next.a += (0 - next.a) * dt * 5;
     return { flight: { kind: 'flight', age: flight.age + dt }, p: next, arrived: next.y <= STAGE_FOUR.arrivalY };
-}
-
-// Spraying into the front of the rooftop duct makes it sneeze. Repeat sprays queue weaker sneezes.
-// The sleeping duct wakes from further away; once awake it only answers sprays close in front,
-// so it never turns into a wall the rider cannot spray past.
-export function ductSprayed(reaction: Readonly<DuctReaction>, p: Readonly<Player>): DuctReaction {
-    const duct = STAGE_THREE.duct;
-    const dx = duct.x - p.x;
-    const asleep = reaction.kind === 'idle';
-    const reach = asleep ? duct.wakeReach : duct.frontReach;
-    const height = asleep ? duct.wakeHeight : duct.frontHeight;
-    if (dx < -duct.rearReach || dx > reach || Math.abs(p.y - duct.y) > height) return cloneReaction(reaction);
-    if (reaction.kind === 'idle') return { kind: 'reacting', age: 0, shots: 1, bursts: [{ kind: 'first', age: 0 }] };
-    if (reaction.kind === 'done') return { kind: 'reacting', age: 10, shots: reaction.shots + 1, bursts: [{ kind: 'repeat', age: 0 }] };
-    const next = cloneReaction(reaction) as Extract<DuctReaction, { kind: 'reacting' }>;
-    next.shots++;
-    next.bursts.push({ kind: 'repeat', age: 0 });
-    return next;
 }
 
 function ductReactionStep(input: Readonly<DuctReaction>, player: Readonly<Player>, dt: number): { reaction: DuctReaction; p: Player; knocked: boolean } {
     const p = { ...player };
     const duct = STAGE_THREE.duct;
     let reaction = cloneReaction(input);
-    if (reaction.kind === 'done') {
+    if (reaction.kind === 'idle') {
+        reaction.rest += dt;
+        if (reaction.rest < duct.firstSneezeAt) return { reaction, p, knocked: false };
+        reaction = { kind: 'reacting', age: reaction.rest - duct.firstSneezeAt, shots: 1, bursts: [{ kind: 'first', age: reaction.rest - duct.firstSneezeAt }] };
+    } else if (reaction.kind === 'done') {
         reaction.rest += dt;
         if (reaction.rest < duct.gustPeriod) return { reaction, p, knocked: false };
         // Age 10 keeps the first sneeze's junk settled where it landed.
-        reaction = { kind: 'reacting', age: 10, shots: reaction.shots, bursts: [{ kind: 'gust', age: reaction.rest - duct.gustPeriod }] };
+        reaction = { kind: 'reacting', age: 10, shots: reaction.shots + 1, bursts: [{ kind: 'gust', age: reaction.rest - duct.gustPeriod }] };
     }
     if (reaction.kind !== 'reacting') return { reaction, p, knocked: false };
     let knocked = false;
@@ -121,11 +110,10 @@ function ductReactionStep(input: Readonly<DuctReaction>, player: Readonly<Player
         burst.age += dt;
         if (before < windAt && burst.age >= windAt
             && p.x >= duct.x - 260 && p.x <= duct.x + 30 && Math.abs(p.y - duct.y) < 180) {
-            const strong = burst.kind !== 'repeat';
-            const speed = burst.kind === 'first' ? duct.firstKnockback : burst.kind === 'gust' ? duct.gustKnockback : duct.repeatKnockback;
+            const speed = burst.kind === 'first' ? duct.firstKnockback : duct.gustKnockback;
             p.vx = Math.max(-315, Math.min(-speed, p.vx - speed * .5));
-            p.vy -= strong ? 70 : 25;
-            p.w -= strong ? .3 : .1;
+            p.vy -= 70;
+            p.w -= .3;
             knocked = true;
         }
     }

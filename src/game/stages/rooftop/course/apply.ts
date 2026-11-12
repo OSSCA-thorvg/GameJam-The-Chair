@@ -1,7 +1,8 @@
 // Writes the decisions from ./decide into game state. The only place this system changes state.
 import { setPlayer, type GameState } from '../../../state';
 import type { GameEvent } from '../../../types';
-import { ductSprayed, entranceStep, flightStep, graphRideStep, rooftopStep } from './decide';
+import { entranceStep, flightStep, graphRideStep, rooftopStep } from './decide';
+import * as Det from '../../../math';
 // Returns true while the rooftop door scene owns the chair.
 export function applyRooftopEntrance(s: GameState, dt: number) {
     if (s.rooftop.entrance.kind !== 'opening') return false;
@@ -38,12 +39,6 @@ export function applyRooftop(s: GameState, out: GameEvent[], dt: number) {
     }
 }
 
-// A spray on the rooftop can wake the duct.
-export function applyRooftopSpray(s: GameState) {
-    if (s.stage !== 3) return;
-    s.rooftop.duct = ductSprayed(s.rooftop.duct, s.p);
-}
-
 // Returns 'flight' while riding the graph or climbing, 'arrived' on reaching the sky, false otherwise.
 export function applyFlight(s: GameState, dt: number): false | 'flight' | 'arrived' {
     const flight = s.rooftop.flight;
@@ -55,7 +50,7 @@ export function applyFlight(s: GameState, dt: number): false | 'flight' | 'arriv
         s.ground = false;
         // The extinguisher roars backwards along the line like a booster.
         s.sprayBurst = .24;
-        s.sprayDir = { x: -r.p.vx / Math.max(1, Math.hypot(r.p.vx, r.p.vy)), y: -r.p.vy / Math.max(1, Math.hypot(r.p.vx, r.p.vy)) };
+        s.sprayDir = { x: -r.p.vx / Math.max(1, Det.hypot(r.p.vx, r.p.vy)), y: -r.p.vy / Math.max(1, Det.hypot(r.p.vx, r.p.vy)) };
         return 'flight';
     }
     const r = flightStep(flight, s.p, dt);

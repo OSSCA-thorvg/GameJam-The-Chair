@@ -1,5 +1,6 @@
 import type { Point } from '../../types';
 import { deepFreeze } from '../../data';
+import * as Det from '../../math';
 
 // The duct shaft (x 1240-1780) is a zig-zag chimney: ledges alternate from the left and right walls and
 // meet at x 1540, so every column is roofed by some ledge and the spray cannot be held straight up through.
@@ -27,8 +28,10 @@ export const STAGE_THREE = deepFreeze({
     length: 3320, goal: 2920,
     entrance: { duration: 2.6, openDuration: .85, emergeAt: .55, emergeEnd: 1.8, closeAt: 1.95, closeDuration: .65, fromX: 100, toX: 235 },
     pickup: { x: 600, y: 368 },
-    duct: { x: 1660, y: 226, wakeReach: 260, wakeHeight: 120, frontReach: 170, frontHeight: 80, rearReach: 45, inhaleDuration: .12, twitchDuration: .08, sneezeDuration: 1.3, repeatInhaleDuration: .06, repeatTwitchDuration: .04, repeatSneezeDuration: .5, firstKnockback: 285, repeatKnockback: 120,
-        // Once awake the duct keeps sneezing on its own: a long, visible inhale, then a strong gust.
+    // The duct runs on a timer and ignores the rider: `firstSneezeAt` seconds into the attempt it gives its
+    // first big sneeze (scattering the overtime junk), then gusts again `gustPeriod` after each sneeze ends:
+    // a long, visible inhale, then a strong gust.
+    duct: { x: 1660, y: 226, firstSneezeAt: 6, inhaleDuration: .12, twitchDuration: .08, sneezeDuration: 1.3, firstKnockback: 285,
         gustPeriod: 3.4, gustInhaleDuration: .45, gustTwitchDuration: .12, gustSneezeDuration: .8, gustKnockback: 260 },
     // Steam vents in the shaft: a hiss (warn), then a blast. The wall vents sit just above a ledge, so the
     // ledge itself is a safe place to wait, and shove a chair flying past back across the shaft; the
@@ -86,12 +89,11 @@ export const STAGE_THREE = deepFreeze({
     ]) satisfies Point[][],
 });
 
-export type DuctBurst = { kind: 'first' | 'repeat' | 'gust'; age: number };
+export type DuctBurst = { kind: 'first' | 'gust'; age: number };
 export function ductTimings(kind: DuctBurst['kind']) {
     const d = STAGE_THREE.duct;
     if (kind === 'first') return { inhale: d.inhaleDuration, twitch: d.twitchDuration, sneeze: d.sneezeDuration };
-    if (kind === 'gust') return { inhale: d.gustInhaleDuration, twitch: d.gustTwitchDuration, sneeze: d.gustSneezeDuration };
-    return { inhale: d.repeatInhaleDuration, twitch: d.repeatTwitchDuration, sneeze: d.repeatSneezeDuration };
+    return { inhale: d.gustInhaleDuration, twitch: d.gustTwitchDuration, sneeze: d.gustSneezeDuration };
 }
 
 export type Vent = (typeof STAGE_THREE.vents)[number];
@@ -122,7 +124,7 @@ export function onSlickPaper(p: Readonly<Point>, ground: boolean) {
 // The sales graph as a polyline: cumulative length at each point.
 const GRAPH = STAGE_THREE.graph.points;
 const GRAPH_DIST = GRAPH.reduce<number[]>((acc, point, i) => {
-    acc.push(i === 0 ? 0 : acc[i - 1] + Math.hypot(point.x - GRAPH[i - 1].x, point.y - GRAPH[i - 1].y));
+    acc.push(i === 0 ? 0 : acc[i - 1] + Det.hypot(point.x - GRAPH[i - 1].x, point.y - GRAPH[i - 1].y));
     return acc;
 }, []);
 export const GRAPH_LENGTH = GRAPH_DIST[GRAPH_DIST.length - 1];
@@ -150,7 +152,7 @@ export function graphCatch(p: Readonly<Point>): number | null {
         const k = (p.x - a.x) / (b.x - a.x);
         const wheels = p.y + 28, line = a.y + (b.y - a.y) * k;
         if (wheels < line - g.catchBelow || wheels > line + g.catchAbove) return null;
-        return GRAPH_DIST[i - 1] + Math.hypot(p.x - a.x, line - a.y);
+        return GRAPH_DIST[i - 1] + Det.hypot(p.x - a.x, line - a.y);
     }
     return null;
 }

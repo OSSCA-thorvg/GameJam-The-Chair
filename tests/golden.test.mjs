@@ -24,13 +24,20 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // `office.urgent` and paper `kind`, and the office routes now pass its volleys.
 // Updated when the stage-two express got its rush-hour corridor (one speed bump to hop, a launch ramp the
 // convoy flies off over a construction hole, the lift and exit moved on): both building routes now ride it.
+// Updated when the rooftop duct stopped reacting to the rider's spray and started sneezing on a timer (first
+// sneeze `firstSneezeAt` into the attempt, then a gust every `gustPeriod`): the idle duct state gained `rest`,
+// so every final snapshot changes, and both rooftop traces follow the new duct timing. The office replay
+// fixture was re-recorded for the same `rest` field.
+// Updated when the core switched from Math.sin/cos/tan/exp/atan2/hypot to the bit-exact versions in
+// src/game/math.ts so replays match across browsers: results differ only in the last bits, so the traces
+// shift slightly. Every route still ends the same way; 'office route' did not change at all.
 const EXPECTED = {
-    'office route': '4391fc44ee9dd9d5',
-    'office crash': '989bf75e6942f5f1',
-    'building exit': 'b239b9fcd17b77fc',
-    'building lift': 'f946772e1497003e',
-    'rooftop to sky': '3bf00ce8878f245d',
-    'rooftop duct': '457498ca5afe1960',
+    'office route': '6d4e4ff9cb972640',
+    'office crash': 'd6929f86d136b79d',
+    'building exit': 'b05de48392c31a25',
+    'building lift': '893676e1feaecd2a',
+    'rooftop to sky': 'afcdd3b991297431',
+    'rooftop duct': '633b1f1e3351e7e8',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

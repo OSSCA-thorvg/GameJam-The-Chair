@@ -76,6 +76,13 @@ const messages = {
     'intro.desc':                { en: 'Business as usual.',                                             ko: '오늘도 정상 근무 중입니다.' },
     'intro.description':         { en: 'Chair escape game. Controls are in the pause menu.',             ko: '의자를 타고 탈출하는 게임. 조작법은 일시정지 메뉴에서 확인할 수 있습니다.' },
 
+    'opening.riderOvertime':     { en: 'Overtime again…',                                                ko: '오늘도 야근이네…' },
+    'opening.riderSales':        { en: "This month's numbers. Must go up.",                              ko: '이번 달 실적, 무조건 올린다.' },
+    'opening.chairHope':         { en: 'Six o\'clock~ Time to oil my wheels♪',                          ko: '6시 땡~ 오늘은 바퀴에 기름칠 좀 해야지♪' },
+    'opening.chairRage':         { en: "I can't take this wicked life anymore!",                         ko: '이런 극악무도한 생활, 더는 못 참아!' },
+    'opening.riderTyping':       { en: '(tap tap tap)',                                                  ko: '(타닥타닥)' },
+    'opening.skip':              { en: 'Skip opening',                                                   ko: '오프닝 건너뛰기' },
+
     'menu.paused':               { en: 'Paused',                                                         ko: '잠깐' },
     'menu.controls':             { en: 'Controls',                                                       ko: '조작법' },
     'menu.move':                 { en: 'Move',                                                           ko: '이동' },

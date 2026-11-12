@@ -8,6 +8,7 @@ import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/stages/office/monitor/decide';
 import { SPLASH_DURATION } from './ui/splash-meta';
+import { OPENING_BEATS, OPENING_DURATION, openingFrame, openingState, type OpeningFrame } from './render/scene/opening/timeline';
 
 export type PreviewScene = {
     id: string;
@@ -18,6 +19,8 @@ export type PreviewScene = {
     follow?: boolean;
     markers: readonly { at: number; label: string }[];
     sample(time: number): { state: GameState; effects: EffectsState };
+    // Cutscene frames draw with their own camera and overlays instead of the stage scene.
+    opening?(time: number): OpeningFrame;
 };
 
 type PreviewFrame = { state: GameState; effects: EffectsState };
@@ -331,9 +334,14 @@ function rooftopTakeoff(): PreviewScene {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return { ...recordedScene('rooftop-takeoff', 'Rooftop · Ride the sales graph up to the sky', 2500,
-        [{ at: 0, label: 'Run-up' }, ...graphTargetMarkers(frames),
-            { at: 3.4, label: 'Short arrow · Chair keeps climbing' }, { at: 5.6, label: 'Sky stage' }], frames), follow: true };
+    const markers = [
+        { at: 0, label: 'Run-up' }, { at: 1.65, label: 'Boards the graph · Surge' },
+        ...graphTargetMarkers(frames), { at: 3, label: 'Breaks out of the sign' },
+        { at: 3.4, label: 'Short arrow · Chair keeps climbing · White clouds' },
+        { at: 4.5, label: 'Colour changing' }, { at: 5.6, label: 'Bread at sky' },
+    ].sort((a, b) => a.at - b.at);
+    return { ...recordedScene('rooftop-takeoff', 'Rooftop · Sales graph ride & bread cloud ascent', 2500,
+        markers, frames), follow: true };
 }
 
 function graphTargetMarkers(frames: PreviewFrame[]): PreviewScene['markers'] {
@@ -430,8 +438,8 @@ function cloudEntry(): PreviewScene {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('cloud-entry', 'Sky · Stage 4 hovering start', 2380,
-        [{ at: 0, label: 'Arrival' }, { at: 1, label: 'Continuous spray · Hovering' }], frames);
+    return recordedScene('cloud-entry', 'Sky · Stage 4 bread clouds', 2380,
+        [{ at: 0, label: 'Bread on arrival' }, { at: 1, label: 'Continuous spray' }], frames);
 }
 
 function skyEnding(): PreviewScene {
@@ -456,24 +464,24 @@ function skyEnding(): PreviewScene {
     };
 }
 
-function ductSneeze(repeat = false): PreviewScene {
+// The duct's timed sneezes: the first big one that spits out the overtime junk, and the later gusts.
+function ductSneeze(gust = false): PreviewScene {
     const game = createGame();
     game.startStage(3);
     const base = game.getSnapshot();
     const effects = createEffects().snapshot();
-    const kind = repeat ? 'repeat' : 'first';
+    const kind = gust ? 'gust' : 'first';
     const timing = ductTimings(kind);
     return {
-        id: repeat ? 'duct-repeat' : 'duct-sneeze', label: repeat ? 'Rooftop · Gentle repeat wind' : 'Rooftop · First sneeze & overtime junk', duration: 2.2, focusX: 1510,
+        id: gust ? 'duct-gust' : 'duct-sneeze', label: gust ? 'Rooftop · Timed duct gust' : 'Rooftop · First timed sneeze & overtime junk', duration: 2.2, focusX: 1510,
         markers: [{ at: .05, label: 'Inhale' }, { at: timing.inhale + .02, label: 'Twitch' },
-            { at: timing.inhale + timing.twitch + .18, label: 'Sneeze' }, { at: repeat ? .8 : 2.1, label: repeat ? 'Wind fades' : 'Junk settles' }],
+            { at: timing.inhale + timing.twitch + .18, label: 'Sneeze' }, { at: gust ? 1.6 : 2.1, label: gust ? 'Gust fades' : 'Junk settles' }],
         sample(time) {
             const at = Math.max(0, Math.min(2.2, time));
             const drift = Math.min(1, Math.max(0, at - timing.inhale - timing.twitch));
             return { state: { ...base, time: at, hasExtinguisher: true, checkpoint: 2,
-                rooftopEntrance: { kind: 'ready' }, ductReaction: { kind: 'reacting', age: repeat ? 10 + at : at, shots: repeat ? 2 : 1, bursts: [{ kind, age: at }] },
-                spray: { ...base.spray, burst: at < timing.inhale ? .24 * (1 - at / timing.inhale) : 0, dir: { x: Math.SQRT1_2, y: Math.SQRT1_2 } },
-                player: { ...base.player, x: 1580 - drift * (repeat ? 65 : 145), y: 160 - Math.sin(drift * Math.PI) * 45, a: -.05 }, ground: false,
+                rooftopEntrance: { kind: 'ready' }, ductReaction: { kind: 'reacting', age: gust ? 10 + at : at, shots: gust ? 2 : 1, bursts: [{ kind, age: at }] },
+                player: { ...base.player, x: 1580 - drift * (gust ? 120 : 145), y: 160 - Math.sin(drift * Math.PI) * 45, a: -.05 }, ground: false,
             }, effects };
         },
     };
@@ -497,6 +505,25 @@ function officeTyping(): PreviewScene {
     };
 }
 
+function opening(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const B = OPENING_BEATS;
+    return {
+        id: 'opening', label: 'Intro · Opening: overtime until 9 pm', duration: OPENING_DURATION, focusX: base.player.x,
+        markers: [
+            { at: B.sixPm, label: '6 pm' }, { at: B.irisOpen, label: 'Into the office' }, { at: B.riderOvertime, label: 'Worker: overtime' },
+            { at: B.riderSales, label: 'Worker: sales' }, { at: B.pushIn, label: 'Push in' }, { at: B.chairHope, label: 'Chair hopes' },
+            { at: B.irisClose, label: 'Back to clock' }, { at: B.spinToEight, label: '7 → 8 pm' }, { at: B.spinToNine, label: '8 → 9 pm' },
+            { at: B.darkChair, label: 'Dark chair' }, { at: B.rage, label: 'Rage' }, { at: B.handoff, label: 'Handoff' },
+        ],
+        sample: time => ({ state: openingState(base, openingFrame(time)), effects }),
+        opening: openingFrame,
+    };
+}
+
 export const previewScenes: readonly PreviewScene[] = [
     {
         id: 'startup-splash', label: 'Intro · ThorVG splash', duration: SPLASH_DURATION,
@@ -504,6 +531,7 @@ export const previewScenes: readonly PreviewScene[] = [
         markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
+    opening(),
     bucketPour(),
     cleanerRecovery(),
     monitorLight(),
