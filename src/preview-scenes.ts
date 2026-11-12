@@ -375,7 +375,7 @@ function urgentCopier(volley: number, id: string, label: string): PreviewScene {
         frames.push(capture(game, effects));
     }
     return recordedScene(id, label, LEVEL.urgentCopier.x - 150,
-        [{ at: 0, label: 'Emergency scan · Tray glows' }, { at: .8, label: 'Three print batches' }], frames);
+        [{ at: 0, label: 'Emergency scan · Both trays glow' }, { at: .8, label: 'Left blast' }, { at: .88, label: 'Right blast' }], frames);
 }
 
 function cloudEntry(): PreviewScene {

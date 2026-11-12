@@ -12,8 +12,8 @@ export const LEVEL = Object.freeze({
     ]),
     copier: Object.freeze({ x: 750, initialDelay: 1.2, period: 3.5 }),
     // The executive multifunction printer runs independently of the chair: after the initial delay it shows
-    // an emergency scan, prints exactly three batches `shotGap` apart, and repeats on its fixed period.
-    urgentCopier: Object.freeze({ x: 2460, initialDelay: 2.4, period: 5.2, scan: .8, shotGap: .25, life: 3.5 }),
+    // an emergency scan, sprays a rapid batch to each side, and repeats on its fixed period.
+    urgentCopier: Object.freeze({ x: 2460, initialDelay: 2.4, period: 5.2, scan: .8, shotGap: .08, life: 3.5 }),
     cleaning: Object.freeze({ x: 1095, a: 1035, b: 1360 }),
     bin: Object.freeze({ x: 1660, a: 1580, b: 1740, rim: 402 }),
     geysers: Object.freeze([

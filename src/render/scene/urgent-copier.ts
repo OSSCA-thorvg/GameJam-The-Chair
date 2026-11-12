@@ -17,7 +17,7 @@ export function urgentCopierDraw(ctx: RenderCtx) {
     const awake = scanning || firing;
     const pattern = urgentPattern(Math.max(1, c.volley));
     const progress = scanning ? 1 - c.scan / LEVEL.urgentCopier.scan : 0;
-    const shake = firing ? Math.sin(t * 60) * 1.6 : 0;
+    const shake = firing ? Math.sin(t * 90) * 2.8 : 0;
     const bx = x + shake;
 
     ctx.ellipse(x + 4, F - 4, 86, 6, '#515c6d60');
@@ -31,14 +31,15 @@ export function urgentCopierDraw(ctx: RenderCtx) {
     ctx.rect(bx + 18, F - 160, 46, 22, '#1f2530');
     ctx.rect(bx + 22, F - 156, 38, 14, awake ? '#ff6a5c' : '#7fb79a');
 
-    // Output trays on the side it faces; the coming pattern's tray glows during the scan.
-    const side = c.dir < 0 ? -1 : 1;
-    const trayX = bx + side * 74;
+    // Both sides warn at once; each tray then spits its own half of the rapid pair.
     const glow = scanning ? .45 + .55 * Math.abs(Math.sin(t * 18)) : 0;
     const lowTray = pattern === 'low' || pattern === 'fan';
     const highTray = pattern === 'lob' || pattern === 'fan';
-    tray(ctx, trayX, F - 52, side, lowTray ? glow : 0);
-    tray(ctx, trayX, F - 118, side, highTray ? glow : 0);
+    for (const side of [-1, 1]) {
+        const trayX = bx + side * 74;
+        tray(ctx, trayX, F - 52, side, lowTray ? glow : 0);
+        tray(ctx, trayX, F - 118, side, highTray ? glow : 0);
+    }
     // Stapler door for bundles.
     ctx.rect(bx - 48, F - 98, 64, 52, '#3a414e');
     ctx.rect(bx - 44, F - 94, 56, 44, pattern === 'bundle' && scanning ? ctx.tint('#ffb347', .4 + glow * .6) : '#4b5463');
@@ -82,7 +83,7 @@ export function urgentCopierDraw(ctx: RenderCtx) {
         ctx.endLayer();
     }
 
-    // Keep the emergency state visible from the warning scan through all three print batches.
+    // Keep the emergency state visible from the warning scan through both print blasts.
     if (awake && ctx.mode === 'play') speechBurst(ctx, x, F - 262, translate('copier.urgent', ctx.locale), scanning ? Math.min(1, progress * 6) : 1);
 }
 
@@ -115,10 +116,11 @@ function speechBurst(ctx: RenderCtx, x: number, y: number, line: string, pop: nu
 // Urgent sheets in flight get a ThorVG motion blur along their path; bundles are thick and stapled.
 export function urgentPapersDraw(ctx: RenderCtx, papers: readonly DeepReadonly<Paper>[]) {
     const flying = papers.filter(z => z.volley >= URGENT_VOLLEY_ID && !z.landed && z.kind === 'sheet');
-    if (flying.length) {
-        const dir = flying[0].vx < 0 ? 180 : 0;
-        ctx.beginLayer({ key: 'urgent-sheets', motionBlur: { distance: 12, angle: dir } });
-        for (const z of flying) sheet(ctx, z);
+    for (const direction of [-1, 1]) {
+        const stream = flying.filter(z => Math.sign(z.vx) === direction);
+        if (!stream.length) continue;
+        ctx.beginLayer({ key: `urgent-sheets-${direction}`, motionBlur: { distance: 14, angle: direction < 0 ? 180 : 0 } });
+        for (const z of stream) sheet(ctx, z);
         ctx.endLayer();
     }
     for (const z of papers) {

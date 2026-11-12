@@ -60,7 +60,7 @@ export function urgentPattern(volley: number): UrgentPattern {
     const order: UrgentPattern[] = ['low', 'lob', 'fan', 'bundle'];
     return volley <= order.length ? order[Math.max(0, volley - 1)] : order[2 + (volley - order.length - 1) % 2];
 }
-const URGENT_BATCHES = 3;
+const URGENT_BATCHES = 2;
 // Urgent sheets carry their own focus id from here up (volley * 100 + shot * 10 + sheet), so each sheet
 // that hits counts, apart from the office copier's once-per-volley hits.
 export const URGENT_VOLLEY_ID = 1000;
@@ -69,7 +69,7 @@ export function createUrgentCopier(): UrgentCopier {
     return { x: LEVEL.urgentCopier.x, scan: 0, cool: LEVEL.urgentCopier.initialDelay, burst: 0, next: 0, dir: -1, volley: 0 };
 }
 
-// Starts on its own timer, scans as an emergency warning, then emits exactly three batches.
+// Starts on its own timer, scans as an emergency warning, then sprays once left and once right.
 export function urgentCopierStep(copier: Readonly<UrgentCopier>, dt: number): UrgentResult {
     const spec = LEVEL.urgentCopier;
     const next = { ...copier, cool: Math.max(0, copier.cool - dt) };
@@ -90,6 +90,7 @@ export function urgentCopierStep(copier: Readonly<UrgentCopier>, dt: number): Ur
     if (next.burst > 0 && next.scan === 0) {
         next.next -= dt;
         if (next.next <= 0) {
+            next.dir = next.burst === URGENT_BATCHES ? -1 : 1;
             fire = true;
             next.burst--;
             next.next = spec.shotGap;
@@ -106,19 +107,21 @@ export function urgentShot(copier: Readonly<UrgentCopier>): Paper[] {
     const shot = URGENT_BATCHES - 1 - copier.burst;
     const sheet = (y: number, vx: number, vy: number, i: number, kind: Paper['kind'] = 'sheet'): Paper => ({
         x: copier.x + dir * 60, y, vx: dir * vx, vy, a: i * .7, w: dir * (kind === 'bundle' ? 1.5 : 4 + i),
-        life: LEVEL.urgentCopier.life, hit: false, landed: false, safe: false, kind,
+        life: LEVEL.urgentCopier.life, hit: false, landed: false, safe: i >= 4, kind,
         volley: URGENT_VOLLEY_ID + copier.volley * 100 + shot * 10 + i,
     });
     // Skimming just above the floor: only a jump clears them.
     // Each later shot of a volley flies a little faster, so the stream spreads out instead of stacking.
-    const low = () => [0, 1, 2, 3].map(i => sheet(F - 38 - i * 3, 285 + i * 22 + (shot % 3) * 15, -70 - i * 6, i));
+    const low = () => Array.from({ length: 8 }, (_, i) => sheet(F - 38 - i * 3, 285 + i * 16 + shot * 15, -70 - i * 6, i));
     // Lobbed high, raining down a little ahead of the printer.
-    const lob = (count: number) => Array.from({ length: count }, (_, i) => sheet(F - 120, 130 + i * 40 + (shot % 3) * 25, -230 - i * 18, i));
-    // Every emergency cycle is visibly split into three batches; each pattern changes their trajectory.
+    const lob = () => Array.from({ length: 8 }, (_, i) => sheet(F - 120, 130 + i * 25 + shot * 25, -230 - i * 12, i));
+    // The extra four safe sheets make the barrage look worse without increasing its maximum focus cost.
     if (pattern === 'low') return low();
-    if (pattern === 'lob') return lob(5);
-    if (pattern === 'fan') return shot % 2 === 1 ? lob(4) : low();
-    return shot === 0 ? [sheet(F - 55, 230, -90, 0, 'bundle')] : lob(4);
+    if (pattern === 'lob') return lob();
+    if (pattern === 'fan') return shot === 1 ? lob() : low();
+    if (shot === 1) return lob();
+    return [sheet(F - 55, 230, -90, 0, 'bundle'),
+        ...Array.from({ length: 7 }, (_, i) => sheet(F - 120, 155 + i * 27, -235 - i * 12, i + 1))];
 }
 
 // Moves every sheet one step and reports the ones that hit the rider, in order.

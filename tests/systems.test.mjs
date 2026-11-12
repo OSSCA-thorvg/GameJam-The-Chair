@@ -203,26 +203,23 @@ test('corridor decisions: convoy landing, lift ride, meeting and chatter use the
     assert.equal(base.offices[0].life, 0, 'input untouched');
 });
 
-test('the executive printer starts on its timer, warns, then prints in three batches', () => {
+test('the executive printer warns, then sprays once to each side in a rapid pair', () => {
     assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map(sys.urgentPattern), ['low', 'lob', 'fan', 'bundle', 'fan', 'bundle', 'fan']);
     let c = sys.createUrgentCopier();
     const dt = 1 / 120;
     let r;
     let startedAt = null;
-    let firstShot = null;
-    let shots = 0;
+    const shots = [];
     for (let i = 0; i < 120 * 5; i++) {
         r = sys.urgentCopierStep(c, dt);
         c = r.copier;
         if (r.started) startedAt = i * dt;
-        if (r.fire) {
-            firstShot ??= i * dt;
-            shots++;
-        }
+        if (r.fire) shots.push({ at: i * dt, dir: c.dir });
     }
     assert.ok(startedAt >= 2.4 - dt && startedAt <= 2.4, `the timer starts the warning at ${startedAt}`);
-    assert.ok(firstShot - startedAt >= .8 - dt, `the emergency warning precedes printing by 0.8 s`);
-    assert.equal(shots, 3);
+    assert.ok(shots[0].at - startedAt >= .8 - dt, `the emergency warning precedes printing by 0.8 s`);
+    assert.deepEqual(shots.map(shot => shot.dir), [-1, 1]);
+    assert.ok(shots[1].at - shots[0].at < .1, `both sides fire within 0.1 s (${shots[1].at - shots[0].at})`);
 });
 
 test('urgent sheets: skimming ones need a jump, a stapled bundle shoves the chair back', () => {
@@ -238,24 +235,29 @@ test('urgent sheets: skimming ones need a jump, a stapled bundle shoves the chai
     const jumping = () => ({ x: copier.x - 180, y: F - 28 - 76 });
     assert.ok(flyAt(low, standing).length > 0, 'skimming sheets hit a chair on the floor');
     assert.equal(flyAt(sys.urgentShot(copier), jumping).length, 0, 'a jump clears them');
-    const bundle = sys.urgentShot({ ...copier, volley: 4, burst: 2 });
-    assert.equal(bundle.length, 1, 'the bundle flies alone, its loose pages follow in the next shot');
+    const bundle = sys.urgentShot({ ...copier, volley: 4, burst: 1 });
+    assert.equal(bundle.length, 8, 'the bundle leads a ridiculous stack of loose pages');
     assert.equal(bundle[0].kind, 'bundle');
     const hit = flyAt(bundle, standing)[0];
     assert.ok(hit.heavy && hit.focus.damage === 12 && hit.vx < 0, 'a bundle has reduced focus damage');
     assert.ok(hit.focus.id > 1000, 'urgent volleys count apart from the office copier');
 });
 
-test('every urgent volley is split into three batches, and each sheet that hits costs reduced focus', () => {
+test('each side gets eight urgent sheets, but only four can drain focus', () => {
     for (let volley = 1; volley <= 4; volley++) {
         const papers = [];
-        for (let burst = 2; burst >= 0; burst--) papers.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley, burst }));
+        for (let burst = 1; burst >= 0; burst--) {
+            const batch = sys.urgentShot({ ...sys.createUrgentCopier(), volley, burst, dir: burst === 1 ? -1 : 1 });
+            assert.equal(batch.length, 8);
+            assert.equal(batch.filter(paper => !paper.safe).length, 4);
+            papers.push(...batch);
+        }
         assert.equal(new Set(papers.map(z => z.volley)).size, papers.length, 'each sheet has its own focus id');
     }
     const focus = { focus: 100, focusClock: 0, focusEvents: [], focusNotice: null };
     let f = focus;
     const sheets = [];
-    for (let burst = 2; burst >= 0; burst--) sheets.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley: 1, burst }));
-    for (const z of sheets) f = { ...f, ...sys.focusAfterHit(f, { kind: 'paper', id: z.volley, damage: 1.5 }) };
-    assert.equal(f.focus, 82, 'all twelve sheets now cost eighteen focus total');
+    for (let burst = 1; burst >= 0; burst--) sheets.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley: 1, burst }));
+    for (const z of sheets.filter(paper => !paper.safe)) f = { ...f, ...sys.focusAfterHit(f, { kind: 'paper', id: z.volley, damage: 1.5 }) };
+    assert.equal(f.focus, 88, 'the visual barrage costs at most twelve focus');
 });

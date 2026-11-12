@@ -24,9 +24,11 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // so all final fingerprints intentionally change even when the route does not visit the office.
 // Updated when the stage-two express got its rush-hour corridor (one speed bump to hop, a launch ramp the
 // convoy flies off over a construction hole, the lift and exit moved on): both building routes now ride it.
+// Updated when the urgent copier changed from three one-way batches to a rapid left-right pair with extra
+// harmless sheets: only the office crash trace reaches that volley and changes.
 const EXPECTED = {
     'office route': 'd41d1de617a863e2',
-    'office crash': '30365888ef38ccc5',
+    'office crash': '2ec7ca9b200d62a9',
     'building exit': '7a6598139ae4a309',
     'building lift': '3fe01948291e4e0a',
     'rooftop to sky': '6d3aa99199117ba1',
