@@ -6,14 +6,16 @@ export const buildingHooks: StageHooks = {
     takeover(s, out, dt) {
         return applyMeeting(s, dt) || applyLiftRide(s, out, dt);
     },
-    // Jumping off the carried convoy keeps its speed for a long leap.
+    // Jumping from anywhere in the convoy keeps its speed for a long leap.
     onJump(s) {
         if (s.building.corridor.convoy === 'carried') s.building.corridor.convoy = 'airborne';
+        else if (s.building.corridor.convoy === 'leading') s.building.corridor.convoy = 'leading-airborne';
     },
     drive(s, inputDir) {
-        const convoyJump = s.building.corridor.convoy === 'airborne' && !s.ground;
+        const convoyJump = (s.building.corridor.convoy === 'airborne' || s.building.corridor.convoy === 'leading-airborne') && !s.ground;
+        const joined = s.building.corridor.convoy === 'carried' || s.building.corridor.convoy === 'leading';
         return {
-            dir: s.building.corridor.convoy === 'carried' ? 0 : inputDir,
+            dir: joined ? 0 : inputDir,
             convoyJump,
             expressJump: convoyJump && s.building.corridor.pace === 'express',
         };

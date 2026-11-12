@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, applyCorridor } = await loadSource(`
+const { createGame, applyCorridor, STAGE_TWO } = await loadSource(`
     export { createGame } from './src/game/game';
     export { applyCorridor } from './src/game/stages/building/corridor/apply';
+    export { STAGE_TWO } from './src/game/stages/building/data';
 `);
 const dt = 1 / 120;
 function crowd() {
@@ -35,16 +36,34 @@ test('unaccompanied chairs trade gossip and roll ahead without waiting for the p
     assert.ok(s.building.furniture.every((chair, i) => chair.x > start[i] + 500));
 });
 
-test('the corridor accelerates when the rider leads the nearby chair convoy past the rush checkpoint', () => {
+test('a rider leading the nearby convoy joins its express run and clears the construction pit', () => {
     const s = crowd();
+    s.lessons.jumped = true;
     s.building.furniture.forEach((chair, i) => Object.assign(chair, { x: 2160 - i * 130, vx: 185 }));
     Object.assign(s.p, { x: 2200, vx: 185 });
+    const game = createGame({ seed: 0 });
+    game.restore(JSON.stringify(s));
+    game.setInput('right');
+    let led = false;
+    let launched = false;
 
-    tick(s);
+    for (let i = 0; i < 600 && game.getSnapshot().player.x <= STAGE_TWO.express.pit.right; i++) {
+        const state = game.getSnapshot();
+        led ||= state.corridor.convoy === 'leading';
+        launched ||= state.corridor.convoy === 'leading-airborne' && state.player.x >= STAGE_TWO.express.pit.left;
+        const toBump = STAGE_TWO.express.bump - state.player.x;
+        if (state.corridor.convoy === 'leading' && state.ground && toBump > 0 && toBump < 70) {
+            game.jump();
+            game.clearInput();
+        }
+        game.step();
+    }
 
-    assert.equal(s.building.corridor.pace, 'express');
-    assert.equal(s.p.vx, 360);
-    assert.ok(s.building.furniture.every(chair => chair.vx >= 360));
+    const state = game.getSnapshot();
+    assert.equal(state.deaths, 0);
+    assert.ok(led, 'the lead rider becomes part of the convoy');
+    assert.ok(launched, 'the lead rider launches with the convoy');
+    assert.ok(state.player.x > STAGE_TWO.express.pit.right, 'the lead rider clears the pit');
 });
 
 test('flying over the group does not count as joining, grounded admission welcomes the rookie only once', () => {
