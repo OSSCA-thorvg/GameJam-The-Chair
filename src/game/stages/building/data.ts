@@ -132,8 +132,8 @@ export type Corridor = {
     dispatchAge: number;
     dispatchStarted: boolean;
     chat: ChairChat;
-    // 'dropped': thrown off by the speed bump; the chairs roll past it before it can board again.
-    convoy: 'free' | 'carried' | 'airborne' | 'dropped';
+    // 'leading': rolling at the head; 'leading-airborne': jumping from there; 'dropped': hit by the bump.
+    convoy: 'free' | 'carried' | 'leading' | 'airborne' | 'leading-airborne' | 'dropped';
     pace: 'casual' | 'express';
     departure: ChairDeparture;
     lift: { kind: 'waiting' } | { kind: 'arriving'; age: number } | { kind: 'open'; age: number } | { kind: 'departed' };

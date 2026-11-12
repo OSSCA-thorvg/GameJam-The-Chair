@@ -173,7 +173,7 @@ function building(value: unknown, path: string) {
     finite(corridor.dispatchAge, `${path}.corridor.dispatchAge`);
     boolean(corridor.dispatchStarted, `${path}.corridor.dispatchStarted`);
     chat(corridor.chat, `${path}.corridor.chat`);
-    choice(corridor.convoy, ['free', 'carried', 'airborne', 'dropped'], `${path}.corridor.convoy`);
+    choice(corridor.convoy, ['free', 'carried', 'leading', 'airborne', 'leading-airborne', 'dropped'], `${path}.corridor.convoy`);
     choice(corridor.pace, ['casual', 'express'], `${path}.corridor.pace`);
     departure(corridor.departure, `${path}.corridor.departure`);
     lift(corridor.lift, `${path}.corridor.lift`);

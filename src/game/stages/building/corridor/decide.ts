@@ -9,13 +9,24 @@ function insideConvoy(p: Readonly<Point>, furniture: readonly Readonly<Furniture
     return p.y > 360 && p.x > furniture[2].x + 28 && p.x < furniture[0].x - 28;
 }
 
+function leadsConvoy(p: Readonly<Point>, furniture: readonly Readonly<Furniture>[]) {
+    const front = furniture[0];
+    return p.y > 360 && p.x >= front.x - 28 && p.x < front.x + 240;
+}
+
+function isJoinedConvoy(convoy: Corridor['convoy']): convoy is 'carried' | 'leading' {
+    return convoy === 'carried' || convoy === 'leading';
+}
+
 // Landing from a jump onto the moving chairs rides along; landing anywhere else frees the rider.
 export function convoyLanding(corridor: Readonly<Corridor>, furniture: readonly Readonly<Furniture>[], p: Readonly<Point>, ground: boolean): { convoy: Corridor['convoy']; vx: number | null } | null {
-    if (corridor.convoy !== 'airborne' || !ground) return null;
+    if ((corridor.convoy !== 'airborne' && corridor.convoy !== 'leading-airborne') || !ground) return null;
     const departure = corridor.departure;
     const canCarry = departure.kind === 'none' || (departure.kind === 'boarding' && departure.reason === 'abduction');
-    const convoy = canCarry && insideConvoy(p, furniture) ? 'carried' : 'free';
-    return { convoy, vx: convoy === 'carried' ? furniture[0].vx : null };
+    const convoy = !canCarry ? 'free'
+        : insideConvoy(p, furniture) ? 'carried'
+            : corridor.convoy === 'leading-airborne' && leadsConvoy(p, furniture) ? 'leading' : 'free';
+    return { convoy, vx: isJoinedConvoy(convoy) ? furniture[0].vx : null };
 }
 
 // A rider carried into the lift goes down with the chairs. `lost` once the doors close below.
@@ -101,11 +112,15 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     const allReleased = furniture.every(chair => chair.released);
     const front = furniture[0], back = furniture[2];
     const frontX = front.x;
+    const nearby = p.x > back.x - 240 && p.x < front.x + 240;
+    const leading = allReleased && ground && c.pace === 'casual' && leadsConvoy(p, furniture) && p.x >= STAGE_TWO.checkpoints[2].x;
     const captiveBoarding = c.departure.kind === 'boarding' && c.departure.reason === 'abduction';
     if (c.departure.kind !== 'none' && !captiveBoarding) {
         if (c.convoy !== 'airborne') c.convoy = 'free';
-    } else if (allReleased && ground && c.convoy !== 'carried' && c.convoy !== 'dropped') c.convoy = insideConvoy(p, furniture) ? 'carried' : 'free';
-    if (c.departure.kind === 'none' && c.convoy === 'carried' && c.pace === 'casual' && p.x >= STAGE_TWO.checkpoints[2].x) {
+    } else if (allReleased && ground && !isJoinedConvoy(c.convoy) && c.convoy !== 'dropped') {
+        c.convoy = insideConvoy(p, furniture) ? 'carried' : leading ? 'leading' : 'free';
+    }
+    if (c.departure.kind === 'none' && isJoinedConvoy(c.convoy) && c.pace === 'casual' && p.x >= STAGE_TWO.checkpoints[2].x) {
         c.pace = 'express';
         c.chat = { kind: 'rush', age: 0 };
         for (const chair of furniture) chair.vx = 360;
@@ -137,11 +152,14 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
         chair.y = 420;
     }
     const followsBoarding = captiveBoarding && c.convoy === 'airborne' && !input.steering;
-    if (c.convoy === 'carried' || followsBoarding) {
-        p.x = Math.max(back.x + 29, Math.min(front.x - 29, previousX + front.x - frontX));
+    if (isJoinedConvoy(c.convoy) || followsBoarding) {
+        const nextX = previousX + front.x - frontX;
+        p.x = c.convoy === 'leading'
+            ? Math.max(front.x + 29, Math.min(front.x + 239, nextX))
+            : Math.max(back.x + 29, Math.min(front.x - 29, nextX));
         p.vx = front.vx;
     }
-    if (c.convoy === 'carried' && c.pace === 'express') {
+    if (isJoinedConvoy(c.convoy) && c.pace === 'express') {
         const express = STAGE_TWO.express;
         if (previousX < express.bump && p.x >= express.bump && ground) {
             // Clunk: the bump throws the heavy chair out of the convoy, spun and slowed; the empty chairs
@@ -155,7 +173,7 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
         } else if (previousX < express.pit.left && p.x >= express.pit.left) {
             // Off the ramp's lip at full express speed: the whole convoy takes off over the hole.
             kick = 'launch';
-            c.convoy = 'airborne';
+            c.convoy = c.convoy === 'leading' ? 'leading-airborne' : 'airborne';
             p.vy = Math.min(p.vy, -express.launch);
             p.y -= 4;
             p.vx = front.vx;
@@ -165,16 +183,15 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     }
     // Once the whole convoy has rolled past the dropped rider, it is just a rider on foot again.
     if (c.convoy === 'dropped' && p.x < back.x - 30) c.convoy = 'free';
-    const nearby = p.x > back.x - 240 && p.x < front.x + 240;
     if (c.departure.kind === 'none' && allReleased && c.chat.kind === 'waiting' && nearby) c.chat = { kind: 'gossip', age: 0 };
     if (c.departure.kind === 'none' && c.chat.kind !== 'waiting') {
-        if (c.chat.kind === 'wary' && (p.x <= back.x + 28 || p.x >= front.x - 28)) {
+        if (c.chat.kind === 'wary' && !isJoinedConvoy(c.convoy) && (p.x <= back.x + 28 || p.x >= front.x - 28)) {
             c.chat = { kind: 'dismissed', age: 0 };
         } else {
             const speaker = chairChatLine(c.chat, c.appearanceSeed).speaker;
             if (Math.abs(furniture[speaker].x - p.x) < 240 || c.chat.kind === 'gossip' || c.chat.kind === 'companions' || c.chat.kind === 'dismissed' || c.chat.kind === 'rush' || c.chat.kind === 'ramp') c.chat.age += dt;
         }
-        if ((c.chat.kind === 'gossip' || c.chat.kind === 'dismissed') && c.convoy === 'carried') {
+        if ((c.chat.kind === 'gossip' || c.chat.kind === 'dismissed') && isJoinedConvoy(c.convoy)) {
             c.chat = { kind: 'wary', age: 0 };
         } else if (c.chat.kind === 'dismissed' && c.chat.age >= CHAIR_CHAT_INTERVAL.dismissed * CHAIR_CHAT.dismissed.length) c.chat = { kind: 'gossip', age: 0 };
         else if (c.chat.kind === 'wary' && c.chat.age >= 2.2) c.chat = { kind: 'realizing', age: 0 };

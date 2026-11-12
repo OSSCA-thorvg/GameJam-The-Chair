@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, applyCorridor } = await loadSource(`
+const { createGame, applyCorridor, STAGE_TWO } = await loadSource(`
     export { createGame } from './src/game/game';
     export { applyCorridor } from './src/game/stages/building/corridor/apply';
+    export { STAGE_TWO } from './src/game/stages/building/data';
 `);
 const dt = 1 / 120;
 function crowd() {
@@ -19,8 +20,10 @@ function crowd() {
 }
 function tick(s) {
     const player = { ...s.p };
+    const pace = s.building.corridor.pace;
     applyCorridor(s, [], dt, s.p.x - s.p.vx * dt);
-    if (s.building.corridor.convoy === 'free') assert.deepEqual(s.p, player, 'free riders keep control while chairs make room');
+    const startedExpress = pace === 'casual' && s.building.corridor.pace === 'express';
+    if (s.building.corridor.convoy === 'free' && !startedExpress) assert.deepEqual(s.p, player, 'free riders keep control while chairs make room');
     for (let i = 1; i < 3; i++) assert.ok(s.building.furniture[i - 1].x - s.building.furniture[i].x >= 79.99);
 }
 
@@ -31,6 +34,36 @@ test('unaccompanied chairs trade gossip and roll ahead without waiting for the p
     assert.equal(s.building.corridor.chat.kind, 'gossip');
     assert.ok(s.building.corridor.chat.age > 2.9);
     assert.ok(s.building.furniture.every((chair, i) => chair.x > start[i] + 500));
+});
+
+test('a rider leading the nearby convoy joins its express run and clears the construction pit', () => {
+    const s = crowd();
+    s.lessons.jumped = true;
+    s.building.furniture.forEach((chair, i) => Object.assign(chair, { x: 2160 - i * 130, vx: 185 }));
+    Object.assign(s.p, { x: 2200, vx: 185 });
+    const game = createGame({ seed: 0 });
+    game.restore(JSON.stringify(s));
+    game.setInput('right');
+    let led = false;
+    let launched = false;
+
+    for (let i = 0; i < 600 && game.getSnapshot().player.x <= STAGE_TWO.express.pit.right; i++) {
+        const state = game.getSnapshot();
+        led ||= state.corridor.convoy === 'leading';
+        launched ||= state.corridor.convoy === 'leading-airborne' && state.player.x >= STAGE_TWO.express.pit.left;
+        const toBump = STAGE_TWO.express.bump - state.player.x;
+        if (state.corridor.convoy === 'leading' && state.ground && toBump > 0 && toBump < 70) {
+            game.jump();
+            game.clearInput();
+        }
+        game.step();
+    }
+
+    const state = game.getSnapshot();
+    assert.equal(state.deaths, 0);
+    assert.ok(led, 'the lead rider becomes part of the convoy');
+    assert.ok(launched, 'the lead rider launches with the convoy');
+    assert.ok(state.player.x > STAGE_TWO.express.pit.right, 'the lead rider clears the pit');
 });
 
 test('flying over the group does not count as joining, grounded admission welcomes the rookie only once', () => {
