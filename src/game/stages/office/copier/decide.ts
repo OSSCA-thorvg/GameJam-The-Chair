@@ -1,6 +1,7 @@
 import { FOCUS_DAMAGE, LEVEL } from '../../../level';
 import type { Paper, Point } from '../../../types';
 import type { FocusHit } from '../../../systems/focus/decide';
+import * as Det from '../../../math';
 
 export type Copier = { x: number; cool: number; burst: number; next: number; dir: number };
 export type CopierResult = { copier: Copier; volley: number; fire: boolean };
@@ -134,19 +135,19 @@ export function papersStep(papers: readonly Readonly<Paper>[], p: Readonly<Point
         z.life -= dt;
         z.x += z.vx * dt;
         z.y += z.vy * dt;
-        z.vx *= Math.exp(-.8 * dt);
+        z.vx *= Det.exp(-.8 * dt);
         z.vy += 210 * dt;
         z.a += z.w * dt;
         const pit = z.x > LEVEL.bin.a && z.x < LEVEL.bin.b;
         if (z.y > F - 4 && !pit) {
             z.y = F - 4;
             z.vy = 0;
-            z.vx *= Math.exp(-4 * dt);
+            z.vx *= Det.exp(-4 * dt);
             z.w *= .9;
             z.landed = true;
         }
         const heavy = z.kind === 'bundle';
-        if (!z.safe && !z.hit && !z.landed && !inBin && Math.hypot(z.x - p.x, z.y - (p.y - 50)) < (heavy ? 60 : 48)) {
+        if (!z.safe && !z.hit && !z.landed && !inBin && Det.hypot(z.x - p.x, z.y - (p.y - 50)) < (heavy ? 60 : 48)) {
             z.hit = true;
             const damage = heavy ? FOCUS_DAMAGE.bundle : z.volley >= URGENT_VOLLEY_ID ? FOCUS_DAMAGE.urgentSheet : FOCUS_DAMAGE.copier;
             hits.push({ index, vx: z.vx, heavy, focus: { kind: 'paper', id: z.volley, damage } });

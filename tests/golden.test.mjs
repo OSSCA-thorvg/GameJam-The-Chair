@@ -17,6 +17,9 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when stage three capped the extinguisher at three bursts per time in the air: both rooftop traces
 // change, and every final snapshot gains `airSprays`. Without that field the four office/building hashes
 // still matched, so their play is unchanged.
+// Updated when the rooftop's three-spray launch pad was replaced by dropping off the roof onto the sales
+// graph: every final snapshot's `rooftop.flight` lost `verticalShots`/`lastShotAt`, and 'rooftop to sky'
+// now rolls off the roof edge onto the billboard's graph and rides it straight up.
 // Updated when the office gained the executive printer's urgent-report mode: every final snapshot gains
 // `office.urgent` and paper `kind`, and the office routes now pass its volleys.
 // Updated when stage-one printers moved from proximity triggers to fixed timers, urgent output became three
@@ -24,15 +27,20 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // so all final fingerprints intentionally change even when the route does not visit the office.
 // Updated when the stage-two express got its rush-hour corridor (one speed bump to hop, a launch ramp the
 // convoy flies off over a construction hole, the lift and exit moved on): both building routes now ride it.
+// Updated when the core switched from Math.sin/cos/tan/exp/atan2/hypot to the bit-exact versions in
+// src/game/math.ts so replays match across browsers: results differ only in the last bits, so the traces
+// shift slightly. Every route still ends the same way; 'office route' did not change at all.
 // Updated when the urgent copier changed from three one-way batches to a rapid left-right pair with extra
 // harmless sheets: only the office crash trace reaches that volley and changes.
+// Re-recorded when merging main's bit-exact math into the timed stage-one hazards: both changes together
+// move every trace, and the office replay fixture was re-recorded with them.
 const EXPECTED = {
-    'office route': 'd41d1de617a863e2',
-    'office crash': '2ec7ca9b200d62a9',
-    'building exit': '7a6598139ae4a309',
-    'building lift': '3fe01948291e4e0a',
-    'rooftop to sky': '6d3aa99199117ba1',
-    'rooftop duct': '0f71b0c9c56311d8',
+    'office route': 'b81544d943eba2d7',
+    'office crash': '1ad42f39fa482ff0',
+    'building exit': 'a89216fb6ef49cf4',
+    'building lift': '25d2534258d66f66',
+    'rooftop to sky': 'b289fc5846b6656a',
+    'rooftop duct': '34c51c521b4c075a',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

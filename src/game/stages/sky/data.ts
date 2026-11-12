@@ -1,4 +1,5 @@
 import { deepFreeze } from '../../data';
+import * as Det from '../../math';
 
 export const STAGE_FOUR = deepFreeze({
     length: 6100,
@@ -29,10 +30,10 @@ export type SkyPlatform = {
 };
 export function skyWind(time: number) {
     // The ribbon and cloud wisps announce each gust before the sign folds down.
-    return Math.sin(time * .9) * .5 + .5;
+    return Det.sin(time * .9) * .5 + .5;
 }
 export function skyPlatforms(sky: Readonly<SkyState>, time: number): SkyPlatform[] {
-    const bob = (phase: number) => Math.sin(time * .72 + phase) * 9;
+    const bob = (phase: number) => Det.sin(time * .72 + phase) * 9;
     return [
         { id: 'arrival-roof', kind: 'roof', x: 2670, y: -1720, width: 390, angle: 0 },
         { id: 'window-one', kind: 'sill', x: 3040, y: -1810 - sky.lift * 80, width: 180, angle: 0 },
@@ -48,5 +49,5 @@ export function skyPlatforms(sky: Readonly<SkyState>, time: number): SkyPlatform
     ];
 }
 export function skySurface(platform: Readonly<SkyPlatform>, x: number) {
-    return platform.y + (x - platform.x - platform.width / 2) * Math.tan(platform.angle);
+    return platform.y + (x - platform.x - platform.width / 2) * Det.tan(platform.angle);
 }

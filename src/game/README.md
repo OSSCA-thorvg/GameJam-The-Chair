@@ -22,6 +22,7 @@ Every value that affects gameplay belongs to one of these categories.
 `npm run lint` and the tests enforce these restrictions:
 
 - Do not use `Math.random`, `Date`, `performance`, `requestAnimationFrame`, or `localStorage` in `src/game`. Read randomness from `state.rng` through `rng.ts`.
+- Do not use engine-approximated `Math` functions (`sin`, `cos`, `tan`, `exp`, `atan2`, `hypot`, `pow`/`**`, `log`, …) in `src/game`. Browsers may differ in their last bit, which makes a replay recorded in one browser drift in another. Use the bit-exact versions in `math.ts` (`import * as Det from './math'`). `+ - * /`, `Math.sqrt`, `round`, `floor`, `abs`, `min`, and `max` are exact everywhere.
 - A system's `decide.ts` accepts only the values it needs and returns a decision. Its paired `apply.ts` writes that result to state.
 - A stage can import only another stage's `data.ts`. See [the stage guide](stages/README.md).
 
@@ -36,6 +37,7 @@ Every value that affects gameplay belongs to one of these categories.
 | `systems/<system>/` | Shared focus and impact systems, split into `decide.ts` and `apply.ts` |
 | `stages/<stage>/` | Per-stage data, state, hooks, and systems |
 | `rng.ts` | Seeded `physics` and `cosmetic` random streams |
+| `math.ts` | Bit-exact `sin`, `cos`, `tan`, `exp`, `atan2`, `hypot` that every browser computes the same way |
 | `replay.ts` | Replay recording, validation, and timelines |
 | `game.ts` | The `createGame` facade: state ownership, fixed-step accumulation, recording hooks, events, and presentation snapshots |
 

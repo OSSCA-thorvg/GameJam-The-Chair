@@ -101,17 +101,22 @@ test('rooftop door scene rolls the chair out and hands over control when closed'
     assert.deepEqual([end.done, end.entrance.kind, end.pose.x, end.pose.vx], [true, 'ready', 235, 0]);
 });
 
-test('three quick downward sprays on the launch pad start the flight', () => {
-    const pad = { x: 2300, y: -172, vx: 40, vy: 0, a: 0, w: 1 };
-    let flight = { kind: 'course', verticalShots: 0, lastShotAt: -1 };
-    const times = [10, 10.3, 10.6];
-    let r;
-    for (const time of times) { r = sys.launchShot(flight, pad, time, 0); flight = r.firstFlight; }
-    assert.equal(r.takeoff, true);
-    assert.deepEqual([r.p.vx, r.p.vy, r.p.w], [0, -320, 0]);
-    assert.equal(sys.launchShot({ kind: 'course', verticalShots: 2, lastShotAt: 10 }, pad, 11, 0).firstFlight.verticalShots, 1, 'too slow restarts the count');
-    assert.equal(sys.launchShot({ kind: 'course', verticalShots: 2, lastShotAt: 10 }, pad, 10.2, 1).firstFlight.verticalShots, 0, 'sideways spray resets');
-    const climb = sys.flightStep({ kind: 'flight', age: 0 }, { ...pad, y: -1819, vy: -300 }, 1 / 120);
+test('a chair falling onto the slumping sales graph rides it up and climbs to the sky', () => {
+    const base = { p: { x: 2500, y: -188, vx: 200, vy: 0, a: 0, w: 0 }, ground: false, hasExtinguisher: true, firstFlight: { kind: 'course' }, ductReaction: { kind: 'idle' }, time: 0 };
+    const caught = sys.rooftopStep(base, 1 / 120).firstFlight;
+    assert.equal(caught.kind, 'ride');
+    assert.equal(sys.rooftopStep({ ...base, p: { ...base.p, y: -280 } }, 1 / 120).firstFlight.kind, 'course', 'too high above the line');
+    assert.equal(sys.rooftopStep({ ...base, p: { ...base.p, vx: -100, vy: -50 } }, 1 / 120).firstFlight.kind, 'course', 'rising away from the line does not board');
+    assert.equal(sys.rooftopStep({ ...base, hasExtinguisher: false }, 1 / 120).firstFlight.kind, 'course');
+    let flight = caught, p = base.p, top = Infinity, right = 0;
+    for (let i = 0; i < 120 * 10 && flight.kind === 'ride'; i++) {
+        const r = sys.graphRideStep(flight, p, 1 / 120);
+        assert.ok(Math.hypot(r.p.x - p.x, r.p.y - p.y) < 20, 'the ride moves on smoothly');
+        flight = r.flight; p = r.p; top = Math.min(top, p.y); right = Math.max(right, p.x);
+    }
+    assert.equal(flight.kind, 'flight');
+    assert.ok(top < -900 && p.vy <= -320 && right > 2850, 'the line carries the chair up and to the right');
+    const climb = sys.flightStep({ kind: 'flight', age: 0 }, { ...p, y: -1819, vy: -300 }, 1 / 120);
     assert.equal(climb.arrived, true);
 });
 
@@ -120,7 +125,7 @@ test('the duct sneezes back at a rider in front of it once the inhale ends', () 
     const reacting = sys.ductSprayed({ kind: 'idle' }, p);
     assert.equal(reacting.kind, 'reacting');
     assert.equal(sys.ductSprayed({ kind: 'idle' }, { ...p, x: 1000 }).kind, 'idle', 'out of reach');
-    let input = { p, ground: true, hasExtinguisher: true, firstFlight: { kind: 'course', verticalShots: 0, lastShotAt: -1 }, ductReaction: reacting, time: 0 };
+    let input = { p, ground: true, hasExtinguisher: true, firstFlight: { kind: 'course' }, ductReaction: reacting, time: 0 };
     let knocked = false;
     for (let i = 0; i < 30; i++) {
         const r = sys.rooftopStep(input, 1 / 120);

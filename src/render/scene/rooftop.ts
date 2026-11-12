@@ -7,6 +7,7 @@ import { sprayPlume } from './spray';
 import { ascentClouds } from './clouds';
 import { rooftopCeilingLight, rooftopSky, rooftopWalls, rooftopPlatforms } from './rooftop-art';
 import { rooftopDuct, rooftopVents } from './rooftop-duct';
+import { rooftopGraphSign, salesMonitor } from './rooftop-graph';
 
 export function drawRooftop(ctx: RenderCtx) {
     const state = ctx.state;
@@ -17,9 +18,13 @@ export function drawRooftop(ctx: RenderCtx) {
 
     rooftopSky(ctx);
     rooftopWalls(ctx);
+    // The company's sales on small monitors before the billboard: falling, then going nowhere.
+    salesMonitor(ctx, 66, 140, 'fall');
+    salesMonitor(ctx, 1268, 170, 'flat');
     rooftopPlatforms(ctx);
     rooftopDuct(ctx);
     rooftopVents(ctx);
+    rooftopGraphSign(ctx);
     if (state.firstFlight.kind === 'flight') ascentClouds(ctx);
 
     // Empty entrance recess sits behind the hinged door and the existing player.
@@ -47,12 +52,6 @@ export function drawRooftop(ctx: RenderCtx) {
     for (let i = 1; i < STAGE_THREE.checkpoints.length; i++) {
         const mark = STAGE_THREE.checkpoints[i];
         checkpointFlag(ctx, mark.x, mark.y + 28, state.checkpoint >= i);
-    }
-
-    if (p.x > 2100 && state.firstFlight.kind === 'course') {
-        ctx.label(`${SPRAY_KEY} × 3`, 2350, -228, 18, '#ffe2a8');
-        for (let i = 0; i < 3; i++) ctx.ellipse(2330 + i * 20, -212, 4, 4,
-            i < state.firstFlight.verticalShots ? '#fff2ce' : '#778ba4');
     }
 
     // Chair shadow and player.

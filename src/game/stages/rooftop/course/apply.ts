@@ -1,7 +1,8 @@
 // Writes the decisions from ./decide into game state. The only place this system changes state.
 import { setPlayer, type GameState } from '../../../state';
 import type { GameEvent } from '../../../types';
-import { ductSprayed, entranceStep, flightStep, launchShot, rooftopStep } from './decide';
+import { ductSprayed, entranceStep, flightStep, graphRideStep, rooftopStep } from './decide';
+import * as Det from '../../../math';
 // Returns true while the rooftop door scene owns the chair.
 export function applyRooftopEntrance(s: GameState, dt: number) {
     if (s.rooftop.entrance.kind !== 'opening') return false;
@@ -21,6 +22,14 @@ export function applyRooftop(s: GameState, out: GameEvent[], dt: number) {
     setPlayer(s, r.p);
     s.ground = r.ground;
     s.rooftop.duct = r.ductReaction;
+    if (s.rooftop.flight.kind === 'course' && r.firstFlight.kind === 'ride') {
+        s.keys = [];
+        s.jumpQ = 0;
+        s.sprayBurst = .24;
+        s.sprayDir = { x: -1, y: 0 };
+        s.ground = false;
+        out.push({ type: 'cue', id: 'checkpoint' });
+    }
     s.rooftop.flight = r.firstFlight;
     if (r.pickup) {
         s.hasExtinguisher = true;
@@ -30,23 +39,27 @@ export function applyRooftop(s: GameState, out: GameEvent[], dt: number) {
     }
 }
 
-// A spray on the rooftop can wake the duct and counts toward the launch.
-export function applyRooftopSpray(s: GameState, direction: number) {
+// A spray on the rooftop can wake the duct.
+export function applyRooftopSpray(s: GameState) {
     if (s.stage !== 3) return;
     s.rooftop.duct = ductSprayed(s.rooftop.duct, s.p);
-    const r = launchShot(s.rooftop.flight, s.p, s.time, direction);
-    s.rooftop.flight = r.firstFlight;
-    setPlayer(s, r.p);
-    if (r.takeoff) {
-        s.keys = [];
-        s.jumpQ = 0;
-    }
 }
 
-// Returns 'flight' while climbing, 'arrived' on reaching the sky, false when not flying.
+// Returns 'flight' while riding the graph or climbing, 'arrived' on reaching the sky, false otherwise.
 export function applyFlight(s: GameState, dt: number): false | 'flight' | 'arrived' {
-    if (s.rooftop.flight.kind !== 'flight') return false;
-    const r = flightStep(s.rooftop.flight, s.p, dt);
+    const flight = s.rooftop.flight;
+    if (flight.kind === 'course') return false;
+    if (flight.kind === 'ride') {
+        const r = graphRideStep(flight, s.p, dt);
+        s.rooftop.flight = r.flight;
+        setPlayer(s, r.p);
+        s.ground = false;
+        // The extinguisher roars backwards along the line like a booster.
+        s.sprayBurst = .24;
+        s.sprayDir = { x: -r.p.vx / Math.max(1, Det.hypot(r.p.vx, r.p.vy)), y: -r.p.vy / Math.max(1, Det.hypot(r.p.vx, r.p.vy)) };
+        return 'flight';
+    }
+    const r = flightStep(flight, s.p, dt);
     s.rooftop.flight = r.flight;
     setPlayer(s, r.p);
     s.sprayBurst = .24;
