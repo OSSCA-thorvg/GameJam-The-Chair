@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, createSkyProjection, endingChair } = await loadSource(`
+const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, createSkyProjection, endingChair, skyCoursePlatform } = await loadSource(`
     export { createGame } from './src/game/game';
     export { createSky, STAGE_FOUR } from './src/game/stages/sky/data';
     export { skyStep } from './src/game/stages/sky/course/decide';
@@ -10,7 +10,47 @@ const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, cr
     export { drawSky } from './src/render/scene/sky';
     export { createSkyProjection } from './src/render/scene/sky-projection';
     export { endingChair } from './src/render/scene/sky-ending-art';
+    export { skyCoursePlatform } from './src/render/scene/sky-course-art';
 `);
+
+test('the stage four billboard slogan fills its space without covering the portrait', () => {
+    const renderLabels = (locale, width) => {
+        const labels = [];
+        let originX = 0, originY = 0;
+        const lg = {
+            save() {}, restore() {}, rotate() {},
+            translate(x, y) { originX = x; originY = y; },
+            measureText(text) {
+                const ems = { '흔들리지 않는 기업': 7.7, '흔들리지': 4, '않는 기업': 3.25,
+                    'UNSHAKEABLE INC.': 10, UNSHAKE: 5.2, 'ABLE INC.': 4.8 }[text];
+                return { width: Number(this.font.match(/([\d.]+)px/)?.[1]) * ems };
+            },
+            strokeText() {},
+            fillText(text, x, y) {
+                const measured = this.measureText(text).width;
+                labels.push({ text, fontSize: Number(this.font.match(/([\d.]+)px/)?.[1]),
+                    left: originX + x - measured / 2, right: originX + x + measured / 2, y: originY + y });
+            },
+        };
+        const ctx = createRenderCtx({}, lg);
+        ctx.locale = locale;
+        ctx.scale = 1 / 1.12;
+        skyCoursePlatform(ctx, { id: 'last-sign', kind: 'sign', x: 0, y: 0, width, angle: 0 });
+        return labels;
+    };
+
+    const ko = renderLabels('ko', 230);
+    const en = renderLabels('en', 230);
+    assert.deepEqual(ko.map(label => label.text), ['흔들리지', '않는 기업']);
+    assert.deepEqual(en.map(label => label.text), ['UNSHAKE', 'ABLE INC.']);
+    assert.ok(ko.every(label => label.fontSize >= 30), 'Korean stays large at the stage four camera scale');
+    assert.ok(en.every(label => label.fontSize >= 25), 'English stays large at the stage four camera scale');
+    for (const label of [...ko, ...en]) {
+        assert.ok(label.left >= 14 / 1.12 - 1e-9, 'the slogan stays inside the left frame');
+        assert.ok(label.right <= (230 - 66) / 1.12 + 1e-9, 'the slogan leaves room for the portrait');
+    }
+    assert.ok(ko[1].y > ko[0].y, 'the slogan uses the billboard height instead of shrinking into one line');
+});
 
 test('the ending settles before turning and finishes on its timer regardless of held movement', () => {
     const input = {
