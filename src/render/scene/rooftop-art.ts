@@ -26,7 +26,7 @@ export function rooftopSky(ctx: RenderCtx) {
             }
         }
     }
-    ctx.beginLayer({ key: 'rooftop-clouds', blur: .8 });
+    ctx.beginLayer({ key: 'rooftop-clouds' });
     for (let i = -1; i < 7; i++) {
         const x = i * 330 + ctx.cam * .72, y = -360 - ((i + 6) % 3) * 95;
         puffCloud(ctx, x, y, .72 + ((i + 6) % 4) * .07, 300 + i, CLOUD_TONES.dusk, { alpha: .62, fade: true });
