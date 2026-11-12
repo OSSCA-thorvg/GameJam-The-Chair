@@ -20,7 +20,7 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when the office gained the executive printer's urgent-report mode: every final snapshot gains
 // `office.urgent` and paper `kind`, and the office routes now pass its volleys.
 const EXPECTED = {
-    'office route': '7391227c1520d74c',
+    'office route': '384df579e67b7be8',
     'office crash': '95beeba2d857d4c1',
     'building exit': 'd9977bb81547d1ab',
     'building lift': '8073926b292ed8fb',

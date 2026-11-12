@@ -229,10 +229,27 @@ test('urgent sheets: skimming ones need a jump, a stapled bundle shoves the chai
     const jumping = () => ({ x: copier.x - 180, y: F - 28 - 76 });
     assert.ok(flyAt(low, standing).length > 0, 'skimming sheets hit a chair on the floor');
     assert.equal(flyAt(sys.urgentShot(copier), jumping).length, 0, 'a jump clears them');
-    const bundle = sys.urgentShot({ ...copier, volley: 4, burst: 1 });
+    const bundle = sys.urgentShot({ ...copier, volley: 4, burst: 3 });
     assert.equal(bundle.length, 1, 'the bundle flies alone, its loose pages follow in the next shot');
     assert.equal(bundle[0].kind, 'bundle');
     const hit = flyAt(bundle, standing)[0];
-    assert.ok(hit.heavy && hit.focus.damage === 25 && hit.vx < 0);
+    assert.ok(hit.heavy && hit.focus.damage === 20 && hit.vx < 0, 'a bundle costs eight sheets\' worth');
     assert.ok(hit.focus.id > 1000, 'urgent volleys count apart from the office copier');
+});
+
+test('every urgent volley is 20 sheets\' worth, and each sheet that hits costs focus on its own', () => {
+    for (let volley = 1; volley <= 4; volley++) {
+        const shots = { 1: 5, 2: 4, 3: 5, 4: 4 }[volley];
+        const papers = [];
+        for (let burst = shots - 1; burst >= 0; burst--) papers.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley, burst }));
+        const worth = papers.reduce((sum, z) => sum + (z.kind === 'bundle' ? 8 : 1), 0);
+        assert.equal(worth, 20, `volley ${volley}`);
+        assert.equal(new Set(papers.map(z => z.volley)).size, papers.length, 'each sheet has its own focus id');
+    }
+    const focus = { focus: 100, focusClock: 0, focusEvents: [], focusNotice: null };
+    let f = focus;
+    const sheets = [];
+    for (let burst = 4; burst >= 0; burst--) sheets.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley: 1, burst }));
+    for (const z of sheets) f = { ...f, ...sys.focusAfterHit(f, { kind: 'paper', id: z.volley, damage: 2.5 }) };
+    assert.equal(f.focus, 50, 'a whole volley takes half the focus bar');
 });
