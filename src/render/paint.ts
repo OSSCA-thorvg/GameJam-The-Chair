@@ -1,7 +1,7 @@
 import type { Canvas, LinearGradient, RadialGradient, Scene, Shape, ThorVGNamespace } from '@thorvg/webcanvas';
 import type { RenderCtx } from './context';
 import type { Blend, DrawCommand, Gradient, LayerSpec } from './types';
-import type { RenderStats } from './perf';
+import { applyLayerOverrides, type LayerOverrides, type RenderStats } from './perf';
 
 type LayerSlot = { scene: Scene; shapes: Shape[]; clip: Shape | null; mask: Shape | null; maskInvert: boolean };
 type Item = { cmd: DrawCommand } | { layer: LayerSpec; key: string; cmds: DrawCommand[] };
@@ -86,8 +86,9 @@ export function paint(
     tvg: Canvas | null,
     pool: PaintPool,
     stats?: RenderStats,
+    overrides?: LayerOverrides,
 ) {
-    const commands = ctx.commands;
+    const commands = applyLayerOverrides(ctx.commands, overrides);
     if (stats) stats.commands = commands.length;
     if (tvg && TVG) {
         paintThorvg(ctx, TVG, tvg, pool, collect(commands), stats);
@@ -220,7 +221,7 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         const { scene, shapes } = slot;
         const spec = item.layer;
         const blurred = !!spec.blur || (!!spec.motionBlur && spec.motionBlur.distance > .5);
-        const extent = stats && blurred ? [Infinity, Infinity, -Infinity, -Infinity] : undefined;
+        const extent = stats ? [Infinity, Infinity, -Infinity, -Infinity] : undefined;
         let i = 0;
         let anchor: [number, number] | null = null;
         for (const cmd of item.cmds) {
@@ -253,9 +254,17 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
                 stats.motionBlurs++;
                 stats.blurAmount += spec.motionBlur.distance;
             }
-            if (extent && extent[2] > extent[0] && extent[3] > extent[1]) {
-                stats.blurArea += (extent[2] - extent[0]) * (extent[3] - extent[1]);
-            }
+            const area = extent && extent[2] > extent[0] && extent[3] > extent[1]
+                ? (extent[2] - extent[0]) * (extent[3] - extent[1]) : 0;
+            if (blurred) stats.blurArea += area;
+            const effects: string[] = [];
+            if (spec.opacity !== undefined && spec.opacity < 1) effects.push(`α${spec.opacity.toFixed(2)}`);
+            if (spec.blend && spec.blend !== 'normal') effects.push(spec.blend);
+            if (spec.blur) effects.push(`blur${spec.blur}`);
+            if (spec.motionBlur && spec.motionBlur.distance > .5) effects.push('motion');
+            if (spec.clip) effects.push('clip');
+            if (spec.mask) effects.push(spec.maskInvert ? 'invmask' : 'mask');
+            stats.layerList.push({ key: spec.key, shapes: i, area, effects });
         }
         for (; i < shapes.length; i++) apply(shapes[i], { v: [[px, py], [px + 1, py], [px + 1, py + 1], [px, py + 1]], c: '#00000001' });
 
