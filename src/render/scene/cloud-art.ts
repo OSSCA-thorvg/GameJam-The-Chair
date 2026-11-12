@@ -21,9 +21,26 @@ export const CLOUD_TONES = {
     dusk: { top: '#fff2df', middle: '#f2cdbf', belly: '#a99bb8', highlight: '#fff9ee', rim: '#ffe4bd' },
     /** The climb from the rooftop: almost white, cool shadow. */
     ascent: { top: '#fdf8ef', middle: '#ebe4e2', belly: '#b3bdd2', highlight: '#ffffff', rim: '#fff1d6' },
-    /** Above the clouds in stage 4: warm daylight. */
-    day: { top: '#fcefe0', middle: '#e3cdd2', belly: '#a6b7d1', highlight: '#fff8ea', rim: '#fff2da' },
+    /** Stage 4 after the colour transition: golden crust and a toasted underside. */
+    bread: { top: '#f8d98d', middle: '#d9943b', belly: '#8f4823', highlight: '#fff0bd', rim: '#ffe4a3' },
 } satisfies Record<string, CloudTone>;
+
+function mixHex(from: string, to: string, amount: number) {
+    const channel = (hex: string, index: number) => parseInt(hex.slice(1 + index * 2, 3 + index * 2), 16);
+    return '#' + [0, 1, 2].map(index => Math.round(channel(from, index) + (channel(to, index) - channel(from, index)) * amount)
+        .toString(16).padStart(2, '0')).join('');
+}
+
+export function blendCloudTone(from: CloudTone, to: CloudTone, amount: number): CloudTone {
+    const t = Math.max(0, Math.min(1, amount));
+    return {
+        top: mixHex(from.top, to.top, t),
+        middle: mixHex(from.middle, to.middle, t),
+        belly: mixHex(from.belly, to.belly, t),
+        highlight: mixHex(from.highlight, to.highlight, t),
+        rim: mixHex(from.rim, to.rim, t),
+    };
+}
 
 export type CloudOptions = {
     /** Overall opacity, 0..1. */

@@ -385,12 +385,12 @@ function cloudEntry(): PreviewScene {
     game.startStage(4);
     const effects = createEffects();
     const frames = [capture(game, effects)];
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 330; i++) {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('cloud-entry', 'Sky · Stage 4 bread clouds', 2380,
-        [{ at: 0, label: 'Arrival · Clouds become bread' }, { at: 1, label: 'Continuous spray · Hovering' }], frames);
+    return recordedScene('cloud-entry', 'Sky · Clouds warm into bread', 2380,
+        [{ at: 0, label: 'White clouds' }, { at: 1.3, label: 'Colour changing' }, { at: 2.6, label: 'Bread colour' }], frames);
 }
 
 function skyEnding(): PreviewScene {
