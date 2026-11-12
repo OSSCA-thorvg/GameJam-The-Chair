@@ -97,7 +97,7 @@ test('rooftop door scene rolls the chair out and hands over control when closed'
 });
 
 test('a chair falling onto the slumping sales graph rides it up and climbs to the sky', () => {
-    const base = { p: { x: 2500, y: -188, vx: 200, vy: 0, a: 0, w: 0 }, ground: false, hasExtinguisher: true, firstFlight: { kind: 'course' }, ductReaction: { kind: 'idle' }, time: 0 };
+    const base = { p: { x: 2500, y: -188, vx: 200, vy: 0, a: 0, w: 0 }, ground: false, hasExtinguisher: true, firstFlight: { kind: 'course' }, ductReaction: { kind: 'idle', rest: 0 }, time: 0 };
     const caught = sys.rooftopStep(base, 1 / 120).firstFlight;
     assert.equal(caught.kind, 'ride');
     assert.equal(sys.rooftopStep({ ...base, p: { ...base.p, y: -280 } }, 1 / 120).firstFlight.kind, 'course', 'too high above the line');
@@ -115,11 +115,12 @@ test('a chair falling onto the slumping sales graph rides it up and climbs to th
     assert.equal(climb.arrived, true);
 });
 
-test('the duct sneezes back at a rider in front of it once the inhale ends', () => {
+test('the duct sneezes on its timer at a rider in front of it once the inhale ends', () => {
     const p = { x: 1600, y: 226, vx: 0, vy: 0, a: 0, w: 0 };
-    const reacting = sys.ductSprayed({ kind: 'idle' }, p);
+    const reacting = sys.rooftopStep({ p, ground: true, hasExtinguisher: true, firstFlight: { kind: 'course' }, ductReaction: { kind: 'idle', rest: 5.999 }, time: 0 }, 1 / 120).ductReaction;
     assert.equal(reacting.kind, 'reacting');
-    assert.equal(sys.ductSprayed({ kind: 'idle' }, { ...p, x: 1000 }).kind, 'idle', 'out of reach');
+    const age = reacting.bursts[0].age;
+    assert.equal(sys.rooftopStep({ p, ground: true, hasExtinguisher: true, firstFlight: { kind: 'course' }, ductReaction: { kind: 'idle', rest: 1 }, time: 0 }, 1 / 120).ductReaction.kind, 'idle', 'not yet time');
     let input = { p, ground: true, hasExtinguisher: true, firstFlight: { kind: 'course' }, ductReaction: reacting, time: 0 };
     let knocked = false;
     for (let i = 0; i < 30; i++) {
@@ -128,7 +129,7 @@ test('the duct sneezes back at a rider in front of it once the inhale ends', () 
         input = { ...input, p: r.p, ground: r.ground, ductReaction: r.ductReaction };
     }
     assert.ok(knocked);
-    assert.equal(reacting.bursts[0].age, 0, 'input untouched');
+    assert.equal(reacting.bursts[0].age, age, 'input untouched');
 });
 
 test('the sky hovers in, lands on platforms and saves flags without touching its input', () => {

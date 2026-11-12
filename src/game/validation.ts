@@ -197,18 +197,20 @@ function entrance(value: unknown, path: string) {
 function duct(value: unknown, path: string) {
     const data = record(value, path);
     const kind = choice(data.kind, ['idle', 'reacting', 'done'], `${path}.kind`);
-    exact(data, kind === 'reacting' ? ['kind', 'age', 'shots', 'bursts'] : kind === 'done' ? ['kind', 'shots', 'rest'] : ['kind'], path);
+    exact(data, kind === 'reacting' ? ['kind', 'age', 'shots', 'bursts'] : kind === 'done' ? ['kind', 'shots', 'rest'] : ['kind', 'rest'], path);
     if (kind === 'reacting') {
         finite(data.age, `${path}.age`);
         integer(data.shots, `${path}.shots`);
         array(data.bursts, `${path}.bursts`, 64).forEach((item, index) => {
             const burst = record(item, `${path}.bursts[${index}]`);
             exact(burst, ['kind', 'age'], `${path}.bursts[${index}]`);
-            choice(burst.kind, ['first', 'repeat', 'gust'], `${path}.bursts[${index}].kind`);
+            choice(burst.kind, ['first', 'gust'], `${path}.bursts[${index}].kind`);
             finite(burst.age, `${path}.bursts[${index}].age`);
         });
     } else if (kind === 'done') {
         integer(data.shots, `${path}.shots`);
+        finite(data.rest, `${path}.rest`);
+    } else {
         finite(data.rest, `${path}.rest`);
     }
 }
