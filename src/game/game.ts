@@ -218,6 +218,7 @@ export function viewState(s: Readonly<CoreState>) {
         people: s.people,
         solids: stageSolids(s).map(p => ({ p })),
         copier: s.office.copier,
+        urgentCopier: s.office.urgent,
         bin: LEVEL.bin,
         focusBlocked: focusBlockedIn(s),
     });

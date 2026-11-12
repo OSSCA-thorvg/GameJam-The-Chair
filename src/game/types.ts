@@ -30,12 +30,14 @@ export type Paper = {
     landed: boolean;
     volley: number;
     safe: boolean;
+    // A stapled bundle of reports is bigger, heavier and shoves the chair back.
+    kind: 'sheet' | 'bundle';
 };
 export type Input = 'left' | 'right' | 'q' | 'e' | 'spray' | 'forward' | 'back';
 export type DeepReadonly<T> = T extends object ? {
     readonly [K in keyof T]: DeepReadonly<T[K]>;
 } : T;
-export type CueId = 'lift-game-over' | 'practice-cleared' | 'checkpoint' | 'head-hit' | 'head-comment' | 'head-game-over' | 'first-volley' | 'paper-hit' | 'water-spilled' | 'water-comment' | 'water-followup' | 'bin-fall' | 'bin-comment' | 'bin-game-over' | 'focus-lost' | 'focus-game-over' | 'slipping' | 'rolling' | 'reverse-comment' | 'person-comment' | 'stage-clear' | 'light-hit' | 'light-comment' | 'spray' | 'extinguisher-pickup' | 'convoy-bump';
+export type CueId = 'lift-game-over' | 'practice-cleared' | 'checkpoint' | 'head-hit' | 'head-comment' | 'head-game-over' | 'first-volley' | 'paper-hit' | 'water-spilled' | 'water-comment' | 'water-followup' | 'bin-fall' | 'bin-comment' | 'bin-game-over' | 'focus-lost' | 'focus-game-over' | 'slipping' | 'rolling' | 'reverse-comment' | 'person-comment' | 'stage-clear' | 'light-hit' | 'light-comment' | 'spray' | 'extinguisher-pickup' | 'urgent-volley' | 'bundle-hit' | 'convoy-bump';
 export type GameEvent = {
     type: 'cue';
     id: Exclude<CueId, 'light-comment'>;

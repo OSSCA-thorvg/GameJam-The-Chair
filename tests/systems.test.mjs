@@ -128,7 +128,7 @@ test('the duct sneezes back at a rider in front of it once the inhale ends', () 
 
 test('the sky hovers in, lands on platforms and saves flags without touching its input', () => {
     const sky = { phase: 'arrival', age: 0, lift: 0, drawer: 0, deskTilt: 0, signTilt: -1.28, standing: null, depth: 0, depthTravel: 0 };
-    const base = { sky, p: { x: 2380, y: -1820, vx: 0, vy: 0, a: 0, w: 0 }, ground: false, coyote: 0, jumpQ: 0, checkpoint: 0, time: 0, direction: 1, depthDir: 0, length: 6100, sprayBurst: 0, sprayDir: { x: 0, y: 1 } };
+    const base = { sky, p: { x: 2380, y: -1820, vx: 0, vy: 0, a: 0, w: 0 }, ground: false, coyote: 0, jumpQ: 0, checkpoint: 0, time: 0, direction: 1, length: 6100, sprayBurst: 0, sprayDir: { x: 0, y: 1 } };
     let r = sys.skyStep(base, 1 / 120);
     assert.ok(r.p.x > 2380 && r.sprayBurst === .24 && r.speed > 0);
     assert.equal(sky.age, 0, 'input untouched');
@@ -141,9 +141,9 @@ test('the sky hovers in, lands on platforms and saves flags without touching its
     }
     assert.ok(reached, 'landing on the arrival roof saves flag 1');
     assert.equal(r.checkpoint, 1);
-    const depth = sys.skyStep({ ...base, sky: { ...sky, phase: 'depth', depthTravel: .649 }, depthDir: 1 }, 1 / 120);
+    const depth = sys.skyStep({ ...base, sky: { ...sky, phase: 'depth', age: 4 } }, 1 / 120);
     assert.equal(depth.won, true);
-    assert.equal(depth.speed, null);
+    assert.equal(depth.speed, 0);
 });
 
 test('each distraction costs focus once, and focus recovers only when undisturbed', () => {
@@ -196,4 +196,60 @@ test('corridor decisions: convoy landing, lift ride, meeting and chatter use the
     assert.notEqual(r.rng, 5, 'bubble placement uses the cosmetic stream');
     assert.deepEqual(sys.corridorStep(input, 1 / 120, 230), r, 'deterministic');
     assert.equal(base.offices[0].life, 0, 'input untouched');
+});
+
+test('the executive printer scans before every urgent volley and follows a fixed pattern order', () => {
+    assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map(sys.urgentPattern), ['low', 'lob', 'fan', 'bundle', 'fan', 'bundle', 'fan']);
+    let c = sys.createUrgentCopier();
+    const dt = 1 / 120;
+    assert.equal(sys.urgentCopierStep(c, c.x - 600, dt).copier.volley, 0, 'asleep while the chair is far away');
+    let r = sys.urgentCopierStep(c, c.x - 300, dt);
+    assert.equal(r.started, true);
+    assert.equal(r.copier.dir, -1, 'faces the approaching chair');
+    c = r.copier;
+    let firstShot = null;
+    for (let i = 1; i < 240 && firstShot === null; i++) {
+        r = sys.urgentCopierStep(c, c.x - 300, dt);
+        c = r.copier;
+        if (r.fire) firstShot = i * dt;
+    }
+    assert.ok(firstShot >= .6 - dt && firstShot < .62, `the scan warns for 0.6 s (fired at ${firstShot})`);
+});
+
+test('urgent sheets: skimming ones need a jump, a stapled bundle shoves the chair back', () => {
+    const F = 420, dt = 1 / 120;
+    const flyAt = (papers, chair) => {
+        let list = papers, hits = [];
+        for (let i = 0; i < 240 && !hits.length; i++) ({ papers: list, hits } = sys.papersStep(list, chair(i * dt), false, dt));
+        return hits;
+    };
+    const copier = { ...sys.createUrgentCopier(), dir: -1, volley: 1, burst: 1 };
+    const low = sys.urgentShot(copier);
+    const standing = () => ({ x: copier.x - 180, y: F - 28 });
+    const jumping = () => ({ x: copier.x - 180, y: F - 28 - 76 });
+    assert.ok(flyAt(low, standing).length > 0, 'skimming sheets hit a chair on the floor');
+    assert.equal(flyAt(sys.urgentShot(copier), jumping).length, 0, 'a jump clears them');
+    const bundle = sys.urgentShot({ ...copier, volley: 4, burst: 3 });
+    assert.equal(bundle.length, 1, 'the bundle flies alone, its loose pages follow in the next shot');
+    assert.equal(bundle[0].kind, 'bundle');
+    const hit = flyAt(bundle, standing)[0];
+    assert.ok(hit.heavy && hit.focus.damage === 20 && hit.vx < 0, 'a bundle costs eight sheets\' worth');
+    assert.ok(hit.focus.id > 1000, 'urgent volleys count apart from the office copier');
+});
+
+test('every urgent volley is 20 sheets\' worth, and each sheet that hits costs focus on its own', () => {
+    for (let volley = 1; volley <= 4; volley++) {
+        const shots = { 1: 5, 2: 4, 3: 5, 4: 4 }[volley];
+        const papers = [];
+        for (let burst = shots - 1; burst >= 0; burst--) papers.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley, burst }));
+        const worth = papers.reduce((sum, z) => sum + (z.kind === 'bundle' ? 8 : 1), 0);
+        assert.equal(worth, 20, `volley ${volley}`);
+        assert.equal(new Set(papers.map(z => z.volley)).size, papers.length, 'each sheet has its own focus id');
+    }
+    const focus = { focus: 100, focusClock: 0, focusEvents: [], focusNotice: null };
+    let f = focus;
+    const sheets = [];
+    for (let burst = 4; burst >= 0; burst--) sheets.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley: 1, burst }));
+    for (const z of sheets) f = { ...f, ...sys.focusAfterHit(f, { kind: 'paper', id: z.volley, damage: 2.5 }) };
+    assert.equal(f.focus, 50, 'a whole volley takes half the focus bar');
 });

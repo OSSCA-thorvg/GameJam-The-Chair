@@ -40,7 +40,8 @@ test('a recorded attempt replays to the same state with matching hashes and mark
     game.startStage(1);
     for (let i = 0; i < 120 * 30; i++) {
         const state = game.getSnapshot();
-        if (state.mode === 'dead') break;
+        // The attempt ends either way the office can end: a loss or a clear.
+        if (state.mode === 'dead' || state.mode === 'won') break;
         balancePolicy(state, game);
         game.advance([1 / 60, 1 / 144, .011][i % 3]);
     }
@@ -52,7 +53,7 @@ test('a recorded attempt replays to the same state with matching hashes and mark
     assert.equal(timeline.error, null);
     assert.equal(timeline.endTick, file.endTick);
     assert.ok(timeline.markers.some(marker => marker.kind === 'checkpoint'));
-    assert.ok(timeline.markers.some(marker => marker.kind === 'death'));
+    assert.ok(timeline.markers.some(marker => marker.kind === 'death' || marker.kind === 'clear'));
     assert.equal(JSON.stringify(R.seekTimeline(timeline, timeline.endTick).state), game.serialize());
     // Seeking anywhere matches running straight through.
     const mid = Math.floor((timeline.startTick + timeline.endTick) / 2);

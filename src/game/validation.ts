@@ -72,7 +72,8 @@ function person(value: unknown, path: string) {
 
 function paper(value: unknown, path: string) {
     const data = record(value, path);
-    exact(data, ['x', 'y', 'vx', 'vy', 'a', 'w', 'life', 'hit', 'landed', 'volley', 'safe'], path);
+    exact(data, ['x', 'y', 'vx', 'vy', 'a', 'w', 'life', 'hit', 'landed', 'volley', 'safe', 'kind'], path);
+    choice(data.kind, ['sheet', 'bundle'], `${path}.kind`);
     for (const key of ['x', 'y', 'vx', 'vy', 'a', 'w', 'life']) finite(data[key], `${path}.${key}`);
     integer(data.volley, `${path}.volley`);
     for (const key of ['hit', 'landed', 'safe']) boolean(data[key], `${path}.${key}`);
@@ -93,12 +94,16 @@ function impact(value: unknown, path: string) {
 
 function office(value: unknown, path: string) {
     const data = record(value, path);
-    exact(data, ['copier', 'volley', 'bursts', 'papers', 'paperHits', 'paperPenaltyRemaining', 'cleaning', 'bucket', 'soakedOnSpill',
+    exact(data, ['copier', 'urgent', 'volley', 'bursts', 'papers', 'paperHits', 'paperPenaltyRemaining', 'cleaning', 'bucket', 'soakedOnSpill',
         'slip', 'wetSeen', 'slipCooldown', 'inBin', 'dirty', 'binAge', 'binCooldown', 'binFalls', 'lightPenaltyRemaining', 'lightHits',
         'lightCooldown', 'doorHits'], path);
     const copier = record(data.copier, `${path}.copier`);
     exact(copier, ['x', 'cool', 'burst', 'next', 'dir'], `${path}.copier`);
     for (const key of ['x', 'cool', 'burst', 'next', 'dir']) finite(copier[key], `${path}.copier.${key}`);
+    const urgent = record(data.urgent, `${path}.urgent`);
+    exact(urgent, ['x', 'scan', 'cool', 'burst', 'next', 'dir', 'volley'], `${path}.urgent`);
+    for (const key of ['x', 'scan', 'cool', 'next', 'dir']) finite(urgent[key], `${path}.urgent.${key}`);
+    for (const key of ['burst', 'volley']) integer(urgent[key], `${path}.urgent.${key}`);
     for (const key of ['volley', 'bursts', 'paperHits', 'soakedOnSpill', 'binFalls', 'lightHits', 'doorHits']) integer(data[key], `${path}.${key}`);
     for (const key of ['paperPenaltyRemaining', 'slipCooldown', 'binAge', 'binCooldown', 'lightPenaltyRemaining', 'lightCooldown']) finite(data[key], `${path}.${key}`);
     for (const key of ['slip', 'wetSeen', 'inBin', 'dirty']) boolean(data[key], `${path}.${key}`);

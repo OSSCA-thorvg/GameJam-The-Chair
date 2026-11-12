@@ -1,7 +1,7 @@
 // Stage 1 · Office: copier papers, the mop bucket, geysers, wet floor, the bin and the monitors.
 import type { StageHooks } from '../types';
-import { applyCopier, applyPapers } from './copier/apply';
-import { copierStep, papersStep } from './copier/decide';
+import { applyCopier, applyPapers, applyUrgentCopier } from './copier/apply';
+import { copierStep, papersStep, urgentCopierStep } from './copier/decide';
 import { applyCleaning } from './cleaning/apply';
 import { cleaningStep, slipping, waterExposure } from './cleaning/decide';
 import { applyGeyserHits } from './geyser/apply';
@@ -22,6 +22,7 @@ export const officeHooks: StageHooks = {
     },
     hazards(s, out, dt) {
         applyCopier(s, out, copierStep(s.office.copier, s.office.volley, s.p.x, true, dt));
+        applyUrgentCopier(s, out, urgentCopierStep(s.office.urgent, s.p.x, dt));
         if (!applyPapers(s, out, papersStep(s.office.papers, s.p, s.office.inBin, dt), dt)) return false;
         const { cleaning, bucket, soakedOnSpill } = s.office;
         applyCleaning(s, out, cleaningStep({ p: s.p, cleaning, bucket, soakedOnSpill }, dt), dt);

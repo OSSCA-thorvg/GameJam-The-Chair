@@ -17,15 +17,17 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when stage three capped the extinguisher at three bursts per time in the air: both rooftop traces
 // change, and every final snapshot gains `airSprays`. Without that field the four office/building hashes
 // still matched, so their play is unchanged.
+// Updated when the office gained the executive printer's urgent-report mode: every final snapshot gains
+// `office.urgent` and paper `kind`, and the office routes now pass its volleys.
 // Updated when the stage-two express got its rush-hour corridor (one speed bump to hop, a launch ramp the
 // convoy flies off over a construction hole, the lift and exit moved on): both building routes now ride it.
 const EXPECTED = {
-    'office route': '995927ffea4a5796',
-    'office crash': 'e6454bb05e08a208',
-    'building exit': 'a6285dd75729053d',
-    'building lift': '9ef9332d9cfbe7ab',
-    'rooftop to sky': '552d0b94896862a5',
-    'rooftop duct': '6727692e86ef84e3',
+    'office route': '384df579e67b7be8',
+    'office crash': '95beeba2d857d4c1',
+    'building exit': '68eff7944f536a19',
+    'building lift': '562b82b07313ef79',
+    'rooftop to sky': '6eaed670ba29c3b7',
+    'rooftop duct': '7b197da464e60d87',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

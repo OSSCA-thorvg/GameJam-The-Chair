@@ -43,6 +43,7 @@ export type RenderCtx = {
     cleaning: GameState['cleaning'];
     bin: GameState['bin'] & { bottom: number };
     copier: GameState['copier'] & { flash: number };
+    urgentCopier: GameState['urgentCopier'];
     people: GameState['people'];
     solids: GameState['solids'];
     papers: GameState['papers'];
@@ -120,6 +121,7 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         cleaning: null as unknown as GameState['cleaning'],
         bin: null as unknown as GameState['bin'] & { bottom: number },
         copier: null as unknown as GameState['copier'] & { flash: number },
+        urgentCopier: null as unknown as GameState['urgentCopier'],
         people: [] as unknown as GameState['people'],
         solids: [] as unknown as GameState['solids'],
         papers: [] as unknown as GameState['papers'],
