@@ -5,22 +5,38 @@ import { deepFreeze } from '../../data';
 export const TYPING_SOUNDS = deepFreeze(['typing.1', 'typing.2', 'typing.3', 'typing.4', 'typing.5'] satisfies Message[]);
 export type { StageId } from '../../types';
 export type Furniture = { kind: 'chair'; x: number; y: number; width: number; height: number; vx: number; released: boolean; cheer: number };
+// The rush-hour corridor past the second flag. The empty chairs roll over cable covers (`bumps`) and a
+// plank across a construction hole (`pit`) without noticing; a chair carrying a human is heavier. At
+// express speed a cover kicks a carried rider up by `kick` with a `spin` and slows it to `drag` of the convoy's
+// speed (hop it: jump without pushing on), and the plank cannot hold a human, so only the express leap (jump while pushing on) clears the hole.
+// The lift stays far enough past the hole that the convoy can still sweep a rookie back aboard.
+const EXPRESS = { bumps: [2480, 2760, 2900], pit: { left: 3080, right: 3420 }, kick: 300, spin: .5, drag: .3 };
 export const STAGE_TWO = deepFreeze({
-    length: 4000, goal: 3780,
+    length: 4850, goal: 4600,
     meeting: 620,
-    lift: 3250,
+    lift: 4050,
     offices: [220, 1030, 1840, 2370],
-    checkpoints: [{ x: 100, y: 392 }, { x: 1300, y: 392 }, { x: 2200, y: 392 }, { x: 3400, y: 392 }],
+    checkpoints: [{ x: 100, y: 392 }, { x: 1300, y: 392 }, { x: 2200, y: 392 }, { x: 4200, y: 392 }],
+    express: EXPRESS,
     terrain: [
-        [{ x: -400, y: 420 }, { x: 4400, y: 420 }, { x: 4400, y: 800 }, { x: -400, y: 800 }],
+        [{ x: -400, y: 420 }, { x: EXPRESS.pit.left, y: 420 }, { x: EXPRESS.pit.left, y: 800 }, { x: -400, y: 800 }],
+        [{ x: EXPRESS.pit.right, y: 420 }, { x: 5300, y: 420 }, { x: 5300, y: 800 }, { x: EXPRESS.pit.right, y: 800 }],
     ] satisfies Point[][],
 });
-export type ChairChat = { kind: 'waiting' } | { kind: 'gossip' | 'wary' | 'dismissed' | 'realizing' | 'welcoming' | 'companions' | 'rush'; age: number };
+export function overPit(x: number) {
+    return x > STAGE_TWO.express.pit.left && x < STAGE_TWO.express.pit.right;
+}
+export type ChairChat = { kind: 'waiting' } | { kind: 'gossip' | 'wary' | 'dismissed' | 'realizing' | 'welcoming' | 'companions' | 'rush' | 'pit'; age: number };
 export const CHAIR_CHAT = deepFreeze({
     rush: [
         { speaker: 0, text: 'chair.rush.1' },
         { speaker: 1, text: 'chair.rush.2' },
         { speaker: 2, text: 'chair.rush.3' },
+    ],
+    // Shouted back at the rookie as the front chair reaches the construction hole.
+    pit: [
+        { speaker: 0, text: 'chair.pit.1' },
+        { speaker: 1, text: 'chair.pit.2' },
     ],
     gossip: [
         { speaker: 2, text: 'chair.gossip.1' },
@@ -71,7 +87,7 @@ export const CHAIR_CHAT = deepFreeze({
         { speaker: 2, text: 'chair.companions.18' },
     ],
 } satisfies Record<Exclude<ChairChat['kind'], 'waiting'>, { speaker: 0 | 1 | 2; text: Message }[]>);
-export const CHAIR_CHAT_INTERVAL = deepFreeze({ gossip: 3.2, wary: 4, dismissed: 1.9, realizing: 4, welcoming: 4, companions: 3.2, rush: 1.6 });
+export const CHAIR_CHAT_INTERVAL = deepFreeze({ gossip: 3.2, wary: 4, dismissed: 1.9, realizing: 4, welcoming: 4, companions: 3.2, rush: 1.6, pit: 1 });
 export function chairChatLine(chat: Exclude<ChairChat, { kind: 'waiting' }>, seed: number) {
     const lines = CHAIR_CHAT[chat.kind];
     const looping = chat.kind === 'gossip' || chat.kind === 'companions';

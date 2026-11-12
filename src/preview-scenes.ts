@@ -1,4 +1,5 @@
 import { createGame, type Game, type GameState } from './game/game';
+import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_TWO } from './game/stages/building/data';
 import { ductTimings, STAGE_THREE } from './game/stages/rooftop/data';
@@ -13,6 +14,8 @@ export type PreviewScene = {
     label: string;
     duration: number;
     focusX: number;
+    // Follow the chair with the camera (centred) instead of holding it at `focusX`.
+    follow?: boolean;
     markers: readonly { at: number; label: string }[];
     sample(time: number): { state: GameState; effects: EffectsState };
 };
@@ -325,6 +328,34 @@ function shaftHazards(id: string, label: string, at: { x: number; y: number }, s
     return recordedScene(id, label, at.x, markers, frames);
 }
 
+// The rush-hour express from the flag before it. `hop` hops each cable cover, `leap` leaps the hole.
+function expressRun(id: string, label: string, opts: { hop: boolean; leap: boolean }, markers: PreviewScene['markers'], focusX: number): PreviewScene {
+    const game = createGame();
+    game.startStage(2);
+    const saved = JSON.parse(game.serialize());
+    saved.checkpoint = 2;
+    game.restore(JSON.stringify(saved));
+    game.reset();
+    const { bumps, pit } = STAGE_TWO.express;
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    let leapt = false;
+    for (let i = 0; i < 330; i++) {
+        const state = game.getSnapshot(), p = state.player, c = state.corridor;
+        let keys: Input[] = [];
+        if (c.convoy === 'carried' && c.pace === 'express' && state.ground) {
+            const next = bumps.map(x => x - p.x).find(d => d > 0);
+            if (opts.hop && next !== undefined && next < 70) game.jump();
+            if (opts.leap && !leapt && pit.left - p.x > 0 && pit.left - p.x < 60) { game.jump(); leapt = true; keys = ['right']; }
+        } else if (leapt || (c.convoy === 'free' && state.ground && p.x > pit.right)) keys = ['right'];
+        game.setInput(...keys);
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+        if (game.getSnapshot().deaths > 0) break;
+    }
+    return { ...recordedScene(id, label, focusX, markers, frames), follow: true };
+}
+
 function cloudEntry(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -400,6 +431,12 @@ export const previewScenes: readonly PreviewScene[] = [
         [{ at: 1.6, label: 'Vent hiss' }, { at: 2.4, label: 'Vent blast' }, { at: 3.45, label: 'Duct inhale' }, { at: 4.05, label: 'Duct gust' }]),
     shaftHazards('rooftop-shaft-high', 'Rooftop · Shaft vent & ceiling downdraft', { x: 1400, y: -262 }, 1.2,
         [{ at: .3, label: 'Downdraft' }, { at: 1.5, label: 'Wall vent hiss' }, { at: 2.25, label: 'Wall vent blast' }, { at: 2.65, label: 'Ceiling hiss' }, { at: 3.4, label: 'Downdraft' }]),
+    expressRun('express-hop', 'Building · Express: hopping the cable covers', { hop: true, leap: true },
+        [{ at: .7, label: 'Front chair bounces' }, { at: .8, label: 'Hop' }, { at: 1.6, label: 'Pit shout' }, { at: 2.6, label: 'Leap' }], 2500),
+    expressRun('express-bump', 'Building · Express: kicked off by a cable cover', { hop: false, leap: false },
+        [{ at: .8, label: 'Clunk' }, { at: 1.5, label: 'Left behind' }], 2500),
+    expressRun('express-plank', 'Building · Express: the plank will not hold a human', { hop: true, leap: false },
+        [{ at: 1.6, label: 'Pit shout' }, { at: 2.6, label: 'Plank snaps' }], 3100),
     rooftopTakeoff(),
     cloudEntry(),
     officeTyping(),

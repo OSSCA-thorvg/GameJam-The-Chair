@@ -127,7 +127,7 @@ function room(value: unknown, path: string) {
 
 function chat(value: unknown, path: string) {
     const data = record(value, path);
-    const kind = choice(data.kind, ['waiting', 'gossip', 'wary', 'dismissed', 'realizing', 'welcoming', 'companions', 'rush'], `${path}.kind`);
+    const kind = choice(data.kind, ['waiting', 'gossip', 'wary', 'dismissed', 'realizing', 'welcoming', 'companions', 'rush', 'pit'], `${path}.kind`);
     exact(data, kind === 'waiting' ? ['kind'] : ['kind', 'age'], path);
     if (kind !== 'waiting') finite(data.age, `${path}.age`);
 }
@@ -279,7 +279,7 @@ export function assertGameState(value: unknown, path = 'state'): asserts value i
     if (data.focusNotice !== null) {
         const notice = record(data.focusNotice, `${path}.focusNotice`);
         exact(notice, ['kind', 'life'], `${path}.focusNotice`);
-        choice(notice.kind, ['paper', 'water', 'light', 'door'], `${path}.focusNotice.kind`);
+        choice(notice.kind, ['paper', 'water', 'light', 'door', 'bump'], `${path}.focusNotice.kind`);
         finite(notice.life, `${path}.focusNotice.life`);
     }
     if (data.lossReason !== null) choice(data.lossReason, ['head', 'bin', 'focus', 'lift'], `${path}.lossReason`);

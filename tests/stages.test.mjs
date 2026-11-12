@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { bundled } from './support/load.mjs';
+import { createExpressRider } from './support/harness.mjs';
 
 const { createGame } = await bundled({ entryPoints: ['src/game/game.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
 const dt = 1 / 120;
@@ -11,12 +12,14 @@ function geyserBursting(g, t) {
     return p >= 2.0;
 }
 function drive(game, stop = state => state.mode !== 'play', options = {}) {
-    const seen = { checkpoints: new Set(), express: false };
+    const seen = { checkpoints: new Set(), express: false, bumps: 0, chats: new Set() };
+    const express = createExpressRider(options.stayAboard);
     for (let i = 0; i < 120 * 60; i++) {
         const state = game.getSnapshot(), p = state.player;
         const simT = state.time;
         seen.checkpoints.add(state.checkpoint);
         seen.express ||= state.corridor.pace === 'express';
+        if (state.stage === 2) seen.chats.add(state.corridor.chat.kind);
         if (stop(state)) return { state, seen };
         let hazardWait = false;
         if (state.stage === 1) {
@@ -25,15 +28,13 @@ function drive(game, stop = state => state.mode !== 'play', options = {}) {
             }
         }
         const correction = -p.a * 12 - p.w * 4;
-        const keys = hazardWait ? [] : ['right'];
+        // The express convoy hops the cable covers and leaps the hole; with stayAboard it gets swept into the lift.
+        const keys = (state.stage === 2 ? express(state, game) : null) ?? (hazardWait ? [] : ['right']);
         if (correction < -.4) keys.push('q');
         if (correction > .4) keys.push('e');
         game.setInput(...keys);
-        // The express convoy heads into the clock-out lift; leap off it unless the test wants the ride.
-        const { convoy, pace } = state.corridor;
-        if (!options.stayAboard && convoy === 'carried' && pace === 'express' && state.ground) game.jump();
         game.step(dt);
-        game.drainEvents();
+        for (const event of game.drainEvents()) if (event.type === 'cue' && event.id === 'convoy-bump') seen.bumps++;
     }
     assert.fail('Route did not finish within 60 simulated seconds');
 }
@@ -48,6 +49,8 @@ test('stage2 completes through chair dispatch and the clock-out lift', () => {
     assert.deepEqual([...seen.checkpoints], [0, 1, 2, 3]);
     assert.ok(state.furniture.every(chair => chair.released));
     assert.ok(seen.express, 'the convoy speeds up before the lift');
+    assert.equal(seen.bumps, 0, 'every cable cover was hopped');
+    assert.ok(seen.chats.has('pit'), 'the chairs shout back about the plank before the hole');
     assert.notEqual(state.corridor.departure.kind, 'none', 'the chairs head into the lift');
     assert.notEqual(state.corridor.departure.reason, 'abduction', 'the rider is not taken along');
     assert.equal(state.bursts, 0);
@@ -66,13 +69,36 @@ test('staying aboard the express convoy ends in a forced clock-out', () => {
     assert.equal(game.getSnapshot().checkpoint, 2, 'retry starts from the last flag before the lift');
 });
 
-test('leaping off the express convoy reaches the exit without losing focus', () => {
+test('hopping the covers and leaping the hole reaches the exit without losing focus', () => {
     const game = createGame(); game.startStage(2);
     const { state } = drive(game);
     assert.equal(state.mode, 'won');
     assert.equal(state.deaths, 0);
     assert.equal(state.focus, 100);
     assert.ok(state.player.x >= state.level.goal);
+});
+
+test('riding the express without hopping: a cover kicks the rookie off and the hole takes it', () => {
+    const game = createGame(); game.startStage(2);
+    drive(game, state => state.corridor.pace === 'express' && state.corridor.convoy === 'carried');
+    game.clearInput();
+    const cues = [];
+    let kicked = null;
+    for (let i = 0; i < 120 * 12 && game.getSnapshot().deaths === 0; i++) {
+        game.step(dt);
+        const state = game.getSnapshot();
+        for (const event of game.drainEvents()) if (event.type === 'cue') cues.push(event.id);
+        if (kicked === null && cues.includes('convoy-bump')) kicked = state;
+        // Back on its wheels, it chases the chairs on foot.
+        if (kicked && state.ground && state.corridor.convoy === 'free') game.setInput('right');
+    }
+    assert.ok(kicked, 'the first cable cover kicks the carried rider');
+    assert.ok(kicked.player.vy < 0 && kicked.player.vx < 200, 'up and slowed: no brakes for the rookie');
+    assert.equal(kicked.focus, 90);
+    const state = game.getSnapshot();
+    assert.equal(state.deaths, 1, 'left behind, the rider rolls into the construction hole');
+    assert.equal(state.checkpoint, 2);
+    assert.equal(state.player.x, 2200, 'the retry starts at the flag before the rush');
 });
 
 test('restart resumes at the last reached checkpoint and stage selection starts fresh', () => {
@@ -83,7 +109,7 @@ test('restart resumes at the last reached checkpoint and stage selection starts 
     const saved = game.getSnapshot();
     assert.equal(saved.stage, 2);
     assert.equal(saved.checkpoint, 3);
-    assert.equal(saved.player.x, 3400);
+    assert.equal(saved.player.x, 4200);
     assert.equal(saved.deaths, 1);
     assert.equal(saved.corridor.departure.kind, 'gone');
     assert.equal(saved.corridor.room.kind, 'corridor');

@@ -80,19 +80,46 @@ export function balancePolicy(state, game) {
     if (state.mode === 'dead' || state.mode === 'won') game.reset();
 }
 
-// Rides the building corridor: enters the meeting once, then leaps off the express convoy unless `stayAboard`.
+const EXPRESS = { bumps: [2480, 2760, 2900], pit: { left: 3080, right: 3420 } };
+// Rides the express convoy through the rush-hour corridor: hops each cable cover (a jump without pushing
+// on lands back on the chairs), leaps the construction hole (a jump while pushing on). With `stayAboard`
+// the leap is short and the rider hops in place past the hole until the chairs sweep it into the lift.
+// Returns the keys to hold this tick, or null when the convoy is not involved.
+export function createExpressRider(stayAboard = false) {
+    let leapAt = null;
+    return (state, game) => {
+        const p = state.player, { convoy, pace } = state.corridor;
+        if (pace !== 'express') return null;
+        if (leapAt === null) {
+            if (convoy === 'airborne') return [];
+            if (convoy !== 'carried') return null;
+            const next = EXPRESS.bumps.map(x => x - p.x).find(d => d > 0);
+            if (state.ground && next !== undefined && next < 70) game.jump();
+            const toPit = EXPRESS.pit.left - p.x;
+            if (state.ground && toPit > 0 && toPit < 60) { game.jump(); leapAt = state.time; return ['right']; }
+            return [];
+        }
+        if (!stayAboard) return ['right'];
+        if (state.time - leapAt < .08) return ['right'];
+        // Past the hole: keep hopping in place until the chairs roll in underneath.
+        if (convoy === 'free' && p.x > EXPRESS.pit.right && state.ground && Math.abs(p.vx) < 40) game.jump();
+        return [];
+    };
+}
+
+// Rides the building corridor: enters the meeting once, then rides the express convoy across the hole and
+// off it again, unless `stayAboard`.
 export function corridorPolicy(stayAboard) {
     let entered = false;
+    const express = createExpressRider(stayAboard);
     return (state, game) => {
         const p = state.player;
         const correction = -p.a * 12 - p.w * 4;
-        const keys = ['right'];
+        const keys = express(state, game) ?? ['right'];
         if (correction < -.4) keys.push('q');
         if (correction > .4) keys.push('e');
         game.setInput(...keys);
         if (!entered && state.canEnterMeeting) { entered = true; game.interact(); }
-        const { convoy, pace } = state.corridor;
-        if (!stayAboard && convoy === 'carried' && pace === 'express' && state.ground) game.jump();
         if (state.mode === 'dead') game.reset();
     };
 }
