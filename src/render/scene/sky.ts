@@ -3,17 +3,9 @@ import type { RenderCtx } from '../context';
 import { player } from './player';
 import { sprayPlume } from './spray';
 import { drawSkyReveal } from './sky-reveal';
-import { blendCloudTone, CLOUD_TONES, puffCloud, type CloudTone } from './cloud-art';
+import { CLOUD_TONES, puffCloud, type CloudTone } from './cloud-art';
 import { skyCoursePlatform } from './sky-course-art';
 import { skyBuilding, skyFlag, skyMonitor, skyRibbon } from './sky-course-decor';
-
-const BREAD_COLOUR_DURATION = 2.6;
-
-function breadTone(ctx: RenderCtx) {
-    const progress = ctx.clamp(ctx.t / BREAD_COLOUR_DURATION, 0, 1);
-    const eased = progress * progress * (3 - 2 * progress);
-    return blendCloudTone(CLOUD_TONES.ascent, CLOUD_TONES.bread, eased);
-}
 
 function cloud(ctx: RenderCtx, x: number, y: number, size: number, seed: number, near: boolean, tone: CloudTone) {
     puffCloud(ctx, x, y, size, seed, tone, near ? { alpha: .95, fade: true } : { alpha: .72, fade: true });
@@ -37,8 +29,7 @@ function atmosphere(ctx: RenderCtx) {
         ctx.polygon([[x, cityY - h], [x + 3, cityY - h - 2], [x + 10, cityY - h - 2], [x + 8, cityY - h]], '#b1c4ca');
     }
     ctx.endLayer();
-    // The cloud silhouettes stay intact while their colour slowly warms into toasted bread.
-    const tone = breadTone(ctx);
+    const tone = CLOUD_TONES.bread;
     for (let i = -2; i < 7; i++) {
         const drift = ctx.cam * .18 + ctx.t * 4;
         const x = ctx.cam + i * 290 - drift % 290;
@@ -85,7 +76,7 @@ export function drawSky(ctx: RenderCtx) {
     // Foreground cloud edges frame open space without hiding the next landing.
     ctx.beginLayer({ key: 'sky-near-clouds', opacity: .75 });
     const bottom = ctx.H / ctx.scale - ctx.vertical;
-    const tone = breadTone(ctx);
+    const tone = CLOUD_TONES.bread;
     cloud(ctx, ctx.cam - 100 - Math.sin(ctx.t * .15) * 25, bottom + 60, 1.45, 901, true, tone);
     cloud(ctx, ctx.cam + ctx.VW + 130, bottom + 45, 1.7, 902, true, tone);
     ctx.endLayer();

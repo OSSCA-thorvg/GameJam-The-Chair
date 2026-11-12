@@ -1,5 +1,7 @@
+import { STAGE_THREE } from '../../game/stages/rooftop/data';
+import { STAGE_FOUR } from '../../game/stages/sky/data';
 import type { RenderCtx } from '../context';
-import { CLOUD_TONES, puffCloud, seeded } from './cloud-art';
+import { blendCloudTone, CLOUD_TONES, puffCloud, seeded } from './cloud-art';
 
 type Placement = { x: number; y: number; size: number; seed: number };
 
@@ -17,11 +19,21 @@ const ASCENT: readonly Placement[] = (() => {
     return placements;
 })();
 
+const GRAPH_END = STAGE_THREE.graph.points[STAGE_THREE.graph.points.length - 1];
+const ASCENT_START_Y = GRAPH_END.y - 28;
+
+function ascentTone(ctx: RenderCtx) {
+    const progress = ctx.clamp((ASCENT_START_Y - ctx.p.y) / (ASCENT_START_Y - STAGE_FOUR.arrivalY), 0, 1);
+    const eased = progress * progress * (3 - 2 * progress);
+    return blendCloudTone(CLOUD_TONES.ascent, CLOUD_TONES.bread, eased);
+}
+
 // The clouds the chair punches through on its climb from the rooftop.
 export function ascentClouds(ctx: RenderCtx) {
     ctx.beginLayer({ key: 'ascent-clouds' });
+    const tone = ascentTone(ctx);
     for (const c of ASCENT) {
-        puffCloud(ctx, ctx.cam - 120 + c.x * (ctx.VW + 240), c.y, c.size, c.seed, CLOUD_TONES.ascent, { alpha: .62 });
+        puffCloud(ctx, ctx.cam - 120 + c.x * (ctx.VW + 240), c.y, c.size, c.seed, tone, { alpha: .62 });
     }
     ctx.endLayer();
 }
