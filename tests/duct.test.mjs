@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { bundled } from './support/load.mjs';
-const { createCore, viewState, applyRooftopSpray, applyRooftop, createRenderCtx, rooftopDuct, DUCT_PROP_COLORS } = await bundled({ stdin: { contents: `export {createCore} from './src/game/state'; export {viewState} from './src/game/game'; export {applyRooftopSpray, applyRooftop} from './src/game/stages/rooftop/course/apply'; export {createRenderCtx} from './src/render/context'; export {rooftopDuct, DUCT_PROP_COLORS} from './src/render/scene/rooftop-duct';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
-function front() {
+const { createCore, viewState, applyRooftop, rooftopHooks, createRenderCtx, rooftopDuct, DUCT_PROP_COLORS, STAGE_THREE } = await bundled({ stdin: { contents: `export {createCore} from './src/game/state'; export {viewState} from './src/game/game'; export {applyRooftop} from './src/game/stages/rooftop/course/apply'; export {rooftopHooks} from './src/game/stages/rooftop/hooks'; export {createRenderCtx} from './src/render/context'; export {rooftopDuct, DUCT_PROP_COLORS} from './src/render/scene/rooftop-duct'; export {STAGE_THREE} from './src/game/stages/rooftop/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
+const D = STAGE_THREE.duct;
+function at(x, y = 226) {
     const s = createCore({ seed: 0 }); s.stage = 3; s.hasExtinguisher = true;
-    s.p = { x: 1600, y: 226, vx: 0, vy: 0, a: 0, w: 0 };
+    s.p = { x, y, vx: 0, vy: 0, a: 0, w: 0 };
     return s;
 }
-function tick(s, seconds) { for (let i = 0; i < Math.ceil(seconds * 120); i++) applyRooftop(s, [], 1 / 120); }
+function tick(s, seconds) { for (let i = 0; i < Math.round(seconds * 120); i++) applyRooftop(s, [], 1 / 120); }
 // The ejected junk: four energy-drink cans, three coffee cups, an empty badge, two ties and twelve printouts.
 function props(s) {
     const ctx = createRenderCtx({}, {}); Object.assign(ctx, { state: viewState(s) }); rooftopDuct(ctx);
@@ -15,52 +16,46 @@ function props(s) {
     return ctx.commands.filter(command => marks.includes(command.c)).map(command => command.v);
 }
 
-test('each spray in front triggers independently, including overlapping sprays', () => {
-    const s = front();
-    for (const x of [-1, 0, 1]) { s.sprayDir = { x, y: 1 }; applyRooftopSpray(s, 0); }
-    assert.equal(s.rooftop.duct.shots, 3);
-    assert.deepEqual(s.rooftop.duct.bursts.map(burst => burst.kind), ['first', 'repeat', 'repeat']);
-    tick(s, .25);
-    assert.equal(s.rooftop.duct.bursts.length, 3, 'a new spray cannot cancel the first reaction');
-    assert.ok(s.p.vx <= -285, 'first wind supplies the stronger knockback');
-});
-
-test('first wind ejects the overtime junk once and subsequent wind is weaker without re-ejecting it', () => {
-    const s = front(); applyRooftopSpray(s, 0);
-    tick(s, .1); assert.equal(s.p.vx, 0, 'inhale precedes the wind');
-    tick(s, .11); const first = s.p.vx;
-    assert.equal(first, -285);
-    tick(s, 2); assert.equal(s.rooftop.duct.kind, 'done');
-    const settled = props(s); assert.equal(settled.length, 22);
-    s.p.vx = 0; s.p.vy = 0;
-    applyRooftopSpray(s, 0);
-    assert.equal(s.rooftop.duct.shots, 2);
-    assert.deepEqual(s.rooftop.duct.bursts.map(burst => burst.kind), ['repeat']);
-    tick(s, .13);
-    assert.equal(s.p.vx, -120);
-    assert.ok(Math.abs(s.p.vx) < Math.abs(first));
-    assert.deepEqual(props(s), settled, 'the junk stays settled instead of launching again');
-    s.p.vx = 0; tick(s, .05);
-    assert.equal(s.p.vx, 0, 'one wind pulse applies only one impulse');
-    tick(s, 1); applyRooftopSpray(s, 0);
-    assert.equal(s.rooftop.duct.shots, 3, 'later visits still trigger the effect');
-});
-
-test('the front trigger excludes the rear, upper shaft and other stages', () => {
-    for (const [x, y, stage] of [[1800, 226, 3], [1600, 30, 3], [1200, 226, 3], [1600, 226, 4]]) {
-        const s = front(); s.p.x = x; s.p.y = y; s.stage = stage;
-        applyRooftopSpray(s, 0); assert.equal(s.rooftop.duct.kind, 'idle');
+test('the duct sneezes first on a timer, wherever the rider is', () => {
+    for (const x of [300, 1600]) {
+        const s = at(x);
+        tick(s, D.firstSneezeAt - .05);
+        assert.equal(s.rooftop.duct.kind, 'idle', 'nothing before the timer');
+        tick(s, .1);
+        assert.equal(s.rooftop.duct.kind, 'reacting', `the first sneeze starts on time with the rider at x=${x}`);
+        assert.deepEqual(s.rooftop.duct.bursts.map(burst => burst.kind), ['first']);
     }
 });
 
-test('the sleeping duct wakes from further away, but once awake only close sprays retrigger it', () => {
-    const s = front(); s.p.x = 1660 - 250; s.p.y = 226 + 110;
-    applyRooftopSpray(s, 0);
-    assert.equal(s.rooftop.duct.kind, 'reacting', 'a spray 250 away wakes the idle duct');
-    tick(s, 2); assert.equal(s.rooftop.duct.kind, 'done');
-    s.p.x = 1660 - 250; s.p.y = 226; s.p.vx = 0;
-    applyRooftopSpray(s, 0);
-    assert.equal(s.rooftop.duct.kind, 'done', 'the awake duct ignores the same distant spray');
-    s.p.x = 1600; applyRooftopSpray(s, 0);
-    assert.equal(s.rooftop.duct.kind, 'reacting', 'a close spray still retriggers it');
+test('spraying at the duct no longer wakes it or makes it sneeze', () => {
+    const s = at(1600); s.ground = true;
+    for (let i = 0; i < 5; i++) { rooftopHooks.onSpray(s); s.rooftop.airSprays = 0; tick(s, .3); }
+    assert.equal(s.rooftop.duct.kind, 'idle');
+    assert.equal(s.p.vx, 0);
+});
+
+test('the first sneeze ejects the overtime junk once; later gusts keep their period and leave it settled', () => {
+    const s = at(1600);
+    tick(s, D.firstSneezeAt + D.inhaleDuration + D.twitchDuration - .03);
+    assert.equal(s.p.vx, 0, 'inhale precedes the wind');
+    tick(s, .05);
+    assert.equal(s.p.vx, -D.firstKnockback);
+    let quiet = 0;
+    while (s.rooftop.duct.kind !== 'done') tick(s, 1 / 120);
+    const settled = props(s); assert.equal(settled.length, 22);
+    s.p = { x: 1600, y: 226, vx: 0, vy: 0, a: 0, w: 0 };
+    while (s.rooftop.duct.kind === 'done') { tick(s, 1 / 120); quiet += 1 / 120; }
+    assert.ok(Math.abs(quiet - D.gustPeriod) < .02, `the gust comes after its period (${quiet.toFixed(3)} s)`);
+    assert.deepEqual(s.rooftop.duct.bursts.map(burst => burst.kind), ['gust']);
+    tick(s, D.gustInhaleDuration + D.gustTwitchDuration);
+    assert.equal(s.p.vx, -D.gustKnockback);
+    assert.deepEqual(props(s), settled, 'the junk stays settled instead of launching again');
+});
+
+test('a gust only knocks back a rider in front of the duct', () => {
+    for (const [x, y] of [[1800, 226], [1600, 30], [1200, 226]]) {
+        const s = at(x, y);
+        tick(s, D.firstSneezeAt + 1);
+        assert.equal(s.p.vx, 0, `rider at ${x},${y} is untouched`);
+    }
 });

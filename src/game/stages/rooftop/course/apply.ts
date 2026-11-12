@@ -1,7 +1,7 @@
 // Writes the decisions from ./decide into game state. The only place this system changes state.
 import { setPlayer, type GameState } from '../../../state';
 import type { GameEvent } from '../../../types';
-import { ductSprayed, entranceStep, flightStep, graphRideStep, rooftopStep } from './decide';
+import { entranceStep, flightStep, graphRideStep, rooftopStep } from './decide';
 // Returns true while the rooftop door scene owns the chair.
 export function applyRooftopEntrance(s: GameState, dt: number) {
     if (s.rooftop.entrance.kind !== 'opening') return false;
@@ -36,12 +36,6 @@ export function applyRooftop(s: GameState, out: GameEvent[], dt: number) {
         out.push({ type: 'cue', id: 'extinguisher-pickup' });
         out.push({ type: 'cue', id: 'checkpoint' });
     }
-}
-
-// A spray on the rooftop can wake the duct.
-export function applyRooftopSpray(s: GameState) {
-    if (s.stage !== 3) return;
-    s.rooftop.duct = ductSprayed(s.rooftop.duct, s.p);
 }
 
 // Returns 'flight' while riding the graph or climbing, 'arrived' on reaching the sky, false otherwise.

@@ -24,13 +24,17 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // `office.urgent` and paper `kind`, and the office routes now pass its volleys.
 // Updated when the stage-two express got its rush-hour corridor (one speed bump to hop, a launch ramp the
 // convoy flies off over a construction hole, the lift and exit moved on): both building routes now ride it.
+// Updated when the rooftop duct stopped reacting to the rider's spray and started sneezing on a timer (first
+// sneeze `firstSneezeAt` into the attempt, then a gust every `gustPeriod`): the idle duct state gained `rest`,
+// so every final snapshot changes, and both rooftop traces follow the new duct timing. The office replay
+// fixture was re-recorded for the same `rest` field.
 const EXPECTED = {
-    'office route': '4391fc44ee9dd9d5',
-    'office crash': '989bf75e6942f5f1',
-    'building exit': 'b239b9fcd17b77fc',
-    'building lift': 'f946772e1497003e',
-    'rooftop to sky': '3bf00ce8878f245d',
-    'rooftop duct': '457498ca5afe1960',
+    'office route': '6d4e4ff9cb972640',
+    'office crash': 'ffcea9a999e97afd',
+    'building exit': '262bf2bedd003e8a',
+    'building lift': '1df1eef9e4fcc9de',
+    'rooftop to sky': 'dd3c527edcf3b54b',
+    'rooftop duct': '766afd664a275c9b',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {
