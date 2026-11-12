@@ -19,8 +19,10 @@ function crowd() {
 }
 function tick(s) {
     const player = { ...s.p };
+    const pace = s.building.corridor.pace;
     applyCorridor(s, [], dt, s.p.x - s.p.vx * dt);
-    if (s.building.corridor.convoy === 'free') assert.deepEqual(s.p, player, 'free riders keep control while chairs make room');
+    const startedExpress = pace === 'casual' && s.building.corridor.pace === 'express';
+    if (s.building.corridor.convoy === 'free' && !startedExpress) assert.deepEqual(s.p, player, 'free riders keep control while chairs make room');
     for (let i = 1; i < 3; i++) assert.ok(s.building.furniture[i - 1].x - s.building.furniture[i].x >= 79.99);
 }
 
@@ -31,6 +33,18 @@ test('unaccompanied chairs trade gossip and roll ahead without waiting for the p
     assert.equal(s.building.corridor.chat.kind, 'gossip');
     assert.ok(s.building.corridor.chat.age > 2.9);
     assert.ok(s.building.furniture.every((chair, i) => chair.x > start[i] + 500));
+});
+
+test('the corridor accelerates when the rider leads the nearby chair convoy past the rush checkpoint', () => {
+    const s = crowd();
+    s.building.furniture.forEach((chair, i) => Object.assign(chair, { x: 2160 - i * 130, vx: 185 }));
+    Object.assign(s.p, { x: 2200, vx: 185 });
+
+    tick(s);
+
+    assert.equal(s.building.corridor.pace, 'express');
+    assert.equal(s.p.vx, 360);
+    assert.ok(s.building.furniture.every(chair => chair.vx >= 360));
 });
 
 test('flying over the group does not count as joining, grounded admission welcomes the rookie only once', () => {

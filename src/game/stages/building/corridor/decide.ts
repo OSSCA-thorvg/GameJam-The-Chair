@@ -101,11 +101,13 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     const allReleased = furniture.every(chair => chair.released);
     const front = furniture[0], back = furniture[2];
     const frontX = front.x;
+    const nearby = p.x > back.x - 240 && p.x < front.x + 240;
+    const leadsConvoy = allReleased && ground && p.y > 360 && p.x >= front.x - 28 && nearby;
     const captiveBoarding = c.departure.kind === 'boarding' && c.departure.reason === 'abduction';
     if (c.departure.kind !== 'none' && !captiveBoarding) {
         if (c.convoy !== 'airborne') c.convoy = 'free';
     } else if (allReleased && ground && c.convoy !== 'carried' && c.convoy !== 'dropped') c.convoy = insideConvoy(p, furniture) ? 'carried' : 'free';
-    if (c.departure.kind === 'none' && c.convoy === 'carried' && c.pace === 'casual' && p.x >= STAGE_TWO.checkpoints[2].x) {
+    if (c.departure.kind === 'none' && (c.convoy === 'carried' || leadsConvoy) && c.pace === 'casual' && p.x >= STAGE_TWO.checkpoints[2].x) {
         c.pace = 'express';
         c.chat = { kind: 'rush', age: 0 };
         for (const chair of furniture) chair.vx = 360;
@@ -165,7 +167,6 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     }
     // Once the whole convoy has rolled past the dropped rider, it is just a rider on foot again.
     if (c.convoy === 'dropped' && p.x < back.x - 30) c.convoy = 'free';
-    const nearby = p.x > back.x - 240 && p.x < front.x + 240;
     if (c.departure.kind === 'none' && allReleased && c.chat.kind === 'waiting' && nearby) c.chat = { kind: 'gossip', age: 0 };
     if (c.departure.kind === 'none' && c.chat.kind !== 'waiting') {
         if (c.chat.kind === 'wary' && (p.x <= back.x + 28 || p.x >= front.x - 28)) {
