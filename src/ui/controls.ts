@@ -3,7 +3,7 @@
 import type { Game, GameStatus } from '../game/game';
 import type { Input } from '../game/types';
 
-export type Action = 'up' | 'down' | 'brake' | 'left' | 'right' | 'leanLeft' | 'leanRight' | 'jump' | 'spray' | 'meeting' | 'pause' | 'restart';
+export type Action = 'up' | 'down' | 'left' | 'right' | 'leanLeft' | 'leanRight' | 'jump' | 'spray' | 'meeting' | 'pause' | 'restart';
 
 interface Control {
     /** KeyboardEvent.key values (letters are matched case-insensitively). */
@@ -17,7 +17,6 @@ interface Control {
 export const CONTROLS: Readonly<Record<Action, Control>> = {
     up:        { keys: ['ArrowUp', 'w'], label: '↑ / W', when: s => s.stage === 5 },
     down:      { keys: ['ArrowDown', 's'], label: '↓ / S', when: s => s.stage === 5 },
-    brake:     { keys: ['Shift'], label: 'Shift', when: s => s.stage === 5 },
     left:      { keys: ['ArrowLeft', 'a'], label: '← / A' },
     right:     { keys: ['ArrowRight', 'd'], label: '→ / D' },
     leanLeft:  { keys: ['q'], label: 'Q' },
@@ -35,7 +34,7 @@ export const SPRAY_KEY = 'Space';
 export const MOVE_LABEL = '← → / A D';
 
 /** Held actions map onto the game's continuous inputs. */
-const HELD: Partial<Record<Action, Input>> = { up: 'forward', down: 'back', brake: 'brake', left: 'left', right: 'right', leanLeft: 'q', leanRight: 'e', spray: 'spray' };
+const HELD: Partial<Record<Action, Input>> = { up: 'forward', down: 'back', left: 'left', right: 'right', leanLeft: 'q', leanRight: 'e', spray: 'spray' };
 
 const normalize = (key: string) => key.length === 1 ? key.toLowerCase() : key;
 

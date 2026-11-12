@@ -1,6 +1,7 @@
 import { createGame, type Game, type GameState } from './game/game';
 import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
+import { STAGE_FIVE } from './game/stages/orbit/data';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { STAGE_TWO } from './game/stages/building/data';
 import { ductTimings, STAGE_THREE, GRAPH_CORNERS } from './game/stages/rooftop/data';
@@ -474,14 +475,13 @@ function orbitRoute(): PreviewScene {
     for (let i = 0; i < 3600; i++) {
         const state = game.getSnapshot(), orbit = state.orbit;
         if (!orbit) break;
-        const target = orbit.rings === 1 ? { x: 240, y: 160 } : orbit.rings === 2 ? { x: 0, y: 40 } : { x: 0, y: 0 };
+        const target = STAGE_FIVE.rings[orbit.rings] ?? STAGE_FIVE.door;
         const p = state.player;
         const keys: Input[] = [];
         if (target.x - p.x > p.vx * .65 + 6) keys.push('right');
         if (target.x - p.x < p.vx * .65 - 6) keys.push('left');
         if (target.y - p.y > p.vy * .65 + 6) keys.push('forward');
         if (target.y - p.y < p.vy * .65 - 6) keys.push('back');
-        if (orbit.z > 5100) keys.push('brake');
         game.setInput(...keys);
         stepGame(game, effects);
         frames.push(capture(game, effects));
@@ -489,7 +489,7 @@ function orbitRoute(): PreviewScene {
         if (phase !== previous) { markers.push({ at: i / 60, label: phase }); previous = phase; }
         if (orbit.phase === 'parked') break;
     }
-    return recordedScene('orbit-route', 'Orbit · Cloud hoops & drawer braking', 0, markers, frames);
+    return recordedScene('orbit-route', 'Orbit · Concept 01: cloud basin & office door', 0, markers, frames);
 }
 
 // The duct's timed sneezes: the first big one that spits out the overtime junk, and the later gusts.
