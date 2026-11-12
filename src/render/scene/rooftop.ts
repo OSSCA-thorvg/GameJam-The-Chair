@@ -7,8 +7,9 @@ import { sprayPlume } from './spray';
 import { ascentClouds } from './clouds';
 import { rooftopCeilingLight, rooftopSky, rooftopWalls, rooftopPlatforms } from './rooftop-art';
 import { rooftopDuct, rooftopVents } from './rooftop-duct';
-import { rooftopGraphSign, salesMonitor } from './rooftop-graph';
+import { rooftopGraphSign } from './rooftop-graph';
 import { employeeBoard } from './employee-board';
+import { personalBox } from './personal-box';
 
 export function drawRooftop(ctx: RenderCtx) {
     const state = ctx.state;
@@ -20,7 +21,7 @@ export function drawRooftop(ctx: RenderCtx) {
     rooftopSky(ctx);
     rooftopWalls(ctx);
     employeeBoard(ctx);
-    salesMonitor(ctx, 1268, 170, 'flat');
+    personalBox(ctx);
     rooftopPlatforms(ctx);
     rooftopDuct(ctx);
     rooftopVents(ctx);

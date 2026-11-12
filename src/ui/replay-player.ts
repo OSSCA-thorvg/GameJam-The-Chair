@@ -6,6 +6,7 @@ import type { GameEvent } from '../game/types';
 import { translate, type Locale, type Message } from '../i18n';
 import { createEffects } from '../render/effects';
 import { createFeedback } from './feedback';
+import { buildPersonalBoxTrack, personalBoxAt } from './personal-box-replay';
 
 const SPEEDS = [.25, .5, 1, 2, 4];
 // Death and clear screens stay up briefly before the recorded retry, like they did for the player.
@@ -35,9 +36,13 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
     let effects = createEffects();
     let feedback = createFeedback(getLocale);
     let pending: GameEvent[] = [];
+    let personalBoxTrack: ReturnType<typeof buildPersonalBoxTrack> = [];
 
     function receive(events: readonly GameEvent[]) {
-        if (!events.length || !cursor) return;
+        if (!cursor) return;
+        const state = cursor.state;
+        effects.observe({ stage: state.stage, deaths: state.deaths, time: state.time, player: state.p });
+        if (!events.length) return;
         const view = viewState(cursor.state);
         for (const event of events) {
             effects.receive(event);
@@ -81,6 +86,7 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
         const warmup = Math.round(getSettings().warmupSeconds / FIXED_STEP);
         cursor = seekTimeline(timeline, target - warmup);
         effects = createEffects();
+        effects.restorePersonalBox(personalBoxAt(personalBoxTrack, cursor.state.tick));
         feedback = createFeedback(getLocale);
         pending = [];
         hold = 0;
@@ -162,6 +168,7 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
 
     function open(file: ReplayFile) {
         timeline = buildTimeline(file, getSettings().keyframeInterval);
+        personalBoxTrack = buildPersonalBoxTrack(timeline);
         speed = getSettings().playbackSpeed;
         if (speedSelect) {
             speedSelect.replaceChildren(...[...new Set([...SPEEDS, speed])].sort((a, b) => a - b).map(value => {

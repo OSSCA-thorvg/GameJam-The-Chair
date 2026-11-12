@@ -86,6 +86,7 @@ function setup(
         ctx.glare = effects.glare;
         ctx.practiceBurst = effects.practiceBurst;
         ctx.saveFlash = effects.saveFlash;
+        ctx.personalBox = effects.personalBox;
 
         const baseWidth = ctx.W < 520 ? 540 : Math.max(760, ctx.W);
         ctx.VW = next.stage === 4 ? baseWidth * 1.12 : baseWidth;

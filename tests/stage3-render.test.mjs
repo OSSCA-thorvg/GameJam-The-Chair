@@ -20,7 +20,7 @@ test('entrance replaces the falling chart with an employee board with an initial
             && command.v[2][1] - command.v[1][1] === 49);
         assert.deepEqual(portraits.map(command => command.v[0]), [[62, 118], [111, 118], [160, 118]]);
         assert.ok(!ctx.commands.some(command => command.layer?.key === 'sales-monitor-fall'));
-        assert.ok(ctx.commands.some(command => command.layer?.key === 'sales-monitor-flat'));
+        assert.ok(!ctx.commands.some(command => command.layer?.key === 'sales-monitor-flat'));
         const beam = ctx.commands.find(command => command.layer?.key === 'employee-board-light');
         assert.ok(beam && typeof beam.c !== 'string');
         assert.ok(Math.min(...beam.v.map(point => point[1])) < 82, 'light starts above the board');
