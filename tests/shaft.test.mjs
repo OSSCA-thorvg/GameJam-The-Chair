@@ -14,7 +14,7 @@ const dt = 1 / 120;
 const SHAFT_FLAG = STAGE_THREE.checkpoints.findIndex(mark => mark.x === 1310);
 const course = { kind: 'course' };
 
-function rooftop(p, { time = 0, duct = { kind: 'idle' }, ground = true } = {}) {
+function rooftop(p, { time = 0, duct = { kind: 'idle', rest: 0 }, ground = true } = {}) {
     return { p: { vx: 0, vy: 0, a: 0, w: 0, ...p }, ground, hasExtinguisher: true, firstFlight: course, ductReaction: duct, time };
 }
 
@@ -24,7 +24,7 @@ function firstTime(vent, kind) {
     throw new Error(`vent never ${kind}`);
 }
 
-test('the shaft has no open column: holding spray straight up never gets past the duct ledge', () => {
+test('the shaft has no open column: holding spray straight up never gets past the lower ledges', () => {
     for (const x of [1270, 1350, 1450, 1510, 1600, 1700]) {
         const game = createGame({ seed: 1 }); game.startStage(3);
         driveStageThree(game, state => state.checkpoint === 2 && state.ground && state.player.x > 1100);
@@ -34,17 +34,19 @@ test('the shaft has no open column: holding spray straight up never gets past th
             game.setInput(s.player.x < x ? 'right' : 'left'); game.step(dt);
         }
         game.setInput('spray');
-        let top = Infinity, stood = Infinity;
+        let top = Infinity, higher = null;
         for (let i = 0; i < 120 * 10; i++) {
             game.step(dt); game.drainEvents();
             const s = game.getSnapshot();
             top = Math.min(top, s.player.y);
-            if (s.ground) stood = Math.min(stood, s.player.y);
+            // R2 (centre -92, right of x 1540) or the L2 storey above it.
+            if (s.ground && s.player.y < 0 && (s.player.x > 1540 || s.player.y < -150)) higher ??= { ...s.player };
         }
-        // Landing refills the bursts, so the chair may hop onto R1 (centre 248) and float up into the room
-        // above it, but it never stands on a higher ledge nor reaches the L2 storey (bottom -210).
-        assert.ok(stood > 200, `from x=${x} the chair stood at ${stood.toFixed(0)}`);
-        assert.ok(top > -150, `from x=${x} the chair rose to ${top.toFixed(0)}`);
+        // Landing refills the bursts, so the chair may hop onto R1 (centre 248), slide along its printouts
+        // onto the low wall pipe, float up into the room above it, or be thrown onto L1 (and its wall pipe)
+        // by the duct's timed gust, but it never stands on R2 nor reaches the L2 storey (bottom -210).
+        assert.equal(higher, null, `from x=${x} the chair stood at ${higher && `${higher.x.toFixed(0)},${higher.y.toFixed(0)}`}`);
+        assert.ok(top > -210, `from x=${x} the chair rose to ${top.toFixed(0)}`);
     }
 });
 
@@ -80,7 +82,7 @@ test('the scattered printouts make the shaft ledges slippery only once the duct 
     const s = createCore({ seed: 0 }); s.stage = 3; s.hasExtinguisher = true; s.ground = true;
     for (const span of STAGE_THREE.slick) {
         s.p = { x: (span.left + span.right) / 2, y: span.y - 28, vx: 0, vy: 0, a: 0, w: 0 };
-        s.rooftop.duct = { kind: 'idle' };
+        s.rooftop.duct = { kind: 'idle', rest: 0 };
         assert.deepEqual(rooftopHooks.drive(s, 0), {}, 'no paper before the first sneeze');
         s.rooftop.duct = { kind: 'done', shots: 1, rest: 0 };
         assert.deepEqual(rooftopHooks.drive(s, 0), { slip: true });

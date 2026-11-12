@@ -21,8 +21,7 @@ const ductQuietFor = seconds => state => state.ductReaction.kind === 'done' && s
 // Standing heights (chair centre) of the floor and the shaft ledges.
 const FLOOR = 368, R1 = 248, L1 = 78, R2 = -92, L2 = -262, UPPER = -172;
 
-// Steps in order. 'roll' drives along the ground; 'wake' sprays once to wake the duct and waits for it
-// to settle; 'hop' climbs from a ledge at `level` to `to`: roll to `takeoff`, wait until `ready`, then
+// Steps in order. 'roll' drives along the ground; 'wait' waits for the duct's timed sneeze to end; 'hop' climbs from a ledge at `level` to `to`: roll to `takeoff`, wait until `ready`, then
 // burst straight up (at most `ups` times, default 2) until high enough and spend the remaining bursts
 // toward the target. A 'leap' first runs
 // from `start` so the chair carries speed off the edge. 'board' rolls right onto the sales graph.
@@ -31,9 +30,10 @@ const ROUTE = [
     { how: 'pickup' },
     { how: 'rise', x: 1030, y: 210 },
     { how: 'roll', x: 1120 },
-    { how: 'roll', x: 1420 },
-    { how: 'wake', x: 1420 },
-    { how: 'hop', level: FLOOR, takeoff: 1460, to: [1600, R1], apex: 222, ready: ductJustGusted },
+    { how: 'roll', x: 1370 },
+    // Wait out of the gust's reach until the duct has just gusted, then hop up before the next one.
+    { how: 'wait', x: 1370 },
+    { how: 'hop', level: FLOOR, takeoff: 1460, to: [1600, R1], apex: 200, ready: ductQuietFor(2) },
     // R1 sits in the duct's gust: arrive right after a gust and leave before the next one.
     { how: 'hop', level: R1, takeoff: 1655, to: [1330, L1], apex: 50, ready: ductQuietFor(1.3) },
     // L2 roofs the column above L1, so this hop turns sideways after a single upward burst.
@@ -78,18 +78,18 @@ export function driveStageThree(game, stop = state => state.stage === 4 || state
         } else if (step.how === 'roll') {
             game.setInput(...toward(step.x));
             if (Math.abs(p.x - step.x) < 40 && state.ground) phase++;
-        } else if (step.how === 'wake') {
-            // The duct only hears sprays level with its mouth: hop off the floor, then spray again up there.
-            const level = !state.ground && p.y < STAGE_THREE.duct.y + STAGE_THREE.duct.wakeHeight - 10;
-            if (state.ductReaction.kind === 'idle') game.setInput(...(state.ground || (level && p.vy > -200) ? ['spray'] : []));
-            else game.setInput(...(state.ground ? toward(step.x) : []));
-            if (state.ductReaction.kind === 'done' && state.ground) { phase++; sub = 'go'; }
+        } else if (step.how === 'wait') {
+            // The duct sneezes on its own timer: hold position until its first sneeze has passed.
+            game.setInput(...(state.ground ? toward(step.x) : []));
+            if (ductJustGusted(state) && state.ground) { phase++; sub = 'go'; }
         } else if (step.how === 'hop' || step.how === 'leap') {
             const [tx, ty] = step.to;
             const onLevel = y => state.ground && Math.abs(p.y - y) < 20;
             // Touching down refills the bursts: line up and wait again before the next try.
-            if (state.ground && sub === 'air') sub = 'go';
+            if (state.ground && (sub === 'air' || (sub === 'settle' && !onLevel(ty)))) sub = 'go';
             if (onLevel(ty) && Math.abs(p.x - tx) < (step.how === 'leap' ? 60 : 150)) {
+                // Arrived: a hard landing may bounce, so only steer from here on.
+                sub = 'settle';
                 game.setInput(...toward(tx));
                 if (Math.abs(p.vx) < 60) { phase++; sub = 'go'; }
             } else if (onLevel(ty)) {
@@ -113,6 +113,8 @@ export function driveStageThree(game, stop = state => state.stage === 4 || state
                     if (p.x >= step.takeoff) sub = 'launch';
                 }
                 if (sub === 'launch') { game.setInput(...(step.how === 'leap' ? ['right', 'spray'] : ['spray'])); sub = 'air'; }
+            } else if (sub === 'settle') {
+                game.setInput(...(p.vy < 120 ? toward(tx) : []));
             } else {
                 sub = state.ground ? sub : 'air';
                 const keys = [];

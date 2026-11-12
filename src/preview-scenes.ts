@@ -418,24 +418,24 @@ function skyEnding(): PreviewScene {
     };
 }
 
-function ductSneeze(repeat = false): PreviewScene {
+// The duct's timed sneezes: the first big one that spits out the overtime junk, and the later gusts.
+function ductSneeze(gust = false): PreviewScene {
     const game = createGame();
     game.startStage(3);
     const base = game.getSnapshot();
     const effects = createEffects().snapshot();
-    const kind = repeat ? 'repeat' : 'first';
+    const kind = gust ? 'gust' : 'first';
     const timing = ductTimings(kind);
     return {
-        id: repeat ? 'duct-repeat' : 'duct-sneeze', label: repeat ? 'Rooftop · Gentle repeat wind' : 'Rooftop · First sneeze & overtime junk', duration: 2.2, focusX: 1510,
+        id: gust ? 'duct-gust' : 'duct-sneeze', label: gust ? 'Rooftop · Timed duct gust' : 'Rooftop · First timed sneeze & overtime junk', duration: 2.2, focusX: 1510,
         markers: [{ at: .05, label: 'Inhale' }, { at: timing.inhale + .02, label: 'Twitch' },
-            { at: timing.inhale + timing.twitch + .18, label: 'Sneeze' }, { at: repeat ? .8 : 2.1, label: repeat ? 'Wind fades' : 'Junk settles' }],
+            { at: timing.inhale + timing.twitch + .18, label: 'Sneeze' }, { at: gust ? 1.6 : 2.1, label: gust ? 'Gust fades' : 'Junk settles' }],
         sample(time) {
             const at = Math.max(0, Math.min(2.2, time));
             const drift = Math.min(1, Math.max(0, at - timing.inhale - timing.twitch));
             return { state: { ...base, time: at, hasExtinguisher: true, checkpoint: 2,
-                rooftopEntrance: { kind: 'ready' }, ductReaction: { kind: 'reacting', age: repeat ? 10 + at : at, shots: repeat ? 2 : 1, bursts: [{ kind, age: at }] },
-                spray: { ...base.spray, burst: at < timing.inhale ? .24 * (1 - at / timing.inhale) : 0, dir: { x: Math.SQRT1_2, y: Math.SQRT1_2 } },
-                player: { ...base.player, x: 1580 - drift * (repeat ? 65 : 145), y: 160 - Math.sin(drift * Math.PI) * 45, a: -.05 }, ground: false,
+                rooftopEntrance: { kind: 'ready' }, ductReaction: { kind: 'reacting', age: gust ? 10 + at : at, shots: gust ? 2 : 1, bursts: [{ kind, age: at }] },
+                player: { ...base.player, x: 1580 - drift * (gust ? 120 : 145), y: 160 - Math.sin(drift * Math.PI) * 45, a: -.05 }, ground: false,
             }, effects };
         },
     };
