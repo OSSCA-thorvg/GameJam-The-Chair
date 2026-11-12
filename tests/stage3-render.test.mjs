@@ -24,6 +24,23 @@ test('the rooftop sales chart has no information banner above it', () => {
     assert.equal(banner, undefined);
 });
 
+test('the rooftop sales chart support ends cleanly at the top edge', () => {
+    const game = createGame();
+    game.startStage(3);
+    const state = game.getSnapshot();
+    const ctx = createRenderCtx({}, { fillText() {} });
+    Object.assign(ctx, { state, p: state.player, mode: state.mode });
+
+    drawRooftop(ctx);
+
+    const braces = ctx.commands.filter(command => command.c === '#353e4d'
+        && command.v.some(([x]) => x < STAGE_THREE.edge)
+        && command.v.every(([x]) => x >= 2360 && x <= STAGE_THREE.edge + 5));
+    assert.ok(braces.length > 0, 'the chart support is rendered');
+    const top = Math.min(...braces.flatMap(command => command.v.map(([, y]) => y)));
+    assert.ok(top >= -620, `support protrudes above the chart: ${top}`);
+});
+
 test('entrance replaces the falling chart with an employee board with an initially tidy row', () => {
     const game = createGame();
     game.startStage(3);

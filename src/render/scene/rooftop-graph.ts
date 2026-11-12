@@ -11,7 +11,7 @@ import { graphTarget } from './graph-target';
 const ROOF = -144;
 const EDGE = STAGE_THREE.edge;
 const PANEL = { left: EDGE, right: 2920, top: -620, bottom: -150 };
-const TOWER = { left: 2370, right: EDGE };
+const TOWER = { left: 2370, right: EDGE, top: PANEL.top + 10, bays: 5 };
 const INSIDE = STAGE_THREE.graph.catchUntil;
 const LAMPS = [2560, 2700, 2840];
 
@@ -30,19 +30,23 @@ function quad(left: number, top: number, right: number, bottom: number) {
 // Steel lattice tower on the roof behind the board, and struts from the facade under the overhang.
 function structure(ctx: RenderCtx) {
     const steel = '#4a5568', dark = '#353e4d';
-    for (const x of [TOWER.left, TOWER.right - 6]) ctx.rect(x, PANEL.top + 10, 8, ROOF - PANEL.top - 10, steel);
-    for (let y = ROOF; y > PANEL.top + 40; y -= 104) {
-        ctx.rod(TOWER.left + 4, y, TOWER.right - 2, y - 104, 3, dark);
-        ctx.rod(TOWER.right - 2, y, TOWER.left + 4, y - 104, 3, dark);
+    for (const x of [TOWER.left, TOWER.right - 6]) ctx.rect(x, TOWER.top, 8, ROOF - TOWER.top, steel);
+    const bayHeight = (ROOF - TOWER.top) / TOWER.bays;
+    for (let i = 0; i < TOWER.bays; i++) {
+        const y = ROOF - i * bayHeight;
+        const nextY = y - bayHeight;
+        ctx.rod(TOWER.left + 4, y, TOWER.right - 2, nextY, 3, dark);
+        ctx.rod(TOWER.right - 2, y, TOWER.left + 4, nextY, 3, dark);
         ctx.rod(TOWER.left + 4, y, TOWER.right - 2, y, 4, steel);
     }
+    ctx.rod(TOWER.left + 4, TOWER.top, TOWER.right - 2, TOWER.top, 4, steel);
     // Base plates bolted to the roof.
     for (const x of [TOWER.left - 6, TOWER.right - 14]) ctx.rect(x, ROOF - 6, 20, 6, '#2c3442');
     // Facade brackets and struts carrying the overhanging board.
     ctx.rect(EDGE, ROOF + 96, 14, 26, dark);
     for (const x of [2640, 2830]) ctx.rod(EDGE + 6, ROOF + 108, x, PANEL.bottom + 6, 6, steel);
     // Stay cables from the tower top to the board's free end.
-    ctx.rod(TOWER.left + 4, PANEL.top + 14, PANEL.right - 10, PANEL.top + 20, 1.6, '#7c8799');
+    ctx.rod(TOWER.left + 4, TOWER.top + 4, PANEL.right - 10, TOWER.top + 10, 1.6, '#7c8799');
 }
 
 // The catwalk under the board: grating, toe board and an end guard rail.
