@@ -110,35 +110,56 @@ export function skySurface(platform: Readonly<SkyPlatform>, x: number) {
     return platform.y + (x - platform.x - platform.width / 2) * Det.tan(platform.angle);
 }
 
-export type SkyHazard = { id: string; kind: SkyHazardKind; x: number; y: number; r: number; spin: number };
+export type SkyHazard = { id: string; kind: SkyHazardKind; x: number; y: number; r: number; spin: number; focusId: number };
 
-// Paper bundles ride each gust in from the right; birds cross the upper desks on their own beat.
+// Paper bundles ride each gust in from beyond the right edge, cross their stretch of the course, then drop out
+// of sight below. Birds swoop down from above, glide across the upper desks and climb away out of view, so
+// nothing ever blinks out on screen. Every path is a pure function of time.
 const PAPER_LANES = deepFreeze([
     { from: 3640, to: 2820, y: -1905, lag: 0, speed: 360 },
     { from: 3960, to: 3150, y: -2105, lag: .55, speed: 330 },
     { from: 4520, to: 3700, y: -2150, lag: .2, speed: 370 },
     { from: 5250, to: 4420, y: -2345, lag: .8, speed: 340 },
 ]);
+const PAPER_PATH = { lead: 1.5, drop: 170 };
 const BIRD_LANES = deepFreeze([
-    { from: 4560, to: 3880, y: -2215, period: 5.3, offset: 0, speed: 150 },
-    { from: 5080, to: 4380, y: -2255, period: 6.1, offset: 2.4, speed: 165 },
-    { from: 5560, to: 4700, y: -2450, period: 4.9, offset: 1.1, speed: 185 },
+    { from: 4560, to: 3880, y: -2215, period: 8.2, offset: 0, speed: 150 },
+    { from: 5080, to: 4380, y: -2255, period: 8, offset: 3.4, speed: 165 },
+    { from: 5560, to: 4700, y: -2450, period: 8.4, offset: 6.1, speed: 185 },
 ]);
+const BIRD_PATH = { swoop: 1.4, reach: 260, height: 950, climb: 240 };
 
 export function skyHazards(time: number): SkyHazard[] {
     const out: SkyHazard[] = [];
     const w = STAGE_FOUR.wind;
     PAPER_LANES.forEach((lane, i) => {
-        const age = cycle(time - w.calm - w.warn - lane.lag, w.period);
-        const x = lane.from - age * lane.speed;
-        if (x < lane.to) return;
-        out.push({ id: `paper-${i}`, kind: 'paper', x, y: lane.y + Det.sin(age * 5 + i) * 18, r: 24, spin: age * 7 + i });
+        const shifted = time - w.calm - w.warn - lane.lag + PAPER_PATH.lead;
+        const age = cycle(shifted, w.period);
+        const glide = PAPER_PATH.lead + (lane.from - lane.to) / lane.speed;
+        const falling = Math.max(0, age - glide);
+        out.push({
+            id: `paper-${i}`, kind: 'paper', r: 24, spin: age * 7 + i, focusId: i * 100000 + Math.floor(shifted / w.period),
+            x: lane.from + PAPER_PATH.lead * lane.speed - age * lane.speed,
+            y: lane.y + Det.sin(age * 5 + i) * 18 + PAPER_PATH.drop * falling * falling,
+        });
     });
     BIRD_LANES.forEach((lane, i) => {
-        const age = cycle(time + lane.offset, lane.period);
-        const x = lane.from - age * lane.speed;
-        if (x < lane.to) return;
-        out.push({ id: `bird-${i}`, kind: 'bird', x, y: lane.y + Det.sin(age * 2.4 + i) * 26, r: 22, spin: age * 11 });
+        const shifted = time + lane.offset;
+        const age = cycle(shifted, lane.period);
+        const glide = (lane.from - lane.to) / lane.speed;
+        const { swoop, reach, height, climb } = BIRD_PATH;
+        let x: number, y = lane.y + Det.sin(age * 2.4 + i) * 26;
+        if (age < swoop) {
+            const k = 1 - age / swoop;
+            x = lane.from + reach * k;
+            y -= height * k * k;
+        } else {
+            const flying = age - swoop;
+            const away = Math.max(0, flying - glide);
+            x = lane.from - flying * lane.speed;
+            y -= climb * away * away;
+        }
+        out.push({ id: `bird-${i}`, kind: 'bird', x, y, r: 22, spin: age * 11, focusId: i * 100000 + Math.floor(shifted / lane.period) });
     });
     return out;
 }

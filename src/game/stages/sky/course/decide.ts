@@ -23,7 +23,7 @@ export type SkyResult = Omit<SkyInput, 'time' | 'direction' | 'length' | 'sky' |
     reached: boolean;      // a new flag was saved
     fell: boolean;         // dropped below the last flag and was put back
     won: boolean;
-    hit: SkyHazardKind | null;  // a paper bundle or bird knocked the chair back this tick
+    hit: { kind: SkyHazardKind; focusId: number } | null;  // a paper bundle or bird knocked the chair back this tick
 };
 
 // Stage 4 above the clouds: hover in, hop across growing windows, a gusting sign and floating desks,
@@ -34,7 +34,7 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
     let { ground, coyote, jumpQ, checkpoint, sprayBurst } = input;
     let sprayDir = { ...input.sprayDir };
     let reached = false, fell = false, won = false;
-    let hit: SkyHazardKind | null = null;
+    let hit: SkyResult['hit'] = null;
     const { direction, time } = input;
     const result = (speed: number | null): SkyResult => ({ sky, p, ground, coyote, jumpQ, checkpoint, sprayBurst, sprayDir, speed, reached, fell, won, hit });
     sky.age += dt;
@@ -108,7 +108,7 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
             const struck = skyHazards(time).find(item => Det.hypot(item.x - body.x, item.y - body.y) < item.r + STAGE_FOUR.knock.reach);
             if (struck) {
                 // Papers slap the chair backwards and up; a bird clips it back and down.
-                hit = struck.kind;
+                hit = { kind: struck.kind, focusId: struck.focusId };
                 sky.knock = STAGE_FOUR.knock.cooldown;
                 sky.knockKind = struck.kind;
                 p.vx = Math.min(p.vx, 0) - (struck.kind === 'paper' ? 210 : 240);

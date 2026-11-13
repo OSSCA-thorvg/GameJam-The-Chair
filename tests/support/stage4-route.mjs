@@ -20,7 +20,7 @@ function steer(p, x, speed, keys) {
 // Keep the chair over the middle of the platform it stands on while waiting for a launch window.
 function standKeys(state) {
     const keys = [], here = platform(state, state.sky.standing);
-    if (here) steer(state.player, here.x + here.width * .45, 120, keys);
+    if (here) steer(state.player, here.x + here.width * .5, 160, keys);
     return keys;
 }
 
@@ -37,8 +37,9 @@ function hopKeys(state, id) {
     return keys;
 }
 
+// Plays one hop. Returns 'won', 'missed' (a fall, lost focus, a knock on a clean try or a timeout) or the id of
+// the platform the chair next settles on (the target, or wherever the wind and hazards put it instead).
 function run(game, plan, id, visit) {
-    // plan: { wait, launch }. Returns 'landed' | 'missed' | 'won'.
     let frames = 0, launched = false;
     const limit = Math.round((plan.wait + (id === 'finish' ? 16 : 5)) / STEP);
     while (frames++ < limit) {
@@ -46,9 +47,8 @@ function run(game, plan, id, visit) {
         if (state.stage === 5) return 'won';
         visit?.(state);
         if (state.sky.phase === 'reveal' || state.sky.phase === 'depth') { game.setInput(); game.step(STEP); game.drainEvents(); continue; }
-        if (state.deaths > plan.deaths || (plan.clean && state.sky.knock > 0 && launched)) return 'missed';
-        if (launched && state.ground && state.sky.standing === id) return 'landed';
-        if (state.ground && state.sky.standing !== plan.from && (launched || state.sky.standing !== null)) return 'missed';
+        if (state.deaths > plan.deaths || state.mode !== 'play' || (plan.clean && state.sky.knock > 0)) return 'missed';
+        if (state.ground && state.sky.standing !== null && (state.sky.standing !== plan.from || (launched && state.sky.standing === id))) return state.sky.standing;
         if (!launched && frames * STEP >= plan.wait) {
             launched = true;
             const keys = hopKeys(state, id);
@@ -60,17 +60,24 @@ function run(game, plan, id, visit) {
     return 'missed';
 }
 
-function plan(game, from, id, minWait) {
+// Tries launches on a saved copy and keeps the best: a clean landing on the target, then any landing on it,
+// then any landing further along the route, then (last resort) any safe landing to re-plan from.
+function plan(game, from, id, route, minWait) {
     const saved = game.serialize(), deaths = game.getSnapshot().deaths;
-    const tries = [];
-    for (const clean of [true, false]) for (let wait = minWait; wait < 9; wait += .2) for (const launch of ['spray', 'jump']) tries.push({ wait, launch, clean, from, deaths });
-    for (const attempt of tries) {
+    const order = platform => platform === 'won' || platform === id ? 2 : route.indexOf(platform) > route.indexOf(from) ? 1 : 0;
+    let fallback = null, forward = null;
+    for (const clean of [true, false]) for (let wait = minWait; wait < 9; wait += .2) for (const launch of ['spray', 'jump']) {
+        const attempt = { wait, launch, clean, from, deaths };
         game.restore(saved);
         const result = run(game, attempt, id);
-        if (result !== 'missed') { game.restore(saved); return attempt; }
+        if (result === 'missed' || !route.includes(result) && result !== 'won') continue;
+        const rank = order(result);
+        if (rank === 2) { game.restore(saved); return attempt; }
+        if (rank === 1) forward ??= attempt;
+        else if (!clean) fallback ??= attempt;
     }
     game.restore(saved);
-    return null;
+    return forward ?? fallback;
 }
 
 export function driveStageFour(game, visit = () => {}, route = STAGE_FOUR_ROUTE) {
@@ -83,13 +90,15 @@ export function driveStageFour(game, visit = () => {}, route = STAGE_FOUR_ROUTE)
         game.step(STEP); game.drainEvents();
     }
     let from = game.getSnapshot().sky.standing;
-    for (const id of route.slice(route.indexOf(from) + 1)) {
-        const chosen = plan(game, from, id, from === 'drawer-desk' ? .8 : 0);
-        if (!chosen) throw new Error(`No clean hop from ${from} to ${id}: ${JSON.stringify(game.getSnapshot().player)}`);
+    for (let hop = 0; hop < 40; hop++) {
+        const id = route[route.indexOf(from) + 1];
+        if (!id) break;
+        const chosen = plan(game, from, id, route, from === 'drawer-desk' ? .8 : 0);
+        if (!chosen) throw new Error(`No safe hop from ${from} to ${id}: ${JSON.stringify(game.getSnapshot().player)}`);
         const result = run(game, chosen, id, visit);
         if (result === 'won') return game.getSnapshot();
-        if (result !== 'landed') throw new Error(`Planned hop from ${from} to ${id} did not replay`);
-        from = id;
+        if (result === 'missed') throw new Error(`Planned hop from ${from} to ${id} did not replay`);
+        from = result;
     }
     for (let frame = 0; frame < 120 * 30; frame++) {
         const state = game.getSnapshot();

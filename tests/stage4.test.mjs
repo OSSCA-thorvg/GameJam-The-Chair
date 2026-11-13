@@ -92,21 +92,63 @@ test('the headwind always pushes back and a warning breeze comes before every gu
     assert.ok(gust.p.vx < calm.p.vx * 2.5, 'a gust blows much harder');
 });
 
-test('paper bundles ride the gusts and birds knock the chair backwards', () => {
+test('paper bundles ride the gusts and birds knock the chair backwards and cost focus', () => {
     const w = STAGE_FOUR.wind;
-    assert.equal(skyHazards(1).filter(h => h.kind === 'paper').length, 0, 'no papers in the calm');
-    const papers = skyHazards(w.calm + w.warn + 1).filter(h => h.kind === 'paper');
-    assert.ok(papers.length > 0);
+    // In the calm the bundles have dropped below their lane or are still off to the right; a gust brings them in.
+    const gust = skyHazards(w.period + w.calm + w.warn + .5).filter(h => h.kind === 'paper');
+    const calm = skyHazards(w.period + w.calm - .1).filter(h => h.kind === 'paper');
+    for (const [i, paper] of calm.entries()) assert.ok(paper.y > gust[i].y + 150 || paper.x > gust[i].x + 300, `${paper.id} sits out the calm`);
     for (const kind of ['paper', 'bird']) {
         let time = 0, hazard;
-        while (!(hazard = skyHazards(time).find(h => h.kind === kind))) time += .05;
+        while (!(hazard = skyHazards(time).find(h => h.kind === kind && h.x > 3900 && h.x < 4400))) time += .05;
         const r = skyStep(course({ time, p: { x: hazard.x, y: hazard.y + 20, vx: 100, vy: 0, a: 0, w: 0 } }), 1 / 120);
-        assert.equal(r.hit, kind);
+        assert.equal(r.hit?.kind, kind);
         assert.ok(r.p.vx < -100, `${kind} knocks the chair back`);
         assert.equal(r.sky.knockKind, kind);
         const again = skyStep({ ...course({ time: time + 1 / 120, p: r.p }), sky: r.sky }, 1 / 120);
         assert.equal(again.hit, null, 'one knock at a time');
     }
+});
+
+test('hazards never blink out on screen: they leave the view before their path restarts', () => {
+    const step = 1 / 60;
+    let previous = skyHazards(0);
+    for (let t = step; t < 40; t += step) {
+        const now = skyHazards(t);
+        for (const [i, h] of now.entries()) {
+            const before = previous[i];
+            const jump = Math.hypot(h.x - before.x, h.y - before.y);
+            // A wrap back to the start is a teleport; both ends must be far from every platform's height band.
+            if (jump > 60) {
+                assert.ok(before.y > -1300 || before.y < -2900 || before.x < 2300 || before.x > 5900, `${h.id} left the view at ${before.x},${before.y}`);
+                assert.ok(h.y < -2900 || h.x > before.x + 400, `${h.id} re-enters from out of view at ${h.x},${h.y}`);
+            }
+        }
+        previous = now;
+    }
+});
+
+test('a bird or paper hit costs focus once per pass and running out of focus ends the attempt', () => {
+    const game = createGame(); game.startStage(4);
+    const state = JSON.parse(game.serialize());
+    const time = (() => { let t = 30; while (!skyHazards(t).find(h => h.kind === 'bird' && h.x > 4000 && h.x < 4400)) t += .05; return t; })();
+    const bird = skyHazards(time).find(h => h.kind === 'bird' && h.x > 4000 && h.x < 4400);
+    const place = (s, t, focus) => {
+        const target = skyHazards(t).find(h => h.id === bird.id);
+        Object.assign(s, { time: t - 1 / 120, focus, mode: 'play' });
+        Object.assign(s.sky, { phase: 'course', lift: 1, knock: 0, knockKind: null, standing: null });
+        Object.assign(s.p, { x: target.x, y: target.y + 20, vx: 0, vy: 0 });
+        s.ground = false;
+        return s;
+    };
+    game.restore(JSON.stringify(place(state, time, 100)));
+    game.step(1 / 120);
+    assert.equal(game.getSnapshot().focus, 100 - 20);
+    assert.equal(game.getSnapshot().focusNotice?.kind, 'bird');
+    const low = JSON.parse(game.serialize());
+    game.restore(JSON.stringify(place(low, time + 8.2, 15)));
+    game.step(1 / 120);
+    assert.equal(game.getSnapshot().mode, 'focuslost', 'the next pass of the same bird can still distract, and that one ends it');
 });
 
 test('desks rock back and forth and carry the chair standing on them', () => {
