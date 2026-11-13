@@ -451,9 +451,9 @@ function skyEnding(): PreviewScene {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const duration = settle + turn + hold;
     return {
-        id: 'sky-ending', label: 'Sky · Side to back & bread clouds proofing', duration, focusX: STAGE_FOUR.goal,
-        markers: [{ at: 0, label: 'Side view' }, { at: settle + turn * .3, label: 'Dough rising' },
-            { at: settle + turn / 2, label: 'Camera turning' }, { at: settle + turn, label: 'Back view & baked' },
+        id: 'sky-ending', label: 'Sky · Side to back through bread clouds', duration, focusX: STAGE_FOUR.goal,
+        markers: [{ at: 0, label: 'Side view' }, { at: settle + turn / 2, label: 'Camera turning' },
+            { at: settle + turn, label: 'Back view' },
             { at: duration, label: 'Stage 5 hand-off' }],
         sample(time) {
             const at = Math.max(0, Math.min(duration, time));

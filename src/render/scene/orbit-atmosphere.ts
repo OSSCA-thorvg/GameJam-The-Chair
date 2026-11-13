@@ -1,6 +1,6 @@
 import type { RenderCtx } from '../context';
 import type { SkyProjection } from './sky-projection';
-import { blendCloudTone, breadCloud, CLOUD_TONES, puffCloud, seeded } from './cloud-art';
+import { breadCloud, CLOUD_TONES, puffCloud, seeded } from './cloud-art';
 
 const CITY = (() => {
     const random = seeded(9102);
@@ -34,50 +34,24 @@ export function orbitSky(ctx: RenderCtx, anchor: BasinAnchor = ctx.state.player)
     }
 }
 
-// Dough springs past its full size, then sinks back like a loaf leaving the oven.
-function rise(t: number) {
-    if (t <= 0) return 0;
-    if (t >= 1) return 1;
-    const u = t - 1, overshoot = 2.6;
-    return 1 + (overshoot + 1) * u * u * u + overshoot * u * u;
-}
-
-/**
- * Bread cloud that can still be proofing: `proof` 0 is a small pale ball of dough, 1 the baked cloud.
- * `opacity` fades it further. Fully proofed, opaque clouds take the shared `breadCloud` path so stage five draws exactly what it always did.
- */
-function bakedCloud(ctx: RenderCtx, x: number, y: number, size: number, seed: number, near: boolean, proof: number, opacity = 1) {
-    if (proof >= 1 && opacity >= 1) {
-        breadCloud(ctx, x, y, size, seed, near);
-        return;
-    }
-    const swell = rise(proof);
-    if (swell <= .02) return;
-    const baked = ctx.clamp((proof - .25) / .6, 0, 1);
-    const tone = blendCloudTone(CLOUD_TONES.ascent, CLOUD_TONES.bread, baked * baked * (3 - 2 * baked));
-    // The puff stays seated on its flat base while it swells, so dough rises instead of inflating from the middle.
-    const scale = .18 + .82 * swell;
-    puffCloud(ctx, x, y + 34 * size * (1 - scale), size * scale, seed, tone,
-        { alpha: (near ? .95 : .72) * Math.min(1, proof * 4) * opacity, fade: true });
-}
-
 export type CloudBankOptions = {
     anchor?: BasinAnchor;
-    /** 0..1 progress of the stage-four ending; each cloud proofs on its own beat. */
-    proof?: number;
-    /** Clouds nearer the camera than this are skipped; the swinging ending camera passes close to some. */
+    /**
+     * Draw only these cloud seeds. They skip stage five's clear-centre rule, because the caller already chose
+     * them as the clouds that stay on screen; the stage-four ending passes the clouds of stage five's first frame.
+     */
+    only?: ReadonlySet<number>;
+    /** Clouds nearer the camera than this are skipped and fade in beyond it; the ending camera passes close to some. */
     nearDepth?: number;
 };
 
-export function orbitCloudBank(ctx: RenderCtx, view: SkyProjection, travel: number, foreground: boolean, options: CloudBankOptions = {}) {
+type PlacedCloud = { seed: number; x: number; y: number; size: number; opacity: number };
+
+function placeClouds(ctx: RenderCtx, view: SkyProjection, travel: number, foreground: boolean, options: CloudBankOptions) {
     const anchor = options.anchor ?? ctx.state.player;
-    const proof = options.proof ?? 1;
-    // Each cloud starts proofing a little after the previous one, so the basin bubbles up rather than appearing at once.
-    const beat = (index: number, count: number) => ctx.clamp((proof - index / count * .45) / .55, 0, 1);
-    const saved = { scale: ctx.scale, cam: ctx.cam, vertical: ctx.vertical, ox: ctx.ox, oy: ctx.oy,
-        rotation: ctx.rotation, localScale: ctx.localScale, mirror: ctx.mirror };
-    Object.assign(ctx, { scale: 1, cam: 0, vertical: 0, ox: 0, oy: 0, rotation: 0, localScale: 1, mirror: null });
-    for (const [index, cloud] of CLOUDS.entries()) {
+    const placed: PlacedCloud[] = [];
+    for (const cloud of CLOUDS) {
+        if (options.only && !options.only.has(cloud.seed)) continue;
         const z = ((cloud.z - travel + 12000) % 10000) - 500;
         if (z < -160 || (z < 900) !== foreground) continue;
         const center: [number,number,number] = [z, cloud.y - anchor.y * .45, cloud.x - anchor.x * .55];
@@ -86,17 +60,34 @@ export function orbitCloudBank(ctx: RenderCtx, view: SkyProjection, travel: numb
         const [x,y] = view.project(center);
         const edge = view.project([z,center[1],center[2]+cloud.radius]);
         const size = Math.abs(edge[0]-x) / 170;
-        if (!foreground && z < 4500 && Math.abs(x-ctx.W/2) < ctx.W*.34+size*90) continue;
+        if (!options.only && !foreground && z < 4500 && Math.abs(x-ctx.W/2) < ctx.W*.34+size*90) continue;
         if (x < -size*300 || x > ctx.W+size*300 || y-size*180 > ctx.H || y+size*40 < 0) continue;
         // With a custom cutoff, clouds swinging in past the camera fade in rather than popping at it.
         const opacity = options.nearDepth === undefined ? 1 : ctx.clamp((depth - options.nearDepth) / 600, 0, 1);
-        bakedCloud(ctx, x, y, size, cloud.seed, foreground, beat(index, CLOUDS.length), opacity);
+        placed.push({ seed: cloud.seed, x, y, size, opacity });
     }
-    if (!foreground) for (const [i, [x,y,seed]] of [[.15,.15,9201],[.83,.1,9202]].entries()) {
-        bakedCloud(ctx, ctx.W*x + Math.sin(travel*.0003)*8, ctx.H*y, ctx.W/2500, seed, false, beat(i * 4 + 2, 10));
+    return placed;
+}
+
+/** Seeds of the basin clouds this view shows, by stage five's own rules. */
+export function basinCloudSeeds(ctx: RenderCtx, view: SkyProjection, travel: number, anchor: BasinAnchor) {
+    return new Set([false, true].flatMap(foreground =>
+        placeClouds(ctx, view, travel, foreground, { anchor }).map(cloud => cloud.seed)));
+}
+
+export function orbitCloudBank(ctx: RenderCtx, view: SkyProjection, travel: number, foreground: boolean, options: CloudBankOptions = {}) {
+    const placed = placeClouds(ctx, view, travel, foreground, options);
+    const saved = { scale: ctx.scale, cam: ctx.cam, vertical: ctx.vertical, ox: ctx.ox, oy: ctx.oy,
+        rotation: ctx.rotation, localScale: ctx.localScale, mirror: ctx.mirror };
+    Object.assign(ctx, { scale: 1, cam: 0, vertical: 0, ox: 0, oy: 0, rotation: 0, localScale: 1, mirror: null });
+    for (const { seed, x, y, size, opacity } of placed) {
+        if (opacity >= 1) breadCloud(ctx, x, y, size, seed, foreground);
+        else puffCloud(ctx, x, y, size, seed, CLOUD_TONES.bread, { alpha: (foreground ? .95 : .72) * opacity, fade: true });
     }
-    // A low continuous cloud floor leaves the city visible above its crests. It carries over from stage four,
-    // so it is already baked when the ending starts.
+    if (!foreground) for (const [x,y,seed] of [[.15,.15,9201],[.83,.1,9202]]) {
+        breadCloud(ctx, ctx.W*x + Math.sin(travel*.0003)*8, ctx.H*y, ctx.W/2500, seed);
+    }
+    // A low continuous cloud floor leaves the city visible above its crests. It carries over from stage four.
     if (!foreground) for (let i = 0; i < 5; i++) {
         breadCloud(ctx, ctx.W * (i / 4), ctx.H * (.98+Math.sin(i*4)*.065), ctx.W/1000*(.8+(i%2)*.2), 700+i*2);
     }

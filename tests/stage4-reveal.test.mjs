@@ -181,16 +181,21 @@ test('the ending clouds are bread clouds, not flat pale ovals', () => {
     }
 });
 
-test('the far clouds proof from pale dough into bread while the camera turns', () => {
-    const { settle, turn } = STAGE_FOUR.reveal;
+test('ending clouds are bread from the start and none vanishes while the camera turns', () => {
+    const { settle, turn, hold } = STAGE_FOUR.reveal;
     // Cloud bodies: linear crown-to-belly gradients whose underside fades out.
-    const crowns = commands => commands.filter(command => Array.isArray(command.c?.stops) && !command.c.radius
-        && command.c.stops.length === 3 && command.c.stops[2][1][3] === 0)
-        .map(command => command.c.stops[0][1].slice(0, 3).join());
+    const bodies = commands => commands.filter(command => Array.isArray(command.c?.stops) && !command.c.radius
+        && command.c.stops.length === 3 && command.c.stops[2][1][3] === 0);
     const bread = hex(CLOUD_TONES.bread.top).join();
-    const proofing = crowns(revealFrame('reveal', settle + turn * .3)).filter(crown => crown !== bread);
-    assert.ok(proofing.length > 0, 'some clouds are still pale dough mid-turn');
-    assert.deepEqual(crowns(revealFrame('depth', 0)).filter(crown => crown !== bread), [], 'every cloud is baked at the back view');
+    let previous = 0;
+    for (let at = 0; at <= settle + turn + hold; at += 1 / 30) {
+        const turning = at < settle + turn;
+        const clouds = bodies(revealFrame(turning ? 'reveal' : 'depth', turning ? at : at - settle - turn));
+        assert.deepEqual(clouds.map(command => command.c.stops[0][1].slice(0, 3).join()).filter(crown => crown !== bread), [],
+            `every cloud is bread at ${at.toFixed(2)} s`);
+        assert.ok(clouds.length >= previous, `no cloud disappears at ${at.toFixed(2)} s`);
+        previous = clouds.length;
+    }
 });
 
 test('the last ending frame shows the same bread clouds as the first frame of stage five', () => {
