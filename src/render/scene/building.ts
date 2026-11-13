@@ -1,6 +1,7 @@
 import { translate, type Message } from '../../i18n';
 import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES, chairChatLine } from '../../game/stages/building/data';
 import type { RenderCtx } from '../context';
+import { SPEECH_FONT } from '../fonts';
 import type { Vector } from '../types';
 import { chairLift, expressFloor } from './express';
 import { practiceFloor, checkpointFlag } from './decor';
@@ -24,7 +25,7 @@ function bubble(ctx: RenderCtx, text: Message, x: number, y: number, width: numb
         ], ctx.gradientFill(x, y - 22, x, y + 22, [[0, '#ffffff'], [1, '#e2e8df']], alpha));
     }
     if (tail) ctx.polygon([[x - 8, y + 20], [x + 9, y + 20], [x + (tail === 'right' ? 18 : -10), y + 36]], fill);
-    ctx.label(translate(text, ctx.locale), x, y + 5, 13, ctx.tint('#344955', alpha));
+    ctx.label(translate(text, ctx.locale), x, y + 5, 13, ctx.tint('#344955', alpha), SPEECH_FONT);
 }
 // Typing bubbles stay in the band above the chair chatter (y >= 193) so the two never overlap.
 const OFFICE_BUBBLE_TOP = 70;
@@ -165,7 +166,6 @@ function typingWorker(ctx: RenderCtx, x: number, y: number, look: OfficeAppearan
 function chair(ctx: RenderCtx, x: number, y: number) {
     const shadowStart = ctx.commands.length;
     ctx.ellipse(x, y + 3, 37, 5, '#35465622');
-    const actorStart = ctx.commands.length;
     ctx.rod(x - 18, y - 37, x - 22, y - 90, 6, '#515665');
     ctx.rect(x - 30, y - 90, 18, 48, '#6f7687');
     ctx.rect(x - 24, y - 40, 48, 8, '#6f7687');
@@ -175,20 +175,16 @@ function chair(ctx: RenderCtx, x: number, y: number) {
         ctx.ellipse(x + side * 17, y - 5, 5, 5, '#3f4650');
         ctx.rod(x + side * 17, y - 5, x + side * 17 + Math.cos(ctx.t * 9) * 3, y - 5 + Math.sin(ctx.t * 9) * 3, 1, '#b6c5c7');
     }
-    if (ctx.state.corridor.departure.kind === 'descending') {
-        cabinActors(ctx, shadowStart, actorStart - shadowStart);
-    } else {
-        ctx.foregroundActors.push(...ctx.commands.slice(actorStart));
-    }
+    if (ctx.state.corridor.departure.kind === 'descending') cabinActors(ctx, shadowStart);
 }
-function cabinActors(ctx: RenderCtx, start: number, foregroundOffset = 0) {
+function cabinActors(ctx: RenderCtx, start: number) {
     const departure = ctx.state.corridor.departure;
     if (departure.kind !== 'descending') return;
     const age = departure.age;
     const aperture = 1 - ctx.clamp((age - 1.3) / .7, 0, 1);
     const [left, top] = ctx.screenPoint(STAGE_TWO.lift - 1 - aperture * 99, 190);
     const [right, bottom] = ctx.screenPoint(STAGE_TWO.lift + aperture * 99, 420);
-    const visible = ctx.commands.splice(start).flatMap((command, index) => {
+    const visible = ctx.commands.splice(start).flatMap(command => {
         let points = command.v;
         for (const [axis, edge, direction] of [[0, left, 1], [0, right, -1], [1, top, 1], [1, bottom, -1]] satisfies [0 | 1, number, number][]) {
             const clipped: Vector[] = [];
@@ -205,9 +201,7 @@ function cabinActors(ctx: RenderCtx, start: number, foregroundOffset = 0) {
             points = clipped;
         }
         if (points.length < 3 || aperture === 0) return [];
-        const clipped = { ...command, v: points };
-        if (index >= foregroundOffset) ctx.foregroundActors.push(clipped);
-        return [clipped];
+        return [{ ...command, v: points }];
     });
     ctx.commands.push(...visible);
 }
@@ -255,16 +249,14 @@ function room(ctx: RenderCtx) {
     ctx.rod(x + 160, 345, x + 160, 420, 8, '#657b7b');
     for (const dx of [-110, 0, 110]) {
         ctx.ripple(x + dx, 404, 28, 10, 2, '#f0e8c0');
-        ctx.label('···', x + dx, 405, 18, '#7c8d85');
+        for (const dot of [-6, 0, 6]) ctx.ellipse(x + dx + dot, 399, 1.7, 1.7, '#7c8d85');
     }
     const pushing = Math.max(0, scene.age - 4.6) * 100;
     worker(ctx, x - 156 + pushing, 420, 'facilitator', 1,
         scene.age > 4.6 ? [ctx.p.x - 31, ctx.p.y - 61] : undefined);
     const line: Message = scene.age < 2.4 ? 'building.chairsGone' : scene.age < 3.5 ? 'building.stayNext' : 'building.oneMoreChair';
     bubble(ctx, line, x, 75, 440);
-    const actorStart = ctx.commands.length;
     player(ctx);
-    ctx.foregroundActors.push(...ctx.commands.slice(actorStart));
 }
 export function drawBuilding(ctx: RenderCtx) {
     const { state, cam, VW } = ctx;
@@ -383,6 +375,5 @@ export function drawBuilding(ctx: RenderCtx) {
         const actorStart = ctx.commands.length;
         player(ctx);
         if (departure.kind === 'descending' && departure.reason === 'abduction') cabinActors(ctx, actorStart);
-        else ctx.foregroundActors.push(...ctx.commands.slice(actorStart));
     }
 }

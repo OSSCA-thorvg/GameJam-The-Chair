@@ -1,7 +1,7 @@
 import type { Canvas, LinearGradient, RadialGradient, Scene, Shape, Text, ThorVGNamespace } from '@thorvg/webcanvas';
 import type { RenderCtx } from './context';
 import type { Blend, DrawCommand, Gradient, LayerSpec, TextSpec } from './types';
-import { signFontCss } from './fonts';
+import { fontCss, type FontName } from './fonts';
 import { applyLayerOverrides, effectScaleForArea, type LayerOverrides, type RenderStats } from './perf';
 
 type LayerSlot = {
@@ -125,13 +125,22 @@ export function paint(
         paintCanvas(ctx, bg, commands);
         if (stats) stats.renderMs = performance.now() - start;
     }
-    const labelsStart = stats ? performance.now() : 0;
-    const lg = ctx.lg;
-    lg.save();
-    // System-font labels sit above the vector canvas, including its actors.
-    paintCanvas(ctx, lg, ctx.foregroundActors);
-    lg.restore();
-    if (stats) stats.labelsMs = performance.now() - labelsStart;
+}
+
+/** Measures text with ThorVG's own layout, so bubbles and bursts fit the glyphs ThorVG draws. */
+export function thorvgTextWidth(TVG: ThorVGNamespace) {
+    const probe = new TVG.Text();
+    const cache = new Map<string, number>();
+    return (content: string, font: FontName) => {
+        const key = `${font}\n${content}`;
+        let width = cache.get(key);
+        if (width === undefined) {
+            probe.font(font).fontSize(100 * PX_TO_PT).text(content);
+            width = content ? probe.bounds().width / 100 : 0;
+            cache.set(key, width);
+        }
+        return width;
+    };
 }
 
 function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: PaintPool, items: Item[], stats?: RenderStats) {
@@ -223,11 +232,12 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         // ThorVG 1.1.3 Text sizes are points (96/72 px each); TextSpec sizes are CSS px like Canvas2D.
         const size = spec.size * PX_TO_PT;
         const [r, g, b, a] = ctx.rgba(spec.fill);
-        slot.front.fontSize(size).fill(r, g, b).opacity(a).transform(matrix).visible(true);
+        const fade = spec.opacity ?? 1;
+        slot.front.fontSize(size).fill(r, g, b).opacity(Math.round(a * fade)).transform(matrix).visible(true);
         if (spec.outline) {
             const [or, og, ob, oa] = ctx.rgba(spec.outline.color);
             slot.back.fontSize(size).fill(or, og, ob).outline(spec.outline.width, or, og, ob)
-                .opacity(oa).transform(matrix).visible(true);
+                .opacity(Math.round(oa * fade)).transform(matrix).visible(true);
         } else {
             slot.back.visible(false);
         }
@@ -455,7 +465,8 @@ function text2d(bg: CanvasRenderingContext2D, spec: TextSpec) {
     bg.save();
     bg.translate(spec.x, spec.y);
     bg.rotate(spec.rotation);
-    bg.font = signFontCss(spec.size);
+    bg.font = fontCss(spec.font, spec.size);
+    if (spec.opacity !== undefined) bg.globalAlpha = spec.opacity;
     bg.textAlign = 'center';
     bg.textBaseline = 'middle';
     if (spec.outline) {

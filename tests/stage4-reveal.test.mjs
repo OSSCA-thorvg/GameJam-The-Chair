@@ -18,9 +18,9 @@ const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, dr
 test('the stage four billboard slogan fills its space without covering the portrait', () => {
     const ems = { '흔들리지': 4, '않는 기업': 3.25, UNSHAKE: 5.2, 'ABLE INC.': 4.8 };
     const renderLabels = (locale, width) => {
-        // Only measuring touches the label canvas; the copy itself is ThorVG Text in the command list.
-        const lg = { measureText(text) { return { width: Number(this.font.match(/([\d.]+)px/)?.[1]) * ems[text] }; } };
-        const ctx = createRenderCtx({}, lg);
+        // Before ThorVG loads, the base canvas measures; the copy itself is ThorVG Text in the command list.
+        const bg = { measureText(text) { return { width: Number(this.font.match(/([\d.]+)px/)?.[1]) * ems[text] }; } };
+        const ctx = createRenderCtx(bg);
         ctx.locale = locale;
         ctx.scale = 1 / 1.12;
         skyCoursePlatform(ctx, { id: 'last-sign', kind: 'sign', x: 0, y: 0, width, angle: 0 });
@@ -73,17 +73,13 @@ test('the ending draws only the chair and sky without slogans at every camera ph
         for (const [phase, age] of [['reveal', 1], ['reveal', 5], ['depth', 0], ['depth', 3]]) {
             const state = structuredClone(base);
             Object.assign(state.sky, { phase, age });
-            const labels = [], transforms = [];
-            const ctx = createRenderCtx({}, {
-                save() {}, restore() {},
-                transform(...matrix) { transforms.push(matrix); },
-                fillText(text) { labels.push(text); },
-            });
+            const transforms = [];
+            const ctx = createRenderCtx({ save() {}, restore() {}, transform(...matrix) { transforms.push(matrix); } });
             Object.assign(ctx, { state, p: state.player, mode: 'play', locale, W: width, H: 510 });
             const before = structuredClone(state);
             drawSky(ctx);
             assert.deepEqual(state, before, 'cinematic rendering leaves gameplay untouched');
-            assert.deepEqual(labels, []);
+            assert.deepEqual(ctx.commands.filter(command => command.text), []);
             assert.deepEqual(transforms, []);
             assert.ok(ctx.commands.length > 100);
             for (const command of ctx.commands) {
@@ -149,7 +145,7 @@ function renderFrame(stage, setup) {
     game.startStage(stage);
     const state = structuredClone(game.getSnapshot());
     setup?.(state);
-    const ctx = createRenderCtx({}, {});
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { state, p: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t: 0 });
     (stage === 4 ? drawSky : drawOrbit)(ctx);
     return ctx.commands;

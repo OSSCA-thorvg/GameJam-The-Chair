@@ -15,7 +15,7 @@ function stageContext(stage, camera = 0) {
     const game = createGame();
     game.startStage(stage);
     const state = game.getSnapshot();
-    const ctx = createRenderCtx({}, { fillText() {} });
+    const ctx = createRenderCtx({});
     Object.assign(ctx, {
         state,
         p: state.player,

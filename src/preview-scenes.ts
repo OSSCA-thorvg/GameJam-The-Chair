@@ -9,6 +9,9 @@ import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/stages/office/monitor/decide';
 import { SPLASH_DURATION } from './ui/splash-meta';
+import { REACTION_LIFE, SPEECH_LIFE } from './ui/types';
+import { translate, type Locale } from './i18n';
+import type { SceneTalk } from './render/types';
 import { OPENING_BEATS, OPENING_DURATION, openingFrame, openingState, type OpeningFrame } from './render/scene/opening/timeline';
 
 export type PreviewScene = {
@@ -22,6 +25,8 @@ export type PreviewScene = {
     sample(time: number): { state: GameState; effects: EffectsState };
     // Cutscene frames draw with their own camera and overlays instead of the stage scene.
     opening?(time: number): OpeningFrame;
+    // Spoken lines shown over the scene at this time.
+    talk?(time: number, locale: Locale): SceneTalk;
 };
 
 type PreviewFrame = { state: GameState; effects: EffectsState };
@@ -719,6 +724,36 @@ function officeTyping(): PreviewScene {
     };
 }
 
+function sceneTalk(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const effects = createEffects().snapshot();
+    const frames: GameState[] = [];
+    for (let frame = 0; frame * FRAME_TIME <= 4.2; frame++) {
+        frames.push(game.getSnapshot());
+        for (let i = 0; i < 2; i++) game.step(FIXED_STEP);
+        game.drainEvents();
+    }
+    const REACT = .6, SPEAK = 1.4;
+    const managerX = frames[0].people.find(person => person.id === 'manager')?.x ?? 320;
+    return {
+        id: 'scene-talk', label: 'Office · Stage title, rider reaction and colleague remark', duration: 4.2, focusX: 420,
+        markers: [{ at: 0, label: 'Title drops' }, { at: REACT, label: 'Rider reacts' }, { at: SPEAK, label: 'Manager speaks' }, { at: 2.2, label: 'Title gone' }],
+        sample(time) {
+            return { state: frames[Math.max(0, Math.min(frames.length - 1, Math.round(time / FRAME_TIME)))], effects };
+        },
+        talk(time, locale) {
+            const reactionLife = REACTION_LIFE - (time - REACT);
+            const speechLife = SPEECH_LIFE - (time - SPEAK);
+            return {
+                reaction: time >= REACT && reactionLife > 0 ? { text: translate('player.paperHit', locale), life: reactionLife } : null,
+                speech: time >= SPEAK && speechLife > 0
+                    ? { name: translate('person.manager', locale), text: translate('npc.manager.leave', locale), x: managerX, life: speechLife } : null,
+            };
+        },
+    };
+}
+
 function opening(): PreviewScene {
     const game = createGame();
     game.reset();
@@ -746,6 +781,7 @@ export const previewScenes: readonly PreviewScene[] = [
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
     opening(),
+    sceneTalk(),
     bucketPour(),
     cleanerRecovery(),
     monitorLight(),

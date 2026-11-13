@@ -116,7 +116,7 @@ test('renderer consumes snapshots and supports changed art without editing physi
     let paths = 0, labels = 0;
     const finite = (...args) => args.forEach(n => assert.ok(Number.isFinite(n)));
     const context = {
-        save() {}, restore() {}, transform:finite, setTransform:finite, clearRect:finite, beginPath() { paths++; },
+        save() {}, restore() {}, transform:finite, translate:finite, rotate:finite, strokeText() {}, setTransform:finite, clearRect:finite, beginPath() { paths++; },
         moveTo:finite, lineTo:finite, bezierCurveTo:finite, closePath() {}, fill() {}, stroke() {}, clip() {}, setLineDash() {},
         measureText(text) { return { width: text.length * 8 }; },
         fillText(text, x, y) { assert.equal(typeof text, 'string'); finite(x, y); labels++; },
@@ -124,7 +124,7 @@ test('renderer consumes snapshots and supports changed art without editing physi
         createRadialGradient(...coords) { finite(...coords); return { addColorStop(at, color) { finite(at); assert.equal(typeof color, 'string'); } }; }
     };
     const canvas = () => ({ clientWidth:800, clientHeight:510, getContext:() => context });
-    const canvases = { '[data-base]':canvas(), '[data-labels]':canvas(), '[data-tvg]':canvas() };
+    const canvases = { '[data-base]':canvas(), '[data-tvg]':canvas() };
     const renderer = createRenderer({ isConnected:true, querySelector:s => canvases[s] });
     await Promise.resolve();
     const game = createGame(), effects = createEffects();

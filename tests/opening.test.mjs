@@ -12,14 +12,7 @@ const { createGame, createRenderCtx, drawOpening, openingFrame, openingState, OP
 const B = OPENING_BEATS;
 
 function render(time, locale = 'ko') {
-    const labels = [];
-    const lg = {
-        font: '', fillStyle: '', textAlign: 'left', textBaseline: 'alphabetic', globalAlpha: 1,
-        measureText(text) { return { width: [...text].length * 9 }; },
-        fillText(text, x, y) { labels.push({ text, x, y, alpha: this.globalAlpha }); },
-        save() {}, restore() {},
-    };
-    const ctx = createRenderCtx({}, lg);
+    const ctx = createRenderCtx({});
     const game = createGame();
     game.reset();
     const frame = openingFrame(time);
@@ -35,6 +28,7 @@ function render(time, locale = 'ko') {
         for (const point of cmd.v) for (const n of point) assert.ok(Number.isFinite(n), `finite point at t=${time}`);
         for (const curve of cmd.curves ?? []) for (const n of curve) assert.ok(Number.isFinite(n), `finite curve at t=${time}`);
     }
+    const labels = ctx.commands.filter(cmd => cmd.text).map(({ text }) => ({ text: text.content, x: text.x, y: text.y, alpha: text.opacity ?? 1 }));
     return { frame, commands: ctx.commands, labels };
 }
 
@@ -114,11 +108,13 @@ test('office frames light the scene and draw the bubbles with their words', () =
     const wide = render(B.riderOvertime + 1.5);
     assert.ok(wide.commands.some(c => c.layer?.key === 'opening-dusk' && c.layer.blend === 'multiply'));
     assert.ok(wide.commands.some(c => c.layer?.key === 'opening-sunbeams' && c.layer.blend === 'screen'));
-    assert.ok(wide.labels.some(l => l.text === translate('opening.riderOvertime', 'ko')));
+    assert.ok(wide.labels.some(l => l.text === translate('opening.riderOvertime', 'ko').replace('…', '...')));
 
     const hope = render(B.chairHope + 2.5);
     assert.ok(hope.commands.some(c => c.layer?.key.endsWith('-glow') && c.layer.blur > 0), 'the chair bubble glows');
     assert.ok(hope.commands.some(c => c.layer?.key === 'opening-notes'));
+    assert.ok(hope.commands.some(c => c.layer?.key.endsWith('-note')), 'the chair hums a drawn note in place of the missing ♪ glyph');
+    assert.ok(hope.labels.every(l => !l.text.includes('♪')));
 
     const rage = render(B.riderTyping + 1);
     assert.ok(rage.commands.some(c => c.layer?.key === 'opening-laptop' && c.layer.blend === 'add'));

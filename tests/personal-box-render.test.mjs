@@ -9,11 +9,10 @@ const { createRenderCtx, personalBox } = await loadSource(`
 
 test('personal belongings render without text and restore the scene transform', () => {
     for (const locale of ['en', 'ko']) for (const scale of [.7, 1]) {
-        const labels = [];
-        const ctx = createRenderCtx({}, { fillText: text => labels.push(text) });
+        const ctx = createRenderCtx({});
         Object.assign(ctx, { locale, scale, ox: 13, oy: 27, rotation: .2, localScale: .9 });
         personalBox(ctx);
-        assert.deepEqual(labels, [], 'belongings tell the story without labels');
+        assert.deepEqual(ctx.commands.filter(command => command.text), [], 'belongings tell the story without labels');
         assert.deepEqual([ctx.ox, ctx.oy, ctx.rotation, ctx.localScale], [13, 27, .2, .9]);
         assert.ok(ctx.commands.some(command => command.curves?.length && command.stroke), 'mug and lanyard retain curved strokes');
         assert.ok(ctx.commands.some(command => command.curves?.length && command.c), 'plant retains curved leaves');
@@ -25,7 +24,7 @@ test('personal belongings render without text and restore the scene transform', 
 });
 
 test('the readable badge portrait hangs at the upper right and disappears when its back turns', () => {
-    const ctx = createRenderCtx({}, { fillText() {} });
+    const ctx = createRenderCtx({});
     personalBox(ctx);
     const front = ctx.commands;
     const glasses = front.filter(command => command.c === '#83c8e4');
@@ -47,7 +46,7 @@ test('the readable badge portrait hangs at the upper right and disappears when i
 });
 
 test('personal box sits below the chair seat, with a small recessed mug and shoulder-height leaves', () => {
-    const ctx = createRenderCtx({}, { fillText() {} });
+    const ctx = createRenderCtx({});
     personalBox(ctx);
     const body = ctx.commands.find(command => command.v.length === 4
         && command.v[1][0] - command.v[0][0] > 70 && command.v[1][0] - command.v[0][0] < 80

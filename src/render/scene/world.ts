@@ -1,6 +1,7 @@
 import { translate } from '../../i18n';
 import type { DeepReadonly, Person } from '../../game/types';
 import type { RenderCtx } from '../context';
+import { SIGN_FONT } from '../fonts';
 import { plant, desk, binBack, binFront, practiceFloor, checkpointFlag } from './decor';
 import { cleaningDraw, person } from './cleaning';
 import { monitorDraw } from './monitor';
@@ -192,8 +193,7 @@ export function drawWorld(ctx: RenderCtx) {
         const pop = .9 + .1 * Math.min(1, age / .06);
         const y = F - 205;
         const line = translate('copier.printer', ctx.locale);
-        ctx.lg.font = `${18 * ctx.scale}px system-ui,sans-serif`;
-        const radiusX = Math.max(82, ctx.lg.measureText(line).width / ctx.scale / 2 + 24);
+        const radiusX = Math.max(82, ctx.measureText(line, 18, SIGN_FONT) / 2 + 24);
         const burst: Vector[] = Array.from({ length: 24 }, (_, i) => {
             const angle = i / 24 * ctx.TAU;
             const radius = i % 2 === 0 ? 1 : .76;
@@ -202,6 +202,6 @@ export function drawWorld(ctx: RenderCtx) {
         ctx.polygon([[x - 16, y + 21], [x + 5, F - 151], [x + 16, y + 20]], C.ink);
         ctx.polygon(burst, C.ink);
         ctx.polygon(burst.map(([px, py]) => [x + (px - x) * .94, y + (py - y) * .88]), '#fff0bc');
-        ctx.label(line, x, y + 6, 18, C.ink);
+        ctx.label(line, x, y + 6, 18, C.ink, SIGN_FONT);
     }
 }

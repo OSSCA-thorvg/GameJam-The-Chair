@@ -93,13 +93,13 @@ function billboard(ctx: RenderCtx, width: number) {
         const lines = ctx.locale === 'ko' ? ['흔들리지', '않는 기업'] : ['UNSHAKE', 'ABLE INC.'];
         const textLeft = left + 14, textRight = model - 34;
         const maxSize = 34;
-        const widest = Math.max(...lines.map(line => ctx.measureSignText(line, maxSize)));
+        const widest = Math.max(...lines.map(line => ctx.measureText(line, maxSize)));
         const available = textRight - textLeft;
         const size = widest > available ? maxSize * available / widest : maxSize;
         const lineHeight = size * .92;
         for (let i = 0; i < lines.length; i++) {
             const y = 50 + (i - (lines.length - 1) / 2) * lineHeight;
-            ctx.signText(lines[i], (textLeft + textRight) / 2, y, size, '#fff0cc', { width: Math.max(1, size * .08), color: '#27344d' });
+            ctx.text(lines[i], (textLeft + textRight) / 2, y, size, '#fff0cc', { outline: { width: Math.max(1, size * .08), color: '#27344d' } });
         }
     }
 }

@@ -63,7 +63,7 @@ function riderWorry(ctx: RenderCtx) {
             const on = (ctx.t * 2.4 - i * .35) % 1.6 < 1.1;
             ctx.ellipse(-4 + i * 6, -108 - i * 1.5, 1.8, 1.8, ctx.tint('#f5eddc', on ? tension.critical : 0));
         }
-        ctx.signText('?', 17, -108, 15 + pop * 2, '#f5eddc', { width: 1.6, color: '#28303b' });
+        ctx.text('?', 17, -108, 15 + pop * 2, '#f5eddc', { outline: { width: 1.6, color: '#28303b' } });
     }
 }
 

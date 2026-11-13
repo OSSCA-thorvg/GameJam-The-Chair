@@ -37,7 +37,7 @@ function render() {
         const width = root.querySelector('canvas')!.clientWidth;
         const worldWidth = width < 520 ? 540 : Math.max(760, width);
         if (scene.opening) renderer.draw(state, effects, undefined, scene.opening(time));
-        else renderer.draw(state, effects, (scene.follow ? state.player.x : scene.focusX) - worldWidth / 2);
+        else renderer.draw(state, effects, (scene.follow ? state.player.x : scene.focusX) - worldWidth / 2, undefined, scene.talk?.(time, locale));
     }
     slider.value = String(time);
     value.value = `${time.toFixed(2)} s`;

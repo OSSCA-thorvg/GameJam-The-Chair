@@ -21,7 +21,7 @@ test('the vignette is one border band appended last, and skipped when idle', () 
     const game = createGame();
     game.reset();
     const state = { ...game.getSnapshot(), mode: 'play', focus: 50, focusNotice: { kind: 'paper', life: 1.6 } };
-    const ctx = createRenderCtx({}, { fillText() {} });
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { state, p: state.player, mode: 'play', t: 0, cam: 0, W: 1000, H: 510, VW: 1000, scale: 1, vertical: 0 });
     focusVignette(ctx);
     assert.equal(ctx.commands.length, 1);
