@@ -2,6 +2,9 @@ import { STAGE_FOUR, skyHazards, skyHeadwind, skyPlatforms, skySurface, skyWind,
 import type { Player, Point } from '../../../types';
 import * as Det from '../../../math';
 
+// Robot parrots count as gear for focus; offset their ids so they never share a token with a floating gear loop.
+const ROBOT_FOCUS_ID = 1_000_000;
+
 export type SkyInput = {
     sky: Readonly<SkyState>;
     p: Readonly<Player>;
@@ -107,11 +110,13 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
             const body = { x: p.x, y: p.y - 20 };
             const struck = skyHazards(time).find(item => Det.hypot(item.x - body.x, item.y - body.y) < item.r + STAGE_FOUR.knock.reach);
             if (struck) {
-                // Papers slap the chair backwards and up; a bird clips it back and down; office gear bounces it away from the impact.
-                hit = { kind: struck.kind, focusId: struck.focusId };
+                // Papers slap the chair backwards and up; a bird clips it back and down; office gear, robot parrots
+                // included, bounces it away from the impact.
+                const metal = struck.kind === 'gear' || struck.robot !== undefined;
+                hit = struck.robot ? { kind: 'gear', focusId: ROBOT_FOCUS_ID + struck.focusId } : { kind: struck.kind, focusId: struck.focusId };
                 sky.knock = STAGE_FOUR.knock.cooldown;
-                sky.knockKind = struck.kind;
-                if (struck.kind === 'gear') {
+                sky.knockKind = metal ? 'gear' : struck.kind;
+                if (metal) {
                     p.vx = Math.min(p.vx, 0) - 230;
                     p.vy = body.y < struck.y ? Math.min(p.vy, 0) - 140 : Math.max(p.vy, 0) + 120;
                 } else {

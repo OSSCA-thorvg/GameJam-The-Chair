@@ -593,7 +593,7 @@ function skyWindFeedback(): PreviewScene {
     };
 }
 
-// Many passes of the upper-desk bird lane in a row: every pass draws a different lovebird colour or the macaw.
+// Many passes of the upper-desk bird lane in a row: every pass draws a different lovebird colour, the macaw or a robot parrot.
 function skyParrots(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -608,6 +608,31 @@ function skyParrots(): PreviewScene {
             return { state: { ...base, time: at,
                 sky: { ...base.sky, phase: 'course', lift: 1, drawer: 1 },
                 player: { ...base.player, x: 3980, y: -2330 }, ground: false,
+            }, effects };
+        },
+    };
+}
+
+// Two passes of the first bird lane flown by the chrome robot parrots (liquid metal, then black chrome);
+// each clips the chair and it clangs away with the office-gear keycaps and sparks.
+function skyRobotParrot(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const period = 8.2, start = period * 19, duration = period * 2, hit = 5.3;
+    return {
+        id: 'sky-robot-parrot', label: 'Sky · Robot parrots (liquid metal, black chrome) and gear knock', duration, focusX: 4150,
+        markers: [{ at: 0, label: 'Liquid metal' }, { at: hit, label: 'Gear knock' },
+            { at: period, label: 'Black chrome' }, { at: period + hit, label: 'Gear knock' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            const knock = (at % period) - hit;
+            const knocking = knock > 0 && knock < 1;
+            return { state: { ...base, time: start + at,
+                sky: { ...base.sky, phase: 'course', lift: 1, drawer: 1,
+                    knock: knocking ? STAGE_FOUR.knock.cooldown * (1 - knock) : 0, knockKind: knocking ? 'gear' : null },
+                player: { ...base.player, x: 3980, y: -2240 }, ground: false,
             }, effects };
         },
     };
@@ -814,6 +839,7 @@ export const previewScenes: readonly PreviewScene[] = [
     skyOfficeFacade(),
     skyWindFeedback(),
     skyParrots(),
+    skyRobotParrot(),
     skySignDepth(),
     skyEnding(),
     orbitRoute(),
