@@ -120,7 +120,8 @@ test('renderer consumes snapshots and supports changed art without editing physi
         moveTo:finite, lineTo:finite, bezierCurveTo:finite, closePath() {}, fill() {}, stroke() {}, clip() {}, setLineDash() {},
         measureText(text) { return { width: text.length * 8 }; },
         fillText(text, x, y) { assert.equal(typeof text, 'string'); finite(x, y); labels++; },
-        createLinearGradient(...coords) { finite(...coords); return { addColorStop(at, color) { finite(at); assert.equal(typeof color, 'string'); } }; }
+        createLinearGradient(...coords) { finite(...coords); return { addColorStop(at, color) { finite(at); assert.equal(typeof color, 'string'); } }; },
+        createRadialGradient(...coords) { finite(...coords); return { addColorStop(at, color) { finite(at); assert.equal(typeof color, 'string'); } }; }
     };
     const canvas = () => ({ clientWidth:800, clientHeight:510, getContext:() => context });
     const canvases = { '[data-base]':canvas(), '[data-labels]':canvas(), '[data-tvg]':canvas() };

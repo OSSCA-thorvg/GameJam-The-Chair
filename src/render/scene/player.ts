@@ -24,7 +24,6 @@ export function player(ctx: RenderCtx) {
     riderWorry(ctx);
     ctx.ox = ctx.oy = ctx.rotation = 0;
     ctx.localScale = 1;
-    focusVignette(ctx);
 }
 
 // How far the rider is from snapping out of work: drifting eyes below 60%, sweat and stalled typing below 40%,
@@ -60,22 +59,12 @@ function riderWorry(ctx: RenderCtx) {
     if (tension.critical > 0) {
         const pop = .5 + .5 * Math.sin(ctx.t * 6);
         for (let i = 0; i < 3; i++) {
+            // Hidden dots stay in the command list so the paint order is not rebuilt when they blink.
             const on = (ctx.t * 2.4 - i * .35) % 1.6 < 1.1;
-            if (on) ctx.ellipse(-4 + i * 6, -108 - i * 1.5, 1.8, 1.8, ctx.tint('#f5eddc', tension.critical));
+            ctx.ellipse(-4 + i * 6, -108 - i * 1.5, 1.8, 1.8, ctx.tint('#f5eddc', on ? tension.critical : 0));
         }
         ctx.signText('?', 17, -108, 15 + pop * 2, '#f5eddc', { width: 1.6, color: '#28303b' });
     }
-}
-
-function focusVignette(ctx: RenderCtx) {
-    const critical = focusTension(ctx).critical;
-    if (critical <= 0 || ctx.mode !== 'play') return;
-    const top = -ctx.vertical, bottom = ctx.H / ctx.scale - ctx.vertical;
-    const left = ctx.cam, right = ctx.cam + ctx.VW;
-    const pulse = .55 + .45 * Math.sin(ctx.t * 5);
-    const fill = ctx.radialFill((left + right) / 2, (top + bottom) / 2, Math.hypot(right - left, bottom - top) / 2,
-        [[.55, '#9a2f2a00'], [1, '#9a2f2a']], critical * pulse * .38);
-    ctx.gradientPolygon([[left, top], [right, top], [right, bottom], [left, bottom]], fill);
 }
 
 function riderBody(ctx: RenderCtx) {

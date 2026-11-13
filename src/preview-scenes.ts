@@ -312,6 +312,36 @@ function focusTension(): PreviewScene {
     };
 }
 
+function focusHitVignette(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const levels = [80, 55, 35, 15];
+    const hit = 2;
+    const focusX = 500;
+    return {
+        id: 'focus-hit-vignette',
+        label: 'Chair · Focus hit vignette',
+        duration: levels.length * hit,
+        focusX,
+        markers: levels.map((focus, i) => ({ at: i * hit, label: `Hit at ${focus}%` })),
+        sample(time) {
+            const at = Math.max(0, Math.min(levels.length * hit - 1e-6, time));
+            const index = Math.floor(at / hit);
+            const life = 1.7 - (at - index * hit);
+            return {
+                state: {
+                    ...base, mode: 'play', focus: levels[index], time: at,
+                    focusNotice: life > 0 ? { kind: 'paper', life } : null,
+                    player: { ...base.player, x: focusX },
+                },
+                effects,
+            };
+        },
+    };
+}
+
 function extinguisherSpray(): PreviewScene {
     const game = createGame();
     game.startStage(3);
@@ -684,6 +714,7 @@ export const previewScenes: readonly PreviewScene[] = [
     headImpact(),
     focusLoss(),
     focusTension(),
+    focusHitVignette(),
     rooftopEntrance(),
     personalBelongings(),
     extinguisherSpray(),
