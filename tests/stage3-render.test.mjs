@@ -8,7 +8,7 @@ test('the rooftop sales chart has no information banner above it', () => {
     const game = createGame();
     game.startStage(3);
     const state = game.getSnapshot();
-    const ctx = createRenderCtx({}, { fillText() {} });
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { state, p: state.player, mode: state.mode, W: 3500, VW: 3500 });
 
     drawRooftop(ctx);
@@ -28,7 +28,7 @@ test('the rooftop sales chart support ends cleanly at the top edge', () => {
     const game = createGame();
     game.startStage(3);
     const state = game.getSnapshot();
-    const ctx = createRenderCtx({}, { fillText() {} });
+    const ctx = createRenderCtx({});
     // This structural assertion asks for the whole chart, so use a viewport wide enough to include it.
     Object.assign(ctx, { state, p: state.player, mode: state.mode, W: 3500, VW: 3500 });
 
@@ -47,10 +47,10 @@ test('entrance replaces the falling chart with an employee board with an initial
     game.startStage(3);
     const state = game.getSnapshot();
     for (const locale of ['en', 'ko']) for (const width of [540, 1000]) {
-        const labels = [];
-        const ctx = createRenderCtx({}, { fillText: (text, x, y) => labels.push({ text, x, y }) });
+        const ctx = createRenderCtx({});
         Object.assign(ctx, { state, p: state.player, mode: state.mode, locale, VW: width, W: width });
         drawRooftop(ctx);
+        const labels = ctx.commands.filter(command => command.text).map(({ text }) => ({ text: text.content, x: text.x, y: text.y }));
         assert.ok(labels.some(label => label.text === (locale === 'en' ? 'EMPLOYEES OF THE MONTH' : '이달의 우수사원')));
         assert.ok(labels.every(label => label.text !== 'JIN' && label.text !== '진'));
         const portraits = ctx.commands.filter(command => command.c === '#f4ecd7'
@@ -77,7 +77,7 @@ test('the shut door jolts only the player portrait into a drop and swing, with r
     }
     const render = tick => {
         const state = frames.get(tick);
-        const ctx = createRenderCtx({}, { fillText() {} });
+        const ctx = createRenderCtx({});
         Object.assign(ctx, { state, p: state.player, mode: state.mode });
         drawRooftop(ctx);
         return ctx.commands.filter(command => command.c === '#f4ecd7' && command.v.length === 4
@@ -134,8 +134,7 @@ test('rooftop renders the live course and first flight in both languages and nar
     });
     assert.equal(frames.size, 11);
     for (const [name, state] of frames) for (const locale of ['en', 'ko']) for (const width of [540, 1000]) {
-        const labels = [];
-        const ctx = createRenderCtx({}, { fillText: text => labels.push(text) });
+        const ctx = createRenderCtx({});
         Object.assign(ctx, { state, p: state.player, mode: state.mode, locale, t: state.time,
             cam: Math.max(0, Math.min(state.player.x - width * .35, state.level.length - width)),
             vertical: Math.max(0, 330 - state.player.y), VW: width, W: width, H: 510,
@@ -153,6 +152,7 @@ test('rooftop renders the live course and first flight in both languages and nar
             for (const point of [...command.v, ...(command.curves ?? [])]) assert.ok(point.every(Number.isFinite));
             if (command.c && typeof command.c !== 'string') assert.ok(command.c.stops.every(([, color]) => color.every(Number.isFinite)));
         }
+        const labels = ctx.commands.filter(command => command.text).map(command => command.text.content);
         const [, playerY] = ctx.screenPoint(state.player.x, state.player.y);
         assert.ok(playerY > 120 && playerY < 450, `${name}: chair remains in view`);
         for (const label of labels) assert.doesNotMatch(label, /[←→↑↓↗↖]/);

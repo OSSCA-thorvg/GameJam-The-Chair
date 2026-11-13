@@ -74,7 +74,7 @@ const messages = {
     'stageLabel.stage1':         { en: '01 Office',                                                      ko: '01 사무실' },
     'stageLabel.stage2':         { en: '02 Inside the building',                                         ko: '02 건물 내부' },
     'stageLabel.stage4': { en: '04 Above the clouds', ko: '04 구름 위' },
-    'stageLabel.stage3':         { en: '03 Mechanical room & rooftop',                                   ko: '03 Rooftop · 기계실·옥상' },
+    'stageLabel.stage3':         { en: '03 Mechanical room & rooftop',                                   ko: '03 기계실 & 옥상' },
 
     'hud.focus':                 { en: 'Focus',                                                          ko: '집중도' },
 
@@ -276,4 +276,9 @@ export function resolveLocale(languages: readonly string[]): Locale {
 
 export function isMessage(value: string): value is Message {
     return Object.hasOwn(messages, value);
+}
+
+/** Every translated string in every locale; the font subsets must cover these characters. */
+export function messageTexts(): string[] {
+    return Object.values(messages).flatMap(entry => Object.values(entry));
 }

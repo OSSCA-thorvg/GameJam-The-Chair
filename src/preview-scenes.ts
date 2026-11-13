@@ -13,6 +13,9 @@ import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/stages/office/monitor/decide';
 import { SPLASH_DURATION } from './ui/splash-meta';
+import { REACTION_LIFE, SPEECH_LIFE } from './ui/types';
+import { translate, type Locale } from './i18n';
+import type { SceneTalk } from './render/types';
 import { OPENING_BEATS, OPENING_DURATION, openingFrame, openingState, type OpeningFrame } from './render/scene/opening/timeline';
 
 export type PreviewScene = {
@@ -26,6 +29,8 @@ export type PreviewScene = {
     sample(time: number): { state: GameState; effects: EffectsState };
     // Cutscene frames draw with their own camera and overlays instead of the stage scene.
     opening?(time: number): OpeningFrame;
+    // Spoken lines shown over the scene at this time.
+    talk?(time: number, locale: Locale): SceneTalk;
 };
 
 type PreviewFrame = { state: GameState; effects: EffectsState };
@@ -292,6 +297,60 @@ function focusLoss(): PreviewScene {
     };
 }
 
+function focusTension(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const duration = 12;
+    const focusX = 500;
+    const focusAt = (at: number) => Math.max(1, Math.round(100 - at / duration * 105));
+    return {
+        id: 'focus-tension',
+        label: 'Chair · Focus tension',
+        duration,
+        focusX,
+        markers: [{ at: 0, label: '100%' }, { at: 4.6, label: '60% · Drift' }, { at: 6.9, label: '40% · Sweat' }, { at: 9.2, label: '20% · Head up' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            return {
+                state: { ...base, mode: 'play', focus: focusAt(at), time: at, player: { ...base.player, x: focusX } },
+                effects,
+            };
+        },
+    };
+}
+
+function focusHitVignette(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const levels = [80, 55, 35, 15];
+    const hit = 2;
+    const focusX = 500;
+    return {
+        id: 'focus-hit-vignette',
+        label: 'Chair · Focus hit vignette',
+        duration: levels.length * hit,
+        focusX,
+        markers: levels.map((focus, i) => ({ at: i * hit, label: `Hit at ${focus}%` })),
+        sample(time) {
+            const at = Math.max(0, Math.min(levels.length * hit - 1e-6, time));
+            const index = Math.floor(at / hit);
+            const life = 1.7 - (at - index * hit);
+            return {
+                state: {
+                    ...base, mode: 'play', focus: levels[index], time: at,
+                    focusNotice: life > 0 ? { kind: 'paper', life } : null,
+                    player: { ...base.player, x: focusX },
+                },
+                effects,
+            };
+        },
+    };
+}
+
 function extinguisherSpray(): PreviewScene {
     const game = createGame();
     game.startStage(3);
@@ -473,6 +532,45 @@ function skyGustCycle(): PreviewScene {
     };
 }
 
+// The floating office facade with its staff still at work behind the windows.
+function skyOfficeFacade(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    return {
+        id: 'sky-facade', label: 'Sky · Floating office facade and its workers', duration: 6, focusX: 3225,
+        markers: [{ at: 0, label: 'Office at work' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(6, time));
+            return { state: { ...base, time: at, sky: { ...base.sky, phase: 'course', lift: 1 },
+                player: { ...base.player, x: 3110, y: -1918 }, ground: true }, effects };
+        },
+    };
+}
+
+// Office gear drifting over the gap to the drawer desk, then a tower PC clanging into the chair.
+function skyOfficeGear(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const duration = 6;
+    return {
+        id: 'sky-gear', label: 'Sky · Floating monitor, keyboard, mouse and tower PC', duration, focusX: 4100,
+        markers: [{ at: 0, label: 'Drifting gear' }, { at: duration - 1, label: 'Gear knock' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            const knock = Math.max(0, at - (duration - 1));
+            return { state: { ...base, time: at,
+                sky: { ...base.sky, phase: 'course', lift: 1, drawer: 1,
+                    knock: knock > 0 ? STAGE_FOUR.knock.cooldown * (1 - knock) : 0, knockKind: knock > 0 ? 'gear' : null },
+                player: { ...base.player, x: 3960 - knock * 60, y: -2220 }, ground: false,
+            }, effects };
+        },
+    };
+}
+
 // Hold a spray in open air so its response is readable through a full gust cycle.
 function skyWindFeedback(): PreviewScene {
     const game = createGame();
@@ -499,7 +597,7 @@ function skyWindFeedback(): PreviewScene {
     };
 }
 
-// Many passes of the upper-desk bird lane in a row: every pass draws a different lovebird colour or the macaw.
+// Many passes of the upper-desk bird lane in a row: every pass draws a different lovebird colour, the macaw or a robot parrot.
 function skyParrots(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -514,6 +612,31 @@ function skyParrots(): PreviewScene {
             return { state: { ...base, time: at,
                 sky: { ...base.sky, phase: 'course', lift: 1, drawer: 1 },
                 player: { ...base.player, x: 3980, y: -2330 }, ground: false,
+            }, effects };
+        },
+    };
+}
+
+// Two passes of the first bird lane flown by the chrome robot parrots (liquid metal, then black chrome);
+// each clips the chair and it clangs away with the office-gear keycaps and sparks.
+function skyRobotParrot(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const period = 8.2, start = period * 19, duration = period * 2, hit = 5.3;
+    return {
+        id: 'sky-robot-parrot', label: 'Sky · Robot parrots (liquid metal, black chrome) and gear knock', duration, focusX: 4150,
+        markers: [{ at: 0, label: 'Liquid metal' }, { at: hit, label: 'Gear knock' },
+            { at: period, label: 'Black chrome' }, { at: period + hit, label: 'Gear knock' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            const knock = (at % period) - hit;
+            const knocking = knock > 0 && knock < 1;
+            return { state: { ...base, time: start + at,
+                sky: { ...base.sky, phase: 'course', lift: 1, drawer: 1,
+                    knock: knocking ? STAGE_FOUR.knock.cooldown * (1 - knock) : 0, knockKind: knocking ? 'gear' : null },
+                player: { ...base.player, x: 3980, y: -2240 }, ground: false,
             }, effects };
         },
     };
@@ -618,7 +741,9 @@ function orbitEndingScene(): PreviewScene {
     game.startStage(5);
     const parked = JSON.parse(game.serialize());
     Object.assign(parked.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1, age: 76 });
+    // As in play, the chair arrives well into the stage, long after the stage title has gone.
     parked.checkpoint = 1;
+    parked.time = 76;
     game.restore(JSON.stringify(parked));
     const effects = createEffects();
     const frames = [capture(game, effects)];
@@ -694,6 +819,36 @@ function officeTyping(): PreviewScene {
     };
 }
 
+function sceneTalk(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const effects = createEffects().snapshot();
+    const frames: GameState[] = [];
+    for (let frame = 0; frame * FRAME_TIME <= 4.2; frame++) {
+        frames.push(game.getSnapshot());
+        for (let i = 0; i < 2; i++) game.step(FIXED_STEP);
+        game.drainEvents();
+    }
+    const REACT = .6, SPEAK = 1.4;
+    const managerX = frames[0].people.find(person => person.id === 'manager')?.x ?? 320;
+    return {
+        id: 'scene-talk', label: 'Office · Stage title, rider reaction and colleague remark', duration: 4.2, focusX: 420,
+        markers: [{ at: 0, label: 'Title drops' }, { at: REACT, label: 'Rider reacts' }, { at: SPEAK, label: 'Manager speaks' }, { at: 2.2, label: 'Title gone' }],
+        sample(time) {
+            return { state: frames[Math.max(0, Math.min(frames.length - 1, Math.round(time / FRAME_TIME)))], effects };
+        },
+        talk(time, locale) {
+            const reactionLife = REACTION_LIFE - (time - REACT);
+            const speechLife = SPEECH_LIFE - (time - SPEAK);
+            return {
+                reaction: time >= REACT && reactionLife > 0 ? { text: translate('player.paperHit', locale), life: reactionLife } : null,
+                speech: time >= SPEAK && speechLife > 0
+                    ? { name: translate('person.manager', locale), text: translate('npc.manager.leave', locale), x: managerX, life: speechLife } : null,
+            };
+        },
+    };
+}
+
 function opening(): PreviewScene {
     const game = createGame();
     game.reset();
@@ -721,12 +876,15 @@ export const previewScenes: readonly PreviewScene[] = [
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
     opening(),
+    sceneTalk(),
     bucketPour(),
     cleanerRecovery(),
     monitorLight(),
     copierVolley(),
     headImpact(),
     focusLoss(),
+    focusTension(),
+    focusHitVignette(),
     rooftopEntrance(),
     personalBelongings(),
     extinguisherSpray(),
@@ -747,8 +905,11 @@ export const previewScenes: readonly PreviewScene[] = [
     rooftopTakeoff(),
     cloudEntry(),
     skyGustCycle(),
+    skyOfficeGear(),
+    skyOfficeFacade(),
     skyWindFeedback(),
     skyParrots(),
+    skyRobotParrot(),
     skySignDepth(),
     skyEnding(),
     orbitRoute(),

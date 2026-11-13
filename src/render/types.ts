@@ -81,6 +81,13 @@ export type TextSpec = {
     fill: string;
     /** Outline drawn under the fill, like Canvas2D strokeText() before fillText(). */
     outline?: { width: number; color: string };
+    /** Multiplies the fill's own alpha; text never joins a layer, so it carries its own fade. */
+    opacity?: number;
+};
+/** Lines spoken in the scene, already translated: the rider's reaction and a colleague's remark. */
+export type SceneTalk = {
+    reaction: { text: string; life: number } | null;
+    speech: { name: string; text: string; x: number; life: number } | null;
 };
 export type DrawCommand = {
     v: Vector[];

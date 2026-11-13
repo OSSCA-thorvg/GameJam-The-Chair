@@ -2,6 +2,9 @@ import { STAGE_FOUR, skyHazards, skyHeadwind, skyPlatforms, skySurface, skyWind,
 import type { Player, Point } from '../../../types';
 import * as Det from '../../../math';
 
+// Robot parrots count as gear for focus; offset their ids so they never share a token with a floating gear loop.
+const ROBOT_FOCUS_ID = 1_000_000;
+
 export type SkyInput = {
     sky: Readonly<SkyState>;
     p: Readonly<Player>;
@@ -23,7 +26,7 @@ export type SkyResult = Omit<SkyInput, 'time' | 'direction' | 'length' | 'sky' |
     reached: boolean;      // a new flag was saved
     fell: boolean;         // dropped below the last flag and was put back
     won: boolean;
-    hit: { kind: SkyHazardKind; focusId: number } | null;  // a paper bundle or bird knocked the chair back this tick
+    hit: { kind: SkyHazardKind; focusId: number } | null;  // a paper bundle, bird or office gear knocked the chair back this tick
 };
 
 // Stage 4 above the clouds: hover in, hop across growing windows, a gusting sign and floating desks,
@@ -107,12 +110,19 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
             const body = { x: p.x, y: p.y - 20 };
             const struck = skyHazards(time).find(item => Det.hypot(item.x - body.x, item.y - body.y) < item.r + STAGE_FOUR.knock.reach);
             if (struck) {
-                // Papers slap the chair backwards and up; a bird clips it back and down.
-                hit = { kind: struck.kind, focusId: struck.focusId };
+                // Papers slap the chair backwards and up; a bird clips it back and down; office gear, robot parrots
+                // included, bounces it away from the impact.
+                const metal = struck.kind === 'gear' || struck.robot !== undefined;
+                hit = struck.robot ? { kind: 'gear', focusId: ROBOT_FOCUS_ID + struck.focusId } : { kind: struck.kind, focusId: struck.focusId };
                 sky.knock = STAGE_FOUR.knock.cooldown;
-                sky.knockKind = struck.kind;
-                p.vx = Math.min(p.vx, 0) - (struck.kind === 'paper' ? 210 : 240);
-                p.vy = struck.kind === 'paper' ? Math.min(p.vy, -150) : Math.max(p.vy, 0) + 170;
+                sky.knockKind = metal ? 'gear' : struck.kind;
+                if (metal) {
+                    p.vx = Math.min(p.vx, 0) - 230;
+                    p.vy = body.y < struck.y ? Math.min(p.vy, 0) - 140 : Math.max(p.vy, 0) + 120;
+                } else {
+                    p.vx = Math.min(p.vx, 0) - (struck.kind === 'paper' ? 210 : 240);
+                    p.vy = struck.kind === 'paper' ? Math.min(p.vy, -150) : Math.max(p.vy, 0) + 170;
+                }
             }
         }
         ground = false;

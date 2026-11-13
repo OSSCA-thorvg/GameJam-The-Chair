@@ -2,9 +2,10 @@ import { translate, type Message } from '../../i18n';
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
 import { PathBuilder, push } from './opening/shapes';
+import { SPEECH_FONT } from '../fonts';
 
 // The worker's laptop answers the cameras just before stage five: a tail-less bubble like the opening's,
-// a ThorVG path in screen space with its words on the label canvas.
+// a ThorVG path in screen space with its words in ThorVG Text.
 export const ATTENDANCE = {
     /** Seconds before stage five starts that the bubble pops up, at the end of the stage four reveal. */
     lead: 1.2,
@@ -30,25 +31,21 @@ function bubblePath(anchor: Vector, x: number, y: number, w: number, h: number, 
 export function attendanceBubble(ctx: RenderCtx, anchor: Vector, age: number, message: Message = 'orbit.attendance') {
     if (age < 0 || age > ATTENDANCE.fade + ATTENDANCE.out) return;
     const alpha = 1 - ctx.clamp((age - ATTENDANCE.fade) / ATTENDANCE.out, 0, 1);
-    const lg = ctx.lg, size = ctx.clamp(ctx.W / 46, 13, 20);
+    const size = ctx.clamp(ctx.W / 46, 13, 20);
     const text = translate(message, ctx.locale);
-    lg.font = `600 ${size}px system-ui,sans-serif`;
-    const w = lg.measureText(text).width + size * 1.8, h = size * 2.5, gap = size * .9;
+    const measure = (line: string) => ctx.measureText(line, size, SPEECH_FONT);
+    const w = measure(text) + size * 1.8, h = size * 2.5, gap = size * .9;
     const x = ctx.clamp(anchor[0] - w / 2, 10, Math.max(10, ctx.W - 10 - w));
     const y = ctx.clamp(anchor[1] - gap - h, 10, Math.max(10, ctx.H - 10 - h));
     const scale = .45 + .55 * easeOutBack(Math.min(1, age / .22));
     ctx.beginLayer({ key: 'attendance-bubble', opacity: alpha });
     push(ctx, bubblePath(anchor, x, y, w, h, size, scale).command('#ffffff', { width: 2, color: '#2b2f3a', cap: 'round' }));
-    ctx.endLayer();
+    // Words in ThorVG Text, typed out from the left edge of where the whole line will sit, in the bubble's layer.
     const shown = [...text].slice(0, Math.max(0, Math.floor(age * TYPE_SPEED))).join('');
-    if (!shown) return;
-    lg.save();
-    lg.globalAlpha = alpha;
-    lg.font = `600 ${size * scale}px system-ui,sans-serif`;
-    lg.textAlign = 'center';
-    lg.textBaseline = 'middle';
-    lg.fillStyle = '#2b2f3a';
-    const full = lg.measureText(text).width, part = lg.measureText(shown).width;
-    lg.fillText(shown, anchor[0] + (x + w / 2 - anchor[0]) * scale - (full - part) / 2, anchor[1] + (y + h / 2 - anchor[1]) * scale);
-    lg.restore();
+    if (shown) {
+        const grow = (px: number, py: number): Vector => [anchor[0] + (px - anchor[0]) * scale, anchor[1] + (py - anchor[1]) * scale];
+        const [left, middle] = grow(x + (w - measure(text)) / 2, y + h / 2);
+        ctx.screenText(shown, left + measure(shown) / 2 * scale, middle, size * scale, '#2b2f3a', { font: SPEECH_FONT });
+    }
+    ctx.endLayer();
 }

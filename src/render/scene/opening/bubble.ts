@@ -2,22 +2,23 @@ import { translate } from '../../../i18n';
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
 import type { OpeningBubble, OpeningFrame } from './timeline';
-import { PathBuilder, push } from './shapes';
+import { SIGN_FONT, SPEECH_FONT, type FontName } from '../../fonts';
+import { circle, PathBuilder, push } from './shapes';
 
 // Speech bubbles. The shapes are ThorVG paths in screen space (so they keep their size while the camera
-// zooms); the words go on the label canvas with a typewriter reveal.
+// zooms); the words are ThorVG Text with a typewriter reveal.
 //   solid: the office worker, opaque white.
 //   glass: the chair daydreaming, translucent white with a soft blurred glow.
 //   rage:  the chair snapping, a translucent spiky burst that shakes.
 
 const TYPE_SPEED = 28;
 
-function wrap(lg: CanvasRenderingContext2D, text: string, maxWidth: number) {
+export function wrap(measure: (line: string) => number, text: string, maxWidth: number) {
     const lines: string[] = [];
     let line = '';
     for (const word of text.split(' ')) {
         const next = line ? `${line} ${word}` : word;
-        if (lg.measureText(next).width <= maxWidth || !line) line = next;
+        if (measure(next) <= maxWidth || !line) line = next;
         else {
             lines.push(line);
             line = word;
@@ -35,15 +36,18 @@ export function bubbleAnchor(ctx: RenderCtx, bubble: OpeningBubble): Vector {
 }
 
 function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, index: number) {
-    const lg = ctx.lg;
     const base = ctx.clamp(ctx.W / 46, 13, 20);
     const size = bubble.style === 'rage' ? base * 1.3 : base;
-    const weight = bubble.style === 'rage' ? '800' : bubble.style === 'glass' ? '500' : '600';
-    lg.font = `${weight} ${size}px system-ui,sans-serif`;
-    const text = translate(bubble.message, ctx.locale);
-    const lines = wrap(lg, text, Math.min(ctx.W - 64, size * (bubble.style === 'rage' ? 10 : 17)));
+    const font: FontName = bubble.style === 'rage' ? SIGN_FONT : SPEECH_FONT;
+    const measure = (line: string) => ctx.measureText(line, size, font);
+    // No face has a ♪, so a trailing one becomes a drawn note that bobs after the words.
+    const message = translate(bubble.message, ctx.locale);
+    const note = message.endsWith('♪');
+    const noteWidth = note ? size * .8 : 0;
+    const lines = wrap(measure, note ? message.slice(0, -1) : message, Math.min(ctx.W - 64, size * (bubble.style === 'rage' ? 10 : 17)));
+    const lineWidths = lines.map((line, i) => measure(line) + (i === lines.length - 1 ? noteWidth : 0));
     const lineHeight = size * 1.3;
-    const textWidth = Math.max(...lines.map(line => lg.measureText(line).width));
+    const textWidth = Math.max(...lineWidths);
     const padX = size * .9, padY = size * .6;
     const w = textWidth + padX * 2, h = lines.length * lineHeight + padY * 2;
     const tip = bubbleAnchor(ctx, bubble);
@@ -122,22 +126,37 @@ function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, 
     // Words, revealed a few characters at a time.
     let shown = Math.floor(bubble.age * TYPE_SPEED * (bubble.style === 'rage' ? 2 : 1));
     const [cx, cy] = grow([x + w / 2, y + h / 2]);
-    lg.save();
-    lg.globalAlpha = bubble.alpha;
-    lg.font = `${weight} ${size * scale}px system-ui,sans-serif`;
-    lg.textAlign = 'center';
-    lg.textBaseline = 'middle';
-    lg.fillStyle = bubble.style === 'rage' ? '#a8322a' : '#2b2f3a';
+    const ink = bubble.style === 'rage' ? '#a8322a' : '#2b2f3a';
     lines.forEach((line, i) => {
         const visible = [...line].slice(0, Math.max(0, shown)).join('');
         shown -= [...line].length + 1;
         if (!visible) return;
-        // Keep the line's final position while it types out: pad the measured width on the right.
-        const full = lg.measureText(line).width;
-        const part = lg.measureText(visible).width;
-        lg.fillText(visible, cx - (full - part) / 2, cy + (i - (lines.length - 1) / 2) * lineHeight * scale);
+        // Keep the line's final position while it types out: anchor the revealed part at the line's left edge.
+        const lineY = cy + (i - (lines.length - 1) / 2) * lineHeight * scale;
+        const left = cx - lineWidths[i] / 2 * scale;
+        ctx.screenText(visible, left + measure(visible) / 2 * scale, lineY, size * scale, ink, { font, opacity: bubble.alpha });
+        if (note && i === lines.length - 1 && shown >= 0) {
+            drawNote(ctx, `${key}-note`, left + (lineWidths[i] - noteWidth / 2) * scale, lineY, size * scale, ink, bubble.alpha, frame.t);
+        }
     });
-    lg.restore();
+}
+
+/** An eighth note that hops in time with the chair's good mood. */
+function drawNote(ctx: RenderCtx, key: string, x: number, y: number, size: number, ink: string, alpha: number, t: number) {
+    const hop = Math.abs(Math.sin(t * 7)) * size * .18;
+    const tilt = Math.sin(t * 7) * .12;
+    const at = (dx: number, dy: number): Vector => [x + dx * size * Math.cos(tilt) - dy * size * Math.sin(tilt), y - hop + dx * size * Math.sin(tilt) + dy * size * Math.cos(tilt)];
+    const head = at(-.14, .28);
+    ctx.beginLayer({ key, opacity: alpha });
+    push(ctx, circle(head[0], head[1], size * .19, size * .14).command(ink));
+    const stem = new PathBuilder(...at(.03, .28)).line(...at(.03, -.42)).line(...at(.11, -.42)).line(...at(.11, .28)).line(...at(.03, .28));
+    push(ctx, stem.command(ink));
+    const flag = new PathBuilder(...at(.11, -.42))
+        .cubic(...at(.2, -.3), ...at(.38, -.22), ...at(.3, .02))
+        .cubic(...at(.3, -.14), ...at(.2, -.2), ...at(.11, -.24))
+        .line(...at(.11, -.42));
+    push(ctx, flag.command(ink));
+    ctx.endLayer();
 }
 
 export function drawBubbles(ctx: RenderCtx, frame: OpeningFrame) {

@@ -102,8 +102,8 @@ test('the orbit preview reaches the Earth shadow, seeks backwards, and renders f
     scene.sample(30);
     assert.deepEqual(scene.sample(4), early);
     for (const width of [320, 1000]) for (const at of [0, 5, 15, 30, scene.duration]) {
-        const frame = scene.sample(at), labels = [];
-        const ctx = createRenderCtx({}, { save() {}, restore() {}, measureText: text => ({ width: [...text].length * 8 }), fillText(text) { labels.push(text); } });
+        const frame = scene.sample(at);
+        const ctx = createRenderCtx({});
         Object.assign(ctx, { state: frame.state, t: at, W: width, H: 510 });
         const before = structuredClone(frame.state);
         drawOrbit(ctx);
@@ -154,7 +154,7 @@ test('orbit recordings reproduce steering and thrust and support backwards seek'
 test('repeated orbit frames do not accumulate previous drawing commands', () => {
     const scene = previewScenes.find(scene => scene.id === 'orbit-route');
     const state = scene.sample(3).state;
-    const ctx = createRenderCtx({}, {});
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { state, t: state.time, W: 1000, H: 510 });
     drawOrbit(ctx);
     const count = ctx.commands.length;
@@ -204,11 +204,11 @@ test('5-1: outside the beam focus recovers, and running out of focus ends the at
 function endingFrame(t) {
     const state = JSON.parse(fresh().serialize());
     Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 + t });
-    const labels = [];
-    const ctx = createRenderCtx({}, { save() {}, restore() {}, measureText: text => ({ width: [...text].length * 8 }), fillText(text) { labels.push(text); } });
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { state: { ...state, player: state.p }, t: 80 + t, W: 1000, H: 510 });
     drawOrbit(ctx);
     const layer = key => ctx.commands.filter(command => command.layer?.key === key);
+    const labels = ctx.commands.filter(command => command.text).map(command => command.text.content);
     return { labels, layer };
 }
 

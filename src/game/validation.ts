@@ -242,7 +242,7 @@ function sky(value: unknown, path: string) {
     for (const key of ['age', 'lift', 'drawer', 'deskTilt', 'signTilt', 'depth', 'depthTravel', 'knock']) finite(data[key], `${path}.${key}`);
     if (data.standing !== null) string(data.standing, `${path}.standing`, 100);
     integer(data.airSprays, `${path}.airSprays`);
-    if (data.knockKind !== null) choice(data.knockKind, ['paper', 'bird'], `${path}.knockKind`);
+    if (data.knockKind !== null) choice(data.knockKind, ['paper', 'bird', 'gear'], `${path}.knockKind`);
 }
 
 function orbit(value: unknown, path: string) {
@@ -298,7 +298,7 @@ export function assertGameState(value: unknown, path = 'state'): asserts value i
     if (data.focusNotice !== null) {
         const notice = record(data.focusNotice, `${path}.focusNotice`);
         exact(notice, ['kind', 'life'], `${path}.focusNotice`);
-        choice(notice.kind, ['paper', 'water', 'light', 'door', 'bump', 'bird', 'praise'], `${path}.focusNotice.kind`);
+        choice(notice.kind, ['paper', 'water', 'light', 'door', 'bump', 'bird', 'gear', 'steam', 'praise'], `${path}.focusNotice.kind`);
         finite(notice.life, `${path}.focusNotice.life`);
     }
     if (data.lossReason !== null) choice(data.lossReason, ['head', 'bin', 'focus', 'lift'], `${path}.lossReason`);

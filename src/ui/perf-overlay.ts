@@ -52,10 +52,10 @@ const TEXT_INTERVAL = 200;
 /** Graph range: at least 50 ms, growing in 50 ms steps up to 250 ms so slow devices stay readable. */
 const GRAPH_MIN_MS = 50;
 const GRAPH_MAX_MS = 250;
-const SERIES = ['sim', 'build', 'sync', 'render', 'labels', 'hud'] as const;
+const SERIES = ['sim', 'build', 'sync', 'render', 'hud'] as const;
 type Series = typeof SERIES[number];
 const COLORS: Record<Series | 'other' | 'gpu', string> = {
-    sim: '#6aa9ff', build: '#f2d16b', sync: '#f29a4a', render: '#ef5f5f', labels: '#c58cf2', hud: '#6fd49a', other: '#5c6573',
+    sim: '#6aa9ff', build: '#f2d16b', sync: '#f29a4a', render: '#ef5f5f', hud: '#6fd49a', other: '#5c6573',
     gpu: '#ffffff',
 };
 
@@ -85,7 +85,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
     const frames = ring();
     const ticks = ring();
     const dropped = ring();
-    const series: Record<Series, Float64Array> = { sim: ring(), build: ring(), sync: ring(), render: ring(), labels: ring(), hud: ring() };
+    const series: Record<Series, Float64Array> = { sim: ring(), build: ring(), sync: ring(), render: ring(), hud: ring() };
     const overlayCost = ring();
     // GPU ms whose timer results arrived in each frame (NaN when none did). They describe earlier frames.
     const gpu = ring().fill(NaN);
@@ -157,7 +157,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
     /** Average, p95 and max of the newest samples covering about one second of frames. */
     function window1s() {
         const picked: number[] = [];
-        const sums: Record<Series, number> = { sim: 0, build: 0, sync: 0, render: 0, labels: 0, hud: 0 };
+        const sums: Record<Series, number> = { sim: 0, build: 0, sync: 0, render: 0, hud: 0 };
         const gpuPicked: number[] = [];
         let elapsed = 0, tickSum = 0, tickMax = 0, droppedSum = 0, cost = 0;
         for (let k = 0; k < count && elapsed < 1000; k++) {
@@ -285,7 +285,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
         const lines = [
             `FPS ${w.fps.toFixed(1)}   frame ${ms(w.frame.avg)} / p95 ${ms(w.frame.p95)} / max ${ms(w.frame.max)} ms`,
             `sim ${ms(seg.sim)}  build ${ms(seg.build)}  sync ${ms(seg.sync)}`,
-            `render ${ms(seg.render)}  labels ${ms(seg.labels)}  hud ${ms(seg.hud)}`,
+            `render ${ms(seg.render)}  hud ${ms(seg.hud)}`,
             `ticks/frame ${w.ticks.avg.toFixed(2)} (max ${w.ticks.max})  dropped ${ms(w.droppedMs)} ms/s`,
             `backend ${s?.backend ?? 'none'}${s && s.backend !== s.requested ? ` (FALLBACK, wanted ${s.requested})` : ''}`,
             `gpu ${w.gpu ? `${ms(w.gpu.avg)} / p95 ${ms(w.gpu.p95)} / max ${ms(w.gpu.max)} ms` : 'n/a'}  (timer ${s?.gpuTimer ?? 'n/a'})`,
@@ -317,7 +317,6 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
         series.build[i] = stats.buildMs;
         series.sync[i] = stats.syncMs;
         series.render[i] = stats.renderMs;
-        series.labels[i] = stats.labelsMs;
         gpu[i] = stats.gpuMs.length ? stats.gpuMs.reduce((a, b) => a + b, 0) / stats.gpuMs.length : NaN;
         // `reorders` counts paint-order rebuilds inside the history window.
         if (count === HISTORY && reordered[i]) reorders--;

@@ -3,7 +3,7 @@ import { LEVEL } from '../game/level';
 import type { GameState } from '../game/game';
 import type { DeepReadonly, Mode } from '../game/types';
 import type { Vector, Curve, Color, Gradient, DrawCommand, LayerSpec, Blend, Stroke, Bounds, TextSpec } from './types';
-import { signFontCss, SIGN_FONT } from './fonts';
+import { fitGlyphs, fontCss, LABEL_FONT, SIGN_FONT, type FontName } from './fonts';
 import { ART } from './art';
 import type { EffectsState } from './effects';
 import type { PersonalBoxReaction } from './personal-box-motion';
@@ -11,7 +11,8 @@ import type { PersonalBoxReaction } from './personal-box-motion';
 export type RenderCtx = {
     locale: Locale;
     bg: CanvasRenderingContext2D;
-    lg: CanvasRenderingContext2D;
+    /** Width of `content` in `font` at 1px; ThorVG measures once it has loaded, Canvas2D until then. */
+    textWidth(content: string, font: FontName): number;
 
     readonly F: number;
     readonly TAU: number;
@@ -36,7 +37,6 @@ export type RenderCtx = {
     layer: LayerSpec | null;
 
     commands: DrawCommand[];
-    foregroundActors: DrawCommand[];
 
     state: GameState;
     p: GameState['player'];
@@ -88,23 +88,26 @@ export type RenderCtx = {
     rect(x: number, y: number, w: number, h: number, c: string): void;
     ellipse(x: number, y: number, rx: number, ry: number, c: string | Gradient, opts?: PathOptions): void;
     rod(x: number, y: number, xx: number, yy: number, w: number, c: string): void;
-    label(text: string, x: number, y: number, size?: number, color?: string, align?: CanvasTextAlign): void;
-    /** Width of one line of sign text at `size` local units, in local units. */
-    measureSignText(content: string, size: number): number;
-    /** One centred line of sign text as a ThorVG Text command, ordered with the shapes around it. */
-    signText(content: string, x: number, y: number, size: number, fill: string, outline?: { width: number; color: string }): void;
+    /** System label: a Do Hyeon line whose baseline sits at world (x, y), ordered with the shapes around it. */
+    label(text: string, x: number, y: number, size?: number, color?: string, font?: FontName): void;
+    /** Width of one line of `font` text at `size` local units, in local units. */
+    measureText(content: string, size: number, font?: FontName): number;
+    /** One line of ThorVG Text centred on local (x, y), turning with the current rotation. */
+    text(content: string, x: number, y: number, size: number, fill: string, opts?: TextOptions): void;
+    /** One line of ThorVG Text centred on canvas pixel (x, y), ignoring the camera. */
+    screenText(content: string, x: number, y: number, size: number, fill: string, opts?: TextOptions): void;
 };
 
+export type TextOptions = { font?: FontName; outline?: { width: number; color: string }; opacity?: number; /** Screen text only, in radians. */ rotation?: number };
 export type PathOptions = { blend?: Blend; trim?: [number, number] };
 export type StrokeInput = { width: number; color: string | Gradient; cap?: Stroke['cap']; dash?: number[]; dashOffset?: number };
 
-export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderingContext2D): RenderCtx {
+export function createRenderCtx(bg: CanvasRenderingContext2D): RenderCtx {
     const TAU = Math.PI * 2;
     const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
     const ctx = {
         locale: 'en' satisfies Locale,
         bg,
-        lg,
         F: LEVEL.floor,
         TAU,
         C: ART.palette,
@@ -124,7 +127,6 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         mirror: null,
         layer: null,
         commands: [] as DrawCommand[],
-        foregroundActors: [],
         state: null as unknown as GameState,
         p: null as unknown as GameState['player'],
         mode: 'intro' as Mode,
@@ -290,31 +292,39 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         const ny = dx / l * w / 2;
         ctx.polygon([[x + nx, y + ny], [xx + nx, yy + ny], [xx - nx, yy - ny], [x - nx, y - ny]], c);
     };
-    ctx.label = (text, x, y, size = 12, color = '#333d4b', align: CanvasTextAlign = 'center') => {
-        ctx.lg.font = `${size * ctx.scale}px system-ui,sans-serif`;
-        ctx.lg.fillStyle = color;
-        ctx.lg.textAlign = align;
-        ctx.lg.fillText(text, (x - ctx.cam) * ctx.scale, (y + ctx.vertical) * ctx.scale);
+    ctx.textWidth = (content, font) => {
+        const measure = (bg as Partial<CanvasRenderingContext2D>).measureText;
+        if (typeof measure !== 'function') return content.length * .62;
+        bg.font = fontCss(font, 100);
+        return measure.call(bg, content).width / 100;
     };
-    ctx.measureSignText = (content, size) => {
-        // Measured at a fixed size in the loaded face; widths scale linearly with font size.
-        const lg = ctx.lg as Partial<CanvasRenderingContext2D>;
-        if (typeof lg.measureText !== 'function') return content.length * size * .62;
-        lg.font = signFontCss(100);
-        return lg.measureText(content).width / 100 * size;
-    };
-    ctx.signText = (content, x, y, size, fill, outline) => {
-        const unit = ctx.scale * ctx.localScale;
-        const [cx, cy] = ctx.screenPoint(x, y);
-        const halfWidth = ctx.measureSignText(content, size) / 2 + (outline?.width ?? 0);
-        const halfHeight = size * .6 + (outline?.width ?? 0);
+    ctx.measureText = (content, size, font = SIGN_FONT) => ctx.textWidth(fitGlyphs(content), font) * size;
+    const pushText = (content: string, cx: number, cy: number, size: number, rotation: number, fill: string, opts: TextOptions = {}) => {
+        const font = opts.font ?? SIGN_FONT;
+        content = fitGlyphs(content);
+        const outline = opts.outline?.width ?? 0;
+        const halfWidth = ctx.textWidth(content, font) * size / 2 + outline;
+        const halfHeight = size * .6 + outline;
+        const c = Math.cos(rotation), s = Math.sin(rotation);
         const box = ([[-halfWidth, -halfHeight], [halfWidth, -halfHeight], [halfWidth, halfHeight], [-halfWidth, halfHeight]] as Vector[])
-            .map(([bx, by]) => ctx.screenPoint(x + bx, y + by));
+            .map(([bx, by]): Vector => [cx + bx * c - by * s, cy + bx * s + by * c]);
         const text: TextSpec = {
-            content, font: SIGN_FONT, size: size * unit, x: cx, y: cy, rotation: ctx.rotation, fill,
-            ...(outline ? { outline: { width: outline.width * unit, color: outline.color } } : {}),
+            content, font, size, x: cx, y: cy, rotation, fill,
+            ...(opts.outline ? { outline: opts.outline } : {}),
+            ...(opts.opacity !== undefined ? { opacity: opts.opacity } : {}),
         };
         push({ v: box, c: fill, text });
+    };
+    ctx.text = (content, x, y, size, fill, opts) => {
+        const unit = ctx.scale * ctx.localScale;
+        const [cx, cy] = ctx.screenPoint(x, y);
+        const outline = opts?.outline && { width: opts.outline.width * unit, color: opts.outline.color };
+        pushText(content, cx, cy, size * unit, ctx.rotation, fill, { ...opts, outline });
+    };
+    ctx.screenText = (content, x, y, size, fill, opts) => pushText(content, x, y, size, opts?.rotation ?? 0, fill, opts);
+    // A label's y is its baseline, as with Canvas2D fillText; the middle of the line sits a third of a size above.
+    ctx.label = (text, x, y, size = 12, color = '#333d4b', font = LABEL_FONT) => {
+        ctx.text(text, x, y - size * .35, size, color, { font });
     };
 
     return ctx;

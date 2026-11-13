@@ -177,10 +177,11 @@ function draw() {
         }
         const visual = replay ? player.effects() : effects.snapshot();
         const cutscene = replay ? null : opening.frame();
-        const view = (cutscene ? renderer?.draw(openingState(state, cutscene), visual, undefined, cutscene) : renderer?.draw(state, visual))
-            ?? { cam: 0, scale: 1, vertical: 0, width: 800 };
+        const cues = replay ? player.feedback() : feedback.snapshot();
+        if (cutscene) renderer?.draw(openingState(state, cutscene), visual, undefined, cutscene);
+        else renderer?.draw(state, visual, undefined, undefined, cues);
         const hudStart = perf.enabled ? performance.now() : 0;
-        hud.draw(state, replay ? player.feedback() : feedback.snapshot(), visual, view, !!cutscene);
+        hud.draw(state, cues, visual, !!cutscene);
         if (perf.enabled) hudMs = performance.now() - hudStart;
     }
     catch (error) {

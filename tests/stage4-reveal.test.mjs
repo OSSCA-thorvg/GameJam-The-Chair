@@ -21,9 +21,9 @@ const { SKY_DEPARTURE, createGame, createSky, STAGE_FOUR, skyStep, createRenderC
 test('the stage four billboard slogan fills its space without covering the portrait', () => {
     const ems = { '흔들리지': 4, '않는 기업': 3.25, UNSHAKE: 5.2, 'ABLE INC.': 4.8 };
     const renderLabels = (locale, width) => {
-        // Only measuring touches the label canvas; the copy itself is ThorVG Text in the command list.
-        const lg = { measureText(text) { return { width: Number(this.font.match(/([\d.]+)px/)?.[1]) * ems[text] }; } };
-        const ctx = createRenderCtx({}, lg);
+        // Before ThorVG loads, the base canvas measures; the copy itself is ThorVG Text in the command list.
+        const bg = { measureText(text) { return { width: Number(this.font.match(/([\d.]+)px/)?.[1]) * ems[text] }; } };
+        const ctx = createRenderCtx(bg);
         ctx.locale = locale;
         ctx.scale = 1 / 1.12;
         skyCoursePlatform(ctx, { id: 'last-sign', kind: 'sign', x: 0, y: 0, width, angle: 0 });
@@ -76,19 +76,15 @@ test('the ending draws no slogans and only the attendance line at every camera p
         for (const [phase, age] of [['reveal', 1], ['reveal', 5], ['depth', 0], ['depth', 3], ['depth', 4.9]]) {
             const state = structuredClone(base);
             Object.assign(state.sky, { phase, age });
-            const labels = [], transforms = [];
-            const ctx = createRenderCtx({}, {
-                save() {}, restore() {},
-                transform(...matrix) { transforms.push(matrix); },
-                measureText: text => ({ width: [...text].length * 8 }),
-                fillText(text) { labels.push(text); },
-            });
+            const transforms = [];
+            const ctx = createRenderCtx({ save() {}, restore() {}, transform(...matrix) { transforms.push(matrix); } });
             Object.assign(ctx, { state, p: state.player, mode: 'play', locale, W: width, H: 510 });
             const before = structuredClone(state);
             drawSky(ctx);
             assert.deepEqual(state, before, 'cinematic rendering leaves gameplay untouched');
-            // The attendance bubble is up for the last second of stage four.
-            assert.deepEqual(labels, phase === 'depth' && age > 4 ? [locale === 'ko' ? '근태 확인됨.' : 'Attendance confirmed.'] : []);
+            // ThorVG Text: only the attendance bubble's line, during the last second of stage four.
+            assert.deepEqual(ctx.commands.filter(command => command.text).map(command => command.text.content),
+                phase === 'depth' && age > 4 ? [locale === 'ko' ? '근태 확인됨.' : 'Attendance confirmed.'] : []);
             assert.deepEqual(transforms, []);
             assert.ok(ctx.commands.length > 100);
             for (const command of ctx.commands) {
@@ -203,14 +199,10 @@ function renderFrame(stage, setup) {
     game.startStage(stage);
     const state = structuredClone(game.getSnapshot());
     setup?.(state);
-    const ctx = createRenderCtx({}, labelCanvas());
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { state, p: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t: 0 });
     (stage === 4 ? drawSky : drawOrbit)(ctx);
     return ctx.commands;
-}
-/** Records the words written on the label canvas, measuring 8px per character. */
-function labelCanvas(written = []) {
-    return { written, save() {}, restore() {}, measureText: text => ({ width: [...text].length * 8 }), fillText: text => written.push(text) };
 }
 const withoutBubble = commands => commands.filter(command => command.layer?.key !== 'attendance-bubble');
 const revealFrame = (phase, age) => renderFrame(4, state => Object.assign(state.sky, { phase, age }));
@@ -250,8 +242,8 @@ test('the watchers stay out of the flat side view and turn up, without fading, a
 test('the attendance bubble appears just before stage five and stays into its first moments', () => {
     const bubble = commands => commands.filter(command => command.layer?.key === 'attendance-bubble');
     assert.equal(bubble(revealFrame('reveal', 8)).length, 0, 'not while the chair is still gliding past the cameras');
-    assert.equal(bubble(revealFrame('depth', STAGE_FOUR.reveal.hold - .5)).length, 1, 'up during the last moments of stage four');
-    assert.equal(bubble(renderFrame(5)).length, 1, 'still up when stage five starts');
+    assert.ok(bubble(revealFrame('depth', STAGE_FOUR.reveal.hold - .5)).length > 0, 'up during the last moments of stage four');
+    assert.ok(bubble(renderFrame(5)).some(command => command.text?.content === 'Attendance confirmed.'), 'still up, words and all, when stage five starts');
     assert.equal(bubble(renderFrame(5, state => { state.orbit.age = 4; })).length, 0, 'gone once stage five is under way');
 });
 

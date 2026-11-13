@@ -3,6 +3,7 @@ import { LEVEL } from '../../game/level';
 import { URGENT_VOLLEY_ID, urgentPattern } from '../../game/stages/office/copier/decide';
 import type { DeepReadonly, Paper } from '../../game/types';
 import type { RenderCtx } from '../context';
+import { SIGN_FONT } from '../fonts';
 import type { Vector } from '../types';
 
 // The executive multifunction printer in urgent-report mode. Before each volley its scanner light sweeps
@@ -96,8 +97,7 @@ function tray(ctx: RenderCtx, x: number, y: number, side: number, glow: number) 
 }
 
 function speechBurst(ctx: RenderCtx, x: number, y: number, line: string, pop: number) {
-    ctx.lg.font = `${18 * ctx.scale}px system-ui,sans-serif`;
-    const radiusX = Math.max(90, ctx.lg.measureText(line).width / ctx.scale / 2 + 40);
+    const radiusX = Math.max(90, ctx.measureText(line, 18, SIGN_FONT) / 2 + 40);
     const size = .6 + .4 * pop;
     const burst: Vector[] = Array.from({ length: 24 }, (_, i) => {
         const angle = i / 24 * ctx.TAU;
@@ -107,7 +107,7 @@ function speechBurst(ctx: RenderCtx, x: number, y: number, line: string, pop: nu
     ctx.polygon([[x - 14, y + 22], [x + 2, y + 52], [x + 14, y + 21]], ctx.C.ink);
     ctx.polygon(burst, ctx.C.ink);
     ctx.polygon(burst.map(([px, py]) => [x + (px - x) * .93, y + (py - y) * .86]), '#ffd6cf');
-    ctx.label(line, x, y + 6, 18, '#a3221a');
+    ctx.label(line, x, y + 6, 18, '#a3221a', SIGN_FONT);
 }
 
 // Urgent sheets in flight get a ThorVG motion blur along their path; bundles are thick and stapled.

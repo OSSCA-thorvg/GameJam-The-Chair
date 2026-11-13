@@ -2,6 +2,8 @@ import { setPlayer, type GameState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { entranceStep, flightStep, graphRideStep, rooftopStep } from './decide';
 import * as Det from '../../../math';
+import { FOCUS_DAMAGE } from '../../../level';
+import { applyFocusHit } from '../../../systems/focus/apply';
 // Returns true while the rooftop door scene owns the chair.
 export function applyRooftopEntrance(s: GameState, dt: number) {
     if (s.rooftop.entrance.kind !== 'opening') return false;
@@ -21,6 +23,9 @@ export function applyRooftop(s: GameState, out: GameEvent[], dt: number) {
     setPlayer(s, r.p);
     s.ground = r.ground;
     s.rooftop.duct = r.ductReaction;
+    for (const id of r.steamHits) {
+        if (!applyFocusHit(s, out, { kind: 'steam', id, damage: FOCUS_DAMAGE.steam })) return;
+    }
     if (s.rooftop.flight.kind === 'course' && r.firstFlight.kind === 'ride') {
         s.keys = [];
         s.jumpQ = 0;

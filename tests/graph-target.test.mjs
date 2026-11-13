@@ -14,7 +14,7 @@ const game = createGame();
 game.startStage(3);
 const base = game.getSnapshot();
 function render(distance, vertical = 0, scale = 1, time = 5) {
-    const ctx = createRenderCtx({}, { fillText() {} });
+    const ctx = createRenderCtx({});
     const state = { ...base, firstFlight: { kind: 'ride', dist: distance, speed: 300, age: 1 } };
     Object.assign(ctx, { state, p: state.player, t: time, vertical, scale });
     rooftopGraphSign(ctx);

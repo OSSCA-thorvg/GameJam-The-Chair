@@ -3,6 +3,7 @@ import type { Vector } from '../types';
 import type { OrbitState } from '../../game/stages/orbit/data';
 import { PRAISE_KINDS, praiseItem } from './orbit-praise';
 import type { SkyProjection } from './sky-projection';
+import { LABEL_FONT } from '../fonts';
 
 // The ending, played while the chair is parked in the Earth's shadow (storyboard 05–08):
 // 05 the spray dies down and the last praise drifts away; 06 the shadow lifts onto a wide blue horizon under
@@ -93,13 +94,5 @@ export function endingFade(ctx: RenderCtx, e: OrbitEndingState) {
     if (e.dark <= 0) return;
     ctx.commands.push({ v: [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]], c: '#000000' + alpha(e.dark), layer: { key: 'orbit-ending-black' } });
     if (e.title <= 0) return;
-    const lg = ctx.lg, size = ctx.clamp(ctx.H * .055, 16, 40);
-    lg.save();
-    lg.globalAlpha = e.title;
-    lg.font = `500 ${size}px system-ui,sans-serif`;
-    lg.textAlign = 'center';
-    lg.textBaseline = 'middle';
-    lg.fillStyle = '#efe6d2';
-    lg.fillText('THE END', ctx.W / 2, ctx.H / 2);
-    lg.restore();
+    ctx.screenText('THE END', ctx.W / 2, ctx.H / 2, ctx.clamp(ctx.H * .055, 16, 40), '#efe6d2', { font: LABEL_FONT, opacity: e.title });
 }

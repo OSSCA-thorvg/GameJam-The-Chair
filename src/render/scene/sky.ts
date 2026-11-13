@@ -5,7 +5,8 @@ import { sprayPlume } from './spray';
 import { drawSkyReveal } from './sky-reveal';
 import { breadCloud as cloud } from './cloud-art';
 import { skyCoursePlatform } from './sky-course-art';
-import { skyBuilding, skyFlag, skyMonitor, skyRibbon } from './sky-course-decor';
+import { skyBuilding, skyFlag } from './sky-course-decor';
+import { skyKnockKeycaps } from './sky-gear';
 import { sunGlow } from './sun';
 import { skyHazardsArt, skyKnockFeathers, skySprayGauge, skyWarningScraps } from './sky-wind';
 
@@ -45,20 +46,12 @@ export function drawSky(ctx: RenderCtx) {
     atmosphere(ctx);
     skyWarningScraps(ctx);
     skyBuilding(ctx);
-    skyRibbon(ctx);
     for (const spec of skyPlatforms(ctx.state.sky, ctx.t)) skyCoursePlatform(ctx, spec);
     for (let i = 1; i < STAGE_FOUR.checkpoints.length; i++) {
         const cp = STAGE_FOUR.checkpoints[i];
         if (Math.abs(cp.x - ctx.cam - ctx.VW / 2) > ctx.VW) continue;
         skyFlag(ctx, cp.x, cp.y, i <= ctx.state.checkpoint);
     }
-    // Loose monitors rotate independently; none sit on an invisible floor.
-    for (let i = 0; i < 7; i++) {
-        const x = 2580 + i * 430;
-        if (x < ctx.cam - 80 || x > ctx.cam + ctx.VW + 80) continue;
-        skyMonitor(ctx, i);
-    }
-    ctx.ox = ctx.oy = ctx.rotation = 0;
     skyHazardsArt(ctx);
     sprayPlume(ctx);
     // Foreground cloud edges frame open space without hiding the next landing.
@@ -71,5 +64,6 @@ export function drawSky(ctx: RenderCtx) {
     // and its knock feathers and spray gauge sit on top of it — all inside the ThorVG scene.
     player(ctx);
     skyKnockFeathers(ctx);
+    skyKnockKeycaps(ctx);
     skySprayGauge(ctx);
 }

@@ -12,15 +12,15 @@ const { createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, revealCha
     export { attendanceBubble } from './src/render/scene/attendance-bubble';
 `);
 
-const labelCanvas = (written = []) =>
-    ({ written, save() {}, restore() {}, measureText: text => ({ width: [...text].length * 8 }), fillText: text => written.push(text) });
+/** The words drawn as ThorVG Text in a frame. */
+const words = commands => commands.filter(command => command.text).map(command => command.text.content);
 
 function orbitFrame(z, t, age = 10) {
     const game = createGame();
     game.startStage(5);
     const state = structuredClone(game.getSnapshot());
     Object.assign(state.orbit, { z, age });
-    const ctx = createRenderCtx({}, labelCanvas());
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { state, p: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t });
     drawOrbit(ctx);
     return ctx.commands;
@@ -69,11 +69,10 @@ test('the cameras come in several models and sizes, spread to every corner of th
 
 test('the attendance bubble says its line in both languages', () => {
     for (const [locale, line] of [['en', 'Attendance confirmed.'], ['ko', '근태 확인됨.']]) {
-        const lg = labelCanvas();
-        const ctx = createRenderCtx({}, lg);
+        const ctx = createRenderCtx({});
         Object.assign(ctx, { locale, W: 1000, H: 510 });
         attendanceBubble(ctx, [500, 200], 2);
-        assert.deepEqual(lg.written, [line]);
+        assert.deepEqual(words(ctx.commands), [line]);
     }
 });
 

@@ -10,14 +10,13 @@ const canvas = document.querySelector('canvas');
 const scene = previewScenes.find(scene => scene.id === 'orbit-route');
 const TVG = await loadThorvg();
 const tvg = new TVG.Canvas('#orbit-benchmark', { width: 1000, height: 510 });
-const labels = document.createElement('canvas').getContext('2d');
-const ctx = createRenderCtx(canvas.getContext('2d'), labels);
+const ctx = createRenderCtx(canvas.getContext('2d'));
 Object.assign(ctx, { W: 1000, H: 510, dpr: 1 });
 
 function draw(pool, optimized, at) {
     const { state } = scene.sample(at);
     // Clear BOTH sides: the baseline measures a conservative single frame, excluding its accumulation bug.
-    Object.assign(ctx, { state, t: state.time, commands: [], foregroundActors: [] });
+    Object.assign(ctx, { state, t: state.time, commands: [] });
     (optimized ? drawOrbit : drawBefore)(ctx);
     paint(ctx, TVG, tvg, pool);
 }
@@ -44,7 +43,7 @@ function profile(optimized) {
     let generationMs=0, paintMs=0;
     for (let i=0;i<8;i++) {
         const { state } = scene.sample(3+i/60);
-        Object.assign(ctx,{state,t:state.time,commands:[],foregroundActors:[]});
+        Object.assign(ctx,{state,t:state.time,commands:[]});
         const start=performance.now();
         (optimized ? drawOrbit : drawBefore)(ctx);
         const generated=performance.now();
