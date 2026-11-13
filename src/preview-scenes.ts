@@ -469,6 +469,26 @@ function skyGustCycle(): PreviewScene {
     };
 }
 
+// Many passes of the upper-desk bird lane in a row: every pass draws a different lovebird colour or the macaw.
+function skyParrots(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const period = 8.2, passes = 10, duration = period * passes;
+    return {
+        id: 'sky-parrots', label: 'Sky · Parrot colours (one bird per pass)', duration, focusX: 4150,
+        markers: Array.from({ length: passes }, (_, i) => ({ at: i * period + 3.6, label: `Pass ${i + 1}` })),
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            return { state: { ...base, time: at,
+                sky: { ...base.sky, phase: 'course', lift: 1, drawer: 1 },
+                player: { ...base.player, x: 3980, y: -2330 }, ground: false,
+            }, effects };
+        },
+    };
+}
+
 function skyEnding(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -613,6 +633,7 @@ export const previewScenes: readonly PreviewScene[] = [
     rooftopTakeoff(),
     cloudEntry(),
     skyGustCycle(),
+    skyParrots(),
     skyEnding(),
     orbitRoute(),
     officeTyping(),
