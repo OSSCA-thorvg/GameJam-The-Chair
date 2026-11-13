@@ -78,7 +78,8 @@ export const ORBIT_WATCH = {
 
 /** idle: a dim red dot · flash: blinking while the chair passes · recorded: steady once it has gone by. */
 export type LampState = 'idle' | 'flash' | 'recorded';
-type Lamp = { at: Point3; state: LampState };
+/** `glow`: a robot parrot's lens eye, always glowing like the stage four 2D lens; its world radius. */
+type Lamp = { at: Point3; state: LampState; glow?: number };
 
 /** Lamp state of a camera `ahead` route units in front of the chair. */
 export function cctvLamp(ahead: number, t: number): LampState {
@@ -95,14 +96,12 @@ function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: nu
     const yaw = aim(-anchor[0], -anchor[2]) + Math.sin(t * .6 + spot.seed) * .05;
     const state = cctvLamp(spot.z - travel, t);
     if (spot.bird) {
-        // Snaps its head to a new tilt every so often, holding each one like it cannot believe what it sees.
-        const beat = Math.floor(t * .7 + spot.seed * .37);
-        const cock = (((beat * 7 + spot.seed) % 5) - 2) * .22;
-        return { at: robotBirdModel(view, spot.bird, placer(anchor, yaw, spot.size * 1.2), t * 9 + spot.seed, cock), state };
+        const { eyes, glow } = robotBirdModel(view, spot.bird, placer(anchor, yaw, spot.size * 1.2), t * 9 + spot.seed);
+        return eyes.map(at => ({ at, state, glow: glow * spot.size * 1.2 }));
     }
     const lamp = cctvModel(view, spot.kind, placer(anchor, yaw, spot.size));
     view.oval(lamp, [4.5 * spot.size, 4.5 * spot.size, 4.5 * spot.size], lampColor(state));
-    return { at: lamp, state };
+    return [{ at: lamp, state }];
 }
 
 function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: number; z: number }, travel: number, t: number): Lamp {
@@ -133,7 +132,7 @@ function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: n
  * `shown` is how far the reveal has turned into 3D; watchers that come later stay hidden.
  */
 export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, cameras: 'reveal' | 'route', shown = 1) {
-    const lamps = ORBIT_WATCH[cameras].filter(spot => spot.appear <= shown).map(spot => floating(view, point, spot, travel, t));
+    const lamps = ORBIT_WATCH[cameras].filter(spot => spot.appear <= shown).flatMap(spot => floating(view, point, spot, travel, t));
     // Far satellites are left out until the chair is within sight of them.
     if (ORBIT_WATCH.satelliteAppear <= shown) for (const at of ORBIT_WATCH.satellites) {
         if (at.z - travel < 6000) lamps.push(satellite(view, point, at, travel, t));
@@ -143,14 +142,29 @@ export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: nu
 
 /** Red light spills from the lamps that caught the chair: flashing as it passes, then a steady small glow. */
 export function orbitWatchGlow(ctx: RenderCtx, view: SkyProjection, lamps: Lamp[], alpha = 1) {
-    for (const { at, state } of lamps) {
-        if (state === 'idle' || view.depth(at) < 80) continue;
+    for (const { at, state, glow } of lamps) {
+        if (view.depth(at) < 80) continue;
+        if (glow) {
+            eyeGlow(ctx, view, at, glow, state, alpha);
+            continue;
+        }
+        if (state === 'idle') continue;
         const [x, y] = view.project(at);
         const radius = ctx.clamp(30000 / view.depth(at), 10, 60) * (state === 'flash' ? 1 : .45);
         ctx.commands.push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
             from: [x, y], to: [x + radius, y], radius, stops: [[0, ctx.rgba('#ff6b57', .95 * alpha)], [1, ctx.rgba('#ff6b57', 0)]],
         }, layer: { key: 'orbit-cctv-light', blend: 'screen' } });
     }
+}
+
+function eyeGlow(ctx: RenderCtx, view: SkyProjection, at: Point3, glow: number, state: LampState, alpha: number) {
+    const [x, y] = view.project(at);
+    const radius = Math.max(4, Math.abs(view.project([at[0], at[1] + glow, at[2]])[1] - y)) * (state === 'flash' ? 1.5 : 1);
+    const pulse = (.8 + Math.sin(ctx.t * 3 + at[0]) * .2) * alpha;
+    ctx.commands.push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
+        from: [x, y], to: [x + radius, y], radius,
+        stops: [[0, ctx.rgba('#ff3a1a', .85 * pulse)], [.4, ctx.rgba('#ff2a1a', .45 * pulse)], [1, ctx.rgba('#ff2a1a', 0)]],
+    }, layer: { key: 'orbit-robot-eye', blend: 'screen' } });
 }
 
 /** One small point twinkles high above the door, too far away to make out yet. */
