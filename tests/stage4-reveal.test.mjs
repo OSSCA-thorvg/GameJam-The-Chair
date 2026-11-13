@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, drawOrbit, CLOUD_TONES, createSkyProjection, endingChair, endingHair, skyCoursePlatform } = await loadSource(`
+const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, drawOrbit, CLOUD_TONES, createSkyProjection, endingChair, endingHair, endingGlasses, skyCoursePlatform } = await loadSource(`
     export { createGame } from './src/game/game';
     export { createSky, STAGE_FOUR } from './src/game/stages/sky/data';
     export { skyStep } from './src/game/stages/sky/course/decide';
@@ -13,6 +13,7 @@ const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, dr
     export { createSkyProjection } from './src/render/scene/sky-projection';
     export { endingChair } from './src/render/scene/sky-ending-art';
     export { endingHair } from './src/render/scene/sky-player-hair';
+    export { endingGlasses } from './src/render/scene/sky-player-glasses';
     export { skyCoursePlatform } from './src/render/scene/sky-course-art';
 `);
 
@@ -171,6 +172,38 @@ test('the rear hair has a swept crown and a tapered nape instead of a rectangula
     assert.ok(edge(left, 'bottom') < bottom - 2 && edge(right, 'bottom') < bottom - 2, 'nape tapers at both sides');
     assert.ok(commands.some(command => command.c === '#505968'), 'rear surface carries a small swept lock');
     for (const [x, y] of vertices) assert.ok(Number.isFinite(x) && Number.isFinite(y));
+});
+
+test('the 3D side view retains the ordinary player’s blue lens size and reflection', () => {
+    const view = createSkyProjection(1000, 510, 0);
+    endingGlasses(view, 0);
+    const commands = view.commands();
+    const panes = commands.filter(command => command.c === '#83c8e4');
+    assert.equal(panes.length, 1, 'only the outward-facing side lens is drawn');
+    const lens = panes[0].v;
+    const width = Math.max(...lens.map(([x]) => x)) - Math.min(...lens.map(([x]) => x));
+    const height = Math.max(...lens.map(([, y]) => y)) - Math.min(...lens.map(([, y]) => y));
+    assert.ok(width > 15 && height > 6, 'blue lens is a readable face rather than a thin edge');
+    assert.ok(Math.abs(width / height - 9 / 4) < .15, 'matches the original side lens proportions');
+    assert.ok(commands.some(command => command.c === '#bfe6ef'), 'keeps the original pale reflection');
+    assert.ok(commands.some(command => command.c === '#446d82'), 'eye remains visible on the blue lens');
+});
+
+test('blue lenses stay readable during the turn and do not face through the back of the head', () => {
+    for (const orbit of [0, .25, .5]) {
+        const view = createSkyProjection(1000, 510, orbit);
+        endingGlasses(view, 0);
+        const pane = view.commands().find(command => command.c === '#83c8e4');
+        assert.ok(pane, `lens remains visible at orbit ${orbit}`);
+        const area = Math.abs(pane.v.reduce((sum, p, i) => {
+            const next = pane.v[(i + 1) % pane.v.length];
+            return sum + p[0] * next[1] - next[0] * p[1];
+        }, 0)) / 2;
+        assert.ok(area > 30, 'turning lens retains a blue surface');
+    }
+    const rear = createSkyProjection(1000, 510, 1);
+    endingGlasses(rear, 0);
+    assert.ok(!rear.commands().some(command => command.c === '#83c8e4'), 'side lens back faces are culled');
 });
 
 function renderFrame(stage, setup) {

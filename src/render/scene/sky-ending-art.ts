@@ -3,6 +3,7 @@ import { PLAYER_OUTLINES } from './player-art';
 import type { Vector } from '../types';
 import type { Point3, SkyProjection } from './sky-projection';
 import { endingHair } from './sky-player-hair';
+import { endingGlasses } from './sky-player-glasses';
 
 export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
     const draw = chairDrawing(view, elapsed);
@@ -55,7 +56,7 @@ function riderBody({ C, profile }: ChairDrawing) {
     profile([[1, -58], [5, -57], [5, -54], [8, -36], [6, -33], [1, -34], [2, -54]], .5, '#a65e44', 17.8);
 }
 
-function riderHead(view: SkyProjection, { C, bob, point, profile, oval, rod }: ChairDrawing) {
+function riderHead(view: SkyProjection, { C, bob, oval }: ChairDrawing) {
     // Only the face below the hairline needs skin. Hidden scalp faces can sort over the hair while orbiting.
     const face: Vector[] = [[-10, -77], [-3, -83], [3, -89], [10, -92], ...PLAYER_OUTLINES.head.slice(3)];
     view.profile(face.map(([x, y]) => [x, -y - 35 + bob]), 12, C.skin, 0, { widthAt: (_x, y) => {
@@ -66,19 +67,8 @@ function riderHead(view: SkyProjection, { C, bob, point, profile, oval, rod }: C
     for (const side of [-1, 1]) {
         oval(-7, -81, side * 13, 2.7, 3.4, 1.5, C.skin);
         oval(10.5, -82.4, side * 12.4, .8, 1.1, .35, '#446d82');
-        rod([13.7, -86, side * 5], [13.7, -86, side * 10], .35, '#3c424f');
-        // Thin temples stay outside the head; both lenses sit ahead of the face.
-        rod([-5, -83, side * 14.8], [15.5, -84, side * 14.8], .55, '#3a414b');
-        const lens: Point3[] = [
-            [15.5, -86, side * 13.5], [17.5, -86, side * 2],
-            [17.5, -80, side * 2], [15.5, -80, side * 13.5],
-        ];
-        // A translucent pane keeps the eyes visible without adding thickness inside the face.
-        const pane = lens.map(p => point(...p));
-        view.polygon(pane, '#83c8e499');
-        for (let i = 0; i < lens.length; i++) rod(lens[i], lens[(i + 1) % lens.length], .55, '#50606a');
     }
-    rod([17.5, -83, -2], [17.5, -83, 2], .5, '#50606a');
+    endingGlasses(view, bob);
 }
 
 function riderArms({ C, elapsed, profile }: ChairDrawing) {
