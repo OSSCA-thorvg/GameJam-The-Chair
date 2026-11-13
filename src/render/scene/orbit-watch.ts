@@ -3,12 +3,14 @@ import { seeded } from './cloud-art';
 import { STAGE_FIVE } from '../../game/stages/orbit/data';
 import { aim, CCTV_KINDS, cctvModel, placer, rect, type CctvKind } from './cctv-models';
 import type { Point3, SkyProjection } from './sky-projection';
+import type { SkyRobot } from '../../game/stages/sky/data';
+import { robotBirdModel } from './orbit-robot-bird';
 
 /** Maps a stage-five route point (x across, y up, z ahead) into a projection's coordinates. */
 export type RoutePoint = (x: number, y: number, z: number) => Point3;
 
 /** `appear`: how far the reveal's turn into 3D has gone (0 side, 1 behind) before this camera comes into view. */
-type Spot = { x: number; y: number; z: number; seed: number; kind: CctvKind; size: number; appear: number };
+type Spot = { x: number; y: number; z: number; seed: number; kind: CctvKind; size: number; appear: number; bird?: SkyRobot };
 
 const pick = (random: () => number) => CCTV_KINDS[Math.floor(random() * CCTV_KINDS.length)];
 
@@ -24,6 +26,8 @@ function routeCctvs(seed: number, count: number, from: number, to: number): Spot
 // Where the reveal cameras sit on a 1000×510 screen once the camera is behind the chair: every edge and corner, none over the chair.
 const REVEAL_COLUMNS = [60, 210, 360, 640, 790, 940], REVEAL_ROWS = [50, 170, 300, 430];
 const REVEAL_VIEW = { focal: 841.5, centerY: 188.7, camera: 480 };
+// A few spots in the field are stage four's chrome robot parrots instead, staring at the chair along with the cameras.
+const REVEAL_BIRDS: Record<number, SkyRobot> = { 1: 'liquid', 6: 'black', 11: 'liquid', 16: 'black', 19: 'liquid' };
 
 /** Cameras hanging in the air all around the chair, turning up one by one as the view turns into 3D; `glide` later carries it past every one. */
 function revealCctvs(seed: number, glide: number): Spot[] {
@@ -33,10 +37,10 @@ function revealCctvs(seed: number, glide: number): Spot[] {
     return REVEAL_ROWS.flatMap((row, r) => REVEAL_COLUMNS.map((column, c) => {
         const depth = 700 + random() * 860;
         const sx = column + (random() - .5) * 90, sy = row + (random() - .5) * 70;
-        const scale = depth / REVEAL_VIEW.focal;
+        const scale = depth / REVEAL_VIEW.focal, index = r * REVEAL_COLUMNS.length + c;
         return { x: (sx - 500) * scale, y: (REVEAL_VIEW.centerY - sy) * scale, z: depth - REVEAL_VIEW.camera - glide,
             seed: seed + r * 10 + c, kind: pick(random), size: 1.3 + random() * 1.3,
-            appear: .04 + .56 * order.indexOf(r * REVEAL_COLUMNS.length + c) / count };
+            appear: .04 + .56 * order.indexOf(index) / count, ...(REVEAL_BIRDS[index] ? { bird: REVEAL_BIRDS[index] } : {}) };
     }));
 }
 
@@ -90,6 +94,12 @@ function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: nu
     // The lens keeps turning toward the chair at the projection's origin.
     const yaw = aim(-anchor[0], -anchor[2]) + Math.sin(t * .6 + spot.seed) * .05;
     const state = cctvLamp(spot.z - travel, t);
+    if (spot.bird) {
+        // Snaps its head to a new tilt every so often, holding each one like it cannot believe what it sees.
+        const beat = Math.floor(t * .7 + spot.seed * .37);
+        const cock = (((beat * 7 + spot.seed) % 5) - 2) * .22;
+        return { at: robotBirdModel(view, spot.bird, placer(anchor, yaw, spot.size * 1.2), t * 9 + spot.seed, cock), state };
+    }
     const lamp = cctvModel(view, spot.kind, placer(anchor, yaw, spot.size));
     view.oval(lamp, [4.5 * spot.size, 4.5 * spot.size, 4.5 * spot.size], lampColor(state));
     return { at: lamp, state };
