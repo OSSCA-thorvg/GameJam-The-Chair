@@ -55,8 +55,8 @@ const keysWith = (...prefixes) => KEYS.filter(key => prefixes.some(prefix => key
 // Which copy each face draws in the scene; the ♪ is drawn as a vector note, never as a glyph.
 const ROLES = {
     [SIGN_FONT]: keysWith('copier.', 'opening.'),
-    [LABEL_FONT]: keysWith('world.', 'interact.', 'building.meeting'),
-    [SPEECH_FONT]: keysWith('opening.', 'building.', 'cheer.'),
+    [LABEL_FONT]: keysWith('world.', 'interact.', 'building.meeting', 'stageLabel.'),
+    [SPEECH_FONT]: keysWith('opening.', 'building.', 'cheer.', 'player.', 'npc.', 'person.'),
 };
 
 test('every font subset carries the glyphs of the copy it draws in both languages', () => {

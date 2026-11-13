@@ -98,7 +98,7 @@ export type RenderCtx = {
     screenText(content: string, x: number, y: number, size: number, fill: string, opts?: TextOptions): void;
 };
 
-export type TextOptions = { font?: FontName; outline?: { width: number; color: string }; opacity?: number };
+export type TextOptions = { font?: FontName; outline?: { width: number; color: string }; opacity?: number; /** Screen text only, in radians. */ rotation?: number };
 export type PathOptions = { blend?: Blend; trim?: [number, number] };
 export type StrokeInput = { width: number; color: string | Gradient; cap?: Stroke['cap']; dash?: number[]; dashOffset?: number };
 
@@ -321,7 +321,7 @@ export function createRenderCtx(bg: CanvasRenderingContext2D): RenderCtx {
         const outline = opts?.outline && { width: opts.outline.width * unit, color: opts.outline.color };
         pushText(content, cx, cy, size * unit, ctx.rotation, fill, { ...opts, outline });
     };
-    ctx.screenText = (content, x, y, size, fill, opts) => pushText(content, x, y, size, 0, fill, opts);
+    ctx.screenText = (content, x, y, size, fill, opts) => pushText(content, x, y, size, opts?.rotation ?? 0, fill, opts);
     // A label's y is its baseline, as with Canvas2D fillText; the middle of the line sits a third of a size above.
     ctx.label = (text, x, y, size = 12, color = '#333d4b', font = LABEL_FONT) => {
         ctx.text(text, x, y - size * .35, size, color, { font });

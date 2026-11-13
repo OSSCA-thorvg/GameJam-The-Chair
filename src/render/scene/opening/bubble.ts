@@ -13,7 +13,7 @@ import { circle, PathBuilder, push } from './shapes';
 
 const TYPE_SPEED = 28;
 
-function wrap(measure: (line: string) => number, text: string, maxWidth: number) {
+export function wrap(measure: (line: string) => number, text: string, maxWidth: number) {
     const lines: string[] = [];
     let line = '';
     for (const word of text.split(' ')) {

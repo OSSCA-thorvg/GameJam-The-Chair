@@ -1,6 +1,6 @@
 import { translate, type Locale, type Message } from '../i18n';
 import type { GameEvent } from '../game/types';
-import type { Reaction, Speech } from './types';
+import { REACTION_LIFE, SPEECH_LIFE, type Reaction, type Speech } from './types';
 import type { GameState } from '../game/game';
 import { ART } from '../render/art';
 const NPC_COPY = {
@@ -22,10 +22,10 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
     let waterRemarked = false;
     let panel: { k: Message; title: Message; desc: string; button: Message } | null = null;
     function say(text: Message) {
-        reaction = { text, face: '', life: 1.8, priority: 1 };
+        reaction = { text, face: '', life: REACTION_LIFE, priority: 1 };
     }
     function npc(text: Message, name: Message, x: number) {
-        speech = { text, name, x, life: 3.4 };
+        speech = { text, name, x, life: SPEECH_LIFE };
     }
     function overlay(k: Message, title: Message, desc = '', button: Message = 'button.retry') {
         reaction = null;

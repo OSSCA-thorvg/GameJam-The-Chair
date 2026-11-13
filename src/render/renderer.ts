@@ -12,6 +12,8 @@ import { drawBuilding } from './scene/building';
 import { drawRooftop } from './scene/rooftop';
 import { drawCloudStart } from './scene/clouds';
 import { focusVignette } from './scene/focus-vignette';
+import { drawStageTitle, drawTalk } from './scene/talk';
+import type { SceneTalk } from './types';
 import { createPaintPool, paint, thorvgTextWidth } from './paint';
 import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
 import { resetRenderStats, type LayerOverrides, type RenderStats } from './perf';
@@ -70,7 +72,7 @@ function setup(
     observer.observe(base);
     size();
 
-    function draw(next: GameState, effects: EffectsState, camera?: number, opening?: OpeningFrame) {
+    function draw(next: GameState, effects: EffectsState, camera?: number, opening?: OpeningFrame, talk?: SceneTalk) {
         ctx.locale = getLocale();
         ctx.state = next;
         ctx.LEN = next.level.length;
@@ -146,7 +148,11 @@ function setup(
         } else {
             drawWorld(ctx);
         }
-        if (!opening) focusVignette(ctx);
+        if (!opening) {
+            focusVignette(ctx);
+            if (talk) drawTalk(ctx, talk);
+            drawStageTitle(ctx);
+        }
         if (stats) {
             resetRenderStats(stats);
             stats.buildMs = performance.now() - buildStart;
@@ -243,10 +249,3 @@ function setup(
         },
     };
 }
-
-export type Viewport = {
-    cam: number;
-    scale: number;
-    vertical: number;
-    width: number;
-};
