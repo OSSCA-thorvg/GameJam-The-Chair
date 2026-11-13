@@ -1,15 +1,16 @@
 import type { RenderCtx } from '../context';
 import { createSkyProjection, placedProjection, type Point3, type SkyProjection } from './sky-projection';
 import { routeBend, routeHeading } from './orbit-route';
-import { orbitCoffee, orbitDebris, orbitGeofence, orbitSlipstream, orbitSpeedLines } from './orbit-flight';
+import { orbitCoffee, orbitDebris, orbitEdgePuffs, orbitSlipstream, orbitSpeedLines } from './orbit-flight';
 import { endingChair } from './sky-ending-art';
 import { skyDeparture } from './sky-departure';
 import { basinCloudSeeds, orbitCloudBank, orbitSky, type CloudBankOptions } from './orbit-atmosphere';
 import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGlow } from './orbit-watch';
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
 import { orbitPraise, orbitPraiseOnChair } from './orbit-praise';
-import { inOpacity, orbitEarth, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
-import { endingChairLights, endingFade, endingNebula, type OrbitEndingState } from './orbit-ending';
+import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
+import { earthHorizonAhead, orbitEarth, type EarthCamera } from './orbit-earth';
+import { endingChairLights, endingFade, endingNebula, endingSignal, ORBIT_ENDING, type OrbitEndingState } from './orbit-ending';
 import { STAGE_FIVE as C } from '../../game/stages/orbit/data';
 
 /**
@@ -55,7 +56,7 @@ const smooth = (value: number) => {
 const screen = (ctx: RenderCtx): [number, number][] => [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]];
 
 /** The sky: the reveal's plain sky under the basin sky, warm sunlight, and the climb toward space. */
-function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: number; y: number }, yaw: number) {
+function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: number; y: number }, yaw: number, earth: EarthCamera) {
     const heights = orbitHeights(shot.travel);
     if (shot.basin < 1) {
         ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H], stops: [[0, ctx.rgba('#678eae')], [1, ctx.rgba('#b7ced1')]] } });
@@ -68,7 +69,8 @@ function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: num
     } });
     orbitHighSky(ctx, heights, yaw);
     endingNebula(ctx, shot.ending.wide);
-    orbitEarth(ctx, heights, shot.ending.wide);
+    // In the ending the sun comes up over the rim and day returns to the ground below.
+    orbitEarth(ctx, shot.travel, earth, yaw, heights.air, heights.shadow * (1 - shot.ending.wide));
     return heights;
 }
 
@@ -77,11 +79,15 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     const clouds = 1 - orbitHeights(travel).air;
     const wide = ending.wide, blend = smooth(shot.entry);
     const mix = (a: number, b: number, k: number) => a + (b - a) * k;
-    // The camera follows most of the chair's offset, a beat late, so the chair leads into every move.
+    // The camera follows most of the chair's offset, a beat late, so the chair leads into every move. It stops at
+    // the edge of the play area, so a chair pressing past it slides out toward the side of the screen.
     const lag = .3, follow = .82;
-    const cam = { x: follow * (p.x - p.vx * lag), y: follow * (p.y - p.vy * lag) };
+    const within = (v: number, bound: number) => Math.max(-bound, Math.min(bound, v));
+    const cam = { x: follow * within(p.x - p.vx * lag, C.bounds.x), y: follow * within(p.y - p.vy * lag, C.bounds.y) };
+    // How hard the chair is pressing out past the edge, and which way.
+    const over = { x: Math.max(0, Math.abs(p.x) - C.bounds.x + 40) * Math.sign(p.x), y: Math.max(0, Math.abs(p.y) - C.bounds.y + 40) * Math.sign(p.y) };
+    const edge = smooth(Math.hypot(over.x, over.y) / (C.steer.overshoot + 40)) * (1 - wide);
     const heading = routeHeading(travel);
-    const heights = backdrop(ctx, shot, clouds, cam, heading);
     const fast = smooth((shot.speed - C.cruise) / (C.maxSpeed - C.cruise));
     const push = shot.push * blend;
     // How hard the chair is rushing forward. Speed only climbs while the extinguisher fires, so as the chair
@@ -91,17 +97,27 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // One camera for the world and the chair. It swings from the reveal's raised side view to behind the chair,
     // dollies back once stage five is under way, widens with speed, rolls a little with the bank and shakes
     // while the extinguisher fires; the ending pulls it back onto the wide horizon.
-    const view = createSkyProjection(ctx.W, ctx.H, turn, {
-        centerY: .5 - .13 * turn + Math.sin(ctx.t * 47) * .002 * push, eyeY: 45 - 30 * turn,
+    // Climbing out of the clouds the camera tips down to take in the Earth below, as a chase camera would.
+    const climb = orbitHeights(travel);
+    const lookDown = (14 * climb.air + 12 * climb.space + 4 * wide) * Math.PI / 180;
+    const framing = {
+        centerY: .5 - .13 * turn + Math.sin(ctx.t * 47) * .002 * push, eyeY: 45 - 30 * turn + distance * Math.tan(lookDown),
         distance, zoom: mix(1 - .08 * fast, .72, wide), roll: mix(p.a * .35, 0, wide),
         offsetX: Math.sin(ctx.t * 53) * 1.2 * push,
-    });
+    };
+    const view = createSkyProjection(ctx.W, ctx.H, turn, framing);
+    // The Earth is seen through the same lens, so its horizon sits where the world's eye level puts it.
+    const earth: EarthCamera = { cx: ctx.W / 2 + framing.offsetX, cy: ctx.H * framing.centerY,
+        focal: Math.min(ctx.H * 1.65, ctx.W * .94) * framing.zoom, roll: framing.roll, pitch: lookDown };
+    const heights = backdrop(ctx, shot, clouds, cam, heading, earth);
     const point = (x: number, y: number, z: number): Point3 => [z - travel, 15 + y - cam.y, x - cam.x + routeBend(travel, heading, z - travel)];
     // The chair sits a little below the camera's line of sight, banking and pitching with its own motion. Its
     // drop scales with the camera distance, so a pulled-back camera shows it smaller at the same height.
     const sink = (38 * turn + 72 * blend) * distance / (480 + 210 * blend) / (1 - .08 * fast * (1 - wide));
     const bank = mix(p.a * .65, 0, wide), pitch = mix(Math.max(-.2, Math.min(.2, p.vy / 900)), 0, wide);
-    const pivot = -25, offset: Point3 = [0, -sink + p.y - cam.y, p.x - cam.x];
+    // Pressing against the edge, the chair shudders.
+    const shudder = edge * 2.6;
+    const pivot = -25, offset: Point3 = [0, -sink + p.y - cam.y + Math.sin(ctx.t * 61) * shudder, p.x - cam.x + Math.cos(ctx.t * 53) * shudder];
     const chair = placedProjection(view, ([x, y, z]) => {
         const ly = y - pivot;
         const x1 = x * Math.cos(pitch) - ly * Math.sin(pitch), y1 = x * Math.sin(pitch) + ly * Math.cos(pitch);
@@ -123,7 +139,6 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     const flight = smooth((since + 2) / 1.5) * (1 - wide);
     orbitDebris(view, point, travel, ctx.t, flight);
     const coffeeGlow = orbitCoffee(ctx, view, point, travel, shot.drunk, ctx.t, flight);
-    orbitGeofence(view, point, travel, p);
     // Scenery beyond the chair first; the chair and whatever passes beside it are painted after the clouds.
     const split = { depth: chair.depth([0, pivot, 0]) + 90, part: 'far' as const };
     ctx.commands.push(...view.commands(split));
@@ -132,24 +147,27 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // The praise beams fade in with their satellites while the camera turns.
     orbitPraise(ctx, view, point, since, travel, smooth((turn - ORBIT_WATCH.satelliteAppear) / .3));
     inOpacity(ctx, { key: 'orbit-near-clouds', opacity: clouds }, () => orbitCloudBank(ctx, view, travel, true, options));
-    orbitShadow(ctx, heights, wide);
+    orbitShadow(ctx, { ...heights, shadow: heights.shadow * (1 - wide) }, earthHorizonAhead(travel, earth, heading));
     skyDeparture(ctx, shot.departure);
     orbitSpeedLines(ctx, view.project(point(0, 0, travel + 100000)), fast * (1 - wide));
     // The air resistance shows as streaks wrapping round the chair, strongest while the extinguisher pushes,
     // and the plume stretches out behind it.
     const air = orbitSlipstream(ctx, chair, rush * (.35 + .65 * push) * (1 - wide));
     ctx.commands.push(...air.behind);
-    endingChair(chair, shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival);
+    endingChair(chair, shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose);
     if (shot.sip > 0) sipCup(chair, shot.sip);
+    orbitEdgePuffs(chair, edge, over, ctx.t);
     ctx.commands.push(...view.commands({ ...split, part: 'near' }));
     ctx.commands.push(...air.over);
     endingChairLights(ctx, chair, ending);
     orbitPraiseOnChair(ctx, chair.project([0, 0, 0]), since, p, travel);
     const head = chair.project([4, 70, 0]);
     // The laptop answers the cameras just before stage five and the bubble stays up into its first moments;
-    // deep in the Earth's shadow the laptop finally loses its connection.
-    if (ending.parked) attendanceBubble(ctx, head, ending.t + .4, 'orbit.disconnected');
-    else attendanceBubble(ctx, head, since + ATTENDANCE.lead);
+    // deep in the Earth's shadow its signal drops away until it loses the network altogether.
+    if (ending.parked) {
+        endingSignal(ctx, head, ending);
+        attendanceBubble(ctx, head, ending.t - ORBIT_ENDING.disconnect, 'orbit.disconnected');
+    } else attendanceBubble(ctx, head, since + ATTENDANCE.lead);
     endingFade(ctx, ending);
 }
 

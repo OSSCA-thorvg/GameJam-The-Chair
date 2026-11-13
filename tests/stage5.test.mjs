@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, orbitStep, praiseBeamX, praiseBeamOn, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
+const { ORBIT_ENDING, createGame, orbitStep, praiseBeamX, praiseBeamOn, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
     export { createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } from './src/game/replay';
     export { actionForKey } from './src/ui/controls';
     export { createGame, stepGame } from './src/game/game';
@@ -11,6 +11,7 @@ const { createGame, orbitStep, praiseBeamX, praiseBeamOn, STAGE_FIVE, stepGame, 
     export { parseCommand } from './src/game/commands';
     export { previewScenes, orbitKeys } from './src/preview-scenes';
     export { drawOrbit } from './src/render/scene/orbit';
+    export { ORBIT_ENDING } from './src/render/scene/orbit-ending';
     export { createRenderCtx } from './src/render/context';
 `);
 const fresh = () => { const game = createGame({ seed: 55 }); game.startStage(5); return game; };
@@ -209,7 +210,7 @@ function endingFrame(t) {
     drawOrbit(ctx);
     const layer = key => ctx.commands.filter(command => command.layer?.key === key);
     const labels = ctx.commands.filter(command => command.text).map(command => command.text.content);
-    return { labels, layer };
+    return { labels, layer, commands: ctx.commands };
 }
 
 test('parked in the Earth shadow, the ending clock counts on and the chair stays put', () => {
@@ -220,13 +221,23 @@ test('parked in the Earth shadow, the ending clock counts on and the chair stays
     assert.equal(after.orbit.z, STAGE_FIVE.checkpoint.z);
 });
 
-test('the ending: horizon and nebula, the laptop goes dark, everything fades, then THE END', () => {
-    const start = endingFrame(0), wide = endingFrame(10), out = endingFrame(15), end = endingFrame(20);
-    assert.deepEqual(start.layer('orbit-nebula'), [], 'it starts from the shadow 5-3 ended in');
-    assert.ok(start.labels.some(label => label.startsWith('Network')), 'the connection-lost bubble is up first');
-    assert.ok(wide.layer('orbit-nebula').length > 0 && wide.layer('orbit-atmosphere-glow').length > 0);
-    assert.ok(wide.layer('orbit-laptop-light').length > 0, 'the laptop still glows');
-    assert.deepEqual(wide.layer('orbit-ending-black'), []);
+test('the ending: the extinguisher floats off, the signal drops bar by bar, the network goes, then THE END', () => {
+    const { release, signal, signalStep, disconnect } = ORBIT_ENDING;
+    const at = t => endingFrame(t);
+    // The extinguisher's red body: where it sits on screen.
+    const extinguisher = frame => {
+        const xs = frame.commands.filter(command => command.c === '#b75f4a' || command.c === '#c7765c').flatMap(command => command.v.map(([x]) => x));
+        return xs.reduce((sum, x) => sum + x, 0) / xs.length;
+    };
+    assert.ok(!at(0).labels.some(label => label.startsWith('Network')), 'no network message straight away');
+    assert.ok(Math.abs(extinguisher(at(release + 6)) - extinguisher(at(0))) > 60, 'the extinguisher has drifted well away from the chair');
+    const bars = frame => frame.layer('orbit-signal').filter(command => command.stroke?.color === '#ffffff').length;
+    assert.deepEqual(at(signal - 2).layer('orbit-signal'), [], 'no signal icon before it starts to drop');
+    assert.equal(bars(at(signal + .1)), 3);
+    assert.ok(bars(at(signal + signalStep * 1.2)) < 3 && bars(at(signal + signalStep * 2.2)) < bars(at(signal + signalStep * 1.2)), 'losing bars one by one');
+    assert.ok(at(disconnect + .5).labels.some(label => label.startsWith('Network')), 'then the network is lost');
+    const wide = at(ORBIT_ENDING.wide - 1), out = at(15), end = at(20);
+    assert.ok(wide.layer('orbit-nebula').length > 0 && wide.layer('orbit-laptop-light').length > 0, 'the laptop still glows under the nebula');
     assert.deepEqual(out.layer('orbit-laptop-light'), [], 'the screen has gone dark');
     assert.ok(out.layer('orbit-ending-black').length === 1, 'fading out');
     assert.deepEqual(end.labels.filter(label => label === 'THE END'), ['THE END']);
@@ -332,12 +343,21 @@ function flightFrame(setup) {
     return ctx.commands;
 }
 
-test('the geofence tape shows only near the edge, and speed lines only when fast', () => {
+test('the edge of the play area shows on the chair itself, and speed lines only when fast', () => {
     const tape = commands => commands.filter(command => typeof command.c === 'string' && /^#(f2c230|2b2b2b)/.test(command.c));
-    assert.equal(tape(flightFrame()).length, 0, 'none in the middle of the route');
-    assert.ok(tape(flightFrame(state => { state.p.x = STAGE_FIVE.bounds.x; })).length > 10, 'tape along the edge the chair is at');
+    const puffs = commands => commands.filter(command => typeof command.c === 'string' && command.c.startsWith('#f6e6df')).length;
+    const casters = commands => {
+        const xs = commands.filter(command => command.c === '#3f4650').flatMap(command => command.v.map(([x]) => x));
+        return xs.reduce((sum, x) => sum + x, 0) / xs.length;
+    };
+    const middle = flightFrame(), inside = flightFrame(state => { state.p.x = STAGE_FIVE.bounds.x - 100; });
+    const pressing = flightFrame(state => { state.p.x = STAGE_FIVE.bounds.x + STAGE_FIVE.steer.overshoot; });
+    assert.equal(tape(pressing).length, 0, 'nothing is hung in the sky to mark it');
+    assert.ok(puffs(pressing) > puffs(inside) + 3, 'the extinguisher coughs outward to push back in');
+    assert.ok(casters(pressing) - casters(inside) > 40, 'the camera stops at the edge, so the chair slides toward the side');
+    assert.ok(Math.abs(casters(middle) - 500) < 30, 'centred in the middle of the route');
     const lines = commands => commands.filter(command => command.layer?.key === 'orbit-speed-lines');
-    assert.equal(lines(flightFrame()).length, 0, 'none at cruise speed');
+    assert.equal(lines(middle).length, 0, 'no speed lines at cruise speed');
     assert.ok(lines(flightFrame(state => { state.orbit.speed = STAGE_FIVE.maxSpeed; })).length > 10, 'streaks flat out');
 });
 
@@ -366,4 +386,31 @@ test('rushing forward pulls the camera back and streams air round the chair', ()
     assert.equal(air(slow).length, 0, 'no air streaks at a crawl');
     assert.ok(air(rushing).length > 10, 'streaks flat out');
     assert.ok(air(rushing)[0].layer.opacity > air(frame(STAGE_FIVE.maxSpeed, 0))[0].layer.opacity, 'stronger while the extinguisher pushes');
+});
+
+test('the Earth sits below the chair: its horizon dips under eye level and curves more the higher it climbs', async () => {
+    const { orbitEarth, earthAltitude, groundTrack } = await loadSource(`export { orbitEarth, earthAltitude, groundTrack } from './src/render/scene/orbit-earth';`);
+    const level = { cx: 500, cy: 189, focal: 841, roll: 0, pitch: 0 };
+    const horizon = z => {
+        const ctx = createRenderCtx({});
+        Object.assign(ctx, { W: 1000, H: 510, t: 0, commands: [] });
+        orbitEarth(ctx, z, level, 0, 1, 0);
+        return ctx.commands.find(command => command.layer?.key === 'orbit-earth-limb').v;
+    };
+    const { air, space, shadow } = STAGE_FIVE.heights;
+    assert.ok(earthAltitude(air) < earthAltitude(space) && earthAltitude(space) < earthAltitude(shadow), 'climbing all the way');
+    const low = horizon(space), high = horizon(shadow);
+    const middle = line => line[Math.floor(line.length / 2)][1];
+    assert.ok(middle(low) > level.cy && middle(high) > middle(low), 'below eye level, lower the higher it is');
+    const sag = line => line.find(([x]) => x > 1000)[1] - middle(line);
+    assert.ok(sag(low) > 0 && sag(high) > sag(low), 'curving down toward the sides, more so higher up');
+    const [lon, lat] = groundTrack(STAGE_FIVE.checkpoint.z);
+    assert.ok(lat < 37.5 && Math.abs(lon - 127) < 3, 'the flight ends south of Seoul, looking north at it');
+});
+
+test('in the ending Seoul glows on the night side ahead', () => {
+    const night = endingFrame(.5);
+    const lights = night.layer('orbit-earth-lights').filter(command => command.c === '#fff6dc');
+    assert.ok(lights.length > 5, 'city lights are on');
+    assert.ok(lights.some(({ v }) => v.every(([x, y]) => x > 0 && x < 1000 && y > 0 && y < 510)), 'and on screen');
 });

@@ -81,26 +81,17 @@ export function orbitCoffee(ctx: RenderCtx, view: SkyProjection, point: RoutePoi
 }
 
 /**
- * The company geofence: yellow-and-black tape that shows up at the edge of the play area as the chair nears it,
- * level with the chair, along the stretch just ahead.
+ * At the edge of the play area the chair pushes back on its own: the extinguisher coughs puffs outward (the
+ * recoil carries it back in) and the chair shudders. `edge` is how hard it is pressing out, `out` which way
+ * (across, up). Drawn in the chair's own model, so the puffs sort with the chair.
  */
-export function orbitGeofence(view: SkyProjection, point: RoutePoint, travel: number, p: { x: number; y: number }) {
-    const near = (at: number, bound: number) => Math.max(0, Math.min(1, (Math.abs(at) - (bound - 240)) / 240));
-    const segment = 70;
-    const first = Math.floor((travel - 150) / segment) * segment;
-    const tape = (corners: (z0: number, z1: number) => Point3[], strength: number) => {
-        if (strength <= 0) return;
-        for (let z = first, i = Math.floor(first / segment); z < travel + 1400; z += segment, i++) {
-            view.polygon(corners(z, z + segment), (i % 2 ? '#2b2b2b' : '#f2c230') + alpha(strength * (1 - (z - travel) / 1600)));
-        }
-    };
-    const sx = Math.sign(p.x) || 1, sy = Math.sign(p.y) || 1;
-    const wallX = sx * (C.bounds.x + 70), wallY = sy * (C.bounds.y + 70);
-    for (const level of [-90, 60]) {
-        tape((z0, z1) => [point(wallX, p.y + level, z0), point(wallX, p.y + level, z1), point(wallX, p.y + level + 22, z1), point(wallX, p.y + level + 22, z0)], near(p.x, C.bounds.x));
-    }
-    for (const side of [-160, 140]) {
-        tape((z0, z1) => [point(p.x + side, wallY, z0), point(p.x + side, wallY, z1), point(p.x + side + 22, wallY, z1), point(p.x + side + 22, wallY, z0)], near(p.y, C.bounds.y));
+export function orbitEdgePuffs(chair: SkyProjection, edge: number, out: { x: number; y: number }, t: number) {
+    if (edge <= .02) return;
+    const len = Math.hypot(out.x, out.y) || 1, dz = out.x / len, dy = out.y / len;
+    for (let i = 0; i < 6; i++) {
+        const age = (t * 2.2 + i / 6) % 1;
+        const reach = 18 + age * 120 * edge, size = 4 + age * 16;
+        chair.oval([-46 - age * 8, 24 + dy * reach, dz * reach], [size * .8, size, size], '#f6e6df' + alpha(.75 * (1 - age) * edge));
     }
 }
 

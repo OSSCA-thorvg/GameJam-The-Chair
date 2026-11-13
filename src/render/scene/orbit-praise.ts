@@ -54,7 +54,8 @@ function beam(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, a
     if (visible.length < 3) return;
     const top = view.project(apex), bottom = view.project(at(0, (near + b.to) / 2));
     ctx.commands.push({ v: hull(visible), c: { from: top, to: bottom,
-        stops: [[0, ctx.rgba('#fff3c4', .55 * strength)], [.7, ctx.rgba('#ffe9a8', .28 * strength)], [1, ctx.rgba('#ffe9a8', .12 * strength)]] },
+        // Fading out toward its far end, so the light never reads as a sheet laid over the Earth below.
+        stops: [[0, ctx.rgba('#fff3c4', .55 * strength)], [.6, ctx.rgba('#ffe9a8', .24 * strength)], [1, ctx.rgba('#ffe9a8', 0)]] },
     layer: { key: 'orbit-praise-beam', blend: 'screen' } });
 }
 

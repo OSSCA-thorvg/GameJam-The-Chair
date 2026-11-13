@@ -782,14 +782,14 @@ function orbitEndingScene(): PreviewScene {
     game.restore(JSON.stringify(parked));
     const effects = createEffects();
     const frames = [capture(game, effects)];
-    const { calm, wide, lightsOut, dark, end } = ORBIT_ENDING;
-    const markers = [{ at: 0, label: '05 Spray dies down' }, { at: calm, label: '06 Horizon and nebula' }, { at: wide, label: '07 Laptop goes dark' },
-        { at: lightsOut, label: 'Fading out' }, { at: dark, label: '08 THE END' }];
+    const { release, wide, signal, disconnect, lightsOut, dark, end } = ORBIT_ENDING;
+    const markers = [{ at: 0, label: 'Spray dies down' }, { at: release, label: 'Extinguisher floats off' }, { at: signal, label: 'Signal dropping' },
+        { at: disconnect, label: 'Network lost' }, { at: wide, label: 'Laptop goes dark' }, { at: lightsOut, label: 'Fading out' }, { at: dark, label: 'THE END' }];
     for (let i = 0; i < (end + 1) * 60; i++) {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('orbit-ending', 'Orbit · Ending: horizon, lights out, THE END', 0, markers, frames);
+    return recordedScene('orbit-ending', 'Orbit · Ending: extinguisher floats off, signal lost, THE END', 0, markers, frames);
 }
 
 // 5-1: duck from shelter cloud to shelter cloud while the satellite's praise beam sweeps the cloud layer.
