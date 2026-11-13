@@ -58,7 +58,8 @@ function boardLight(ctx: RenderCtx) {
     ctx.gradientPolygon([[100, 75], [166, 75], [222, 214], [44, 214]],
         ctx.gradientFill(0, 75, 0, 214, [[0, '#fff0c678'], [.45, '#ffe4b33b'], [1, '#ffe4b300']]));
     ctx.endLayer();
-    ctx.beginLayer({ key: 'employee-board-lamp-glow', blend: 'add', blur: 3, opacity: .5 });
+    ctx.beginLayer({ key: 'employee-board-lamp-glow', blend: 'add', blur: 3, opacity: .5,
+        effectBudget: { area: 24_000, minScale: .7 } });
     ctx.rect(100, 71, 66, 3, '#ffe5af');
     ctx.endLayer();
 }

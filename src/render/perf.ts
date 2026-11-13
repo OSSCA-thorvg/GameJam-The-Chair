@@ -75,10 +75,18 @@ export function applyLayerOverrides(commands: DrawCommand[], overrides: LayerOve
         const key = cmd.layer?.key;
         if (key === undefined) out.push(cmd);
         else if (overrides.hidden.has(key)) continue;
-        else if (overrides.flat.has(key)) out.push({ ...cmd, layer: undefined });
+        // A retained layer with no effects is already flat; dropping its layer would also drop the Scene
+        // transform and paint its local geometry in the wrong place.
+        else if (overrides.flat.has(key) && !cmd.layer?.retained) out.push({ ...cmd, layer: undefined });
         else out.push(cmd);
     }
     return out;
+}
+
+/** Scale effect radius and sampling to keep a large offscreen layer within its declared pixel budget. */
+export function effectScaleForArea(area: number, budget: number, minScale = .55) {
+    if (area <= 0 || budget <= 0 || area <= budget) return 1;
+    return Math.max(Math.min(1, minScale), Math.sqrt(budget / area));
 }
 
 export function createRenderStats(): RenderStats {

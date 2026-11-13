@@ -9,7 +9,7 @@ test('the rooftop sales chart has no information banner above it', () => {
     game.startStage(3);
     const state = game.getSnapshot();
     const ctx = createRenderCtx({}, { fillText() {} });
-    Object.assign(ctx, { state, p: state.player, mode: state.mode });
+    Object.assign(ctx, { state, p: state.player, mode: state.mode, W: 3500, VW: 3500 });
 
     drawRooftop(ctx);
 
@@ -29,7 +29,8 @@ test('the rooftop sales chart support ends cleanly at the top edge', () => {
     game.startStage(3);
     const state = game.getSnapshot();
     const ctx = createRenderCtx({}, { fillText() {} });
-    Object.assign(ctx, { state, p: state.player, mode: state.mode });
+    // This structural assertion asks for the whole chart, so use a viewport wide enough to include it.
+    Object.assign(ctx, { state, p: state.player, mode: state.mode, W: 3500, VW: 3500 });
 
     drawRooftop(ctx);
 

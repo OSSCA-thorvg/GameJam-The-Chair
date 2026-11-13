@@ -27,6 +27,12 @@ export type Gradient = {
     radius?: number;
 };
 export type Blend = 'normal' | 'multiply' | 'screen' | 'add' | 'overlay';
+export type Bounds = { left: number; top: number; right: number; bottom: number };
+export type Transform = {
+    e11: number; e12: number; e13: number;
+    e21: number; e22: number; e23: number;
+    e31: 0; e32: 0; e33: 1;
+};
 export type Stroke = {
     width: number;
     color: string | Gradient;
@@ -52,6 +58,13 @@ export type LayerSpec = {
     mask?: DrawCommand;
     /** Keep the layer where the mask is transparent instead (ThorVG MaskMethod.InvAlpha). */
     maskInvert?: boolean;
+    /**
+     * Immutable local geometry owned by this renderer's ThorVG Scene. The path is built once and only the
+     * absolute Scene transform changes with the camera. Paints are never shared between canvases.
+     */
+    retained?: { geometry: string; transform: Transform; bounds: Bounds };
+    /** Shrink expensive blur sampling when this layer's expanded screen area exceeds the budget. */
+    effectBudget?: { area: number; minScale?: number };
 };
 export type DrawCommand = {
     v: Vector[];

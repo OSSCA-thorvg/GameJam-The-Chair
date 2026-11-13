@@ -47,14 +47,15 @@ export type CloudOptions = {
     alpha?: number;
     /** Fade the underside to transparent so the cloud melts into the sky below it. */
     fade?: boolean;
+    /** `auto` lowers path detail only when the projected cloud is small. */
+    detail?: 'auto' | 'full' | 'reduced';
 };
 
 type Puff = { x: number; y: number; r: number };
 type CloudShape = { start: Vector; outline: Curve[]; crestStart: Vector; crest: Curve[]; puffs: Puff[]; top: number; bottom: number };
 
-const SAMPLES = 64;
 const FLAT_BOTTOM = 34;
-const shapes = new Map<number, CloudShape>();
+const shapes = new Map<string, CloudShape>();
 
 // mulberry32: tiny seeded generator so render-side randomness stays repeatable.
 export function seeded(seed: number) {
@@ -97,7 +98,7 @@ function smoothLoop(points: Vector[], from: number, to: number): Curve[] {
     return curves;
 }
 
-function buildShape(seed: number): CloudShape {
+function buildShape(seed: number, samples: number): CloudShape {
     const random = seeded(seed);
     const count = 4 + Math.floor(random() * 3);
     const width = 230 + random() * 130;
@@ -116,8 +117,8 @@ function buildShape(seed: number): CloudShape {
     const lumps: Lump[] = [...puffs.map(p => ({ x: p.x, y: p.y, rx: p.r, ry: p.r })), base];
     const left = Math.min(...lumps.map(l => l.x - l.rx)) + .01, right = Math.max(...lumps.map(l => l.x + l.rx)) - .01;
     // Half-cosine spacing adds samples where the silhouette turns steeply at both ends.
-    const xs = Array.from({ length: SAMPLES + 1 }, (_, k) => {
-        const u = k / SAMPLES;
+    const xs = Array.from({ length: samples + 1 }, (_, k) => {
+        const u = k / samples;
         return left + (right - left) * (u + (1 - Math.cos(Math.PI * u)) / 2) / 2;
     });
     const crown: Vector[] = [], belly: Vector[] = [];
@@ -141,12 +142,13 @@ function buildShape(seed: number): CloudShape {
     };
 }
 
-function shapeFor(seed: number) {
-    let shape = shapes.get(seed);
+function shapeFor(seed: number, detail: 'full' | 'reduced') {
+    const key = `${seed}:${detail}`;
+    let shape = shapes.get(key);
     if (!shape) {
         // Stage 4 keeps minting ids as clouds scroll past; old shapes are cheap to rebuild.
         if (shapes.size > 256) shapes.clear();
-        shapes.set(seed, shape = buildShape(seed));
+        shapes.set(key, shape = buildShape(seed, detail === 'full' ? 64 : 32));
     }
     return shape;
 }
@@ -161,7 +163,9 @@ function circle(x: number, y: number, r: number): [Vector, Curve[]] {
 
 /** Draws one cloud centred on (x, y); `size` 1 is roughly 300 units wide. The same seed gives the same cloud. */
 export function puffCloud(ctx: RenderCtx, x: number, y: number, size: number, seed: number, tone: CloudTone, options: CloudOptions = {}) {
-    const shape = shapeFor(seed);
+    const projected = size * ctx.localScale * ctx.scale;
+    const detail = options.detail === 'full' || (options.detail !== 'reduced' && projected >= .9) ? 'full' : 'reduced';
+    const shape = shapeFor(seed, detail);
     const alpha = options.alpha ?? 1;
     const ox = ctx.ox, oy = ctx.oy, scale = ctx.localScale, rotation = ctx.rotation;
     ctx.ox = x; ctx.oy = y; ctx.localScale = size; ctx.rotation = 0;
@@ -177,7 +181,8 @@ export function puffCloud(ctx: RenderCtx, x: number, y: number, size: number, se
         ], alpha));
     }
     // Each puff catches the light up and to the left, which gives the cloud its volume.
-    for (const puff of shape.puffs) {
+    const litPuffs = detail === 'full' ? shape.puffs : shape.puffs.filter((_, index) => index % 2 === 0);
+    for (const puff of litPuffs) {
         const cx = puff.x - puff.r * .16, cy = puff.y - puff.r * .2, r = puff.r * .72;
         const [start, curves] = circle(cx, cy, r);
         ctx.effectPath(start, curves, ctx.radialFill(cx - r * .25, cy - r * .3, r * 1.05, [

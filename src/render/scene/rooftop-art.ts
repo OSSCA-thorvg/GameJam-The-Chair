@@ -1,6 +1,7 @@
 import { STAGE_THREE } from '../../game/stages/rooftop/data';
 import type { RenderCtx } from '../context';
 import { CLOUD_TONES, puffCloud } from './cloud-art';
+import { sunGlow } from './sun';
 
 // The dusk over the roof, and the day sky of stage four it turns into on the climb.
 const DUSK: [number, string][] = [[0, '#8798b5'], [.45, '#ccb0b9'], [.8, '#f3c8a6'], [1, '#ffddac']];
@@ -21,11 +22,7 @@ export function rooftopSky(ctx: RenderCtx) {
         ctx.gradientFill(0, top, 0, bottom, DUSK.map(([at, color], i) => [at, mixHex(color, DAY[i][1], eased)] as [number, string])));
     if (eased > 0) {
         // The sky stage's sun glow fades in as the chair nears it.
-        const height = bottom - top;
-        ctx.beginLayer({ key: 'rooftop-sun', blend: 'screen', opacity: eased });
-        ctx.gradientPolygon([[ctx.cam, top], [ctx.cam + ctx.VW, top], [ctx.cam + ctx.VW, bottom], [ctx.cam, bottom]],
-            ctx.radialFill(ctx.cam + ctx.VW * .78, top + height * .2, height * .8, [[0, '#ffdfb549'], [.5, '#fff2db15'], [1, '#fff2db00']]));
-        ctx.endLayer();
+        sunGlow(ctx, top, bottom, eased);
     }
     // The skyline recedes in three layers as the chair climbs out of the city.
     for (let layer = 0; layer < 3; layer++) {
@@ -62,7 +59,7 @@ function wallPanels(ctx: RenderCtx, x: number, y: number, width: number, height:
     for (let col = 0; col < width / colWidth; col++) for (let row = 0; row < height / rowHeight; row++) {
         const px = x + 16 + col * colWidth, py = y + 16 + row * rowHeight;
         const w = Math.min(108, x + width - px - 8), h = Math.min(100, y + height - py - 8);
-        if (w < 4 || h < 4 || px > ctx.cam + ctx.VW + 20 || px + w < ctx.cam - 20) continue;
+        if (w < 4 || h < 4) continue;
         ctx.rect(px - 2, py - 2, w + 4, h + 4, '#58738c');
         ctx.rect(px, py, w, h, '#2d445f');
         ctx.gradientPolygon([[px + 3, py + 3], [px + w, py + 3], [px + w, py + h], [px + 3, py + h]],
@@ -184,7 +181,7 @@ function shaftCeiling(ctx: RenderCtx) {
 }
 
 export function rooftopPlatforms(ctx: RenderCtx) {
-    shaftCeiling(ctx);
+    if (ctx.visible({ left: 1180, top: -660, right: 1820, bottom: -420 }, 40)) shaftCeiling(ctx);
     for (const b of STAGE_THREE.blocks) {
         if (b.x > ctx.cam + ctx.VW + 80 || b.x + b.width < ctx.cam - 80) continue;
         if (b.id === 'shaft-left') continue; // The matching structural column was drawn with the wall.

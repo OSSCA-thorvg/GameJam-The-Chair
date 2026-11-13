@@ -6,15 +6,13 @@ import { drawSkyReveal } from './sky-reveal';
 import { breadCloud as cloud } from './cloud-art';
 import { skyCoursePlatform } from './sky-course-art';
 import { skyBuilding, skyFlag, skyMonitor, skyRibbon } from './sky-course-decor';
+import { sunGlow } from './sun';
 
 function atmosphere(ctx: RenderCtx) {
     const top = -ctx.vertical, height = ctx.H / ctx.scale, bottom = top + height;
     ctx.gradientPolygon([[ctx.cam, top], [ctx.cam + ctx.VW, top], [ctx.cam + ctx.VW, bottom], [ctx.cam, bottom]],
         ctx.gradientFill(0, top, 0, bottom, [[0, '#658eaf'], [.48, '#93bdcd'], [1, '#c6d5d6']]));
-    ctx.beginLayer({ key: 'sky-sun', blend: 'screen' });
-    ctx.gradientPolygon([[ctx.cam, top], [ctx.cam + ctx.VW, top], [ctx.cam + ctx.VW, bottom], [ctx.cam, bottom]],
-        ctx.radialFill(ctx.cam + ctx.VW * .78, top + height * .2, height * .8, [[0, '#ffdfb549'], [.5, '#fff2db15'], [1, '#fff2db00']]));
-    ctx.endLayer();
+    sunGlow(ctx, top, bottom);
     // Small, low-contrast buildings are seen through gaps far BELOW the furniture.
     ctx.beginLayer({ key: 'sky-distant-city', opacity: .25 });
     const cityY = bottom - height * .035;

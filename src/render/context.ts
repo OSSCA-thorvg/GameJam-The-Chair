@@ -2,7 +2,7 @@ import type { Locale } from '../i18n';
 import { LEVEL } from '../game/level';
 import type { GameState } from '../game/game';
 import type { DeepReadonly, Mode } from '../game/types';
-import type { Vector, Curve, Color, Gradient, DrawCommand, LayerSpec, Blend, Stroke } from './types';
+import type { Vector, Curve, Color, Gradient, DrawCommand, LayerSpec, Blend, Stroke, Bounds } from './types';
 import { ART } from './art';
 import type { EffectsState } from './effects';
 import type { PersonalBoxReaction } from './personal-box-motion';
@@ -67,7 +67,7 @@ export type RenderCtx = {
     personalBox: PersonalBoxReaction;
 
     screenPoint(x: number, y: number): Vector;
-    polygon(points: Vector[], color: string | Gradient): void;
+    polygon(points: Vector[], color: string | Gradient, opts?: PathOptions): void;
     rgba(hex: string, alpha?: number): Color;
     rgb(hex: string): [number, number, number];
     gradientFill(x1: number, y1: number, x2: number, y2: number, stops: [number, string][], alpha?: number): Gradient;
@@ -77,11 +77,15 @@ export type RenderCtx = {
     radialFill(cx: number, cy: number, r: number, stops: [number, string][], alpha?: number): Gradient;
     beginLayer(spec: LayerSpec): void;
     endLayer(): void;
-    gradientPolygon(points: Vector[], fill: Gradient): void;
+    gradientPolygon(points: Vector[], fill: Gradient, opts?: PathOptions): void;
+    /** Build immutable local geometry once; ThorVG moves its retained Scene with the camera thereafter. */
+    retainedGroup(key: string, bounds: Bounds, draw: () => void): void;
+    /** Conservative world-space visibility test for skipping whole scene groups before command creation. */
+    visible(bounds: Bounds, margin?: number): boolean;
     ripple(x: number, y: number, rx: number, ry: number, width: number, color: string): void;
     tint(hex: string, alpha: number): string;
     rect(x: number, y: number, w: number, h: number, c: string): void;
-    ellipse(x: number, y: number, rx: number, ry: number, c: string): void;
+    ellipse(x: number, y: number, rx: number, ry: number, c: string | Gradient, opts?: PathOptions): void;
     rod(x: number, y: number, xx: number, yy: number, w: number, c: string): void;
     label(text: string, x: number, y: number, size?: number, color?: string, align?: CanvasTextAlign): void;
 };
@@ -158,8 +162,8 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         if (ctx.layer) cmd.layer = ctx.layer;
         ctx.commands.push(cmd);
     };
-    ctx.polygon = (points, color) => {
-        push({ v: points.map(([x, y]) => ctx.screenPoint(x, y)), c: color });
+    ctx.polygon = (points, color, opts) => {
+        push({ v: points.map(([x, y]) => ctx.screenPoint(x, y)), c: color, ...opts });
     };
     ctx.rgb = (hex) => {
         const h = hex.slice(1);
@@ -210,8 +214,49 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
     ctx.endLayer = () => {
         ctx.layer = null;
     };
-    ctx.gradientPolygon = (points, fill) => {
-        push({ v: points.map(v => ctx.screenPoint(...v)), c: fill });
+    ctx.gradientPolygon = (points, fill, opts) => {
+        push({ v: points.map(v => ctx.screenPoint(...v)), c: fill, ...opts });
+    };
+    const retained = new Map<string, DrawCommand[]>();
+    ctx.visible = (bounds, margin = 0) => {
+        const left = ctx.cam - margin, right = ctx.cam + ctx.VW + margin;
+        const top = -ctx.vertical - margin, bottom = ctx.H / ctx.scale - ctx.vertical + margin;
+        return bounds.right > left && bounds.left < right && bounds.bottom > top && bounds.top < bottom;
+    };
+    ctx.retainedGroup = (key, bounds, draw) => {
+        if (!ctx.visible(bounds)) return;
+        let geometry = retained.get(key);
+        if (!geometry) {
+            const saved = {
+                commands: ctx.commands, cam: ctx.cam, vertical: ctx.vertical, scale: ctx.scale,
+                ox: ctx.ox, oy: ctx.oy, rotation: ctx.rotation, localScale: ctx.localScale,
+                mirror: ctx.mirror, layer: ctx.layer,
+            };
+            ctx.commands = [];
+            ctx.cam = ctx.vertical = ctx.ox = ctx.oy = ctx.rotation = 0;
+            ctx.scale = ctx.localScale = 1;
+            ctx.mirror = ctx.layer = null;
+            try {
+                draw();
+                geometry = ctx.commands;
+                retained.set(key, geometry);
+            } finally {
+                Object.assign(ctx, saved);
+            }
+        }
+        const transform = {
+            e11: ctx.scale, e12: 0, e13: -ctx.cam * ctx.scale,
+            e21: 0, e22: ctx.scale, e23: ctx.vertical * ctx.scale,
+            e31: 0 as const, e32: 0 as const, e33: 1 as const,
+        };
+        const screenBounds = {
+            left: (bounds.left - ctx.cam) * ctx.scale,
+            top: (bounds.top + ctx.vertical) * ctx.scale,
+            right: (bounds.right - ctx.cam) * ctx.scale,
+            bottom: (bounds.bottom + ctx.vertical) * ctx.scale,
+        };
+        const layer: LayerSpec = { key: `retained:${key}`, retained: { geometry: key, transform, bounds: screenBounds } };
+        ctx.commands.push(...geometry.map(command => ({ ...command, layer })));
     };
     ctx.ripple = (x, y, rx, ry, width, color) => {
         const points: Vector[] = [];
@@ -229,8 +274,8 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
     ctx.rect = (x, y, w, h, c) => {
         ctx.polygon([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], c);
     };
-    ctx.ellipse = (x, y, rx, ry, c) => {
-        ctx.polygon(Array.from({ length: 16 }, (_, i) => [x + rx * Math.cos(i / 16 * TAU), y + ry * Math.sin(i / 16 * TAU)]), c);
+    ctx.ellipse = (x, y, rx, ry, c, opts) => {
+        ctx.polygon(Array.from({ length: 16 }, (_, i) => [x + rx * Math.cos(i / 16 * TAU), y + ry * Math.sin(i / 16 * TAU)]), c, opts);
     };
     ctx.rod = (x, y, xx, yy, w, c) => {
         const dx = xx - x;

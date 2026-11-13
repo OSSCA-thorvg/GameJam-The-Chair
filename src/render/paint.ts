@@ -1,9 +1,16 @@
 import type { Canvas, LinearGradient, RadialGradient, Scene, Shape, ThorVGNamespace } from '@thorvg/webcanvas';
 import type { RenderCtx } from './context';
 import type { Blend, DrawCommand, Gradient, LayerSpec } from './types';
-import { applyLayerOverrides, type LayerOverrides, type RenderStats } from './perf';
+import { applyLayerOverrides, effectScaleForArea, type LayerOverrides, type RenderStats } from './perf';
 
-type LayerSlot = { scene: Scene; shapes: Shape[]; clip: Shape | null; mask: Shape | null; maskInvert: boolean };
+type LayerSlot = {
+    scene: Scene;
+    shapes: Shape[];
+    clip: Shape | null;
+    mask: Shape | null;
+    maskInvert: boolean;
+    retainedGeometry: string | null;
+};
 type Item = { cmd: DrawCommand } | { layer: LayerSpec; key: string; cmds: DrawCommand[] };
 
 // Shapes are pooled and reused; these bits remember which non-default
@@ -235,17 +242,27 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         }
         let slot = pool.layers.get(item.key);
         if (!slot) {
-            slot = { scene: new TVG.Scene(), shapes: [], clip: null, mask: null, maskInvert: false };
+            slot = { scene: new TVG.Scene(), shapes: [], clip: null, mask: null, maskInvert: false, retainedGeometry: null };
             pool.layers.set(item.key, slot);
         }
         const { scene, shapes } = slot;
         const spec = item.layer;
         const blurred = !!spec.blur || (!!spec.motionBlur && spec.motionBlur.distance > .5);
-        const extent = stats ? [Infinity, Infinity, -Infinity, -Infinity] : undefined;
+        const extent = stats || spec.effectBudget ? [Infinity, Infinity, -Infinity, -Infinity] : undefined;
+        if (spec.retained && extent) {
+            const bounds = spec.retained.bounds;
+            extent[0] = Math.max(0, bounds.left);
+            extent[1] = Math.max(0, bounds.top);
+            extent[2] = Math.min(ctx.W, bounds.right);
+            extent[3] = Math.min(ctx.H, bounds.bottom);
+        }
+        const retainedReady = !!spec.retained && slot.retainedGeometry === spec.retained.geometry;
         let i = 0;
         let anchor: [number, number] | null = null;
         for (const cmd of item.cmds) {
-            const box = canvasBox(cmd, ctx.W, ctx.H, extent);
+            const box: [number, number] | null = spec.retained
+                ? [Math.max(0, spec.retained.bounds.left), Math.max(0, spec.retained.bounds.top)]
+                : canvasBox(cmd, ctx.W, ctx.H, extent);
             if (!box) continue;
             anchor ??= box;
             let s = shapes[i];
@@ -254,12 +271,20 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
                 shapes.push(s);
                 scene.add(s);
             }
-            apply(s, cmd);
+            if (!retainedReady) apply(s, cmd);
             i++;
+        }
+        if (spec.retained) {
+            scene.transform(spec.retained.transform);
+            slot.retainedGeometry = spec.retained.geometry;
         }
         // Spare shapes stay in the scene (re-adding leaks a ThorVG reference each time) but are parked as a
         // near-transparent pixel inside the drawn area: hiding them or emptying them would widen the region.
         const [px, py] = anchor ?? [0, 0];
+        const area = extent && extent[2] > extent[0] && extent[3] > extent[1]
+            ? (extent[2] - extent[0]) * (extent[3] - extent[1]) : 0;
+        const effectScale = spec.effectBudget
+            ? effectScaleForArea(area, spec.effectBudget.area, spec.effectBudget.minScale) : 1;
         if (stats) {
             stats.layers++;
             stats.layerShapes += shapes.length;
@@ -268,20 +293,19 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
             if (spec.mask) stats.masks++;
             if (spec.blur) {
                 stats.gaussianBlurs++;
-                stats.blurAmount += spec.blur;
+                stats.blurAmount += spec.blur * effectScale;
             }
             if (spec.motionBlur && spec.motionBlur.distance > .5) {
                 stats.motionBlurs++;
-                stats.blurAmount += spec.motionBlur.distance;
+                stats.blurAmount += spec.motionBlur.distance * effectScale;
             }
-            const area = extent && extent[2] > extent[0] && extent[3] > extent[1]
-                ? (extent[2] - extent[0]) * (extent[3] - extent[1]) : 0;
             if (blurred) stats.blurArea += area;
             const effects: string[] = [];
             if (spec.opacity !== undefined && spec.opacity < 1) effects.push(`α${spec.opacity.toFixed(2)}`);
             if (spec.blend && spec.blend !== 'normal') effects.push(spec.blend);
             if (spec.blur) effects.push(`blur${spec.blur}`);
             if (spec.motionBlur && spec.motionBlur.distance > .5) effects.push('motion');
+            if (effectScale < 1) effects.push(`budget${Math.round(effectScale * 100)}%`);
             if (spec.clip) effects.push('clip');
             if (spec.mask) effects.push(spec.maskInvert ? 'invmask' : 'mask');
             stats.layerList.push({ key: spec.key, shapes: i, area, effects });
@@ -289,9 +313,10 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         for (; i < shapes.length; i++) apply(shapes[i], { v: [[px, py], [px + 1, py], [px + 1, py + 1], [px, py + 1]], c: '#00000001' });
 
         scene.resetEffects();
-        if (spec.blur) scene.gaussianBlur(spec.blur, 0, 0, 45);
+        const quality = Math.max(20, Math.round(45 * effectScale));
+        if (spec.blur) scene.gaussianBlur(spec.blur * effectScale, 0, 0, quality);
         if (spec.motionBlur && spec.motionBlur.distance > .5) {
-            scene.motionBlur(spec.motionBlur.distance, spec.motionBlur.angle, 45);
+            scene.motionBlur(spec.motionBlur.distance * effectScale, spec.motionBlur.angle, quality);
         }
         scene.blend(blendOf(spec.blend));
         scene.opacity(Math.round(Math.max(0, Math.min(1, spec.opacity ?? 1)) * 255));
@@ -376,6 +401,10 @@ function paintCanvas(ctx: RenderCtx, bg: CanvasRenderingContext2D, commands: Dra
         const styled = layer || cmd.blend || cmd.stroke;
         if (styled) {
             bg.save();
+            if (layer?.retained) {
+                const m = layer.retained.transform;
+                bg.transform(m.e11, m.e21, m.e12, m.e22, m.e13, m.e23);
+            }
             if (layer?.clip) {
                 tracePath2d(bg, layer.clip);
                 bg.clip();

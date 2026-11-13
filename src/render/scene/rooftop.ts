@@ -19,24 +19,29 @@ export function drawRooftop(ctx: RenderCtx) {
     ctx.ox = ctx.oy = ctx.rotation = 0;
 
     rooftopSky(ctx);
-    rooftopWalls(ctx);
-    employeeBoard(ctx);
-    personalBox(ctx);
+    ctx.retainedGroup('rooftop-walls', { left: -400, top: -650, right: 1807, bottom: 420 }, () => rooftopWalls(ctx));
+    if (ctx.visible({ left: 35, top: 45, right: 230, bottom: 220 }, 40)) employeeBoard(ctx);
+    if (ctx.visible({ left: 1200, top: 300, right: 1370, bottom: 430 }, 80)) personalBox(ctx);
     rooftopPlatforms(ctx);
-    rooftopDuct(ctx);
-    rooftopVents(ctx);
-    rooftopGraphSign(ctx);
+    if (ctx.visible({ left: 1040, top: -720, right: 2050, bottom: 500 }, 100)) {
+        rooftopDuct(ctx);
+        rooftopVents(ctx);
+    }
+    if (ctx.visible({ left: 2260, top: -1060, right: 3050, bottom: 50 }, 120)) rooftopGraphSign(ctx);
     if (state.firstFlight.kind === 'flight') ascentClouds(ctx);
 
     // Empty entrance recess sits behind the hinged door and the existing player.
-    ctx.rect(46, 221, 159, 199, '#71869d');
-    ctx.rect(54, 229, 143, 191, '#23384f');
-    ctx.gradientPolygon([[61, 236], [190, 236], [190, 420], [61, 420]],
-        ctx.gradientFill(0, 236, 0, 420, [[0, '#1c2e45'], [1, '#445e78']]));
-    ctx.rod(62, 417, 195, 417, 5, '#b8b9ad');
+    const entranceVisible = ctx.visible({ left: 35, top: 200, right: 215, bottom: 430 }, 60);
+    if (entranceVisible) {
+        ctx.rect(46, 221, 159, 199, '#71869d');
+        ctx.rect(54, 229, 143, 191, '#23384f');
+        ctx.gradientPolygon([[61, 236], [190, 236], [190, 420], [61, 420]],
+            ctx.gradientFill(0, 236, 0, 420, [[0, '#1c2e45'], [1, '#445e78']]));
+        ctx.rod(62, 417, 195, 417, 5, '#b8b9ad');
+    }
 
     // Pictograms introduce the controls where they are useful.
-    if (!state.hasExtinguisher) {
+    if (!state.hasExtinguisher && ctx.visible({ left: 560, top: 270, right: 640, bottom: 390 }, 40)) {
         const pickup = STAGE_THREE.pickup;
         ctx.rect(pickup.x - 17, pickup.y - 82, 34, 65, '#566477');
         ctx.rect(pickup.x - 9, pickup.y - 74, 18, 43, '#b75f4a');
@@ -45,23 +50,25 @@ export function drawRooftop(ctx: RenderCtx) {
         ctx.rod(pickup.x, pickup.y - 77, pickup.x, pickup.y - 84, 4, '#394657');
         ctx.rod(pickup.x - 3, pickup.y - 84, pickup.x + 12, pickup.y - 84, 3, '#394657');
     }
-    if (p.x < 790) {
+    if (p.x < 790 && ctx.visible({ left: 560, top: 250, right: 640, bottom: 390 }, 40)) {
         ctx.label(SPRAY_KEY, STAGE_THREE.pickup.x, STAGE_THREE.pickup.y - 97, 20, '#f0dfb9');
     }
 
     // Checkpoint flags.
     for (let i = 1; i < STAGE_THREE.checkpoints.length; i++) {
         const mark = STAGE_THREE.checkpoints[i];
-        checkpointFlag(ctx, mark.x, mark.y + 28, state.checkpoint >= i);
+        if (ctx.visible({ left: mark.x - 35, top: mark.y - 80, right: mark.x + 35, bottom: mark.y + 40 }, 30)) {
+            checkpointFlag(ctx, mark.x, mark.y + 28, state.checkpoint >= i);
+        }
     }
 
     // Chair shadow and player.
     if (state.ground) ctx.ellipse(p.x, p.y + 28, 45, 5, '#414d6455');
     const behindDoor = state.rooftopEntrance.kind === 'opening' && state.rooftopEntrance.age < STAGE_THREE.entrance.emergeEnd;
-    if (!behindDoor) entranceDoor(ctx);
+    if (!behindDoor && entranceVisible) entranceDoor(ctx);
     player(ctx);
-    if (behindDoor) entranceDoor(ctx);
-    rooftopCeilingLight(ctx);
+    if (behindDoor && entranceVisible) entranceDoor(ctx);
+    if (entranceVisible) rooftopCeilingLight(ctx);
 
     sprayPlume(ctx);
     airSprayGauge(ctx);
