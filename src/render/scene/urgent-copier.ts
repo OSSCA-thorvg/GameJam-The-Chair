@@ -27,7 +27,6 @@ export function urgentCopierDraw(ctx: RenderCtx) {
         ctx.gradientFill(bx - 74, 0, bx + 74, 0, [[0, '#4a5262'], [.5, '#5d6677'], [1, '#3b4250']]));
     ctx.rect(bx - 74, F - 172, 148, 5, '#c9a35a');
     ctx.rect(bx - 74, F - 16, 148, 4, '#c9a35a');
-    // Control panel with a small display.
     ctx.rect(bx + 18, F - 160, 46, 22, '#1f2530');
     ctx.rect(bx + 22, F - 156, 38, 14, awake ? '#ff6a5c' : '#7fb79a');
 
@@ -39,7 +38,6 @@ export function urgentCopierDraw(ctx: RenderCtx) {
     const highTray = pattern === 'lob' || pattern === 'fan';
     tray(ctx, trayX, F - 52, side, lowTray ? glow : 0);
     tray(ctx, trayX, F - 118, side, highTray ? glow : 0);
-    // Stapler door for bundles.
     ctx.rect(bx - 48, F - 98, 64, 52, '#3a414e');
     ctx.rect(bx - 44, F - 94, 56, 44, pattern === 'bundle' && scanning ? ctx.tint('#ffb347', .4 + glow * .6) : '#4b5463');
     for (const sx of [-30, -6]) ctx.rect(bx + sx, F - 76, 14, 4, '#9aa2ae');

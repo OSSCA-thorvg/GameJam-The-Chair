@@ -1,4 +1,3 @@
-// Writes the decisions from ./decide into game state. The only place this system changes state.
 import { setPlayer, type GameState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { BIN_REST } from './decide';

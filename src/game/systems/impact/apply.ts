@@ -1,4 +1,3 @@
-// Writes the decisions from ./decide into game state. The only place this system changes state.
 import type { GameState } from '../../state';
 import type { GameEvent, Point } from '../../types';
 import { impactReplay, impactStep } from './decide';

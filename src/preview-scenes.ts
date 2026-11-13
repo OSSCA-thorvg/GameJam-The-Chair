@@ -515,6 +515,26 @@ function skyParrots(): PreviewScene {
     };
 }
 
+// The chair hovers in front of the last billboard while a lovebird crosses it: both must cover the ThorVG Text copy.
+function skySignDepth(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const duration = 8;
+    return {
+        id: 'sky-sign-depth', label: 'Sky · Chair and parrot pass in front of the billboard copy', duration, focusX: 4770,
+        markers: [{ at: 7.3, label: 'Parrot reaches sign' }, { at: 7.9, label: 'Parrot over copy' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            return { state: { ...base, time: at,
+                sky: { ...base.sky, phase: 'course', lift: 1, drawer: 1 },
+                player: { ...base.player, x: 4790 - Math.sin(at * .8) * 50, y: -2195 }, ground: false,
+            }, effects };
+        },
+    };
+}
+
 function skyEnding(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -662,6 +682,7 @@ export const previewScenes: readonly PreviewScene[] = [
     skyGustCycle(),
     skyWindFeedback(),
     skyParrots(),
+    skySignDepth(),
     skyEnding(),
     orbitRoute(),
     officeTyping(),

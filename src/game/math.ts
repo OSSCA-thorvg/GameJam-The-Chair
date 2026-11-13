@@ -208,8 +208,6 @@ export function atan2(y: number, x: number): number {
     return y < 0 ? -result : result;
 }
 
-// --- hypot ----------------------------------------------------------------------------------------------
-
 /** √(x² + y²) without overflow, using only exactly rounded operations. */
 export function hypot(x: number, y: number): number {
     let a = Math.abs(x);

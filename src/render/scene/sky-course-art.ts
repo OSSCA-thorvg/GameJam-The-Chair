@@ -89,26 +89,18 @@ function billboard(ctx: RenderCtx, width: number) {
     ctx.ellipse(model - 3, 36, 1, 1.4, '#424f6d');
     ctx.ellipse(model + 3, 36, 1, 1.4, '#424f6d');
     if (Math.abs(ctx.rotation) < .65) {
+        // ThorVG Text sits in the scene right after the screen, so parrots and the chair pass in front of it.
         const lines = ctx.locale === 'ko' ? ['흔들리지', '않는 기업'] : ['UNSHAKE', 'ABLE INC.'];
         const textLeft = left + 14, textRight = model - 34;
-        const [sx, sy] = ctx.screenPoint((textLeft + textRight) / 2, 50);
-        const unit = ctx.scale * ctx.localScale;
-        const maxFontSize = 34 * unit;
-        ctx.lg.save(); ctx.lg.translate(sx, sy); ctx.lg.rotate(ctx.rotation);
-        ctx.lg.font = `800 ${maxFontSize}px Impact,"Arial Narrow",system-ui,sans-serif`;
-        const measuredWidth = Math.max(...lines.map(line => ctx.lg.measureText(line).width));
-        const availableWidth = (textRight - textLeft) * unit;
-        const fontSize = measuredWidth > availableWidth ? maxFontSize * availableWidth / measuredWidth : maxFontSize;
-        ctx.lg.font = `800 ${fontSize}px Impact,"Arial Narrow",system-ui,sans-serif`;
-        ctx.lg.fillStyle = '#fff0cc'; ctx.lg.strokeStyle = '#27344d';
-        ctx.lg.textAlign = 'center'; ctx.lg.textBaseline = 'middle';
-        ctx.lg.lineJoin = 'round'; ctx.lg.lineWidth = Math.max(1, fontSize * .08);
-        const lineHeight = fontSize * .92;
+        const maxSize = 34;
+        const widest = Math.max(...lines.map(line => ctx.measureSignText(line, maxSize)));
+        const available = textRight - textLeft;
+        const size = widest > available ? maxSize * available / widest : maxSize;
+        const lineHeight = size * .92;
         for (let i = 0; i < lines.length; i++) {
-            const y = (i - (lines.length - 1) / 2) * lineHeight;
-            ctx.lg.strokeText(lines[i], 0, y); ctx.lg.fillText(lines[i], 0, y);
+            const y = 50 + (i - (lines.length - 1) / 2) * lineHeight;
+            ctx.signText(lines[i], (textLeft + textRight) / 2, y, size, '#fff0cc', { width: Math.max(1, size * .08), color: '#27344d' });
         }
-        ctx.lg.restore();
     }
 }
 

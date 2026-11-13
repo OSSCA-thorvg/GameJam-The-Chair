@@ -8,8 +8,6 @@ import { createLayerPanel } from './perf-layers';
  * It lives outside the deterministic core: everything here is presentation-side timing. While closed it
  * measures nothing, and while open it keeps its own cost low — text refreshes a few times a second and the
  * graph is a separate Canvas2D element, so the ThorVG canvas being measured never draws overlay pixels.
- *
- * 개발자 성능 오버레이(F3 또는 ` 키, `?debug=1`). 결정적 코어 밖에서만 측정하며, 닫혀 있으면 아무것도 재지 않는다.
  */
 
 /** Main-loop timings for one browser frame (ms). */
@@ -293,7 +291,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
             `gpu ${w.gpu ? `${ms(w.gpu.avg)} / p95 ${ms(w.gpu.p95)} / max ${ms(w.gpu.max)} ms` : 'n/a'}  (timer ${s?.gpuTimer ?? 'n/a'})`,
             s ? `canvas ${s.width}×${s.height} css · page dpr ${devicePixelRatio}` : 'canvas n/a',
             s ? `raster ${s.raster.width}×${s.raster.height} · ${(s.raster.width * s.raster.height / 1e6).toFixed(2)} Mpx · dpr ${+s.raster.dpr.toFixed(3)}` : 'raster n/a',
-            `cmds ${stats.commands}  shapes ${stats.topShapes}/${stats.poolTop}`,
+            `cmds ${stats.commands}  shapes ${stats.topShapes}/${stats.poolTop}  text ${stats.texts}`,
             `layers ${stats.layers}/${stats.layerSlots}  layer shapes ${stats.layerShapes} (parked ${stats.parkedShapes})`,
             `reorder ${stats.reorder ? 'YES' : 'no'}  (${reorders}/${count} frames)`,
             `blur g${stats.gaussianBlurs} m${stats.motionBlurs}  Σ${stats.blurAmount.toFixed(1)}  area ${(stats.blurArea / 1e3).toFixed(0)}k px²` +

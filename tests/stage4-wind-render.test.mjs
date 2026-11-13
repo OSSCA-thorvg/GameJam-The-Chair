@@ -2,13 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createRenderCtx, player, sprayPlume, drawSky, skyWindResponse, previewScenes } = await loadSource(`
+const { createRenderCtx, player, sprayPlume, drawSky, skyWindResponse, previewScenes, skyCoursePlatform } = await loadSource(`
     export { createRenderCtx } from './src/render/context';
     export { player } from './src/render/scene/player';
     export { sprayPlume } from './src/render/scene/spray';
     export { drawSky } from './src/render/scene/sky';
     export { skyWindResponse } from './src/render/scene/sky-wind-response';
     export { previewScenes } from './src/preview-scenes';
+    export { skyCoursePlatform } from './src/render/scene/sky-course-art';
 `);
 const scene = previewScenes.find(scene => scene.id === 'sky-wind-feedback');
 function context(time, over = {}) {
@@ -75,4 +76,21 @@ test('open-air wind preview has no wind strokes, remains finite and supports rev
     render(7.3); render(.3);
     assert.deepEqual(render(time), commands);
     assert.deepEqual(scene.sample(time), frame);
+});
+
+test('billboard copy is ThorVG Text inside the scene, in both languages, never on the label canvas', () => {
+    for (const locale of ['en', 'ko']) {
+        // A label canvas that throws on any drawing: the copy must not go there any more.
+        const ctx = createRenderCtx({}, new Proxy({}, { get: (_, key) => key === 'measureText' ? undefined : () => assert.fail(`lg.${String(key)}`) }));
+        Object.assign(ctx, { locale, cam: 4400, vertical: 2500 });
+        skyCoursePlatform(ctx, { id: 'last-sign', kind: 'sign', x: 4770, y: -2310, width: 230, angle: -.1 });
+        const texts = ctx.commands.filter(command => command.text).map(command => command.text);
+        assert.deepEqual(texts.map(text => text.content), locale === 'ko' ? ['흔들리지', '않는 기업'] : ['UNSHAKE', 'ABLE INC.']);
+        assert.ok(texts.every(text => text.font === 'Black Han Sans' && text.outline && Math.abs(text.rotation + .1) < 1e-9));
+        assert.ok(ctx.commands.at(-1).text, 'the copy is the last thing the sign draws, so actors drawn later cover it');
+        const tilted = createRenderCtx({}, {});
+        Object.assign(tilted, { locale, cam: 4400, vertical: 2500 });
+        skyCoursePlatform(tilted, { id: 'wind-sign', kind: 'sign', x: 4770, y: -2310, width: 230, angle: -1 });
+        assert.equal(tilted.commands.some(command => command.text), false);
+    }
 });

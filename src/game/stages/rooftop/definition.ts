@@ -1,7 +1,6 @@
 import { startMark, type StageDefinition } from '../types';
 import { STAGE_THREE } from './data';
 
-// Stage 3 · Mechanical room and rooftop.
 export const rooftop: StageDefinition = {
     id: 3,
     name: 'rooftop-stage-three',

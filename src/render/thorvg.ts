@@ -1,6 +1,8 @@
 import { init } from '@thorvg/webcanvas';
 import wasmUrl from '../../node_modules/@thorvg/webcanvas/dist/thorvg.wasm?url';
+import signFontUrl from '../assets/fonts/BlackHanSans-sign.ttf?url';
 import { chooseRenderer, isSoftwareGl, type ThorvgRenderer } from './backend';
+import { SIGN_FONT } from './fonts';
 
 export type { ThorvgRenderer } from './backend';
 
@@ -40,7 +42,27 @@ export function thorvgRenderer(): ThorvgRenderer {
     return chosen;
 }
 
+/**
+ * Register the billboard font with ThorVG, and with the document so Canvas2D measuring uses the same glyphs.
+ * A failure only costs the billboard copy, never the renderer.
+ */
+async function loadSignFont(TVG: Awaited<ReturnType<typeof init>>) {
+    try {
+        const res = await fetch(signFontUrl);
+        if (!res.ok) throw new Error(`sign font ${res.status}`);
+        const data = new Uint8Array(await res.arrayBuffer());
+        TVG.Font.load(SIGN_FONT, data, { type: 'ttf' });
+        const face = new FontFace(SIGN_FONT, data.slice().buffer);
+        document.fonts.add(await face.load());
+    } catch (e) {
+        console.warn('sign font unavailable', e);
+    }
+}
+
 export function loadThorvg() {
-    engine ??= init({ renderer: thorvgRenderer(), locateFile: () => wasmUrl });
+    engine ??= init({ renderer: thorvgRenderer(), locateFile: () => wasmUrl }).then(async TVG => {
+        await loadSignFont(TVG);
+        return TVG;
+    });
     return engine;
 }

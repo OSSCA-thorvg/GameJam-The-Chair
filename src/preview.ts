@@ -1,6 +1,7 @@
 import { createRenderer } from './render/renderer';
 import { previewScenes, type PreviewScene } from './preview-scenes';
 import { createSplashPlayer } from './ui/splash';
+import type { Locale } from './i18n';
 import './style.css';
 import './preview.css';
 
@@ -11,7 +12,9 @@ const value = document.querySelector<HTMLOutputElement>('#time-value')!;
 const playButton = document.querySelector<HTMLButtonElement>('#play')!;
 const markers = document.querySelector<HTMLElement>('#markers')!;
 const backend = document.querySelector<HTMLElement>('#renderer')!;
-const renderer = createRenderer(root);
+// `?locale=ko` previews Korean copy drawn in the scene (e.g. the stage-four billboard).
+const locale: Locale = new URLSearchParams(location.search).get('locale') === 'ko' ? 'ko' : 'en';
+const renderer = createRenderer(root, () => locale);
 const splashCanvas = document.querySelector<HTMLCanvasElement>('#splash-preview')!;
 const splash = createSplashPlayer(splashCanvas);
 

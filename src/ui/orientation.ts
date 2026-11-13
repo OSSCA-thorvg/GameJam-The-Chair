@@ -1,6 +1,5 @@
 // Phones are played in landscape. Turning to portrait pauses a running game (the CSS rotate hint covers
 // the screen), and the first tap on Start asks the browser for fullscreen + a landscape lock where supported.
-// 휴대폰은 가로로 플레이한다. 세로로 돌리면 진행 중인 게임을 멈추고, 시작 버튼을 누르면 가능할 때 전체 화면과 가로 고정을 요청한다.
 
 type OrientationLock = ScreenOrientation & { lock?: (orientation: 'landscape') => Promise<void> };
 

@@ -76,14 +76,12 @@ export function radial(ctx: RenderCtx, cx: number, cy: number, r: number, stops:
     return { from: [cx, cy], to: [cx + r, cy], radius: r, stops: stops.map(([at, color]) => [at, ctx.rgba(color, alpha)]) };
 }
 
-/** Mix two #rrggbb colours. */
 export function mix(a: string, b: string, u: number) {
     const ca = [1, 3, 5].map(i => parseInt(a.slice(i, i + 2), 16));
     const cb = [1, 3, 5].map(i => parseInt(b.slice(i, i + 2), 16));
     return '#' + ca.map((v, i) => Math.round(v + (cb[i] - v) * u).toString(16).padStart(2, '0')).join('');
 }
 
-/** Rotate `point` around `centre`. */
 export function rotate([x, y]: Vector, [cx, cy]: Vector, angle: number): Vector {
     const c = Math.cos(angle), s = Math.sin(angle);
     return [cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c];
