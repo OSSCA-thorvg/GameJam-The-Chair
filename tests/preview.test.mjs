@@ -93,7 +93,7 @@ test('duct preview seeks between powder intake, twitch and sneeze', () => {
 test('merged preview registry keeps water, focus loss and rooftop scenes without the removed fan', () => {
     const ids = previewScenes.map(scene => scene.id);
     assert.equal(new Set(ids).size, ids.length);
-    for (const id of ['bucket-pour', 'focus-loss', 'rooftop-entrance', 'duct-sneeze', 'duct-gust', 'cloud-entry']) {
+    for (const id of ['bucket-pour', 'focus-loss', 'rooftop-entrance', 'duct-sneeze', 'duct-gust', 'cloud-entry', 'sky-gear']) {
         assert.ok(ids.includes(id), `missing preview: ${id}`);
     }
     assert.equal(ids.includes('fan-ride'), false);

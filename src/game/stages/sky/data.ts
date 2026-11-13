@@ -20,7 +20,8 @@ export const STAGE_FOUR = deepFreeze({
     knock: { cooldown: .7, reach: 34 },
 });
 
-export type SkyHazardKind = 'paper' | 'bird';
+export type SkyHazardKind = 'paper' | 'bird' | 'gear';
+export type SkyGearItem = 'monitor' | 'keyboard' | 'mouse' | 'tower';
 export type SkyState = {
     phase: 'arrival' | 'course' | 'reveal' | 'depth';
     age: number;
@@ -110,7 +111,7 @@ export function skySurface(platform: Readonly<SkyPlatform>, x: number) {
     return platform.y + (x - platform.x - platform.width / 2) * Det.tan(platform.angle);
 }
 
-export type SkyHazard = { id: string; kind: SkyHazardKind; x: number; y: number; r: number; spin: number; focusId: number };
+export type SkyHazard = { id: string; kind: SkyHazardKind; x: number; y: number; r: number; spin: number; focusId: number; item?: SkyGearItem };
 
 // Paper bundles ride each gust in from beyond the right edge, cross their stretch of the course, then drop out
 // of sight below. Birds swoop down from above, glide across the upper desks and climb away out of view, so
@@ -128,6 +129,16 @@ const BIRD_LANES = deepFreeze([
     { from: 5560, to: 4700, y: -2450, period: 8.4, offset: 6.1, speed: 185 },
 ]);
 const BIRD_PATH = { swoop: 1.4, reach: 260, height: 950, climb: 240 };
+// Office gear adrift over the gaps: each piece bobs and sways on its own slow loop, so every hop has an opening.
+const GEAR = deepFreeze([
+    { item: 'keyboard', x: 3230, y: -2150, r: 14, ax: 18, ay: 48, period: 4.6, phase: 0 },
+    { item: 'mouse', x: 2900, y: -1835, r: 9, ax: 30, ay: 40, period: 3.8, phase: 1.7 },
+    { item: 'monitor', x: 3200, y: -2290, r: 17, ax: 40, ay: 30, period: 5.2, phase: 3.1 },
+    { item: 'tower', x: 4010, y: -2240, r: 18, ax: 16, ay: 52, period: 5.6, phase: .6 },
+    { item: 'keyboard', x: 4400, y: -2450, r: 14, ax: 46, ay: 30, period: 4.9, phase: 2.4 },
+    { item: 'monitor', x: 4730, y: -2480, r: 17, ax: 18, ay: 40, period: 5, phase: 4.2 },
+    { item: 'mouse', x: 5090, y: -2475, r: 9, ax: 22, ay: 52, period: 4.2, phase: 5.3 },
+] as const);
 
 export function skyHazards(time: number): SkyHazard[] {
     const out: SkyHazard[] = [];
@@ -160,6 +171,14 @@ export function skyHazards(time: number): SkyHazard[] {
             y -= climb * away * away;
         }
         out.push({ id: `bird-${i}`, kind: 'bird', x, y, r: 22, spin: age * 11, focusId: i * 100000 + Math.floor(shifted / lane.period) });
+    });
+    GEAR.forEach((gear, i) => {
+        const turn = (time / gear.period + gear.phase) * Math.PI * 2;
+        out.push({
+            id: `gear-${i}`, kind: 'gear', item: gear.item, r: gear.r, spin: Det.sin(turn * .5) * .6 + time * (gear.item === 'mouse' ? .9 : .25),
+            x: gear.x + Det.sin(turn * .5) * gear.ax, y: gear.y + Det.sin(turn) * gear.ay,
+            focusId: i * 100000 + Math.floor(time / gear.period),
+        });
     });
     return out;
 }

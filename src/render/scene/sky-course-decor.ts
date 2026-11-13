@@ -1,5 +1,5 @@
-import { skyWind } from '../../game/stages/sky/data';
 import type { RenderCtx } from '../context';
+import { hasWorker, officeWorker } from './sky-office-workers';
 
 export function skyBuilding(ctx: RenderCtx) {
     if (3450 < ctx.cam - 100 || 3000 > ctx.cam + ctx.VW + 100) return;
@@ -24,27 +24,34 @@ export function skyBuilding(ctx: RenderCtx) {
     for (let i = 0; i < 6; i++) {
         const x = 3018 + i * 71;
         ctx.rect(x - 3, y - 270, 61, 152, '#304962');
-        ctx.gradientPolygon([[x, y - 267], [x + 55, y - 267], [x + 55, y - 121], [x, y - 121]],
-            ctx.gradientFill(x, y - 267, x + 55, y - 121, [[0, '#91a8b2'], [.55, '#7e91a5'], [1, '#526b82']]));
-        ctx.polygon([[x + 3, y - 263], [x + 26, y - 263], [x + 6, y - 199], [x + 3, y - 199]], '#c4c4b74d');
-        ctx.polygon([[x + 35, y - 263], [x + 49, y - 263], [x + 18, y - 126], [x + 6, y - 126]], '#c4c4b726');
-        ctx.rod(x, y - 195, x + 55, y - 195, 3, '#455e76');
-        ctx.rod(x + 1, y - 266, x + 1, y - 123, 1.5, '#a7b4c1');
+        for (const [top, floor, row] of [[-267, -197, 0], [-192, -121, 1]] as const) {
+            const slot = row * 6 + i + 1;
+            const a = y + top, b = y + floor;
+            if (!hasWorker(slot)) {
+                // Cells nobody works in are plain facade panels.
+                ctx.gradientPolygon([[x, a], [x + 55, a], [x + 55, b], [x, b]],
+                    ctx.gradientFill(x, a, x + 55, b, [[0, '#4d6680'], [1, '#3a5270']]));
+                ctx.rect(x, (a + b) / 2, 55, 1.2, '#304962');
+                ctx.rect(x, a, 55, 1.2, '#7e91a566');
+                for (const rx of [x + 4, x + 51]) for (const ry of [a + 4, b - 4]) ctx.ellipse(rx, ry, 1.2, 1.2, '#7e91a5');
+                continue;
+            }
+            // A warm, lit office behind the glass, its worker, then the tinted pane over them.
+            ctx.gradientPolygon([[x, a], [x + 55, a], [x + 55, b], [x, b]],
+                ctx.gradientFill(x, a, x, b, [[0, '#f3e6c8'], [.7, '#d9c6a0'], [1, '#b7a07c']]));
+            ctx.rect(x, b - 14, 55, 14, '#a8957a');
+            ctx.rect(x + 8, a + 1, 39, 2, '#fffbea');
+            officeWorker(ctx, slot, x, b);
+            ctx.gradientPolygon([[x, a], [x + 55, a], [x + 55, b], [x, b]],
+                ctx.gradientFill(x, a, x + 55, b, [[0, '#91a8b255'], [.55, '#7e91a533'], [1, '#526b8266']]));
+            ctx.polygon([[x + 3, a + 4], [x + 24, a + 4], [x + 6, b - 20], [x + 3, b - 20]], '#ffffff2e');
+            ctx.polygon([[x + 36, a + 4], [x + 48, a + 4], [x + 20, b - 4], [x + 9, b - 4]], '#ffffff1a');
+            ctx.rod(x + 1, a + 1, x + 1, b - 1, 1.5, '#a7b4c1');
+        }
+        ctx.rect(x, y - 197, 55, 5, '#455e76');
         ctx.rect(x + 3, y - 125, 50, 3, '#304962');
         ctx.rect(x + 4, y - 108, 16, 1, '#7e91a5');
     }
-    // One unhurried employee keeps typing inside the floating facade.
-    const x = 3180;
-    ctx.rect(x - 18, y - 145, 50, 5, '#e8bb79');
-    ctx.rect(x - 17, y - 140, 3, 17, '#455e76');
-    ctx.rect(x + 25, y - 140, 3, 17, '#455e76');
-    ctx.ellipse(x + 2, y - 179, 7, 9, '#d7b191');
-    ctx.polygon([[x - 6, y - 184], [x - 2, y - 191], [x + 6, y - 188], [x + 9, y - 182], [x + 1, y - 184]], '#3c5069');
-    ctx.polygon([[x - 5, y - 170], [x + 7, y - 170], [x + 12, y - 146], [x - 7, y - 146]], '#e8e2cc');
-    ctx.rect(x + 2, y - 169, 2, 16, '#455e76');
-    ctx.polygon([[x + 13, y - 150], [x + 28, y - 150], [x + 34, y - 168], [x + 20, y - 168]], '#3c5069');
-    ctx.polygon([[x + 18, y - 153], [x + 26, y - 153], [x + 30, y - 165], [x + 22, y - 165]], '#91a8b2');
-    ctx.rod(x + 4, y - 160, x + 17, y - 150 + Math.sin(ctx.t * 6) * 1.5, 3, '#d7b191');
     ctx.gradientPolygon([[3000, y - 296], [3450, y - 296], [3450, y - 290], [3000, y - 290]],
         ctx.gradientFill(0, y - 296, 0, y - 290, [[0, '#edc88b'], [1, '#7e91a5']]));
     ctx.rect(3000, y - 296, 450, 1.5, '#e8e2cc');
@@ -52,42 +59,6 @@ export function skyBuilding(ctx: RenderCtx) {
         ctx.ellipse(x, y + offset, 2, 2, '#304962');
         ctx.ellipse(x - .5, y + offset - .5, .8, .8, '#a7b4c1');
     }
-}
-
-export function skyRibbon(ctx: RenderCtx) {
-    // The ribbon always streams left, against the course, and snaps out flat in a gust.
-    const wind = .35 + skyWind(ctx.t) * .65;
-    const flutter = Math.sin(ctx.t * (6 + wind * 10)) * (1 - wind * .6);
-    ctx.rod(3475, -2100, 3475, -2245, 5, '#536d86');
-    ctx.rod(3474, -2100, 3474, -2245, 2, '#b5bec8');
-    ctx.ellipse(3475, -2247, 3.5, 3.5, '#b5bec8');
-    ctx.effectPath([3475, -2244], [[3450, -2240 - flutter * 12, 3435, -2254 + flutter * 14, 3410 - wind * 40, -2240 + (1 - wind) * 18],
-        [3430, -2234, 3445, -2220, 3475, -2223]], ctx.gradientFill(3475, -2244, 3410, -2223,
-        [[0, '#dfbd85'], [.45, '#f4c582'], [1, '#b8adac']]));
-    ctx.strokePath([3473, -2241], [[3450, -2238 - flutter * 8, 3432, -2246 + flutter * 8, 3412 - wind * 28, -2239 + (1 - wind) * 14]],
-        { width: 1.2, color: '#f7e5c6aa', cap: 'round' });
-    ctx.rod(3473, -2237, 3477, -2237, 2, '#69738c');
-    ctx.rod(3473, -2227, 3477, -2227, 2, '#69738c');
-}
-
-export function skyMonitor(ctx: RenderCtx, index: number) {
-    const x = 2580 + index * 430;
-    ctx.ox = x; ctx.oy = -1990 - index * 67 + Math.sin(ctx.t * .6 + index) * 15;
-    ctx.rotation = Math.sin(ctx.t * .3 + index) * .19;
-    ctx.polygon([[-22, -16], [22, -16], [27, -12], [-17, -12]], '#aab4c0');
-    ctx.polygon([[22, -16], [27, -12], [27, 17], [22, 14]], '#465b79');
-    ctx.gradientPolygon([[-22, -16], [22, -16], [22, 14], [-22, 14]],
-        ctx.gradientFill(-22, -16, 22, 14, [[0, '#a6afbf'], [.6, '#aab4c0'], [1, '#8a9aaf']]));
-    ctx.rect(-19, -13, 38, 24, '#465b79');
-    ctx.gradientPolygon([[-17, -11], [17, -11], [17, 9], [-17, 9]],
-        ctx.gradientFill(-17, -11, 17, 9, [[0, '#8a9aaf'], [.4, '#465b79'], [1, '#465b79']]));
-    ctx.polygon([[-16, -10], [2, -10], [-9, 8], [-16, 8]], '#aab4c033');
-    for (let y = -6; y < 8; y += 5) ctx.rod(-11, y, -3 + y * .3, y, .6, '#aab4c044');
-    ctx.ellipse(15, 12, .9, .9, '#aab4c0');
-    ctx.rod(0, 15, 0, 23, 4, '#8a9aaf');
-    ctx.ellipse(0, 24, 13, 2.5, '#8a9aaf');
-    ctx.rod(-10, 23, 10, 23, 1, '#aab4c0');
-    ctx.ox = ctx.oy = ctx.rotation = 0;
 }
 
 export function skyFlag(ctx: RenderCtx, x: number, y: number, saved: boolean) {
