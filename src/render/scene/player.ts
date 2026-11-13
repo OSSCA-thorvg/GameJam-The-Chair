@@ -13,11 +13,58 @@ export function player(ctx: RenderCtx) {
     ctx.localScale = ART.player.scale;
     playerChair(ctx);
     riderBody(ctx);
+    const lift = focusTension(ctx).lift;
+    const base = { ox: ctx.ox, oy: ctx.oy };
+    shiftLocal(ctx, -1.2 * lift, -3 * lift);
     riderHead(ctx);
+    ctx.ox = base.ox;
+    ctx.oy = base.oy;
     riderArms(ctx);
     riderEffects(ctx);
+    riderWorry(ctx);
     ctx.ox = ctx.oy = ctx.rotation = 0;
     ctx.localScale = 1;
+}
+
+// How far the rider is from snapping out of work: drifting eyes below 60%, sweat and stalled typing below 40%,
+// a raised head and a puzzled "...?" below 20%. Focus loss itself has its own glance.
+function focusTension(ctx: RenderCtx) {
+    const state = ctx.state;
+    const live = ctx.mode !== 'intro' && state.lossReason !== 'focus';
+    const focus = live ? state.focus : 100;
+    const t = ctx.t;
+    const drift = focus <= 60 ? Math.max(0, Math.sin(t * 2.1) * 1.6 - .6) * Math.min(1, (60 - focus) / 30 + .4) : 0;
+    const sweat = focus <= 40 ? Math.min(1, (40 - focus) / 15 + .5) : 0;
+    const stall = focus <= 40 && Math.sin(t * 1.7) > .2;
+    const critical = focus <= 20 ? Math.min(1, (20 - focus) / 10 + .6) : 0;
+    const lift = critical * (.75 + .25 * Math.sin(t * 5));
+    return { drift: Math.min(1, drift), sweat, stall, critical, lift };
+}
+
+function shiftLocal(ctx: RenderCtx, dx: number, dy: number) {
+    const k = ctx.localScale;
+    const c = Math.cos(ctx.rotation), s = Math.sin(ctx.rotation);
+    ctx.ox += (dx * c - dy * s) * k;
+    ctx.oy += (dx * s + dy * c) * k;
+}
+
+function riderWorry(ctx: RenderCtx) {
+    const tension = focusTension(ctx);
+    if (tension.sweat > 0) {
+        const fall = (ctx.t * .9) % 1;
+        const alpha = tension.sweat * (1 - fall * .7);
+        ctx.ellipse(-12, -86 + fall * 12, 1.8, 2.6, ctx.tint('#9fd3ec', alpha));
+        ctx.polygon([[-13.6, -86 + fall * 12], [-12, -90 + fall * 12], [-10.4, -86 + fall * 12]], ctx.tint('#9fd3ec', alpha));
+    }
+    if (tension.critical > 0) {
+        const pop = .5 + .5 * Math.sin(ctx.t * 6);
+        for (let i = 0; i < 3; i++) {
+            // Hidden dots stay in the command list so the paint order is not rebuilt when they blink.
+            const on = (ctx.t * 2.4 - i * .35) % 1.6 < 1.1;
+            ctx.ellipse(-4 + i * 6, -108 - i * 1.5, 1.8, 1.8, ctx.tint('#f5eddc', on ? tension.critical : 0));
+        }
+        ctx.signText('?', 17, -108, 15 + pop * 2, '#f5eddc', { width: 1.6, color: '#28303b' });
+    }
 }
 
 function riderBody(ctx: RenderCtx) {
@@ -43,7 +90,9 @@ function riderHead(ctx: RenderCtx) {
     ctx.polygon([[-11, -76], [-7, -72], [1, -69], [11, -69], [11, -66], [2, -66], [-9, -69]], '#d3b18c');
     ctx.polygon(PLAYER_OUTLINES.hair, '#3c424f');
     ctx.polygon([[-7, -93], [-4, -98], [3, -96]], '#687380');
-    const glance = state.lossReason === 'focus' ? .5 + .5 * Math.sin(state.focusLossTime * 6) : state.focusNotice ? Math.sin((1.7 - state.focusNotice.life) / 1.7 * Math.PI) : 0;
+    const notice = state.lossReason === 'focus' ? .5 + .5 * Math.sin(state.focusLossTime * 6) : state.focusNotice ? Math.sin((1.7 - state.focusNotice.life) / 1.7 * Math.PI) : 0;
+    const tension = focusTension(ctx);
+    const glance = Math.max(notice, tension.drift, tension.lift);
     ctx.ellipse(-7, -81, 2.7, 3.4, C.skin);
     ctx.rod(-5, -83, 4, -84, 1.35, '#3a414b');
     ctx.rect(3, -86, 11, 6, '#50606a');
@@ -64,7 +113,7 @@ function riderArms(ctx: RenderCtx) {
     ctx.polygon([[35, -55], [59, -55], [51, -35], [27, -35]], '#a8b9c3');
 
     ctx.rod(18, -29, 55, -29, 3, C.steel);
-    const tap = state.lossReason === 'focus' ? 0 : Math.sin(ctx.t * 24) * 1.8;
+    const tap = state.lossReason === 'focus' || focusTension(ctx).stall ? 0 : Math.sin(ctx.t * 24) * 1.8;
     ctx.polygon([[17, -36], [23, -38], [30, -36], [34, -33], [31, -32], [26, -34], [18, -33]], '#d3aa80');
     ctx.polygon([[21, -36 + tap], [25, -39 + tap], [30, -38 + tap], [35, -35 + tap], [36, -33 + tap], [33, -33 + tap], [29, -35 + tap], [23, -33 + tap]], C.skin);
 }

@@ -11,6 +11,7 @@ import { drawWorld } from './scene/world';
 import { drawBuilding } from './scene/building';
 import { drawRooftop } from './scene/rooftop';
 import { drawCloudStart } from './scene/clouds';
+import { focusVignette } from './scene/focus-vignette';
 import { createPaintPool, paint } from './paint';
 import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
 import { resetRenderStats, type LayerOverrides, type RenderStats } from './perf';
@@ -154,6 +155,7 @@ function setup(
         } else {
             drawWorld(ctx);
         }
+        if (!opening) focusVignette(ctx);
         if (stats) {
             resetRenderStats(stats);
             stats.buildMs = performance.now() - buildStart;

@@ -288,6 +288,60 @@ function focusLoss(): PreviewScene {
     };
 }
 
+function focusTension(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const duration = 12;
+    const focusX = 500;
+    const focusAt = (at: number) => Math.max(1, Math.round(100 - at / duration * 105));
+    return {
+        id: 'focus-tension',
+        label: 'Chair · Focus tension',
+        duration,
+        focusX,
+        markers: [{ at: 0, label: '100%' }, { at: 4.6, label: '60% · Drift' }, { at: 6.9, label: '40% · Sweat' }, { at: 9.2, label: '20% · Head up' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            return {
+                state: { ...base, mode: 'play', focus: focusAt(at), time: at, player: { ...base.player, x: focusX } },
+                effects,
+            };
+        },
+    };
+}
+
+function focusHitVignette(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const levels = [80, 55, 35, 15];
+    const hit = 2;
+    const focusX = 500;
+    return {
+        id: 'focus-hit-vignette',
+        label: 'Chair · Focus hit vignette',
+        duration: levels.length * hit,
+        focusX,
+        markers: levels.map((focus, i) => ({ at: i * hit, label: `Hit at ${focus}%` })),
+        sample(time) {
+            const at = Math.max(0, Math.min(levels.length * hit - 1e-6, time));
+            const index = Math.floor(at / hit);
+            const life = 1.7 - (at - index * hit);
+            return {
+                state: {
+                    ...base, mode: 'play', focus: levels[index], time: at,
+                    focusNotice: life > 0 ? { kind: 'paper', life } : null,
+                    player: { ...base.player, x: focusX },
+                },
+                effects,
+            };
+        },
+    };
+}
+
 function extinguisherSpray(): PreviewScene {
     const game = createGame();
     game.startStage(3);
@@ -659,6 +713,8 @@ export const previewScenes: readonly PreviewScene[] = [
     copierVolley(),
     headImpact(),
     focusLoss(),
+    focusTension(),
+    focusHitVignette(),
     rooftopEntrance(),
     personalBelongings(),
     extinguisherSpray(),
