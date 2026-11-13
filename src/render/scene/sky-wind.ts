@@ -1,6 +1,7 @@
 import { STAGE_FOUR, skyGust, skyHazards, type SkyHazard } from '../../game/stages/sky/data';
 import type { RenderCtx } from '../context';
 import { skyGearArt } from './sky-gear';
+import { robotParrotArt } from './sky-robot-parrot';
 
 // Papers rattle loose a moment before the gust: a few scraps tumble along with the warning breeze.
 export function skyWarningScraps(ctx: RenderCtx) {
@@ -120,6 +121,7 @@ function lovebird(ctx: RenderCtx, h: SkyHazard, L: Lovebird) {
 }
 
 function bird(ctx: RenderCtx, h: SkyHazard) {
+    if (h.robot) { robotParrotArt(ctx, h, h.robot); return; }
     const variant = birdVariant(h);
     if (variant) lovebird(ctx, h, variant);
     else macaw(ctx, h);

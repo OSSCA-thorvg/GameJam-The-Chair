@@ -100,7 +100,7 @@ test('paper bundles ride the gusts and birds knock the chair backwards and cost 
     for (const [i, paper] of calm.entries()) assert.ok(paper.y > gust[i].y + 150 || paper.x > gust[i].x + 300, `${paper.id} sits out the calm`);
     for (const kind of ['paper', 'bird']) {
         let time = 0, hazard;
-        while (!(hazard = skyHazards(time).find(h => h.kind === kind && h.x > 3900 && h.x < 4400))) time += .05;
+        while (!(hazard = skyHazards(time).find(h => h.kind === kind && !h.robot && h.x > 3900 && h.x < 4400))) time += .05;
         const r = skyStep(course({ time, p: { x: hazard.x, y: hazard.y + 20, vx: 100, vy: 0, a: 0, w: 0 } }), 1 / 120);
         assert.equal(r.hit?.kind, kind);
         assert.ok(r.p.vx < -100, `${kind} knocks the chair back`);
@@ -128,6 +128,20 @@ test('a monitor, keyboard, mouse and tower PC float over the course and knock th
     assert.ok(after.player.vx < -100, 'the gear bounces the chair back');
     assert.equal(after.focus, 100 - FOCUS_DAMAGE.gear);
     assert.equal(after.focusNotice?.kind, 'gear');
+});
+
+test('chrome robot parrots join the bird lanes and clang the chair away like office gear', () => {
+    const birds = [];
+    for (let t = 0; t < 400; t += 2) birds.push(...skyHazards(t).filter(h => h.kind === 'bird'));
+    const robots = new Set(birds.filter(h => h.robot).map(h => h.robot));
+    assert.deepEqual([...robots].sort(), ['black', 'liquid']);
+    assert.ok(birds.some(h => !h.robot), 'real parrots still fly');
+    let time = 0, robot;
+    while (!(robot = skyHazards(time).find(h => h.robot && h.x > 3900 && h.x < 4400))) time += .05;
+    const r = skyStep(course({ time, p: { x: robot.x, y: robot.y + 20, vx: 100, vy: 0, a: 0, w: 0 } }), 1 / 120);
+    assert.equal(r.hit?.kind, 'gear');
+    assert.equal(r.sky.knockKind, 'gear');
+    assert.ok(r.p.vx < -100, 'the robot bounces the chair back');
 });
 
 test('hazards never blink out on screen: they leave the view before their path restarts', () => {

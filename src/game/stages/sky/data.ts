@@ -22,6 +22,7 @@ export const STAGE_FOUR = deepFreeze({
 
 export type SkyHazardKind = 'paper' | 'bird' | 'gear';
 export type SkyGearItem = 'monitor' | 'keyboard' | 'mouse' | 'tower';
+export type SkyRobot = 'liquid' | 'black';
 export type SkyState = {
     phase: 'arrival' | 'course' | 'reveal' | 'depth';
     age: number;
@@ -111,7 +112,7 @@ export function skySurface(platform: Readonly<SkyPlatform>, x: number) {
     return platform.y + (x - platform.x - platform.width / 2) * Det.tan(platform.angle);
 }
 
-export type SkyHazard = { id: string; kind: SkyHazardKind; x: number; y: number; r: number; spin: number; focusId: number; item?: SkyGearItem };
+export type SkyHazard = { id: string; kind: SkyHazardKind; x: number; y: number; r: number; spin: number; focusId: number; item?: SkyGearItem; robot?: SkyRobot };
 
 // Paper bundles ride each gust in from beyond the right edge, cross their stretch of the course, then drop out
 // of sight below. Birds swoop down from above, glide across the upper desks and climb away out of view, so
@@ -139,6 +140,14 @@ const GEAR = deepFreeze([
     { item: 'monitor', x: 4730, y: -2480, r: 17, ax: 18, ay: 40, period: 5, phase: 4.2 },
     { item: 'mouse', x: 5090, y: -2475, r: 9, ax: 22, ay: 52, period: 4.2, phase: 5.3 },
 ] as const);
+
+// About one pass in four is a chrome robot parrot instead of a real bird; it hits like office gear.
+export function skyBirdRobot(focusId: number): SkyRobot | null {
+    let n = Math.imul(focusId + 0x51ed, 0x2c1b3c6d);
+    n = Math.imul(n ^ (n >>> 15), 0x297a2d39);
+    const pick = ((n ^ (n >>> 15)) >>> 0) % 8;
+    return pick === 0 ? 'liquid' : pick === 1 ? 'black' : null;
+}
 
 export function skyHazards(time: number): SkyHazard[] {
     const out: SkyHazard[] = [];
@@ -170,7 +179,9 @@ export function skyHazards(time: number): SkyHazard[] {
             x = lane.from - flying * lane.speed;
             y -= climb * away * away;
         }
-        out.push({ id: `bird-${i}`, kind: 'bird', x, y, r: 22, spin: age * 11, focusId: i * 100000 + Math.floor(shifted / lane.period) });
+        const focusId = i * 100000 + Math.floor(shifted / lane.period);
+        const robot = skyBirdRobot(focusId);
+        out.push({ id: `bird-${i}`, kind: 'bird', x, y, r: 22, spin: age * 11, focusId, ...(robot ? { robot } : {}) });
     });
     GEAR.forEach((gear, i) => {
         const turn = (time / gear.period + gear.phase) * Math.PI * 2;
