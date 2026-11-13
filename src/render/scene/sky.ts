@@ -60,7 +60,10 @@ export function drawSky(ctx: RenderCtx) {
     }
     ctx.ox = ctx.oy = ctx.rotation = 0;
     skyHazardsArt(ctx);
-    sprayPlume(ctx); player(ctx);
+    sprayPlume(ctx);
+    const actorStart = ctx.commands.length;
+    player(ctx);
+    ctx.foregroundActors.push(...ctx.commands.slice(actorStart));
     skyKnockFeathers(ctx);
     skySprayGauge(ctx);
     // Foreground cloud edges frame open space without hiding the next landing.
