@@ -1,3 +1,4 @@
+import { ceilingCctvs } from './ceiling-cctv';
 import { translate, type Message } from '../../i18n';
 import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES, chairChatLine } from '../../game/stages/building/data';
 import type { RenderCtx } from '../context';
@@ -273,6 +274,7 @@ export function drawBuilding(ctx: RenderCtx) {
             ctx.gradientFill(x, 37, x, 420, [[0, '#ffefc9'], [1, '#ffefc9']], .09));
         ctx.rod(x, 60, x, 420, 1, '#91a4a7');
     }
+    ceilingCctvs(ctx, 480);
     ctx.rect(cam, 420, VW, ctx.H / ctx.scale, '#929f9d');
     ctx.rod(cam, 422, cam + VW, 422, 4, '#586f75');
     for (let x = Math.floor(cam / 120) * 120; x < cam + VW; x += 120) ctx.rod(x, 428, x + 100, 520, 1, '#a7b2aa');
