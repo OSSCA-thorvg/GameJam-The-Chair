@@ -179,10 +179,9 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
     const far = Math.max(ctx.W, ctx.H) * 4;
     const ground: Vector[] = [...horizon, [horizon.at(-1)![0] + far, horizon.at(-1)![1] + far], [horizon[0][0] - far, horizon[0][1] + far]];
     const clip: DrawCommand = { v: ground, c: '#000000' };
-    const fade = { key: 'orbit-earth', opacity: strength };
-    // Ocean, hazier toward the horizon.
-    ctx.commands.push({ v: ground, layer: fade, c: { from: middle, to: [middle[0], middle[1] + ctx.H * .5],
-        stops: [[0, ctx.rgba('#8cc0e6')], [.18, ctx.rgba('#3f82c4')], [1, ctx.rgba('#1b4f8f')]] } });
+    // Ocean, hazier toward the horizon. A single shape, so its fade is folded into its own colours (no layer).
+    ctx.commands.push({ v: ground, c: { from: middle, to: [middle[0], middle[1] + ctx.H * .5],
+        stops: [[0, ctx.rgba('#8cc0e6', strength)], [.18, ctx.rgba('#3f82c4', strength)], [1, ctx.rgba('#1b4f8f', strength)]] } });
     // Land, clouds and lights sit on the sphere and are clipped to the ground under the horizon (ThorVG clip).
     const surface = { key: 'orbit-earth-surface', opacity: strength, clip };
     // Coasts get a pale surf line; inland patches (desert, snow, forest) sit on top without one.

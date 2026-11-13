@@ -67,7 +67,8 @@ function fakeThorvg() {
 const square = (x, layer) => ({ v: [[x, 10], [x + 10, 10], [x + 10, 20], [x, 20]], c: '#336699', ...(layer ? { layer } : {}) });
 
 function frame(ctx, layerShapes, plainShapes) {
-    const layer = { key: 'water-body' };
+    // An effect makes it a real ThorVG Scene; a layer without one is painted as plain shapes.
+    const layer = { key: 'water-body', opacity: .9 };
     ctx.commands = [
         ...Array.from({ length: layerShapes }, (_, i) => square(20 + i * 12, layer)),
         ...Array.from({ length: plainShapes }, (_, i) => square(200 + i * 12)),
@@ -277,4 +278,17 @@ test('ThorVG Text keeps its place in the command order so later shapes paint ove
     paint(ctx, TVG, canvas, pool);
     assert.equal(front.calls.visible[0], false);
     assert.equal(canvas.paints.filter(paint => paint.constructor.name === 'Shape').length, 2);
+});
+
+test('a layer that changes nothing is painted as plain shapes, and one faded to nothing is skipped', () => {
+    const { TVG, canvas } = fakeThorvg();
+    const ctx = createRenderCtx({});
+    Object.assign(ctx, { W: 400, H: 300 });
+    const stats = createRenderStats();
+    const plain = { key: 'group-only' }, gone = { key: 'faded', opacity: .001 }, seen = { key: 'fading', opacity: .5 };
+    ctx.commands = [square(20, plain), square(40, plain), square(60, gone), square(80, seen)];
+    paint(ctx, TVG, canvas, createPaintPool(), stats);
+    assert.equal(stats.topShapes, 2, 'the effect-free layer draws its two squares directly');
+    assert.equal(stats.layers, 1, 'only the half-faded layer needs a Scene');
+    assert.deepEqual(stats.layerList.map(layer => layer.key), ['fading']);
 });

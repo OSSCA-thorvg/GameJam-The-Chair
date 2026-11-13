@@ -104,13 +104,15 @@ const LINES = (() => {
 export function orbitSpeedLines(ctx: RenderCtx, center: Vector, fast: number) {
     if (fast <= .02) return;
     const reach = Math.hypot(ctx.W, ctx.H) * .55;
+    // One shared layer: every streak is the same screen-blended fade, so they composite as a single ThorVG Scene.
+    const layer = { key: 'orbit-speed-lines', blend: 'screen' as const, opacity: fast };
     for (const line of LINES) {
         const k = (line.phase + ctx.t * line.rate * (.6 + fast)) % 1;
         const r0 = reach * (.25 + .75 * k), r1 = r0 + reach * (.05 + .22 * k) * fast;
         const dx = Math.cos(line.angle), dy = Math.sin(line.angle), nx = -dy * line.width, ny = dx * line.width;
         const [cx, cy] = center;
         ctx.commands.push({ v: [[cx + dx * r0, cy + dy * r0], [cx + dx * r1 + nx, cy + dy * r1 + ny], [cx + dx * r1 - nx, cy + dy * r1 - ny]],
-            c: '#ffffff' + alpha(.55 * k), layer: { key: 'orbit-speed-lines', blend: 'screen', opacity: fast } });
+            c: '#ffffff' + alpha(.55 * k), layer });
     }
 }
 

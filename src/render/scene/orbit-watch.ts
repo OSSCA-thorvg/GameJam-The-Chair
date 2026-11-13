@@ -1,4 +1,5 @@
 import type { RenderCtx } from '../context';
+import type { DrawCommand, LayerSpec } from '../types';
 import { seeded } from './cloud-art';
 import { STAGE_FIVE } from '../../game/stages/orbit/data';
 import { aim, CCTV_KINDS, cctvModel, placer, rect, type CctvKind } from './cctv-models';
@@ -147,29 +148,36 @@ export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: nu
 
 /** Red light spills from every lamp: a small REC blink while waiting, a flash as the chair passes, then a steady glow. */
 export function orbitWatchGlow(ctx: RenderCtx, view: SkyProjection, lamps: Lamp[], alpha = 1) {
+    // All glows of a kind share one screen-blended layer (one ThorVG Scene each). Screen blending gives the same
+    // result in any order, so the REC blinks, the camera flashes and the robot eyes are painted kind by kind.
+    const recLayer = { key: 'orbit-cctv-rec', blend: 'screen' as const }, lightLayer = { key: 'orbit-cctv-light', blend: 'screen' as const };
+    const eyeLayer = { key: 'orbit-robot-eye', blend: 'screen' as const };
+    const recs: DrawCommand[] = [], lights: DrawCommand[] = [], eyes: DrawCommand[] = [];
     for (const { at, state, glow, rec } of lamps) {
         if (view.depth(at) < 80) continue;
         if (glow) {
-            eyeGlow(ctx, view, at, glow, state, alpha);
+            eyes.push(eyeGlow(ctx, view, at, glow, state, alpha, eyeLayer));
             continue;
         }
         if (state === 'idle' && !rec) continue;
         const [x, y] = view.project(at);
         const radius = ctx.clamp(30000 / view.depth(at), 10, 60) * (state === 'flash' ? 1 : state === 'recorded' ? .45 : .55);
-        ctx.commands.push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
+        const idle = state === 'idle';
+        (idle ? recs : lights).push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
             from: [x, y], to: [x + radius, y], radius, stops: [[0, ctx.rgba('#ff6b57', .95 * alpha)], [1, ctx.rgba('#ff6b57', 0)]],
-        }, layer: { key: state === 'idle' ? 'orbit-cctv-rec' : 'orbit-cctv-light', blend: 'screen' } });
+        }, layer: idle ? recLayer : lightLayer });
     }
+    ctx.commands.push(...recs, ...lights, ...eyes);
 }
 
-function eyeGlow(ctx: RenderCtx, view: SkyProjection, at: Point3, glow: number, state: LampState, alpha: number) {
+function eyeGlow(ctx: RenderCtx, view: SkyProjection, at: Point3, glow: number, state: LampState, alpha: number, layer: LayerSpec): DrawCommand {
     const [x, y] = view.project(at);
     const radius = Math.max(4, Math.abs(view.project([at[0], at[1] + glow, at[2]])[1] - y)) * (state === 'flash' ? 1.5 : 1);
     const pulse = (.8 + Math.sin(ctx.t * 3 + at[0]) * .2) * alpha;
-    ctx.commands.push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
+    return { v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
         from: [x, y], to: [x + radius, y], radius,
         stops: [[0, ctx.rgba('#ff3a1a', .85 * pulse)], [.4, ctx.rgba('#ff2a1a', .45 * pulse)], [1, ctx.rgba('#ff2a1a', 0)]],
-    }, layer: { key: 'orbit-robot-eye', blend: 'screen' } });
+    }, layer };
 }
 
 /** One small point twinkles high above the door, too far away to make out yet. */

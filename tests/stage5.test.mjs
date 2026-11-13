@@ -414,3 +414,18 @@ test('in the ending Seoul glows on the night side ahead', () => {
     assert.ok(lights.length > 5, 'city lights are on');
     assert.ok(lights.some(({ v }) => v.every(([x, y]) => x > 0 && x < 1000 && y > 0 && y < 510)), 'and on screen');
 });
+
+test('glows and streaks of a kind share one layer, so each is a single ThorVG Scene', () => {
+    const frame = flightFrame(state => { state.orbit.speed = STAGE_FIVE.maxSpeed; state.orbit.z = 700; });
+    const runs = key => {
+        let count = 0, last = null;
+        for (const command of frame) {
+            const layer = command.layer?.key === key ? command.layer : null;
+            if (layer && layer !== last) count++;
+            last = layer;
+        }
+        return count;
+    };
+    assert.ok(frame.some(command => command.layer?.key === 'orbit-speed-lines'), 'streaks are drawn flat out');
+    for (const key of ['orbit-speed-lines', 'orbit-cctv-rec', 'orbit-cctv-light', 'orbit-robot-eye']) assert.ok(runs(key) <= 1, `${key} is one layer run`);
+});
