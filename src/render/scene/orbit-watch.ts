@@ -1,0 +1,180 @@
+import type { RenderCtx } from '../context';
+import { seeded } from './cloud-art';
+import { STAGE_FIVE } from '../../game/stages/orbit/data';
+import { aim, CCTV_KINDS, cctvModel, placer, rect, type CctvKind } from './cctv-models';
+import type { Point3, SkyProjection } from './sky-projection';
+
+/** Maps a stage-five route point (x across, y up, z ahead) into a projection's coordinates. */
+export type RoutePoint = (x: number, y: number, z: number) => Point3;
+
+/** `appear`: how far the reveal's turn into 3D has gone (0 side, 1 behind) before this camera comes into view. */
+type Spot = { x: number; y: number; z: number; seed: number; kind: CctvKind; size: number; appear: number };
+
+const pick = (random: () => number) => CCTV_KINDS[Math.floor(random() * CCTV_KINDS.length)];
+
+/** Free-floating cameras spread between the clouds along stage five, kept clear of the chair's lane and the door. */
+function routeCctvs(seed: number, count: number, from: number, to: number): Spot[] {
+    const random = seeded(seed);
+    return Array.from({ length: count }, (_, i) => ({
+        x: (i % 2 ? 1 : -1) * (230 + random() * 560), y: -420 + random() * 520,
+        z: from + (to - from) * (i + random() * .8) / count, seed: seed + i, kind: pick(random), size: 1.3 + random() * 1.1, appear: 0,
+    }));
+}
+
+// Where the reveal cameras sit on a 1000×510 screen once the camera is behind the chair: every edge and corner, none over the chair.
+const REVEAL_COLUMNS = [60, 210, 360, 640, 790, 940], REVEAL_ROWS = [50, 170, 300, 430];
+const REVEAL_VIEW = { focal: 841.5, centerY: 188.7, camera: 480 };
+
+/** Cameras hanging in the air all around the chair, turning up one by one as the view turns into 3D; `glide` later carries it past every one. */
+function revealCctvs(seed: number, glide: number): Spot[] {
+    const random = seeded(seed);
+    const count = REVEAL_ROWS.length * REVEAL_COLUMNS.length;
+    const order = Array.from({ length: count }, (_, i) => ({ i, key: random() })).sort((a, b) => a.key - b.key).map(item => item.i);
+    return REVEAL_ROWS.flatMap((row, r) => REVEAL_COLUMNS.map((column, c) => {
+        const depth = 700 + random() * 860;
+        const sx = column + (random() - .5) * 90, sy = row + (random() - .5) * 70;
+        const scale = depth / REVEAL_VIEW.focal;
+        return { x: (sx - 500) * scale, y: (REVEAL_VIEW.centerY - sy) * scale, z: depth - REVEAL_VIEW.camera - glide,
+            seed: seed + r * 10 + c, kind: pick(random), size: 1.3 + random() * 1.3,
+            appear: .04 + .56 * order.indexOf(r * REVEAL_COLUMNS.length + c) / count };
+    }));
+}
+
+const GLIDE = 1600;
+
+type Glint = { x: number; y: number; red: boolean; rate: number; phase: number };
+
+/** Screen-space points on the low cloud floor and the two high clouds, clear of the chair in the middle. */
+function cloudGlints(seed: number): Glint[] {
+    const random = seeded(seed);
+    const floor = Array.from({ length: 16 }, (_, i) => {
+        const side = i % 2 ? .64 + random() * .33 : .03 + random() * .33;
+        return { x: side, y: .8 + random() * .16 };
+    });
+    return [...floor, { x: .12, y: .17 }, { x: .19, y: .14 }, { x: .85, y: .12 }].map((spot, i) =>
+        ({ ...spot, red: i % 3 === 0, rate: 1.6 + random() * 2.2, phase: random() * Math.PI * 2 }));
+}
+
+// The company keeps watching. Scenery only: nothing here collides or changes play.
+export const ORBIT_WATCH = {
+    // The stage four reveal glides the chair forward through this field before stage five begins at z = 0.
+    glide: GLIDE,
+    reveal: revealCctvs(4100, GLIDE),
+    route: routeCctvs(5200, 10, 600, 4700),
+    // The satellites whose beams shower the chair with praise (5-1 to 5-3).
+    satellites: STAGE_FIVE.praise.beams.map(beam => beam.satellite),
+    satelliteAppear: .35,
+    // A far speck in the sky above the office door, the last landing of the route.
+    beacon: { x: 90, y: 760, z: 7400, appear: .55 },
+    // Lenses and lamps glinting out of the low cloud floor, from when the camera is behind the chair.
+    glints: cloudGlints(6300),
+    glintsFrom: .92,
+    before: 200, after: 40, blink: 7,
+};
+
+/** idle: a dim red dot · flash: blinking while the chair passes · recorded: steady once it has gone by. */
+export type LampState = 'idle' | 'flash' | 'recorded';
+type Lamp = { at: Point3; state: LampState };
+
+/** Lamp state of a camera `ahead` route units in front of the chair. */
+export function cctvLamp(ahead: number, t: number): LampState {
+    if (ahead > ORBIT_WATCH.before) return 'idle';
+    if (ahead > -ORBIT_WATCH.after) return Math.floor(t * ORBIT_WATCH.blink) % 2 === 0 ? 'flash' : 'idle';
+    return 'recorded';
+}
+
+const lampColor = (state: LampState) => state === 'idle' ? '#a8423c' : '#ff5a4a';
+
+function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: number, t: number) {
+    const anchor = point(spot.x, spot.y + Math.sin(t * .9 + spot.seed) * 8, spot.z);
+    // The lens keeps turning toward the chair at the projection's origin.
+    const yaw = aim(-anchor[0], -anchor[2]) + Math.sin(t * .6 + spot.seed) * .05;
+    const state = cctvLamp(spot.z - travel, t);
+    const lamp = cctvModel(view, spot.kind, placer(anchor, yaw, spot.size));
+    view.oval(lamp, [4.5 * spot.size, 4.5 * spot.size, 4.5 * spot.size], lampColor(state));
+    return { at: lamp, state };
+}
+
+function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: number; z: number }, travel: number, t: number): Lamp {
+    const { x, y, z } = at;
+    const place = placer(point(x, y + Math.sin(t * .7) * 12, z), aim(0, 1) + Math.sin(t * .4) * .08);
+    view.profile([[-24, -30], [24, -30], [32, -20], [32, 20], [24, 30], [-24, 30], [-32, 20], [-32, -20]], 28, '#dcd7cf', 0, { place });
+    view.profile(rect(-15, 4, 15, 16), .6, '#2f6fb5', 28.6, { place });
+    for (const s of [-1, 1]) {
+        view.rod(place([s * 32, 0, 0]), place([s * 48, 0, 0]), 2.5, '#9aa0b0');
+        view.profile(rect(s * 48, -24, s * 160, 24), 2, '#3b5c9a', 0, { place });
+        for (const k of [.33, .66]) {
+            const u = s * (48 + 112 * k);
+            view.profile(rect(u - 1, -24, u + 1, 24), .4, '#c9d6ee', 2.4, { place });
+        }
+    }
+    // Its lens is built into the body, looking down at the route.
+    view.oval(place([0, -16, 29]), [9, 9, 3], '#27344d');
+    view.oval(place([2, -13, 30]), [3, 3, 1], '#7d9fbb');
+    const state = cctvLamp(z - travel, t);
+    const lamp = place([-18, 22, 29]);
+    view.oval(lamp, [5, 5, 2], lampColor(state));
+    return { at: lamp, state };
+}
+
+/**
+ * Adds the watchers to `view`; returns their lamps for the glow pass.
+ * `cameras` picks the floating field: the reveal's (behind stage five's start) or the route's.
+ * `shown` is how far the reveal has turned into 3D; watchers that come later stay hidden.
+ */
+export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, cameras: 'reveal' | 'route', shown = 1) {
+    const lamps = ORBIT_WATCH[cameras].filter(spot => spot.appear <= shown).map(spot => floating(view, point, spot, travel, t));
+    // Far satellites are left out until the chair is within sight of them.
+    if (ORBIT_WATCH.satelliteAppear <= shown) for (const at of ORBIT_WATCH.satellites) {
+        if (at.z - travel < 6000) lamps.push(satellite(view, point, at, travel, t));
+    }
+    return lamps;
+}
+
+/** Red light spills from the lamps that caught the chair: flashing as it passes, then a steady small glow. */
+export function orbitWatchGlow(ctx: RenderCtx, view: SkyProjection, lamps: Lamp[], alpha = 1) {
+    for (const { at, state } of lamps) {
+        if (state === 'idle' || view.depth(at) < 80) continue;
+        const [x, y] = view.project(at);
+        const radius = ctx.clamp(30000 / view.depth(at), 10, 60) * (state === 'flash' ? 1 : .45);
+        ctx.commands.push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
+            from: [x, y], to: [x + radius, y], radius, stops: [[0, ctx.rgba('#ff6b57', .95 * alpha)], [1, ctx.rgba('#ff6b57', 0)]],
+        }, layer: { key: 'orbit-cctv-light', blend: 'screen' } });
+    }
+}
+
+/** One small point twinkles high above the door, too far away to make out yet. */
+export function orbitBeacon(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, alpha = 1) {
+    const { x, y, z } = ORBIT_WATCH.beacon;
+    const at = point(x, y, z);
+    if (view.depth(at) < 80) return;
+    const [cx, cy] = view.project(at);
+    const twinkle = .35 + .65 * Math.pow(Math.sin(ctx.t * 1.7) * .5 + .5, 3);
+    const layer = { key: 'orbit-beacon', blend: 'screen' as const };
+    const glow = 5 + 9 * twinkle;
+    ctx.commands.push({ v: [[cx - glow, cy - glow], [cx + glow, cy - glow], [cx + glow, cy + glow], [cx - glow, cy + glow]], c: {
+        from: [cx, cy], to: [cx + glow, cy], radius: glow, stops: [[0, ctx.rgba('#fff3cf', .9 * alpha)], [1, ctx.rgba('#fff3cf', 0)]],
+    }, layer });
+    const ray = 3 + 7 * twinkle, thin = .7;
+    const color = '#fffaf0' + Math.round(ctx.clamp(twinkle * alpha, 0, 1) * 255).toString(16).padStart(2, '0');
+    ctx.commands.push({ v: [[cx - ray, cy], [cx, cy - thin], [cx + ray, cy], [cx, cy + thin]], c: color, layer });
+    ctx.commands.push({ v: [[cx, cy - ray], [cx + thin, cy], [cx, cy + ray], [cx - thin, cy]], c: color, layer });
+}
+
+/** White lens glints and red recording lamps blink out of the clouds. */
+export function orbitCloudGlints(ctx: RenderCtx, alpha = 1) {
+    if (alpha <= 0) return;
+    const layer = { key: 'orbit-cloud-glint', blend: 'screen' as const };
+    for (const glint of ORBIT_WATCH.glints) {
+        const wave = Math.sin(ctx.t * glint.rate + glint.phase);
+        if (wave < .55) continue;
+        const k = (wave - .55) / .45, x = glint.x * ctx.W, y = glint.y * ctx.H;
+        const glow = 7 + 9 * k, core = 2 + 1.6 * k;
+        const color = glint.red ? '#ff6b57' : '#fff3cf';
+        ctx.commands.push({ v: [[x - glow, y - glow], [x + glow, y - glow], [x + glow, y + glow], [x - glow, y + glow]], c: {
+            from: [x, y], to: [x + glow, y], radius: glow, stops: [[0, ctx.rgba(color, .9 * k * alpha)], [1, ctx.rgba(color, 0)]],
+        }, layer });
+        const tint = Math.round(alpha * 255).toString(16).padStart(2, '0');
+        ctx.commands.push({ v: [[x - core, y], [x, y - core], [x + core, y], [x, y + core]], c: (glint.red ? '#ff5a4a' : '#ffffff') + tint, layer });
+    }
+}

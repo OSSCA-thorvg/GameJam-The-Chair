@@ -93,12 +93,3 @@ export function orbitCloudBank(ctx: RenderCtx, view: SkyProjection, travel: numb
     }
     Object.assign(ctx, saved);
 }
-
-export function doorGlow(ctx: RenderCtx, view: SkyProjection, point: [number,number,number], alpha = 1) {
-    if (view.depth(point) < 80) return;
-    const [x,y] = view.project(point);
-    const radius = Math.min(ctx.H * .42, 210000 / view.depth(point));
-    ctx.commands.push({ v: [[x-radius,y-radius],[x+radius,y-radius],[x+radius,y+radius],[x-radius,y+radius]], c: {
-        from: [x,y], to: [x+radius,y], radius, stops: [[0,ctx.rgba('#ffdda6',.8*alpha)],[1,ctx.rgba('#ffdda6',0)]],
-    }, layer: { key: 'orbit-door-light', blend: 'screen' } });
-}

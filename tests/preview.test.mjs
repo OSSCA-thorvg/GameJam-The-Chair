@@ -106,10 +106,12 @@ test('merged preview registry keeps water, focus loss and rooftop scenes without
 test('the sky ending preview seeks through side view, the orbit and back view', () => {
     const scene = previewScenes.find(scene => scene.id === 'sky-ending');
     assert.ok(scene);
+    // The preview runs the reveal for settle + turn seconds, then the depth phase for hold seconds.
+    const depthStart = scene.markers.find(marker => marker.label.startsWith('Rear view')).at;
     assert.equal(scene.sample(1.5).state.sky.phase, 'reveal');
-    assert.equal(scene.sample(8).state.sky.phase, 'depth');
-    assert.equal(scene.sample(10).state.sky.age, 2);
-    const ending = scene.sample(10);
+    assert.equal(scene.sample(depthStart + .5).state.sky.phase, 'depth');
+    assert.equal(scene.sample(scene.duration).state.sky.age, scene.duration - depthStart);
+    const ending = scene.sample(scene.duration);
     scene.sample(0);
-    assert.deepEqual(scene.sample(10), ending);
+    assert.deepEqual(scene.sample(scene.duration), ending);
 });

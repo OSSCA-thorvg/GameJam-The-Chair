@@ -2,7 +2,11 @@ import { createGame, type Game, type GameState } from './game/game';
 import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
+import { praiseBeamX } from './game/stages/orbit/course/decide';
 import { STAGE_FOUR } from './game/stages/sky/data';
+import { SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
+import { ATTENDANCE } from './render/scene/attendance-bubble';
+import { ORBIT_ENDING } from './render/scene/orbit-ending';
 import { STAGE_TWO } from './game/stages/building/data';
 import { ductTimings, STAGE_THREE, GRAPH_CORNERS } from './game/stages/rooftop/data';
 import { createEffects, type EffectsState } from './render/effects';
@@ -666,9 +670,12 @@ function skyEnding(): PreviewScene {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const duration = settle + turn + hold;
     return {
-        id: 'sky-ending', label: 'Sky · Side to back through bread clouds', duration, focusX: STAGE_FOUR.goal,
-        markers: [{ at: 0, label: 'Side view' }, { at: settle + turn / 2, label: 'Camera turning' },
-            { at: settle + turn, label: 'Back view' },
+        id: 'sky-ending', label: 'Sky · Slow turn among cameras, glide to stage 5', duration, focusX: STAGE_FOUR.goal,
+        markers: [{ at: 0, label: 'Leaving the ledge' }, { at: SKY_DEPARTURE, label: 'Quiet side view' },
+            { at: settle + SKY_TURN.duration * .25, label: 'Cameras turning up' },
+            { at: settle + SKY_TURN.duration / 2, label: 'Three-quarter view' },
+            { at: settle + SKY_TURN.duration, label: 'Rear view · gliding past the cameras' },
+            { at: duration - ATTENDANCE.lead, label: 'Attendance confirmed' },
             { at: duration, label: 'Stage 5 hand-off' }],
         sample(time) {
             const at = Math.max(0, Math.min(duration, time));
@@ -681,31 +688,94 @@ function skyEnding(): PreviewScene {
     };
 }
 
+/** Steering for the stage five previews: duck into 5-1's shelter clouds, then keep to the widest gap between beams. */
+export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSnapshot']>): Input[] {
+    const orbit = state.orbit, p = state.player;
+    if (!orbit) return [];
+    const { shelters, beams } = STAGE_FIVE.praise;
+    const shelter = orbit.z < STAGE_FIVE.heights.air ? shelters.find(s => s.z > orbit.z - 120) : undefined;
+    let target = { x: 0, y: 0 };
+    if (shelter) target = shelter;
+    else {
+        const ahead = beams.filter(b => orbit.z + 250 >= b.from && orbit.z <= b.to);
+        let best = -1;
+        for (let x = -620; x <= 620; x += 40) {
+            const room = Math.min(...ahead.map(b => Math.abs(x - praiseBeamX(b, orbit.age + .6)) - b.halfWidth), 9999) - Math.abs(x - p.x) * .15;
+            if (room > best) { best = room; target = { x, y: 0 }; }
+        }
+    }
+    const keys: Input[] = [];
+    if (target.x - p.x > p.vx * .65 + 6) keys.push('right');
+    if (target.x - p.x < p.vx * .65 - 6) keys.push('left');
+    if (target.y - p.y > p.vy * .65 + 6) keys.push('forward');
+    if (target.y - p.y < p.vy * .65 - 6) keys.push('back');
+    return keys;
+}
+
 function orbitRoute(): PreviewScene {
     const game = createGame();
     game.startStage(5);
     const effects = createEffects();
     const frames = [capture(game, effects)];
     const markers = [{ at: 0, label: 'Stage 4 rear view' }];
+    const { air, space, shadow } = STAGE_FIVE.heights;
     let previous = '';
-    for (let i = 0; i < 3600; i++) {
+    for (let i = 0; i < 9000; i++) {
         const state = game.getSnapshot(), orbit = state.orbit;
         if (!orbit) break;
-        const target = STAGE_FIVE.rings[orbit.rings] ?? STAGE_FIVE.door;
-        const p = state.player;
-        const keys: Input[] = [];
-        if (target.x - p.x > p.vx * .65 + 6) keys.push('right');
-        if (target.x - p.x < p.vx * .65 - 6) keys.push('left');
-        if (target.y - p.y > p.vy * .65 + 6) keys.push('forward');
-        if (target.y - p.y < p.vy * .65 - 6) keys.push('back');
-        game.setInput(...keys);
+        game.setInput(...orbitKeys(state));
         stepGame(game, effects);
         frames.push(capture(game, effects));
-        const phase = `${orbit.phase}-${orbit.rings}`;
-        if (phase !== previous) { markers.push({ at: i / 60, label: phase }); previous = phase; }
-        if (orbit.phase === 'parked') break;
+        const section = orbit.phase === 'parked' ? 'Ending' : orbit.z < air ? '5-1 clouds'
+            : orbit.z < space ? '5-2 atmosphere' : orbit.z < shadow ? '5-3 space' : 'Earth shadow';
+        if (section !== previous) { markers.push({ at: i / 60, label: section }); previous = section; }
+        // Keep recording through the whole ending, so the hand-off from 5-3 can be watched in one go.
+        if (orbit.phase === 'parked' && i / 60 - (markers.at(-1)?.at ?? 0) > ORBIT_ENDING.end + 1) break;
     }
-    return recordedScene('orbit-route', 'Orbit · Concept 01: cloud basin & office door', 0, markers, frames);
+    return recordedScene('orbit-route', 'Orbit · 5-1 to 5-3 and the ending', 0, markers, frames);
+}
+
+// The ending, from the moment the chair parks in the Earth's shadow to THE END.
+function orbitEndingScene(): PreviewScene {
+    const game = createGame();
+    game.startStage(5);
+    const parked = JSON.parse(game.serialize());
+    Object.assign(parked.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1, age: 76 });
+    // As in play, the chair arrives well into the stage, long after the stage title has gone.
+    parked.checkpoint = 1;
+    parked.time = 76;
+    game.restore(JSON.stringify(parked));
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    const { calm, wide, lightsOut, dark, end } = ORBIT_ENDING;
+    const markers = [{ at: 0, label: '05 Spray dies down' }, { at: calm, label: '06 Horizon and nebula' }, { at: wide, label: '07 Laptop goes dark' },
+        { at: lightsOut, label: 'Fading out' }, { at: dark, label: '08 THE END' }];
+    for (let i = 0; i < (end + 1) * 60; i++) {
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene('orbit-ending', 'Orbit · Ending: horizon, lights out, THE END', 0, markers, frames);
+}
+
+// 5-1: duck from shelter cloud to shelter cloud while the satellite's praise beam sweeps the cloud layer.
+function orbitPraiseScene(): PreviewScene {
+    const game = createGame();
+    game.startStage(5);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    const markers = [{ at: 0, label: 'Stage 5 start' }];
+    const first = STAGE_FIVE.praise.beams[0];
+    let previous = '';
+    for (let i = 0; i < 2400; i++) {
+        const state = game.getSnapshot(), orbit = state.orbit;
+        if (!orbit || orbit.z > first.to + 200) break;
+        game.setInput(...orbitKeys(state));
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+        const stage = orbit.z < first.from ? 'clouds' : orbit.z < first.to ? 'praise beam' : 'past the beam';
+        if (stage !== previous) { markers.push({ at: i / 60, label: stage }); previous = stage; }
+    }
+    return recordedScene('orbit-praise', 'Orbit · 5-1: hide from the praise beam', 0, markers, frames);
 }
 
 // The duct's timed sneezes: the first big one that spits out the overtime junk, and the later gusts.
@@ -843,5 +913,7 @@ export const previewScenes: readonly PreviewScene[] = [
     skySignDepth(),
     skyEnding(),
     orbitRoute(),
+    orbitPraiseScene(),
+    orbitEndingScene(),
     officeTyping(),
 ];

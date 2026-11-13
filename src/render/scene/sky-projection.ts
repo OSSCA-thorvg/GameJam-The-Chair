@@ -39,8 +39,10 @@ export function createSkyProjection(width: number, height: number, orbit: number
     const shade = (color: string, factor: number) => '#' + [1, 3, 5].map(i =>
         Math.max(0, Math.min(255, Math.round(parseInt(color.slice(i, i + 2), 16) * factor))).toString(16).padStart(2, '0')).join('') + color.slice(7);
     // Extrude the game's existing side silhouettes, with a bevel instead of cuboid limbs.
-    const profile = (outline: Vector[], halfWidth: number, color: string, z = 0, options?: { widthAt?: (x: number, y: number) => number; bevel?: number }) => {
-        const { widthAt, bevel = .86 } = options ?? {};
+    // `place` moves the extruded silhouette into the scene, e.g. turning a billboard to face the route.
+    const profile = (outline: Vector[], halfWidth: number, color: string, z = 0,
+        options?: { widthAt?: (x: number, y: number) => number; bevel?: number; place?: (p: Point3) => Point3 }) => {
+        const { widthAt, bevel = .86, place = (p: Point3) => p } = options ?? {};
         const cx = outline.reduce((sum, p) => sum + p[0], 0) / outline.length;
         const cy = outline.reduce((sum, p) => sum + p[1], 0) / outline.length;
         const area = outline.reduce((sum, p, i) => {
@@ -48,9 +50,9 @@ export function createSkyProjection(width: number, height: number, orbit: number
             return sum + p[0] * next[1] - next[0] * p[1];
         }, 0);
         const points = area > 0 ? outline : [...outline].reverse();
-        const ring = (offset: number, scale: number): Point3[] => points.map(([x, y]) => [
+        const ring = (offset: number, scale: number): Point3[] => points.map(([x, y]) => place([
             cx + (x - cx) * scale, cy + (y - cy) * scale, z + offset * (widthAt ? widthAt(x, y) / halfWidth : 1),
-        ]);
+        ]));
         const rings = [ring(-halfWidth, bevel), ring(-halfWidth * .65, 1), ring(halfWidth * .65, 1), ring(halfWidth, bevel)];
         polygon([...rings[0]].reverse(), shade(color, .94));
         polygon(rings[3], color);

@@ -8,8 +8,12 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     const next = { ...orbit, age: orbit.age + dt };
     const p = { ...player };
     const held = (key: Input) => keys.includes(key) ? 1 : 0;
-    if (next.phase === 'parked') return { orbit: next, p, checkpoint: false };
-    if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = 'rings';
+    // Parked in the Earth's shadow, `settled` counts on from 1 so the ending knows how far it has played.
+    if (next.phase === 'parked') {
+        next.settled += dt;
+        return { orbit: next, p, checkpoint: false, praised: false };
+    }
+    if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
     const controlled = next.phase !== 'entry';
     const damping = Det.exp(-C.drag * dt);
     p.vx = (p.vx + (controlled ? held('right') - held('left') : 0) * C.acceleration * dt) * damping;
@@ -23,10 +27,47 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     const cruise = arriving ? C.arrivalSpeed : C.cruise;
     const thrust = controlled && held('spray') && !arriving;
     next.speed = Math.min(C.maxSpeed, next.speed + (thrust ? C.thrust : (cruise - next.speed) * C.cruiseRecovery) * dt);
+    const beam = controlled ? praiseBeamOn(next.age, p, next.z) : null;
+    if (beam) praiseShove(next, p, beam, dt);
+    const praised = beam !== null;
     next.z += next.speed * dt;
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
-    return { orbit: next, p, checkpoint };
+    return { orbit: next, p, checkpoint, praised };
+}
+
+type Beam = typeof C.praise.beams[number];
+
+/** Lateral centre of a praise beam at `age` seconds into stage five. */
+export function praiseBeamX(beam: Beam, age: number) {
+    return beam.amplitude * Det.sin(age * beam.rate + beam.phase);
+}
+
+/** Whether the chair is tucked into one of the 5-1 shelter clouds, out of the satellites' sight. */
+export function praiseSheltered(p: Readonly<Player>, z: number) {
+    const { shelters, shelterSize: size } = C.praise;
+    return shelters.some(s => Math.abs(p.x - s.x) < size.x && Math.abs(p.y - s.y) < size.y && Math.abs(z - s.z) < size.z);
+}
+
+/** The beam falling on the chair at route depth `z`, if any. */
+export function praiseBeamOn(age: number, p: Readonly<Player>, z: number): Beam | null {
+    if (praiseSheltered(p, z)) return null;
+    for (const beam of C.praise.beams) {
+        if (z >= beam.from && z <= beam.to && Math.abs(p.x - praiseBeamX(beam, age)) < beam.halfWidth) return beam;
+    }
+    return null;
+}
+
+/** Whether a praise beam is falling on the chair at route depth `z`. */
+export function inPraise(age: number, p: Readonly<Player>, z: number) {
+    return praiseBeamOn(age, p, z) !== null;
+}
+
+/** The shower of praise slows the chair to a crawl and shoves it out of the beam's centre. */
+function praiseShove(next: OrbitState, p: Player, beam: Beam, dt: number) {
+    const { slowSpeed, slowResponse, shove } = C.praise;
+    next.speed += (slowSpeed - next.speed) * Math.min(1, slowResponse * dt);
+    p.vx += (p.x >= praiseBeamX(beam, next.age) ? 1 : -1) * shove * dt;
 }
 
 function advanceRings(next: OrbitState, p: Player) {

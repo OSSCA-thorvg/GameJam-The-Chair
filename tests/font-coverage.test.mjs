@@ -56,7 +56,7 @@ const keysWith = (...prefixes) => KEYS.filter(key => prefixes.some(prefix => key
 const ROLES = {
     [SIGN_FONT]: keysWith('copier.', 'opening.'),
     [LABEL_FONT]: keysWith('world.', 'interact.', 'building.meeting', 'stageLabel.'),
-    [SPEECH_FONT]: keysWith('opening.', 'building.', 'cheer.', 'player.', 'npc.', 'person.'),
+    [SPEECH_FONT]: keysWith('opening.', 'building.', 'cheer.', 'player.', 'npc.', 'person.', 'orbit.'),
 };
 
 test('every font subset carries the glyphs of the copy it draws in both languages', () => {

@@ -25,7 +25,9 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         const t = (message: Message) => translate(message, getLocale());
         const { mode, focus } = state;
         const active = mode === 'play' && !cutscene;
-        const ending = state.stage === 4 && (state.sky.phase === 'reveal' || state.sky.phase === 'depth');
+        // The stage four turn into 3D and the stage five ending (parked in the Earth's shadow) play without HUD.
+        const ending = (state.stage === 4 && (state.sky.phase === 'reveal' || state.sky.phase === 'depth'))
+            || (state.stage === 5 && state.orbit?.phase === 'parked');
         const paused = mode === 'pause';
         if (state.stage !== lastStage || state.time < lastTime) {
             focusIntroduced = false;
@@ -39,7 +41,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         previousFocus = focus;
         lastStage = state.stage;
         lastTime = state.time;
-        hidden('[data-play-hud]', mode === 'intro' || ending || state.stage === 5 || cutscene);
+        hidden('[data-play-hud]', mode === 'intro' || ending || cutscene);
         hidden('.drive-controls', ending || cutscene);
         hidden('[data-pause]', !active && !paused);
         hidden('[data-pause-menu]', !paused);

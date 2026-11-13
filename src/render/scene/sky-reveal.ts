@@ -1,11 +1,15 @@
 import { STAGE_FOUR } from '../../game/stages/sky/data';
-import { STAGE_FIVE } from '../../game/stages/orbit/data';
 import type { RenderCtx } from '../context';
 import type { LayerSpec } from '../types';
 import { createSkyProjection, type Point3 } from './sky-projection';
 import { endingChair } from './sky-ending-art';
-import { basinCloudSeeds, doorGlow, orbitCloudBank, orbitSky } from './orbit-atmosphere';
-import { orbitDoor, orbitHoop } from './orbit-art';
+import { skyDeparture } from './sky-departure';
+import { revealChairOrbit, revealTravel, SKY_DEPARTURE, SKY_TURN } from './sky-camera';
+import { basinCloudSeeds, orbitCloudBank, orbitSky } from './orbit-atmosphere';
+import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGlow, type RoutePoint } from './orbit-watch';
+import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
+import { orbitPraiseShelters } from './orbit-praise';
+import type { SkyProjection } from './sky-projection';
 
 const smooth = (value: number) => {
     const t = Math.max(0, Math.min(1, value));
@@ -22,19 +26,35 @@ function inLayer(ctx: RenderCtx, layer: LayerSpec, draw: () => void) {
     for (let i = from; i < ctx.commands.length; i++) if (!ctx.commands[i].layer) ctx.commands[i] = { ...ctx.commands[i], layer };
 }
 
+/**
+ * The floating cameras, satellite and far speck stay out of the flat side view and turn up one by one as the
+ * view turns into 3D (`shown`, 0 side to 1 behind); none fades, so they read as having been there all along.
+ */
+function revealWatchers(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, travel: number, shown: number) {
+    if (shown <= 0) return;
+    inLayer(ctx, { key: 'sky-ending-watch' }, () => {
+        if (shown >= ORBIT_WATCH.beacon.appear) orbitBeacon(ctx, view, point);
+        const lamps = orbitWatchers(view, point, travel, ctx.t, 'reveal', shown);
+        ctx.commands.push(...view.commands());
+        orbitWatchGlow(ctx, view, lamps);
+    });
+}
+
 // Screen-space commands still go through the shared ThorVG paint pool and Canvas2D fallback.
-// The camera swings from the chair's side to its back through stage five's bread-cloud basin,
-// so the last frame here is the first frame of stage five.
+// The camera swings slowly from the chair's side to its back while the watching cameras turn up; then the
+// chair glides forward past them, so the last frame here is the first frame of stage five.
 export function drawSkyReveal(ctx: RenderCtx) {
     const { sky } = ctx.state;
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const elapsed = sky.phase === 'depth' ? settle + turn + sky.age : sky.age;
-    const orbit = smooth((elapsed - settle) / turn);
-    const goal = smooth((elapsed - settle - turn) / (hold * .6));
+    const progress = smooth((elapsed - settle) / Math.min(turn, SKY_TURN.duration));
+    const travel = revealTravel(elapsed, settle, ORBIT_WATCH.glide);
+    const orbit = revealChairOrbit(elapsed, settle);
     const view = createSkyProjection(ctx.W, ctx.H, orbit);
     // The clouds use the stage-five camera framing by the end of the turn.
-    const basin = createSkyProjection(ctx.W, ctx.H, orbit, { centerY: .5 - .13 * orbit, eyeY: 45 - 30 * orbit });
-    const point = (x: number, y: number, z: number): Point3 => [z, 15 + y, x];
+    const framing = { centerY: .5 - .13 * progress, eyeY: 45 - 30 * progress };
+    const basin = createSkyProjection(ctx.W, ctx.H, progress, framing);
+    const point = (x: number, y: number, z: number): Point3 => [z - travel, 15 + y, x];
     // Only the clouds of stage five's first frame are drawn, so none appears mid-turn and then vanishes.
     const only = basinCloudSeeds(ctx, createSkyProjection(ctx.W, ctx.H, 1, { centerY: .37, level: true }), 0, BASIN);
 
@@ -49,18 +69,15 @@ export function drawSkyReveal(ctx: RenderCtx) {
             stops: [[0, ctx.rgba('#ffdfb5', .16)], [1, ctx.rgba('#ffdfb5', 0)]],
         },
     });
+    // The clouds stay put so none slips past the camera; the cameras streaming by carry the forward glide.
     orbitCloudBank(ctx, basin, 0, false, { anchor: BASIN, only, nearDepth: 1100 });
-    // While the camera holds behind the chair, stage five's rings and door appear before control returns.
-    if (goal > 0) doorGlow(ctx, basin, point(STAGE_FIVE.door.x, STAGE_FIVE.door.y + 60, STAGE_FIVE.door.z), goal);
-    if (goal > 0) inLayer(ctx, { key: 'sky-ending-goal', opacity: goal }, () => {
-        orbitDoor(basin, point(STAGE_FIVE.door.x, STAGE_FIVE.door.y, STAGE_FIVE.door.z));
-        ctx.commands.push(...basin.commands());
-        for (let i = STAGE_FIVE.rings.length - 1; i >= 0; i--) {
-            const ring = STAGE_FIVE.rings[i];
-            orbitHoop(ctx, basin, point(ring.x, ring.y, ring.z), ring.radius, false);
-        }
-    });
+    orbitPraiseShelters(ctx, basin, point);
+    if (orbit >= ORBIT_WATCH.glintsFrom) orbitCloudGlints(ctx);
+    revealWatchers(ctx, createSkyProjection(ctx.W, ctx.H, progress, framing), point, travel, orbit);
     orbitCloudBank(ctx, basin, 0, true, { anchor: BASIN, only, nearDepth: 1100 });
-    endingChair(view, elapsed);
+    const departure = smooth(elapsed / SKY_DEPARTURE);
+    skyDeparture(ctx, departure);
+    endingChair(view, elapsed, 1 + 1.5 * (1 - departure), 1 - departure);
     ctx.commands.push(...view.commands());
+    attendanceBubble(ctx, view.project([4, 70, 0]), elapsed - (settle + turn + hold - ATTENDANCE.lead));
 }

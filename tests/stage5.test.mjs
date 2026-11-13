@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, orbitStep, STAGE_FIVE, stepGame, parseCommand, previewScenes, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
+const { createGame, orbitStep, praiseBeamX, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
     export { createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } from './src/game/replay';
     export { actionForKey } from './src/ui/controls';
     export { createGame, stepGame } from './src/game/game';
-    export { orbitStep } from './src/game/stages/orbit/course/decide';
+    export { orbitStep, praiseBeamX } from './src/game/stages/orbit/course/decide';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
     export { parseCommand } from './src/game/commands';
-    export { previewScenes } from './src/preview-scenes';
+    export { previewScenes, orbitKeys } from './src/preview-scenes';
     export { drawOrbit } from './src/render/scene/orbit';
     export { createRenderCtx } from './src/render/context';
 `);
@@ -30,49 +30,52 @@ test('orbit steering is screen-relative, coasts after release and speeds up with
     assert.deepEqual(parseCommand({ type: 'startStage', id: 5 }), { type: 'startStage', id: 5 });
 });
 
-test('a missed hoop remains available without deaths or focus damage', () => {
+test('stage five has no hoops: after the entry the chair heads straight for the door', () => {
+    assert.deepEqual(STAGE_FIVE.rings, []);
     const game = fresh();
     const state = JSON.parse(game.serialize());
-    Object.assign(state.orbit, { phase: 'rings', z: STAGE_FIVE.rings[0].z - 1 });
-    Object.assign(state.p, { x: 600, y: 0 });
-    const before = structuredClone(state);
+    Object.assign(state.orbit, { phase: 'entry', age: STAGE_FIVE.entryTime });
     const result = stepGame(state);
-    assert.deepEqual(state, before);
-    assert.equal(result.state.orbit.rings, 0);
-    assert.ok(result.state.orbit.z < STAGE_FIVE.rings[0].z);
+    assert.equal(result.state.orbit.phase, 'door');
     assert.equal(result.state.focus, 100);
     assert.equal(result.state.deaths, 0);
-    result.state.p.x = 0;
-    const aligned = stepGame(result.state);
-    for (let i = 0; i < 10 && aligned.state.orbit.rings === 0; i++) Object.assign(aligned, stepGame(aligned.state));
-    assert.equal(aligned.state.orbit.rings, 1);
 });
 
-test('the cloud entry ends at the office door after both hoops, without clearing all of stage five', () => {
+test('stage five climbs through 5-1 to 5-3 and stops in the Earth shadow, without clearing all of stage five', () => {
     const game = fresh();
-    for (let i = 0; i < 120 * 60 && game.getSnapshot().checkpoint === 0; i++) {
-        const state = game.getSnapshot(), p = state.player;
-        const target = STAGE_FIVE.rings[state.orbit.rings] ?? STAGE_FIVE.door;
-        const dy = target.y-p.y-p.vy*.65;
-        game.setInput(...(dy > 6 ? ['forward'] : dy < -6 ? ['back'] : []));
+    // The preview driver hides in 5-1's clouds and keeps to the widest gap between the beams after that.
+    let lowest = 100;
+    for (let i = 0; i < 120 * 150 && game.getSnapshot().checkpoint === 0; i++) {
+        game.setInput(...orbitKeys(game.getSnapshot()));
         game.step();
+        lowest = Math.min(lowest, game.getSnapshot().focus);
     }
     const end = game.getSnapshot();
     assert.equal(end.orbit.phase, 'parked');
-    assert.equal(end.orbit.rings, 2);
+    assert.ok(end.orbit.z >= STAGE_FIVE.heights.shadow, 'parked inside the Earth shadow');
     assert.equal(end.checkpoint, 1);
     assert.equal(end.deaths, 0);
-    assert.equal(end.focus, 100);
+    assert.ok(lowest > 20, `careful steering keeps some focus (lowest ${lowest})`);
+    assert.equal(end.focus, 100, 'reaching the shadow clears the head');
     assert.equal(end.completedStage, 4);
     game.restart();
     assert.equal(game.getSnapshot().orbit.phase, 'parked');
     assert.equal(game.getSnapshot().orbit.z, STAGE_FIVE.checkpoint.z);
+    // The whole shadow is the goal: arriving off to one side still parks there.
     const state = JSON.parse(game.serialize());
     Object.assign(state.orbit, { phase: 'door', z: STAGE_FIVE.checkpoint.z, speed: 50 });
     state.p.x = 650;
-    const outside = orbitStep(state.orbit, state.p, [], 1 / 120);
-    assert.equal(outside.checkpoint, false);
-    assert.equal(outside.orbit.phase, 'door');
+    const aside = orbitStep(state.orbit, state.p, [], 1 / 120);
+    assert.equal(aside.checkpoint, true);
+    assert.equal(aside.orbit.phase, 'parked');
+});
+
+test('no praise beam reaches into the Earth shadow, and every beam sweeps slower than the chair steers', () => {
+    const { beams } = STAGE_FIVE.praise;
+    assert.ok(beams.every(beam => beam.to <= STAGE_FIVE.heights.shadow));
+    const steer = STAGE_FIVE.acceleration / STAGE_FIVE.drag;
+    assert.ok(beams.every(beam => beam.amplitude * beam.rate < steer), 'the chair can always outrun a sweep');
+    assert.equal(beams.filter(beam => beam.from >= STAGE_FIVE.heights.air && beam.to <= STAGE_FIVE.heights.space).length, 3, '5-2 has three satellites');
 });
 
 test('saved orbit movement resumes exactly and pause freezes it', () => {
@@ -89,7 +92,7 @@ test('saved orbit movement resumes exactly and pause freezes it', () => {
     assert.equal(game.serialize(), frozen);
 });
 
-test('the orbit preview reaches the office door, seeks backwards, and renders finite geometry on narrow screens', () => {
+test('the orbit preview reaches the Earth shadow, seeks backwards, and renders finite geometry on narrow screens', () => {
     const scene = previewScenes.find(scene => scene.id === 'orbit-route');
     assert.ok(scene);
     assert.equal(STAGE_FIVE.drawer, undefined);
@@ -109,7 +112,8 @@ test('the orbit preview reaches the office door, seeks backwards, and renders fi
         assert.ok(ctx.commands.reduce((n,c) => n+(c.curves?.length ?? 0), 0) <= 5000, 'cloud entry stays within its curve budget');
         assert.ok(ctx.commands.filter(c => c.c && typeof c.c === 'object').length <= 140, 'cloud entry stays within its gradient budget');
         const commands = ctx.commands;
-        assert.ok(commands.some(cmd => cmd.curves && cmd.stroke), 'hoops and clouds use vector curves');
+        assert.ok(commands.some(cmd => cmd.curves), 'clouds use vector curves');
+        assert.ok(!commands.some(cmd => cmd.stroke?.color === '#bff5bd'), 'no green hoops');
         assert.ok(commands.every(cmd => !cmd.layer?.blur && !cmd.layer?.motionBlur), 'the cloud entry uses no blur');
         for (const cmd of commands) for (const point of [...cmd.v, ...(cmd.curves ?? [])]) assert.ok(point.every(Number.isFinite));
     }
@@ -158,4 +162,73 @@ test('repeated orbit frames do not accumulate previous drawing commands', () => 
         drawOrbit(ctx);
         assert.equal(ctx.commands.length, count, `drawing commands accumulated at frame ${frame+2}`);
     }
+});
+
+/** A stage five state with the chair at route depth `z` and lateral `x`, `age` seconds in. */
+function praiseState(z, x, age = 10) {
+    const state = JSON.parse(fresh().serialize());
+    Object.assign(state.orbit, { phase: 'door', age, z, speed: STAGE_FIVE.cruise });
+    Object.assign(state.p, { x, y: 0, vx: 0, vy: 0 });
+    return state;
+}
+const run = (state, seconds) => {
+    let r = { state, events: [] };
+    const events = [];
+    for (let i = 0; i < seconds * 120; i++) { r = stepGame(r.state); events.push(...r.events); }
+    return { state: r.state, events };
+};
+
+test('5-1: each second under the praise beam costs focus, and it does not come back meanwhile', () => {
+    const first = STAGE_FIVE.praise.beams[0], z = first.from + 30;
+    const { state } = run(praiseState(z, praiseBeamX(first, 10)), 1.5);
+    assert.ok(state.focus < 100, `focus ${state.focus}`);
+    assert.ok(state.focus >= 100 - 2 * 5, 'at most one hit per second');
+    assert.equal(state.focusNotice?.kind, 'praise');
+    assert.equal(state.deaths, 0);
+});
+
+test('5-1: outside the beam focus recovers, and running out of focus ends the attempt', () => {
+    const first = STAGE_FIVE.praise.beams[0];
+    const calm = praiseState(first.from - 900, 0);
+    calm.focus = 80;
+    assert.ok(run(calm, 4.1).state.focus > 80, 'recovers away from the beam');
+    const shaky = praiseState(first.from + 30, praiseBeamX(first, 10));
+    shaky.focus = 5;
+    const { state, events } = run(shaky, .2);
+    assert.equal(state.mode, 'focuslost');
+    assert.ok(events.some(event => event.id === 'focus-lost'));
+    assert.equal(state.deaths, 1);
+});
+
+/** Renders stage five parked in the Earth shadow, `t` seconds into the ending. */
+function endingFrame(t) {
+    const state = JSON.parse(fresh().serialize());
+    Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 + t });
+    const ctx = createRenderCtx({});
+    Object.assign(ctx, { state: { ...state, player: state.p }, t: 80 + t, W: 1000, H: 510 });
+    drawOrbit(ctx);
+    const layer = key => ctx.commands.filter(command => command.layer?.key === key);
+    const labels = ctx.commands.filter(command => command.text).map(command => command.text.content);
+    return { labels, layer };
+}
+
+test('parked in the Earth shadow, the ending clock counts on and the chair stays put', () => {
+    const state = JSON.parse(fresh().serialize());
+    Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 });
+    const { state: after } = run(state, 2);
+    assert.ok(Math.abs(after.orbit.settled - 3) < 1e-6);
+    assert.equal(after.orbit.z, STAGE_FIVE.checkpoint.z);
+});
+
+test('the ending: horizon and nebula, the laptop goes dark, everything fades, then THE END', () => {
+    const start = endingFrame(0), wide = endingFrame(10), out = endingFrame(15), end = endingFrame(20);
+    assert.deepEqual(start.layer('orbit-nebula'), [], 'it starts from the shadow 5-3 ended in');
+    assert.ok(start.labels.some(label => label.startsWith('Network')), 'the connection-lost bubble is up first');
+    assert.ok(wide.layer('orbit-nebula').length > 0 && wide.layer('orbit-atmosphere-glow').length > 0);
+    assert.ok(wide.layer('orbit-laptop-light').length > 0, 'the laptop still glows');
+    assert.deepEqual(wide.layer('orbit-ending-black'), []);
+    assert.deepEqual(out.layer('orbit-laptop-light'), [], 'the screen has gone dark');
+    assert.ok(out.layer('orbit-ending-black').length === 1, 'fading out');
+    assert.deepEqual(end.labels.filter(label => label === 'THE END'), ['THE END']);
+    assert.deepEqual(wide.labels.filter(label => label === 'THE END'), []);
 });
