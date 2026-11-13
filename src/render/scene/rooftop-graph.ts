@@ -117,7 +117,8 @@ function restingLine(ctx: RenderCtx, surging: boolean) {
     // A crisp centre stays aligned with the fixed ride surface under the halo.
     const inside = lineCurves(0, INSIDE);
     const pulse = .55 + .45 * Math.abs(Math.sin(t * 2.6));
-    ctx.beginLayer({ key: 'graph-rest-glow', blur: 3, blend: 'add', opacity: (surging ? .35 : .75) * pulse });
+    ctx.beginLayer({ key: 'graph-rest-glow', blur: 3, blend: 'add', opacity: (surging ? .35 : .75) * pulse,
+        effectBudget: { area: 150_000, minScale: .7 } });
     ctx.strokePath(inside.start, inside.curves, { width: 13, color: '#3cff9a', cap: 'round' });
     ctx.endLayer();
     ctx.strokePath(inside.start, inside.curves, { width: 5, color: '#73e6a2', cap: 'round' });
@@ -138,7 +139,8 @@ function surgeLine(ctx: RenderCtx, shown: number) {
     // The surge: the whole line, bright up to just ahead of the chair.
     const whole = lineCurves(0, INSIDE + 1);
     const trim: [number, number] = [0, Math.min(1, shown / GRAPH_CORNERS[INSIDE + 1])];
-    ctx.beginLayer({ key: 'graph-glow', blur: 5, blend: 'add', opacity: .9 });
+    ctx.beginLayer({ key: 'graph-glow', blur: 5, blend: 'add', opacity: .9,
+        effectBudget: { area: 170_000, minScale: .7 } });
     ctx.strokePath(whole.start, whole.curves, { width: 22, color: '#2bff88', cap: 'round' }, { trim });
     ctx.endLayer();
     ctx.strokePath(whole.start, whole.curves, { width: 9, color: ctx.gradientFill(0, ROOF, 0, -1000, [[0, '#4dff9a'], [.5, '#c4ff5c'], [1, '#fff27a']]), cap: 'round' }, { trim });
@@ -149,7 +151,8 @@ function surgeLine(ctx: RenderCtx, shown: number) {
 function chartTip(ctx: RenderCtx, surging: boolean) {
     const tail = lineCurves(INSIDE, INSIDE + 1);
     const last = graphPointAt(GRAPH_CORNERS[INSIDE + 1]);
-    ctx.beginLayer({ key: 'graph-tip-glow', blur: 4, blend: 'add', opacity: surging ? .75 : .4 });
+    ctx.beginLayer({ key: 'graph-tip-glow', blur: 4, blend: 'add', opacity: surging ? .75 : .4,
+        effectBudget: { area: 90_000, minScale: .7 } });
     ctx.strokePath(tail.start, tail.curves, { width: 16, color: '#3cff9a', cap: 'round' });
     ctx.endLayer();
     ctx.strokePath(tail.start, tail.curves, { width: 2.5, color: '#bdf5d4', cap: 'round' });

@@ -18,7 +18,8 @@ function fakeThorvg() {
         constructor() { this.onCanvas = false; this.stale = false; }
     }
     class Shape extends Paint {}
-    for (const name of ['reset', 'moveTo', 'lineTo', 'cubicTo', 'close', 'fill', 'stroke', 'trimPath', 'blend', 'visible', 'appendRect', 'opacity']) Shape.prototype[name] = chain;
+    for (const name of ['moveTo', 'lineTo', 'cubicTo', 'close', 'fill', 'stroke', 'trimPath', 'blend', 'visible', 'appendRect', 'opacity']) Shape.prototype[name] = chain;
+    Shape.prototype.reset = function () { log.push('shape-reset'); return this; };
     class Scene extends Paint {
         constructor() { super(); this.children = []; }
         add(child) {
@@ -27,7 +28,7 @@ function fakeThorvg() {
             return this;
         }
     }
-    for (const name of ['resetEffects', 'gaussianBlur', 'motionBlur', 'blend', 'opacity', 'clip', 'mask', 'visible']) Scene.prototype[name] = chain;
+    for (const name of ['resetEffects', 'gaussianBlur', 'motionBlur', 'blend', 'opacity', 'clip', 'mask', 'visible', 'transform']) Scene.prototype[name] = chain;
     Scene.prototype.mask = function (shape, method) { this.maskShape = shape; this.maskMethod = method; return this; };
     Scene.prototype.clip = function (shape) { this.clipShape = shape; return this; };
     class Gradient { setStops() { return this; } dispose() {} }
@@ -229,4 +230,30 @@ test('a layer that drops its mask or clip gets a fresh scene instead of a pass-t
 
     draw({ key: 'glint', blend: 'screen' });
     assert.equal(sceneOf().clipShape, undefined, 'dropping the clip replaces the scene too');
+});
+
+test('retained geometry is traced once while its ThorVG Scene transform can change every frame', () => {
+    const { TVG, canvas, log } = fakeThorvg();
+    const lg = { save() {}, restore() {} };
+    const ctx = createRenderCtx({}, lg);
+    Object.assign(ctx, { W: 400, H: 300 });
+    const pool = createPaintPool();
+    const retained = tx => ({
+        key: 'retained:test-wall',
+        retained: {
+            geometry: 'test-wall',
+            transform: { e11: 1, e12: 0, e13: tx, e21: 0, e22: 1, e23: 0, e31: 0, e32: 0, e33: 1 },
+            bounds: { left: tx, top: 10, right: tx + 10, bottom: 20 },
+        },
+    });
+
+    ctx.commands = [square(10, retained(0))];
+    ctx.foregroundActors = [];
+    paint(ctx, TVG, canvas, pool);
+    const firstTraceCount = log.filter(item => item === 'shape-reset').length;
+
+    ctx.commands = [square(10, retained(80))];
+    paint(ctx, TVG, canvas, pool);
+    assert.equal(log.filter(item => item === 'shape-reset').length, firstTraceCount,
+        'moving the retained Scene does not retrace its child path');
 });

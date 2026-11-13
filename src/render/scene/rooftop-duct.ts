@@ -97,7 +97,8 @@ function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: 
     const jet = Math.max(0, 1 - age / (.22 * Math.max(.5, strength))) * fadeIn;
     if (jet > 0) {
         const len = (150 + 140 * strength) * smooth(Math.min(1, age / .08 + .25));
-        ctx.beginLayer({ key: 'duct-steam-jet', blur: 3, motionBlur: { distance: 10 * ctx.scale, angle: blurAngle } });
+        ctx.beginLayer({ key: 'duct-steam-jet', blur: 3, motionBlur: { distance: 10 * ctx.scale, angle: blurAngle },
+            effectBudget: { area: 90_000, minScale: .65 } });
         ctx.effectPath([mouthX, y - 22], [
             [mouthX - len * .35, y - 30, mouthX - len * .75, y - 44, mouthX - len, y - 34],
             [mouthX - len - 22, y - 8, mouthX - len - 14, y + 30, mouthX - len, y + 36],
@@ -108,7 +109,7 @@ function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: 
         ctx.endLayer();
     }
 
-    ctx.beginLayer({ key: 'duct-steam', blur: 2.2 });
+    ctx.beginLayer({ key: 'duct-steam', blur: 2.2, effectBudget: { area: 130_000, minScale: .65 } });
     for (let i = 0; i < count; i++) {
         const born = (i / count) * emit;
         const t = age - born;
@@ -145,7 +146,7 @@ function ductSteam(ctx: RenderCtx, x: number, y: number, age: number, duration: 
     ctx.endLayer();
 
     // Thin curling filaments trail the leading puffs and give the cloud its torn, turbulent edge.
-    ctx.beginLayer({ key: 'duct-steam-wisps', blur: 2.6 });
+    ctx.beginLayer({ key: 'duct-steam-wisps', blur: 2.6, effectBudget: { area: 110_000, minScale: .65 } });
     const strands = Math.round(4 + 4 * strength);
     for (let i = 0; i < strands; i++) {
         const seed = 91 + i * 3.7 + strength * 5;
