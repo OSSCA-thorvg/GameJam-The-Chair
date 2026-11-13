@@ -2,12 +2,13 @@ import type { Vector } from '../types';
 import type { RenderCtx } from '../context';
 import { FOCUS_LOSS_DURATION } from '../../game/systems/focus/decide';
 
-// Lower focus makes the hit beat stronger, faster and reach further in from the edges.
+// Lower focus makes the hit beat darker and reach further in from the edges; the beat keeps one tempo.
+const BEAT_RATE = 1.4;
 const TIERS = [
-    { below: 20, strength: .62, rate: 2.4, inner: .42 },
-    { below: 40, strength: .46, rate: 2, inner: .5 },
-    { below: 60, strength: .34, rate: 1.7, inner: .57 },
-    { below: Infinity, strength: .24, rate: 1.4, inner: .64 },
+    { below: 20, strength: .85, inner: .42 },
+    { below: 40, strength: .62, inner: .5 },
+    { below: 60, strength: .42, inner: .57 },
+    { below: Infinity, strength: .26, inner: .64 },
 ] as const;
 
 const bump = (x: number) => Math.exp(-x * x);
@@ -19,7 +20,7 @@ export function focusVignetteAlpha(focus: number, noticeLife: number | null, tim
     if (noticeLife !== null && noticeLife > 0) {
         const age = FOCUS_LOSS_DURATION - noticeLife;
         const fade = Math.min(1, noticeLife / .5);
-        alpha = tier.strength * Math.min(1, beat((age * tier.rate) % 1)) * fade;
+        alpha = tier.strength * Math.min(1, beat((age * BEAT_RATE) % 1)) * fade;
     }
     if (focus <= 20) alpha = Math.max(alpha, .16 * (.5 + .5 * beat((time * 1.2) % 1)));
     return { alpha, inner: tier.inner };
