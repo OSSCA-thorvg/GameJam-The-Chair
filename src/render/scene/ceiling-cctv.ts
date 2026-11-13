@@ -1,38 +1,66 @@
 import type { RenderCtx } from '../context';
-import type { Vector } from '../types';
+import { aim, cctvModel, type CctvKind } from './cctv-models';
+import { createSkyProjection, type Point3 } from './sky-projection';
+import { cctvLamp, type LampState } from './orbit-watch';
 
 const CEILING = 57;
-const PIVOT_DROP = 18;
+const DROP = 14;
+const SIZE = .62;
+// Only the models that sit naturally under a ceiling, with each one's top above its origin so the stem meets the housing.
+const HUNG = ['bullet', 'dome', 'long'] as const satisfies readonly CctvKind[];
+const TOP: Record<typeof HUNG[number], number> = { bullet: 15, dome: 10, long: 15 };
+// How far toward the viewer a camera turns while it looks at the chair, in route units.
+const ACROSS = 260;
 
-/** Security cameras hung at an even spacing under the ceiling, each one turning to follow the chair. */
+/**
+ * The stage five security cameras, already watching from the office ceiling: the same extruded
+ * models hang at an even spacing, turn to follow the chair and blink as it passes underneath.
+ */
 export function ceilingCctvs(ctx: RenderCtx, spacing: number, offset = 0) {
-    const first = Math.floor((ctx.cam - 60 - offset) / spacing) + 1;
-    for (let i = first; i * spacing + offset < ctx.cam + ctx.VW + 60; i++) cctv(ctx, i * spacing + offset, i);
+    const first = Math.floor((ctx.cam - 80 - offset) / spacing) + 1;
+    for (let i = first; i * spacing + offset < ctx.cam + ctx.VW + 80; i++) cctv(ctx, i * spacing + offset, i);
+}
+
+function kindAt(index: number) {
+    const mixed = Math.imul(index ^ 0x5bd1e995, 0x27d4eb2d);
+    return HUNG[((mixed ^ (mixed >>> 15)) >>> 0) % HUNG.length];
 }
 
 function cctv(ctx: RenderCtx, x: number, index: number) {
-    const py = CEILING + PIVOT_DROP;
+    const kind = kindAt(index);
+    const pivotY = CEILING + DROP;
+    const [sx, sy] = ctx.screenPoint(x, pivotY);
+    // A side view looking slightly up at the ceiling, with world units matching the 2D scene.
+    const focal = Math.min(ctx.H * 1.65, ctx.W * .94);
+    const view = createSkyProjection(ctx.W, ctx.H, 0, {
+        zoom: 480 * ctx.scale / focal, offsetX: sx - ctx.W / 2, centerY: sy / ctx.H, eyeY: -30,
+    });
+    const anchor: Point3 = [0, 15, 0];
     const dx = ctx.p.x - x;
-    const dy = ctx.p.y - 45 - py;
-    const side = dx < 0 ? -1 : 1;
-    const tilt = Math.max(.12, Math.min(1.25, Math.atan2(dy, Math.abs(dx))));
-    const cos = Math.cos(tilt), sin = Math.sin(tilt);
-    const at = (u: number, v: number): Vector => [x + side * (u * cos - v * sin), py + u * sin + v * cos];
-    const shape = (points: Vector[], color: string) => ctx.polygon(points.map(([u, v]) => at(u, v)), color);
+    const dy = ctx.p.y - 45 - pivotY;
+    const sway = Math.sin(ctx.t * .6 + index) * .05;
+    const yaw = aim(dx, ACROSS) + sway;
+    const tilt = Math.max(.08, Math.min(1.1, Math.atan2(dy, Math.hypot(dx, ACROSS))));
+    const top = TOP[kind];
+    const cy = Math.cos(yaw), syaw = Math.sin(yaw), ct = Math.cos(tilt), st = Math.sin(tilt);
+    const place = ([u, v, w]: Point3): Point3 => {
+        const pu = u * ct + (v - top) * st, pv = -u * st + (v - top) * ct;
+        return [anchor[0] + (pu * cy + w * syaw) * SIZE, anchor[1] + pv * SIZE, anchor[2] + (w * cy - pu * syaw) * SIZE];
+    };
+    view.rod([0, 15 + DROP, 0], anchor, 2.4, '#69738c');
+    view.profile([[-12, 0], [12, 0], [12, 3], [-12, 3]], 9, '#9aa0b0', 0, { place: ([u, v, w]) => [u, 15 + DROP - 3 + v, w] });
+    view.oval(anchor, [3.5, 3.5, 3.5], '#424f6d');
+    const lamp = cctvModel(view, kind, place);
+    const state = cctvLamp(x - ctx.p.x, ctx.t);
+    view.oval(lamp, [4.5 * SIZE, 4.5 * SIZE, 4.5 * SIZE], state === 'idle' ? '#a8423c' : '#ff5a4a');
+    ctx.commands.push(...view.commands());
+    glow(ctx, view.project(lamp), state);
+}
 
-    ctx.rect(x - 11, CEILING, 22, 4, '#4b5468');
-    ctx.rod(x, CEILING + 3, x, py, 4, '#5d6779');
-    ctx.ellipse(x, py, 4, 4, '#3d4659');
-    shape([[-20, -7], [12, -9], [17, -6], [17, 6], [12, 8], [-20, 7], [-24, 3], [-24, -3]], '#dcd7cf');
-    shape([[-22, -9], [20, -11], [25, -15], [-22, -14]], '#b9b6bb');
-    shape([[-18, 4], [10, 5], [10, 7], [-18, 6]], '#bfc4c9');
-    const [lx, ly] = at(18, 0);
-    ctx.ellipse(lx, ly, 3.2, 5.6, '#27344d');
-    ctx.ellipse(lx + side * .8, ly - 1.4, 1.3, 1.8, '#7d9fbb');
-
-    const near = Math.abs(dx) < 260;
-    const blink = (ctx.t * (near ? 3 : 1) + index * .37) % 1 < (near ? .7 : .25);
-    const [rx, ry] = at(-14, -3);
-    ctx.ellipse(rx, ry, 2, 2, blink ? '#ff4b3e' : '#6b2a2a');
-    if (blink) ctx.ellipse(rx, ry, 7, 7, ctx.radialFill(rx, ry, 7, [[0, '#ff5a4f'], [1, '#ff5a4f00']], .7), { blend: 'add' });
+function glow(ctx: RenderCtx, [x, y]: [number, number], state: LampState) {
+    if (state === 'idle') return;
+    const radius = (state === 'flash' ? 22 : 9) * ctx.scale;
+    ctx.commands.push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
+        from: [x, y], to: [x + radius, y], radius, stops: [[0, ctx.rgba('#ff6b57', .95)], [1, ctx.rgba('#ff6b57', 0)]],
+    }, layer: { key: 'ceiling-cctv-light', blend: 'screen' } });
 }
