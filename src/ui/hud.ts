@@ -43,7 +43,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         previousFocus = focus;
         lastStage = state.stage;
         lastTime = state.time;
-        hidden('[data-play-hud]', mode === 'intro' || ending || state.stage === 5 || cutscene);
+        hidden('[data-play-hud]', mode === 'intro' || ending || cutscene);
         hidden('.drive-controls', ending || cutscene);
         hidden('[data-pause]', !active && !paused);
         hidden('[data-pause-menu]', !paused);

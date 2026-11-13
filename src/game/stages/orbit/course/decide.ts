@@ -8,7 +8,7 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     const next = { ...orbit, age: orbit.age + dt };
     const p = { ...player };
     const held = (key: Input) => keys.includes(key) ? 1 : 0;
-    if (next.phase === 'parked') return { orbit: next, p, checkpoint: false };
+    if (next.phase === 'parked') return { orbit: next, p, checkpoint: false, praised: false };
     if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
     const controlled = next.phase !== 'entry';
     const damping = Det.exp(-C.drag * dt);
@@ -23,11 +23,12 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     const cruise = arriving ? C.arrivalSpeed : C.cruise;
     const thrust = controlled && held('spray') && !arriving;
     next.speed = Math.min(C.maxSpeed, next.speed + (thrust ? C.thrust : (cruise - next.speed) * C.cruiseRecovery) * dt);
-    if (controlled && inPraise(next.age, p, next.z)) praiseShove(next, p, dt);
+    const praised = controlled && inPraise(next.age, p, next.z);
+    if (praised) praiseShove(next, p, dt);
     next.z += next.speed * dt;
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
-    return { orbit: next, p, checkpoint };
+    return { orbit: next, p, checkpoint, praised };
 }
 
 /** Lateral centre of the 5-1 satellite's beam at `age` seconds into stage five. */

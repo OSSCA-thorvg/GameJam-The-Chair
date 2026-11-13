@@ -1,5 +1,5 @@
 
-export type FocusKind = 'paper' | 'water' | 'light' | 'door' | 'bump' | 'bird';
+export type FocusKind = 'paper' | 'water' | 'light' | 'door' | 'bump' | 'bird' | 'praise';
 // One distraction. The same kind and id only ever costs focus once per attempt.
 export type FocusHit = { kind: FocusKind; id: number; damage: number };
 export type FocusNotice = { kind: FocusKind; life: number };

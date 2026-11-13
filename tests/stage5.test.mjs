@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, orbitStep, STAGE_FIVE, stepGame, parseCommand, previewScenes, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
+const { createGame, orbitStep, praiseBeamX, STAGE_FIVE, stepGame, parseCommand, previewScenes, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
     export { createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } from './src/game/replay';
     export { actionForKey } from './src/ui/controls';
     export { createGame, stepGame } from './src/game/game';
-    export { orbitStep } from './src/game/stages/orbit/course/decide';
+    export { orbitStep, praiseBeamX } from './src/game/stages/orbit/course/decide';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
     export { parseCommand } from './src/game/commands';
     export { previewScenes } from './src/preview-scenes';
@@ -154,4 +154,39 @@ test('repeated orbit frames do not accumulate previous drawing commands', () => 
         drawOrbit(ctx);
         assert.equal(ctx.commands.length, count, `drawing commands accumulated at frame ${frame+2}`);
     }
+});
+
+/** A stage five state with the chair at route depth `z` and lateral `x`, `age` seconds in. */
+function praiseState(z, x, age = 10) {
+    const state = JSON.parse(fresh().serialize());
+    Object.assign(state.orbit, { phase: 'door', age, z, speed: STAGE_FIVE.cruise });
+    Object.assign(state.p, { x, y: 0, vx: 0, vy: 0 });
+    return state;
+}
+const run = (state, seconds) => {
+    let r = { state, events: [] };
+    const events = [];
+    for (let i = 0; i < seconds * 120; i++) { r = stepGame(r.state); events.push(...r.events); }
+    return { state: r.state, events };
+};
+
+test('5-1: each second under the praise beam costs focus, and it does not come back meanwhile', () => {
+    const z = STAGE_FIVE.praise.from + 30;
+    const { state } = run(praiseState(z, praiseBeamX(10)), 1.5);
+    assert.ok(state.focus < 100, `focus ${state.focus}`);
+    assert.ok(state.focus >= 100 - 2 * 7, 'at most one hit per second');
+    assert.equal(state.focusNotice?.kind, 'praise');
+    assert.equal(state.deaths, 0);
+});
+
+test('5-1: outside the beam focus recovers, and running out of focus ends the attempt', () => {
+    const calm = praiseState(STAGE_FIVE.praise.from - 900, 0);
+    calm.focus = 80;
+    assert.ok(run(calm, 4.1).state.focus > 80, 'recovers away from the beam');
+    const shaky = praiseState(STAGE_FIVE.praise.from + 30, praiseBeamX(10));
+    shaky.focus = 5;
+    const { state, events } = run(shaky, .2);
+    assert.equal(state.mode, 'focuslost');
+    assert.ok(events.some(event => event.id === 'focus-lost'));
+    assert.equal(state.deaths, 1);
 });
