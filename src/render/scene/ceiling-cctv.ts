@@ -9,6 +9,8 @@ const SIZE = .62;
 // Every ceiling camera is the long-range model; TOP is its housing's height above its origin, where the stem meets it.
 const KIND: CctvKind = 'long';
 const TOP = 15;
+// The long model spans u = -46..38; squeeze it to the bullet camera's 60-unit length, centred on the stem.
+const LENGTH = 60 / 84, MIDDLE = -4;
 // How far toward the viewer a camera turns while it looks at the chair, in route units.
 const ACROSS = 260;
 
@@ -36,7 +38,8 @@ function cctv(ctx: RenderCtx, x: number, index: number) {
     const yaw = aim(dx, ACROSS) + sway;
     const tilt = Math.max(.08, Math.min(1.1, Math.atan2(dy, Math.hypot(dx, ACROSS))));
     const cy = Math.cos(yaw), syaw = Math.sin(yaw), ct = Math.cos(tilt), st = Math.sin(tilt);
-    const place = ([u, v, w]: Point3): Point3 => {
+    const place = ([long, v, w]: Point3): Point3 => {
+        const u = (long - MIDDLE) * LENGTH;
         const pu = u * ct + (v - TOP) * st, pv = -u * st + (v - TOP) * ct;
         return [anchor[0] + (pu * cy + w * syaw) * SIZE, anchor[1] + pv * SIZE, anchor[2] + (w * cy - pu * syaw) * SIZE];
     };
