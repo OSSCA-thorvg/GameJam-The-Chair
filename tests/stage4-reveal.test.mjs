@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { SKY_DEPARTURE, createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, drawOrbit, CLOUD_TONES, createSkyProjection, endingChair, endingHair, endingGlasses, skyCoursePlatform } = await loadSource(`
+const { SKY_DEPARTURE, REVEAL_DURATION, revealChairOrbit, createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, drawOrbit, CLOUD_TONES, createSkyProjection, endingChair, endingHair, endingGlasses, skyCoursePlatform } = await loadSource(`
     export { createGame } from './src/game/game';
     export { createSky, STAGE_FOUR } from './src/game/stages/sky/data';
     export { skyStep } from './src/game/stages/sky/course/decide';
@@ -11,7 +11,7 @@ const { SKY_DEPARTURE, createGame, createSky, STAGE_FOUR, skyStep, createRenderC
     export { drawOrbit } from './src/render/scene/orbit';
     export { CLOUD_TONES } from './src/render/scene/cloud-art';
     export { createSkyProjection } from './src/render/scene/sky-projection';
-    export { SKY_DEPARTURE } from './src/render/scene/sky-camera';
+    export { SKY_DEPARTURE, REVEAL_DURATION, revealChairOrbit } from './src/render/scene/sky-camera';
     export { endingChair } from './src/render/scene/sky-ending-art';
     export { endingHair } from './src/render/scene/sky-player-hair';
     export { endingGlasses } from './src/render/scene/sky-player-glasses';
@@ -73,7 +73,8 @@ test('the ending draws no slogans and only the attendance line at every camera p
     game.startStage(4);
     const base = game.getSnapshot();
     for (const locale of ['en', 'ko']) for (const width of [320, 1000]) {
-        for (const [phase, age] of [['reveal', 1], ['reveal', 5], ['depth', 0], ['depth', 3], ['depth', 4.9]]) {
+        const { hold } = STAGE_FOUR.reveal;
+        for (const [phase, age] of [['reveal', 1], ['reveal', 5], ['depth', 0], ['depth', hold * .3], ['depth', hold - .1]]) {
             const state = structuredClone(base);
             Object.assign(state.sky, { phase, age });
             const transforms = [];
@@ -84,7 +85,7 @@ test('the ending draws no slogans and only the attendance line at every camera p
             assert.deepEqual(state, before, 'cinematic rendering leaves gameplay untouched');
             // ThorVG Text: only the attendance bubble's line, during the last second of stage four.
             assert.deepEqual(ctx.commands.filter(command => command.text).map(command => command.text.content),
-                phase === 'depth' && age > 4 ? [locale === 'ko' ? '근태 확인됨.' : 'Attendance confirmed.'] : []);
+                phase === 'depth' && age > hold - 1.2 ? [locale === 'ko' ? '근태 확인됨.' : 'Attendance confirmed.'] : []);
             assert.deepEqual(transforms, []);
             assert.ok(ctx.commands.length > 100);
             for (const command of ctx.commands) {
@@ -206,36 +207,52 @@ function renderFrame(stage, setup) {
 }
 const withoutBubble = commands => commands.filter(command => command.layer?.key !== 'attendance-bubble');
 const revealFrame = (phase, age) => renderFrame(4, state => Object.assign(state.sky, { phase, age }));
-test('the reveal turns slowly and steadily from the side to behind the chair, with no stop on the way', () => {
+// Chair geometry drawn into the shared world camera picks up rounding noise from its placement transform.
+const near = (actual, expected, path = '') => {
+    if (typeof expected === 'number') return assert.ok(Math.abs(actual - expected) < 1e-6, `${path}: ${actual} vs ${expected}`);
+    if (expected === null || typeof expected !== 'object') return assert.equal(actual, expected, path);
+    assert.equal(Object.keys(actual).length, Object.keys(expected).length, path);
+    for (const key of Object.keys(expected)) near(actual[key], expected[key], `${path}.${key}`);
+};
+const bounds = commands => {
+    const points = commands.flatMap(command => [...command.v, ...(command.curves ?? []).map(curve => curve.slice(-2))]);
+    const xs = points.map(([x]) => x), ys = points.map(([, y]) => y);
+    return { left: Math.min(...xs), right: Math.max(...xs), top: Math.min(...ys), bottom: Math.max(...ys) };
+};
+test('the reveal turns steadily from the side to behind the chair, keeping it centred in the shared camera', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
-    for (const [elapsed, angle] of [[settle, 0], [settle + turn, 1], [settle + turn + hold, 1]]) {
-        const view = createSkyProjection(1000, 510, angle);
-        endingChair(view, elapsed);
-        const expected = view.commands();
-        const phase = elapsed >= settle + turn ? 'depth' : 'reveal';
-        const age = phase === 'depth' ? elapsed - settle - turn : elapsed;
-        const actual = withoutBubble(revealFrame(phase, age)).slice(-expected.length);
-        assert.deepEqual(actual, expected, `chair camera at ${elapsed} seconds`);
-        if (angle < 1) assert.ok(actual.some(command => command.c === '#83c8e4'), 'blue glasses remain visible');
+    // Side view: the chair is exactly the standalone model, with nothing else near it.
+    const side = createSkyProjection(1000, 510, 0);
+    endingChair(side, settle);
+    const model = side.commands();
+    near(withoutBubble(revealFrame('reveal', settle)).slice(-model.length), model);
+    assert.ok(model.some(command => command.c === '#83c8e4'), 'blue glasses remain visible');
+    let previous = -1;
+    for (let at = settle; at <= settle + turn + hold; at += .5) previous = (assert.ok(revealChairOrbit(at, settle) >= previous), revealChairOrbit(at, settle));
+    assert.ok(Math.abs(revealChairOrbit(settle + turn, settle) - 1) < 1e-9, 'behind the chair once the turn is done');
+    // Behind the chair, its silhouette (picked out by the model's own colours) stays centred and the same size.
+    for (const [phase, age] of [['depth', 0], ['depth', hold]]) {
+        const rear = createSkyProjection(1000, 510, 1);
+        endingChair(rear, settle + turn + age);
+        const colours = new Set(rear.commands().map(command => command.c));
+        const chair = bounds(withoutBubble(revealFrame(phase, age)).filter(command => colours.has(command.c) && !command.layer));
+        const alone = bounds(rear.commands());
+        assert.ok(Math.abs((chair.left + chair.right) / 2 - 500) < 30, 'the chair stays centred');
+        // The glide's speed pulls the camera back a little, so the chair may look somewhat smaller, never tiny.
+        const width = chair.right - chair.left, model = alone.right - alone.left;
+        assert.ok(width <= model * 1.05 && width > model * .6, `at about the same size (${(width / model).toFixed(2)})`);
     }
 });
 
-test('stage five starts from the rear character view the reveal ends on', () => {
-    const isSpray = command => typeof command.c === 'string' && command.c.startsWith('#f6e6df');
-    const view = createSkyProjection(1000, 510, 1);
-    endingChair(view, 10);
-    const expected = view.commands();
-    const entry = withoutBubble(renderFrame(5)).slice(-expected.length);
-    assert.deepEqual(entry.filter(command => !isSpray(command)), expected.filter(command => !isSpray(command)));
-});
 
 test('the watchers stay out of the flat side view and turn up, without fading, as the view turns into 3D', () => {
     const { settle, turn } = STAGE_FOUR.reveal;
-    const watch = (phase, age) => revealFrame(phase, age).filter(command => command.layer?.key === 'sky-ending-watch');
+    // Every watcher carries a recording lamp; count those.
+    const watch = (phase, age) => revealFrame(phase, age).filter(command => !command.layer && ['#ff4a3a', '#5e1d1a'].includes(command.c));
     assert.equal(watch('reveal', settle * .9).length, 0, 'nothing in the 2D side view');
     const early = watch('reveal', settle + turn * .3), late = watch('reveal', settle + turn * .8);
     assert.ok(early.length > 0 && late.length > early.length, 'more cameras come into view as the turn goes on');
-    for (const commands of [early, late, watch('depth', 1)]) assert.ok(commands.every(command => command.layer.opacity === undefined), 'no fade');
+    for (const commands of [early, late, watch('depth', 1)]) assert.ok(commands.every(command => command.c.length === 7), 'no fade');
     assert.ok(revealFrame('reveal', settle + turn - .1).some(command => command.layer?.key === 'orbit-beacon'), 'the far speck shows before stage five');
 });
 
@@ -273,9 +290,9 @@ test('arrival spray shortens and settles into the existing chair animation', () 
     assert.ok(bottom(chair(0, 2.5, 0)) > bottom(chair(0, 1, 0)) + 30);
     assert.notDeepEqual(chair(.1, 1, 1), chair(.1, 1, 0), 'arrival initially shakes the chair');
     const settled = SKY_DEPARTURE + .1;
-    assert.deepEqual(revealFrame('reveal', settled).slice(-chair(settled, 1, 0).length), chair(settled, 1, 0),
+    near(revealFrame('reveal', settled).slice(-chair(settled, 1, 0).length), chair(settled, 1, 0),
         'arrival motion returns to the original animated model before the camera turns');
-    assert.deepEqual(plume(revealFrame('reveal', settled)), plume(chair(settled, 1, 0)));
+    near(plume(revealFrame('reveal', settled)), plume(chair(settled, 1, 0)));
 });
 const hex = color => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
 // Cloud bodies are the vertical gradients whose first stop is a cloud crown colour.
@@ -295,7 +312,7 @@ test('the ending clouds are bread clouds, not flat pale ovals', () => {
 test('ending clouds are bread from the start and none vanishes while the camera turns', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     // Cloud bodies: linear crown-to-belly gradients whose underside fades out.
-    const bodies = commands => commands.filter(command => Array.isArray(command.c?.stops) && !command.c.radius
+    const bodies = commands => commands.filter(command => command.layer?.key !== 'orbit-praise-beam' && Array.isArray(command.c?.stops) && !command.c.radius
         && command.c.stops.length === 3 && command.c.stops[2][1][3] === 0);
     const bread = hex(CLOUD_TONES.bread.top).join();
     let previous = 0;
@@ -314,4 +331,12 @@ test('the last ending frame shows the same bread clouds as the first frame of st
     const stageFive = cloudBodies(renderFrame(5), CLOUD_TONES.bread);
     assert.ok(stageFive.length >= 5);
     assert.deepEqual(ending.map(({ v, curves }) => ({ v, curves })), stageFive.map(({ v, curves }) => ({ v, curves })));
+});
+
+test('the last frame of the stage four reveal is the first frame of stage five', () => {
+    // Everything but the rider's bubble, whose pop-in scale follows its own clock in both stages.
+    const last = withoutBubble(revealFrame('depth', STAGE_FOUR.reveal.hold));
+    const first = withoutBubble(renderFrame(5));
+    assert.equal(last.length, first.length);
+    assert.deepEqual(last, first);
 });

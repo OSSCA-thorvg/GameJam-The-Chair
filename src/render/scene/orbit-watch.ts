@@ -19,7 +19,7 @@ function routeCctvs(seed: number, count: number, from: number, to: number): Spot
     const random = seeded(seed);
     return Array.from({ length: count }, (_, i) => ({
         x: (i % 2 ? 1 : -1) * (230 + random() * 560), y: -420 + random() * 520,
-        z: from + (to - from) * (i + random() * .8) / count, seed: seed + i, kind: pick(random), size: 1.3 + random() * 1.1, appear: 0,
+        z: from + (to - from) * (i + random() * .8) / count, seed: seed + i, kind: pick(random), size: 1.3 + random() * 1.1, appear: .5,
     }));
 }
 
@@ -131,12 +131,13 @@ function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: n
 }
 
 /**
- * Adds the watchers to `view`; returns their lamps for the glow pass.
- * `cameras` picks the floating field: the reveal's (behind stage five's start) or the route's.
+ * Adds the watchers to `view`; returns their lamps for the glow pass. The reveal's field sits behind stage five's
+ * start and the route's ahead of it, so both are always placed and the projection leaves out what is behind it.
  * `shown` is how far the reveal has turned into 3D; watchers that come later stay hidden.
  */
-export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, cameras: 'reveal' | 'route', shown = 1) {
-    const lamps = ORBIT_WATCH[cameras].filter(spot => spot.appear <= shown).flatMap(spot => floating(view, point, spot, travel, t));
+export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, shown = 1) {
+    const lamps = [...ORBIT_WATCH.reveal, ...ORBIT_WATCH.route].filter(spot => spot.appear <= shown && spot.z - travel > -600)
+        .flatMap(spot => floating(view, point, spot, travel, t));
     // Far satellites are left out until the chair is within sight of them.
     if (ORBIT_WATCH.satelliteAppear <= shown) for (const at of ORBIT_WATCH.satellites) {
         if (at.z - travel < 6000) lamps.push(satellite(view, point, at, travel, t));

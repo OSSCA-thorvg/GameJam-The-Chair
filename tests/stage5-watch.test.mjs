@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, revealChairOrbit, revealGlideStart, revealTravel, STAGE_FOUR, attendanceBubble } = await loadSource(`
+const { FIVE, createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, revealChairOrbit, revealGlideStart, revealTravel, STAGE_FOUR, attendanceBubble } = await loadSource(`
     export { createGame } from './src/game/game';
+    export { STAGE_FIVE as FIVE } from './src/game/stages/orbit/data';
     export { createRenderCtx } from './src/render/context';
     export { drawOrbit } from './src/render/scene/orbit';
     export { cctvLamp, ORBIT_WATCH } from './src/render/scene/orbit-watch';
@@ -57,12 +58,31 @@ test('the reveal glides forward to exactly where stage five starts', () => {
     assert.ok(ORBIT_WATCH.reveal.every(spot => spot.z + 480 < 30), 'every reveal camera is behind the view before stage five');
 });
 
-test('the glide waits until the camera is fully behind the chair', () => {
-    const { settle } = STAGE_FOUR.reveal;
-    const start = revealGlideStart(settle);
-    assert.equal(revealChairOrbit(start, settle), 1);
-    assert.ok(revealChairOrbit(start - .3, settle) < 1);
-    assert.equal(revealTravel(start, settle, ORBIT_WATCH.glide), -ORBIT_WATCH.glide, 'no forward travel before the rear view');
+test('the cameras get time to sink in before the glide, which arrives at stage five already at cruise speed', () => {
+    const { settle, turn, hold } = STAGE_FOUR.reveal;
+    const start = revealGlideStart(settle), end = settle + turn + hold;
+    // When the camera turn has brought a watcher of the given `appear` into view.
+    const seen = appear => {
+        for (let at = settle; at <= settle + turn; at += 1 / 120) if (revealChairOrbit(at, settle) >= appear) return at;
+        return Infinity;
+    };
+    const appears = ORBIT_WATCH.reveal.map(spot => spot.appear);
+    const first = seen(Math.min(...appears)), last = seen(Math.max(...appears));
+    assert.ok(last - first >= 3.5, `the cameras turn up one by one over ${(last - first).toFixed(1)} s`);
+    assert.ok(start - last >= 1.5, `every camera is in view for ${(start - last).toFixed(1)} s before the glide`);
+    assert.equal(revealTravel(start, settle, ORBIT_WATCH.glide), -ORBIT_WATCH.glide, 'no forward travel before the glide');
+    const step = 1 / 120;
+    let previous = -Infinity;
+    for (let at = start; at <= end; at += step) {
+        const travel = revealTravel(at, settle, ORBIT_WATCH.glide);
+        assert.ok(travel >= previous, `the glide only moves forward (${at.toFixed(2)} s)`);
+        previous = travel;
+    }
+    const speed = (revealTravel(end, settle, ORBIT_WATCH.glide) - revealTravel(end - step, settle, ORBIT_WATCH.glide)) / step;
+    assert.ok(Math.abs(speed - FIVE.cruise) < 2, `hand-off speed ${speed.toFixed(1)} matches stage five's cruise`);
+    const game = createGame();
+    game.startStage(5);
+    assert.equal(game.getSnapshot().orbit.speed, FIVE.cruise, 'stage five starts at the same cruise speed');
 });
 
 test('the cameras come in several models and sizes, spread to every corner of the rear view', () => {
@@ -126,6 +146,9 @@ test('5-1: a shelter cloud hides the chair, and outside the beam nothing happens
     assert.equal(inPraise(age, chairAt(shelter.x, shelter.y), shelter.z), false, 'hidden while the beam is right on it');
     assert.equal(inPraise(age, chairAt(shelter.x), first.from - 10), false, 'no beam before the 5-1 stretch');
     const before = cruising(first.from - 400);
-    const { orbit } = orbitStep(before, chairAt(0), [], 1 / 120);
-    assert.equal(orbit.speed, STAGE_FIVE.cruise);
+    // Outside a beam only the extinguisher and the coast change the speed.
+    const pushed = orbitStep(before, chairAt(0), ['spray'], 1 / 120).orbit.speed;
+    const coasting = orbitStep(before, chairAt(0), [], 1 / 120).orbit.speed;
+    assert.ok(Math.abs(pushed - (STAGE_FIVE.cruise + STAGE_FIVE.thrust / 120)) < 1e-9);
+    assert.ok(Math.abs(coasting - STAGE_FIVE.cruise * Math.exp(-STAGE_FIVE.coast / 120)) < 1e-6);
 });

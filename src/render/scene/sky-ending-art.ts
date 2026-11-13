@@ -5,13 +5,38 @@ import type { Point3, SkyProjection } from './sky-projection';
 import { endingHair } from './sky-player-hair';
 import { endingGlasses } from './sky-player-glasses';
 
-export function endingChair(view: SkyProjection, elapsed: number, spray = 1, arrival = 0) {
+/** `loose`: seconds since the extinguisher came off the chair at the end of the flight (negative while attached). */
+export function endingChair(view: SkyProjection, elapsed: number, spray = 1, arrival = 0, loose = -1) {
     const draw = chairDrawing(view, elapsed, arrival);
     chairFrame(draw);
     riderBody(draw);
     riderHead(view, draw);
     riderArms(draw);
-    extinguisher(draw, spray);
+    if (loose < 0) extinguisher(draw, spray);
+    // Its last puffs set it tumbling as it drifts away.
+    else extinguisher(looseDrawing(view, draw, loose), spray * Math.exp(-loose * .6));
+}
+
+/**
+ * The extinguisher once it has come off: it drifts away up and to the left, turning over slowly, free of the
+ * chair's bob. Drawing through this moves every part of it the same way.
+ */
+function looseDrawing(view: SkyProjection, draw: ChairDrawing, loose: number): ChairDrawing {
+    const centre: Point3 = [-46, -5, 0];
+    const axis: Point3 = [.3, .5, .81], angle = loose * .9;
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    const shift: Point3 = [-10 * loose, 9 * loose, -38 * loose - 10 * (1 - Math.exp(-3 * loose))];
+    const move = (p: Point3): Point3 => {
+        // Rodrigues' rotation about `axis` through the extinguisher's middle.
+        const v: Point3 = [p[0] - centre[0], p[1] - centre[1], p[2] - centre[2]];
+        const d = v[0] * axis[0] + v[1] * axis[1] + v[2] * axis[2];
+        const c: Point3 = [axis[1] * v[2] - axis[2] * v[1], axis[2] * v[0] - axis[0] * v[2], axis[0] * v[1] - axis[1] * v[0]];
+        return [0, 1, 2].map(i => v[i] * cos + c[i] * sin + axis[i] * d * (1 - cos) + centre[i] + shift[i]) as Point3;
+    };
+    const point = (x: number, y: number, z = 0): Point3 => move([x, -y - 35, z]);
+    return { ...draw, bob: 0, point,
+        rod: (a, b, radius, color) => view.rod(point(...a), point(...b), radius, color),
+        oval: (x, y, z, rx, ry, rz, color) => view.oval(point(x, y, z), [rx, ry, rz], color) };
 }
 
 function chairDrawing(view: SkyProjection, elapsed: number, arrival: number) {

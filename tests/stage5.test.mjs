@@ -2,15 +2,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, orbitStep, praiseBeamX, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
+const { ORBIT_ENDING, createGame, orbitStep, praiseBeamX, praiseBeamOn, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
     export { createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } from './src/game/replay';
     export { actionForKey } from './src/ui/controls';
     export { createGame, stepGame } from './src/game/game';
-    export { orbitStep, praiseBeamX } from './src/game/stages/orbit/course/decide';
+    export { orbitStep, praiseBeamX, praiseBeamOn } from './src/game/stages/orbit/course/decide';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
     export { parseCommand } from './src/game/commands';
     export { previewScenes, orbitKeys } from './src/preview-scenes';
     export { drawOrbit } from './src/render/scene/orbit';
+    export { ORBIT_ENDING } from './src/render/scene/orbit-ending';
     export { createRenderCtx } from './src/render/context';
 `);
 const fresh = () => { const game = createGame({ seed: 55 }); game.startStage(5); return game; };
@@ -73,7 +74,7 @@ test('stage five climbs through 5-1 to 5-3 and stops in the Earth shadow, withou
 test('no praise beam reaches into the Earth shadow, and every beam sweeps slower than the chair steers', () => {
     const { beams } = STAGE_FIVE.praise;
     assert.ok(beams.every(beam => beam.to <= STAGE_FIVE.heights.shadow));
-    const steer = STAGE_FIVE.acceleration / STAGE_FIVE.drag;
+    const steer = STAGE_FIVE.steer.speed;
     assert.ok(beams.every(beam => beam.amplitude * beam.rate < steer), 'the chair can always outrun a sweep');
     assert.equal(beams.filter(beam => beam.from >= STAGE_FIVE.heights.air && beam.to <= STAGE_FIVE.heights.space).length, 3, '5-2 has three satellites');
 });
@@ -205,11 +206,11 @@ function endingFrame(t) {
     const state = JSON.parse(fresh().serialize());
     Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 + t });
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state: { ...state, player: state.p }, t: 80 + t, W: 1000, H: 510 });
+    Object.assign(ctx, { state: { ...state, player: state.p, spray: { burst: state.sprayBurst } }, t: 80 + t, W: 1000, H: 510 });
     drawOrbit(ctx);
     const layer = key => ctx.commands.filter(command => command.layer?.key === key);
     const labels = ctx.commands.filter(command => command.text).map(command => command.text.content);
-    return { labels, layer };
+    return { labels, layer, commands: ctx.commands };
 }
 
 test('parked in the Earth shadow, the ending clock counts on and the chair stays put', () => {
@@ -220,15 +221,196 @@ test('parked in the Earth shadow, the ending clock counts on and the chair stays
     assert.equal(after.orbit.z, STAGE_FIVE.checkpoint.z);
 });
 
-test('the ending: horizon and nebula, the laptop goes dark, everything fades, then THE END', () => {
-    const start = endingFrame(0), wide = endingFrame(10), out = endingFrame(15), end = endingFrame(20);
-    assert.deepEqual(start.layer('orbit-nebula'), [], 'it starts from the shadow 5-3 ended in');
-    assert.ok(start.labels.some(label => label.startsWith('Network')), 'the connection-lost bubble is up first');
-    assert.ok(wide.layer('orbit-nebula').length > 0 && wide.layer('orbit-atmosphere-glow').length > 0);
-    assert.ok(wide.layer('orbit-laptop-light').length > 0, 'the laptop still glows');
-    assert.deepEqual(wide.layer('orbit-ending-black'), []);
+test('the ending: the extinguisher floats off, the signal drops bar by bar, the network goes, then THE END', () => {
+    const { release, signal, signalStep, disconnect } = ORBIT_ENDING;
+    const at = t => endingFrame(t);
+    // The extinguisher's red body: where it sits on screen.
+    const extinguisher = frame => {
+        const xs = frame.commands.filter(command => command.c === '#b75f4a' || command.c === '#c7765c').flatMap(command => command.v.map(([x]) => x));
+        return xs.reduce((sum, x) => sum + x, 0) / xs.length;
+    };
+    assert.ok(!at(0).labels.some(label => label.startsWith('Network')), 'no network message straight away');
+    assert.ok(Math.abs(extinguisher(at(release + 6)) - extinguisher(at(0))) > 60, 'the extinguisher has drifted well away from the chair');
+    const bars = frame => frame.layer('orbit-signal').filter(command => command.stroke?.color === '#ffffff').length;
+    assert.deepEqual(at(signal - 2).layer('orbit-signal'), [], 'no signal icon before it starts to drop');
+    assert.equal(bars(at(signal + .1)), 3);
+    assert.ok(bars(at(signal + signalStep * 1.2)) < 3 && bars(at(signal + signalStep * 2.2)) < bars(at(signal + signalStep * 1.2)), 'losing bars one by one');
+    assert.ok(at(disconnect + .5).labels.some(label => label.startsWith('Network')), 'then the network is lost');
+    const wide = at(ORBIT_ENDING.wide - 1), out = at(15), end = at(20);
+    assert.ok(wide.layer('orbit-nebula').length > 0 && wide.layer('orbit-laptop-light').length > 0, 'the laptop still glows under the nebula');
     assert.deepEqual(out.layer('orbit-laptop-light'), [], 'the screen has gone dark');
     assert.ok(out.layer('orbit-ending-black').length === 1, 'fading out');
     assert.deepEqual(end.labels.filter(label => label === 'THE END'), ['THE END']);
     assert.deepEqual(wide.labels.filter(label => label === 'THE END'), []);
+});
+
+test('steering fades in during the entry instead of being locked out', () => {
+    const state = JSON.parse(fresh().serialize());
+    const at = age => orbitStep({ ...state.orbit, age }, state.p, ['right'], 1 / 120).p.vx;
+    assert.ok(at(0) < at(STAGE_FIVE.entryTime * .3), 'the first tick barely steers');
+    assert.ok(at(STAGE_FIVE.entryTime * .3) > 0, 'the chair already answers early in the entry');
+    assert.ok(at(STAGE_FIVE.entryTime * .3) < at(STAGE_FIVE.entryTime * .9), 'and answers more as the entry goes on');
+    const thrust = orbitStep({ ...state.orbit, age: .2 }, state.p, ['spray'], 1 / 120);
+    assert.ok(thrust.orbit.speed <= STAGE_FIVE.cruise, 'thrust waits until the entry is over');
+});
+
+test('only the extinguisher moves the chair forward: it coasts to a crawl without spraying', () => {
+    const coast = fresh(), spray = fresh();
+    for (let i = 0; i < 120 * 6; i++) { coast.step(); spray.setInput('spray'); spray.step(); }
+    const idle = coast.getSnapshot(), pushed = spray.getSnapshot();
+    assert.ok(idle.orbit.speed < STAGE_FIVE.cruise * .2, `coasting slows to ${idle.orbit.speed.toFixed(1)}`);
+    assert.equal(idle.spray.burst, 0, 'no plume while coasting');
+    assert.ok(pushed.orbit.speed > STAGE_FIVE.cruise, 'spraying speeds the chair up');
+    assert.ok(pushed.spray.burst > 0, 'the plume shows while spraying');
+    assert.ok(pushed.orbit.z > idle.orbit.z + 600, 'and carries it much further');
+});
+
+const cruisingAt = (z, extra = {}) => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, rings: 0, settled: 0, coffee: 0, sip: 0, ...extra });
+const still = (x = 0, y = 0) => ({ x, y, vx: 0, vy: 0, a: 0, w: 0 });
+const hold = (orbit, p, keys, seconds) => {
+    for (let i = 0; i < seconds * 120; i++) ({ orbit, p } = orbitStep(orbit, p, keys, 1 / 120));
+    return { orbit, p };
+};
+
+test('steering answers at once and settles quickly when released', () => {
+    const { speed } = STAGE_FIVE.steer;
+    const quick = hold(cruisingAt(200), still(), ['right'], .35);
+    assert.ok(quick.p.vx > speed * .9, `near full sideways speed after 0.35 s (${quick.p.vx.toFixed(0)})`);
+    const settled = hold(quick.orbit, quick.p, [], .6);
+    assert.ok(Math.abs(settled.p.vx) < speed * .1, 'and nearly stopped 0.6 s after letting go');
+    assert.ok(settled.p.x > quick.p.x, 'drifting a little on before it stops');
+});
+
+test('the company geofence pushes back past the edge instead of a hard wall', () => {
+    const { bounds, steer } = STAGE_FIVE;
+    let state = { orbit: cruisingAt(200), p: still() }, furthest = 0;
+    for (let i = 0; i < 10 * 120; i++) {
+        state = orbitStep(state.orbit, state.p, ['right', 'forward'], 1 / 120);
+        furthest = Math.max(furthest, state.p.x);
+    }
+    assert.ok(furthest > bounds.x, 'the chair can lean past the line');
+    assert.ok(furthest <= bounds.x + steer.overshoot, 'but never further than the overshoot');
+    assert.ok(state.p.vx >= 0 && state.p.vx < 1, 'held against the fence it comes to rest, not bounces');
+    assert.ok(state.p.y > bounds.y && state.p.y <= bounds.y + steer.overshoot, 'the same up and down');
+    const back = hold(state.orbit, state.p, [], 2);
+    assert.ok(back.p.x <= bounds.x + 1 && back.p.y <= bounds.y + 1, 'let go, the fence eases it back inside');
+});
+
+test('a side beam sweeps up and down: only climbing or diving gets out of it', () => {
+    const side = STAGE_FIVE.praise.beams.find(beam => beam.axis === 'y');
+    assert.ok(side, 'one satellite shines in from the side');
+    assert.ok(side.amplitude + side.halfWidth <= STAGE_FIVE.bounds.y + 100, 'its sweep stays within reach');
+    const z = (side.from + side.to) / 2;
+    const age = Array.from({ length: 400 }, (_, i) => 10 + i / 10).find(t => Math.abs(praiseBeamX(side, t)) < 20);
+    // Other beams cross this stretch too: test across from where the down beams are shining at that moment.
+    const downs = STAGE_FIVE.praise.beams.filter(beam => beam.axis === 'x' && z >= beam.from && z <= beam.to);
+    const clear = x => downs.every(beam => Math.abs(x - praiseBeamX(beam, age)) >= beam.halfWidth);
+    const xs = Array.from({ length: 33 }, (_, i) => -640 + i * 40).filter(clear);
+    assert.ok(xs.length >= 2, 'there is a gap between the down beams');
+    for (const x of [xs[0], xs.at(-1)]) assert.equal(praiseBeamOn(age, still(x, 0), z), side, `level with the beam it has the chair (x ${x})`);
+    assert.equal(praiseBeamOn(age, still(xs[0], side.halfWidth + 60), z), null, 'climbing clear escapes it');
+    const lit = orbitStep(cruisingAt(z, { age }), still(xs[0], 0), [], 1 / 120);
+    assert.ok(Math.abs(lit.p.vy) > Math.abs(lit.p.vx), 'and it shoves the chair up or down');
+});
+
+test('flying through a coffee cup clears the head once; passing wide of it does nothing', () => {
+    const [cup] = STAGE_FIVE.coffee.cups;
+    const game = fresh();
+    const state = JSON.parse(game.serialize());
+    Object.assign(state.orbit, { phase: 'door', age: 10, z: cup.z - .5 });
+    Object.assign(state.p, { x: cup.x, y: cup.y });
+    state.focus = 50;
+    const { state: after, events } = stepGame(state);
+    assert.equal(after.orbit.coffee & 1, 1, 'the cup is drunk');
+    assert.equal(after.focus, 50 + STAGE_FIVE.coffee.focus);
+    assert.ok(after.orbit.sip > 0, 'the rider takes a sip');
+    assert.ok(events.some(event => event.type === 'cue' && event.id === 'coffee'));
+    const again = stepGame({ ...after, orbit: { ...after.orbit, z: cup.z - .5 } }).state;
+    assert.equal(again.focus, after.focus, 'a drunk cup is gone');
+    const wide = JSON.parse(game.serialize());
+    Object.assign(wide.orbit, { phase: 'door', age: 10, z: cup.z - .5 });
+    Object.assign(wide.p, { x: cup.x + STAGE_FIVE.coffee.reach + 40, y: cup.y });
+    assert.equal(stepGame(wide).state.orbit.coffee, 0, 'out of reach, the cup floats by');
+});
+
+function flightFrame(setup) {
+    const state = JSON.parse(fresh().serialize());
+    Object.assign(state.orbit, { phase: 'door', age: 20, z: 700 });
+    setup?.(state);
+    const ctx = createRenderCtx({});
+    Object.assign(ctx, { state: { ...state, player: state.p, spray: { burst: state.sprayBurst } }, t: 30, W: 1000, H: 510 });
+    drawOrbit(ctx);
+    return ctx.commands;
+}
+
+test('the edge of the play area shows on the chair itself, and speed lines only when fast', () => {
+    const tape = commands => commands.filter(command => typeof command.c === 'string' && /^#(f2c230|2b2b2b)/.test(command.c));
+    const puffs = commands => commands.filter(command => typeof command.c === 'string' && command.c.startsWith('#f6e6df')).length;
+    const casters = commands => {
+        const xs = commands.filter(command => command.c === '#3f4650').flatMap(command => command.v.map(([x]) => x));
+        return xs.reduce((sum, x) => sum + x, 0) / xs.length;
+    };
+    const middle = flightFrame(), inside = flightFrame(state => { state.p.x = STAGE_FIVE.bounds.x - 100; });
+    const pressing = flightFrame(state => { state.p.x = STAGE_FIVE.bounds.x + STAGE_FIVE.steer.overshoot; });
+    assert.equal(tape(pressing).length, 0, 'nothing is hung in the sky to mark it');
+    assert.ok(puffs(pressing) > puffs(inside) + 3, 'the extinguisher coughs outward to push back in');
+    assert.ok(casters(pressing) - casters(inside) > 40, 'the camera stops at the edge, so the chair slides toward the side');
+    assert.ok(Math.abs(casters(middle) - 500) < 30, 'centred in the middle of the route');
+    const lines = commands => commands.filter(command => command.layer?.key === 'orbit-speed-lines');
+    assert.equal(lines(middle).length, 0, 'no speed lines at cruise speed');
+    assert.ok(lines(flightFrame(state => { state.orbit.speed = STAGE_FIVE.maxSpeed; })).length > 10, 'streaks flat out');
+});
+
+test('papers drift past on both sides of the chair and sort in depth with it', () => {
+    const commands = flightFrame();
+    // Near sheets keep their own colours (far ones are hazed); the casters mark where the chair is painted.
+    const sheets = commands.map((command, i) => ({ command, i })).filter(({ command }) => typeof command.c === 'string' && /^#(f4efe2|f7d85c|d9b26a)ff$/.test(command.c));
+    const chair = commands.findIndex(command => command.c === '#3f4650');
+    assert.ok(sheets.length > 5, 'plenty of papers in view');
+    const xs = sheets.map(({ command }) => command.v[0][0]);
+    assert.ok(xs.some(x => x < 400) && xs.some(x => x > 600), 'on both sides');
+    assert.ok(chair > 0 && sheets.some(({ i }) => i > chair), 'some pass nearer than the chair and are painted over it');
+});
+
+test('rushing forward pulls the camera back and streams air round the chair', () => {
+    const casters = commands => {
+        const points = commands.filter(command => command.c === '#3f4650').flatMap(command => command.v);
+        const xs = points.map(([x]) => x), ys = points.map(([, y]) => y);
+        return { width: Math.max(...xs) - Math.min(...xs), y: (Math.max(...ys) + Math.min(...ys)) / 2 };
+    };
+    const air = commands => commands.filter(command => command.layer?.key === 'orbit-slipstream');
+    const frame = (speed, burst) => flightFrame(state => { state.orbit.speed = speed; state.sprayBurst = burst; });
+    const slow = frame(STAGE_FIVE.cruise * .4, 0), cruise = frame(STAGE_FIVE.cruise, 0), rushing = frame(STAGE_FIVE.maxSpeed, .24);
+    assert.ok(casters(rushing).width < casters(cruise).width * .92, 'the chair looks smaller as the camera falls back');
+    assert.ok(Math.abs(casters(rushing).y - casters(cruise).y) < 20, 'but stays at the same height on screen');
+    assert.equal(air(slow).length, 0, 'no air streaks at a crawl');
+    assert.ok(air(rushing).length > 10, 'streaks flat out');
+    assert.ok(air(rushing)[0].layer.opacity > air(frame(STAGE_FIVE.maxSpeed, 0))[0].layer.opacity, 'stronger while the extinguisher pushes');
+});
+
+test('the Earth sits below the chair: its horizon dips under eye level and curves more the higher it climbs', async () => {
+    const { orbitEarth, earthAltitude, groundTrack } = await loadSource(`export { orbitEarth, earthAltitude, groundTrack } from './src/render/scene/orbit-earth';`);
+    const level = { cx: 500, cy: 189, focal: 841, roll: 0, pitch: 0 };
+    const horizon = z => {
+        const ctx = createRenderCtx({});
+        Object.assign(ctx, { W: 1000, H: 510, t: 0, commands: [] });
+        orbitEarth(ctx, z, level, 0, 1, 0);
+        return ctx.commands.find(command => command.layer?.key === 'orbit-earth-limb').v;
+    };
+    const { air, space, shadow } = STAGE_FIVE.heights;
+    assert.ok(earthAltitude(air) < earthAltitude(space) && earthAltitude(space) < earthAltitude(shadow), 'climbing all the way');
+    const low = horizon(space), high = horizon(shadow);
+    const middle = line => line[Math.floor(line.length / 2)][1];
+    assert.ok(middle(low) > level.cy && middle(high) > middle(low), 'below eye level, lower the higher it is');
+    const sag = line => line.find(([x]) => x > 1000)[1] - middle(line);
+    assert.ok(sag(low) > 0 && sag(high) > sag(low), 'curving down toward the sides, more so higher up');
+    const [lon, lat] = groundTrack(STAGE_FIVE.checkpoint.z);
+    assert.ok(lat < 37.5 && Math.abs(lon - 127) < 3, 'the flight ends south of Seoul, looking north at it');
+});
+
+test('in the ending Seoul glows on the night side ahead', () => {
+    const night = endingFrame(.5);
+    const lights = night.layer('orbit-earth-lights').filter(command => command.c === '#fff6dc');
+    assert.ok(lights.length > 5, 'city lights are on');
+    assert.ok(lights.some(({ v }) => v.every(([x, y]) => x > 0 && x < 1000 && y > 0 && y < 510)), 'and on screen');
 });

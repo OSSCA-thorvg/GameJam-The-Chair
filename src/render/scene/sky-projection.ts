@@ -7,9 +7,11 @@ const mul = (a: Point3, s: number): Point3 => [a[0] * s, a[1] * s, a[2] * s];
 const dot = (a: Point3, b: Point3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: Point3, b: Point3): Point3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const norm = (a: Point3) => mul(a, 1 / Math.max(.0001, Math.hypot(...a)));
-export function createSkyProjection(width: number, height: number, orbit: number, framing: { zoom?: number; centerY?: number; offsetX?: number; roll?: number; level?: boolean; eyeY?: number } = {}) {
+export type SkyFraming = { zoom?: number; centerY?: number; offsetX?: number; roll?: number; level?: boolean; eyeY?: number; distance?: number };
+export function createSkyProjection(width: number, height: number, orbit: number, framing: SkyFraming = {}) {
     const angle = orbit * Math.PI / 2;
-    const distance = 480;
+    // How far the camera sits behind the point it looks at.
+    const distance = framing.distance ?? 480;
     const target: Point3 = [0, 15, 0];
     // `level` puts the eye at the chair's height; `eyeY` eases between the two heights.
     const eye = framing.eyeY ?? (framing.level ? 15 : 45);
@@ -99,8 +101,13 @@ export function createSkyProjection(width: number, height: number, orbit: number
             polygon([add(a, u), add(a, v), add(b, v), add(b, u)], shade(color, .96));
         }
     };
-    const commands = (): DrawCommand[] => {
-        const flat = faces.flatMap(face => {
+    /**
+     * The faces and curves added so far, far to near. `split` keeps only those beyond (`far`) or up to (`near`) a
+     * depth, so screen-space layers can be painted between them, e.g. clouds between the scenery and the chair.
+     */
+    const commands = (split?: { depth: number; part: 'far' | 'near' }): DrawCommand[] => {
+        const keep = (depth: number) => !split || (split.part === 'far' ? depth > split.depth : depth <= split.depth);
+        const flat = faces.filter(face => keep(face.depth)).flatMap(face => {
             const v = face.points.map(project);
             if (v.every(p => p[0] < -20) || v.every(p => p[0] > width + 20) || v.every(p => p[1] < -20) || v.every(p => p[1] > height + 20)) return [];
             const haze = Math.min(.78, Math.max(0, (face.depth - 1800) / 18000));
@@ -110,9 +117,27 @@ export function createSkyProjection(width: number, height: number, orbit: number
             }).join('') + face.color.slice(7);
             return [{ depth: face.depth, command: { v, c } }];
         });
-        return [...flat, ...curves].sort((a, b) => b.depth - a.depth).map(item => item.command);
+        return [...flat, ...curves.filter(curve => keep(curve.depth))].sort((a, b) => b.depth - a.depth).map(item => item.command);
     };
     return { project, depth, polygon, profile, oval, rod, commands };
 }
 
 export type SkyProjection = ReturnType<typeof createSkyProjection>;
+
+/**
+ * A view of `view` that moves every point by `place` first. Draws a model (the chair) into another projection's
+ * scene, so its faces sort in depth with everything else there.
+ */
+export function placedProjection(view: SkyProjection, place: (p: Point3) => Point3): SkyProjection {
+    type ProfileOptions = Parameters<SkyProjection['profile']>[4];
+    return {
+        ...view,
+        project: p => view.project(place(p)),
+        depth: p => view.depth(place(p)),
+        polygon: (points, color) => view.polygon(points.map(place), color),
+        profile: (outline, halfWidth, color, z, options?: ProfileOptions) =>
+            view.profile(outline, halfWidth, color, z, { ...options, place: p => place(options?.place ? options.place(p) : p) }),
+        oval: (center, radii, color) => view.oval(place(center), radii, color),
+        rod: (a, b, r, color) => view.rod(place(a), place(b), r, color),
+    };
+}

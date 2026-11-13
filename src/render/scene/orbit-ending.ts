@@ -5,11 +5,11 @@ import { PRAISE_KINDS, praiseItem } from './orbit-praise';
 import type { SkyProjection } from './sky-projection';
 import { LABEL_FONT } from '../fonts';
 
-// The ending, played while the chair is parked in the Earth's shadow (storyboard 05–08):
-// 05 the spray dies down and the last praise drifts away; 06 the shadow lifts onto a wide blue horizon under
-// a nebula while the camera pulls back; 07 the laptop goes dark, the hands stop, and everything fades out;
-// 08 a small THE END on black. It starts from the frame 5-3 ended on, so the hand-off is seamless.
-export const ORBIT_ENDING = { calm: 5, wideFrom: 3, wide: 11, lightsOut: 14, dark: 18, end: 20 };
+// The ending, played while the chair is parked in the Earth's shadow, starting from the frame 5-3 ended on:
+// the spray dies down and the extinguisher comes off and floats away into space; the sun comes up over the rim
+// while the camera pulls back; the laptop's signal drops bar by bar until the network is lost; the laptop goes
+// dark, the hands stop, everything fades out, and a small THE END on black.
+export const ORBIT_ENDING = { calm: 5, release: 1.2, wideFrom: 3, signal: 5, signalStep: 1.5, disconnect: 9.8, wide: 11, lightsOut: 14, dark: 18, end: 20 };
 
 const smooth = (value: number) => {
     const t = Math.max(0, Math.min(1, value));
@@ -27,6 +27,10 @@ export function orbitEnding(orbit: Readonly<OrbitState>) {
         lightsOut: smooth((t - E.wide) / (E.lightsOut - E.wide)),
         dark: smooth((t - E.lightsOut) / (E.dark - E.lightsOut)),
         title: smooth((t - E.dark) / 1.2),
+        /** Seconds since the extinguisher came off (negative while it is still on). */
+        loose: orbit.phase === 'parked' && t >= E.release ? t - E.release : -1,
+        /** Wi-Fi bars lost so far (0 to 3), counting up once the signal starts to drop. */
+        signalLost: Math.max(0, Math.min(3, (t - E.signal) / E.signalStep)),
         /** Seconds the rider has been still: typing and bobbing stop once the screen goes dark. */
         still: Math.max(0, t - E.wide),
     };
@@ -54,12 +58,6 @@ export function endingNebula(ctx: RenderCtx, strength: number) {
         ctx.commands.push({ v: [[cx - ray, cy], [cx, cy - ray * .12], [cx + ray, cy], [cx, cy + ray * .12]], c, layer });
         ctx.commands.push({ v: [[cx, cy - ray], [cx + ray * .12, cy], [cx, cy + ray], [cx - ray * .12, cy]], c, layer });
     }
-}
-
-/** Chair camera framing: from the flight framing toward a smaller chair sitting just above the horizon. */
-export function endingChairFraming(ctx: RenderCtx, flight: { zoom: number; centerY: number; offsetX: number; roll: number }, e: OrbitEndingState) {
-    const mix = (a: number, b: number) => a + (b - a) * e.wide;
-    return { zoom: mix(flight.zoom, .5), centerY: mix(flight.centerY, .64), offsetX: mix(flight.offsetX, 0), roll: mix(flight.roll, 0) };
 }
 
 /** The laptop's blue light on the rider while the screen is on, and the last praise drifting away behind. */
@@ -95,4 +93,24 @@ export function endingFade(ctx: RenderCtx, e: OrbitEndingState) {
     ctx.commands.push({ v: [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]], c: '#000000' + alpha(e.dark), layer: { key: 'orbit-ending-black' } });
     if (e.title <= 0) return;
     ctx.screenText('THE END', ctx.W / 2, ctx.H / 2, ctx.clamp(ctx.H * .055, 16, 40), '#efe6d2', { font: LABEL_FONT, opacity: e.title });
+}
+
+/** The laptop's Wi-Fi above the rider's head, losing a bar at a time; the next bar to go flickers first. */
+export function endingSignal(ctx: RenderCtx, head: Vector, e: OrbitEndingState) {
+    const E = ORBIT_ENDING;
+    const show = smooth((e.t - (E.signal - 1)) / .6) * (1 - smooth((e.t - (E.disconnect + .4)) / .8));
+    if (!e.parked || show <= 0) return;
+    const size = ctx.clamp(ctx.W / 55, 10, 20), [cx, cy] = [head[0] + size * 2.2, head[1] - size * .6];
+    const lit = 3 - Math.floor(e.signalLost), flicker = e.signalLost % 1 > .55 && Math.floor(ctx.t * 8) % 2 === 0;
+    const layer = { key: 'orbit-signal', opacity: show };
+    ctx.commands.push({ v: [[cx - size * .14, cy], [cx, cy - size * .14], [cx + size * .14, cy], [cx, cy + size * .14]], c: '#ffffff', layer });
+    for (let i = 0; i < 3; i++) {
+        const r = size * (.42 + i * .36);
+        const arc: Vector[] = Array.from({ length: 9 }, (_, k) => {
+            const a = -Math.PI * .75 + k / 8 * Math.PI * .5;
+            return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+        });
+        const on = i < lit && !(i === lit - 1 && flicker);
+        ctx.commands.push({ v: arc, open: true, c: null, stroke: { width: size * .16, color: on ? '#ffffff' : '#ffffff40', cap: 'round' }, layer });
+    }
 }

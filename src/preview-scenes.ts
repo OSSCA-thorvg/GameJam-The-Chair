@@ -4,7 +4,7 @@ import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
 import { praiseBeamX } from './game/stages/orbit/course/decide';
 import { STAGE_FOUR } from './game/stages/sky/data';
-import { SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
+import { revealGlideStart, SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
 import { ATTENDANCE } from './render/scene/attendance-bubble';
 import { ORBIT_ENDING } from './render/scene/orbit-ending';
 import { STAGE_TWO } from './game/stages/building/data';
@@ -670,10 +670,11 @@ function skyEnding(): PreviewScene {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const duration = settle + turn + hold;
     return {
-        id: 'sky-ending', label: 'Sky · Slow turn among cameras, glide to stage 5', duration, focusX: STAGE_FOUR.goal,
+        id: 'sky-ending', label: 'Sky · Slow turn among cameras, glide into stage 5 at cruise speed', duration, focusX: STAGE_FOUR.goal,
         markers: [{ at: 0, label: 'Leaving the ledge' }, { at: SKY_DEPARTURE, label: 'Quiet side view' },
             { at: settle + SKY_TURN.duration * .25, label: 'Cameras turning up' },
             { at: settle + SKY_TURN.duration / 2, label: 'Three-quarter view' },
+            { at: revealGlideStart(settle), label: 'All cameras watching · glide starts' },
             { at: settle + SKY_TURN.duration, label: 'Rear view · gliding past the cameras' },
             { at: duration - ATTENDANCE.lead, label: 'Attendance confirmed' },
             { at: duration, label: 'Stage 5 hand-off' }],
@@ -688,6 +689,32 @@ function skyEnding(): PreviewScene {
     };
 }
 
+// The real hand-off: the stage four reveal plays out, stage five takes over mid-glide, and steering fades in.
+function skyToOrbit(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const start = JSON.parse(game.serialize());
+    Object.assign(start.sky, { phase: 'reveal', age: 0 });
+    Object.assign(start.p, { x: 5045, y: -2338, vx: 0, vy: 0 });
+    start.ground = false;
+    game.restore(JSON.stringify(start));
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    const markers = [{ at: 0, label: 'Leaving the ledge' }, { at: revealGlideStart(STAGE_FOUR.reveal.settle), label: 'Glide starts' }];
+    for (let i = 0; i < 60 * 30; i++) {
+        const state = game.getSnapshot();
+        if (state.stage === 5 && !markers.some(marker => marker.label === 'Stage 5')) markers.push({ at: i / 60, label: 'Stage 5' });
+        const age = state.stage === 5 && state.orbit ? state.orbit.age : -1;
+        // Steer while spraying, let go to coast (the plume dies and the chair slows), then spray again.
+        game.setInput(...(age < 0 ? [] : age < 1.6 ? ['right' as const, 'spray' as const] : age < 3.2 ? ['left' as const, 'forward' as const, 'spray' as const]
+            : age < 5.5 ? [] : ['spray' as const]));
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+        if (age > 7.5) break;
+    }
+    return recordedScene('sky-to-orbit', 'Sky → Orbit · Hand-off, steering fade-in, spray to fly', 0, markers, frames);
+}
+
 /** Steering for the stage five previews: duck into 5-1's shelter clouds, then keep to the widest gap between beams. */
 export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSnapshot']>): Input[] {
     const orbit = state.orbit, p = state.player;
@@ -698,17 +725,25 @@ export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSn
     if (shelter) target = shelter;
     else {
         const ahead = beams.filter(b => orbit.z + 250 >= b.from && orbit.z <= b.to);
-        let best = -1;
-        for (let x = -620; x <= 620; x += 40) {
-            const room = Math.min(...ahead.map(b => Math.abs(x - praiseBeamX(b, orbit.age + .6)) - b.halfWidth), 9999) - Math.abs(x - p.x) * .15;
-            if (room > best) { best = room; target = { x, y: 0 }; }
-        }
+        // Each axis on its own: the widest gap from the down beams across, and from the side beams up and down.
+        const gap = (axis: 'x' | 'y', at: number, range: number) => {
+            const facing = ahead.filter(b => b.axis === axis);
+            let best = -Infinity, pick = 0;
+            for (let v = -range; v <= range; v += 40) {
+                const room = Math.min(...facing.map(b => Math.abs(v - praiseBeamX(b, orbit.age + .6)) - b.halfWidth), 9999) - Math.abs(v - at) * .15;
+                if (room > best) { best = room; pick = v; }
+            }
+            return facing.length ? pick : 0;
+        };
+        target = { x: gap('x', p.x, 620), y: gap('y', p.y, 400) };
     }
     const keys: Input[] = [];
     if (target.x - p.x > p.vx * .65 + 6) keys.push('right');
     if (target.x - p.x < p.vx * .65 - 6) keys.push('left');
     if (target.y - p.y > p.vy * .65 + 6) keys.push('forward');
     if (target.y - p.y < p.vy * .65 - 6) keys.push('back');
+    // Only the extinguisher moves the chair forward: keep it near cruise speed.
+    if (orbit.speed < STAGE_FIVE.cruise) keys.push('spray');
     return keys;
 }
 
@@ -747,14 +782,14 @@ function orbitEndingScene(): PreviewScene {
     game.restore(JSON.stringify(parked));
     const effects = createEffects();
     const frames = [capture(game, effects)];
-    const { calm, wide, lightsOut, dark, end } = ORBIT_ENDING;
-    const markers = [{ at: 0, label: '05 Spray dies down' }, { at: calm, label: '06 Horizon and nebula' }, { at: wide, label: '07 Laptop goes dark' },
-        { at: lightsOut, label: 'Fading out' }, { at: dark, label: '08 THE END' }];
+    const { release, wide, signal, disconnect, lightsOut, dark, end } = ORBIT_ENDING;
+    const markers = [{ at: 0, label: 'Spray dies down' }, { at: release, label: 'Extinguisher floats off' }, { at: signal, label: 'Signal dropping' },
+        { at: disconnect, label: 'Network lost' }, { at: wide, label: 'Laptop goes dark' }, { at: lightsOut, label: 'Fading out' }, { at: dark, label: 'THE END' }];
     for (let i = 0; i < (end + 1) * 60; i++) {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('orbit-ending', 'Orbit · Ending: horizon, lights out, THE END', 0, markers, frames);
+    return recordedScene('orbit-ending', 'Orbit · Ending: extinguisher floats off, signal lost, THE END', 0, markers, frames);
 }
 
 // 5-1: duck from shelter cloud to shelter cloud while the satellite's praise beam sweeps the cloud layer.
@@ -912,6 +947,7 @@ export const previewScenes: readonly PreviewScene[] = [
     skyRobotParrot(),
     skySignDepth(),
     skyEnding(),
+    skyToOrbit(),
     orbitRoute(),
     orbitPraiseScene(),
     orbitEndingScene(),
