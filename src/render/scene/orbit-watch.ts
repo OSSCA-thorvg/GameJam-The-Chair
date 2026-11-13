@@ -76,10 +76,10 @@ export const ORBIT_WATCH = {
     before: 200, after: 40, blink: 7,
 };
 
-/** idle: a dim red dot · flash: blinking while the chair passes · recorded: steady once it has gone by. */
+/** idle: the slow REC blink every camera keeps up · flash: blinking while the chair passes · recorded: steady once it has gone by. */
 export type LampState = 'idle' | 'flash' | 'recorded';
 /** `glow`: a robot parrot's lens eye, always glowing like the stage four 2D lens; its world radius. */
-type Lamp = { at: Point3; state: LampState; glow?: number };
+type Lamp = { at: Point3; state: LampState; glow?: number; rec?: boolean };
 
 /** Lamp state of a camera `ahead` route units in front of the chair. */
 export function cctvLamp(ahead: number, t: number): LampState {
@@ -88,9 +88,11 @@ export function cctvLamp(ahead: number, t: number): LampState {
     return 'recorded';
 }
 
-const lampColor = (state: LampState) => state === 'idle' ? '#a8423c' : '#ff5a4a';
+/** Each camera's REC lamp blinks on its own beat, so the whole sky winks red out of step. */
+const recording = (t: number, seed: number) => (t * .8 + seed * .618) % 1 < .55;
+const lampColor = (state: LampState, rec: boolean) => state !== 'idle' || rec ? '#ff4a3a' : '#5e1d1a';
 
-function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: number, t: number) {
+function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: number, t: number): Lamp[] {
     const anchor = point(spot.x, spot.y + Math.sin(t * .9 + spot.seed) * 8, spot.z);
     // The lens keeps turning toward the chair at the projection's origin.
     const yaw = aim(-anchor[0], -anchor[2]) + Math.sin(t * .6 + spot.seed) * .05;
@@ -100,8 +102,9 @@ function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: nu
         return eyes.map(at => ({ at, state, glow: glow * spot.size * 1.2 }));
     }
     const lamp = cctvModel(view, spot.kind, placer(anchor, yaw, spot.size));
-    view.oval(lamp, [4.5 * spot.size, 4.5 * spot.size, 4.5 * spot.size], lampColor(state));
-    return [{ at: lamp, state }];
+    const rec = recording(t, spot.seed);
+    view.oval(lamp, [4.5 * spot.size, 4.5 * spot.size, 4.5 * spot.size], lampColor(state, rec));
+    return [{ at: lamp, state, rec }];
 }
 
 function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: number; z: number }, travel: number, t: number): Lamp {
@@ -122,8 +125,9 @@ function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: n
     view.oval(place([2, -13, 30]), [3, 3, 1], '#7d9fbb');
     const state = cctvLamp(z - travel, t);
     const lamp = place([-18, 22, 29]);
-    view.oval(lamp, [5, 5, 2], lampColor(state));
-    return { at: lamp, state };
+    const rec = recording(t, z);
+    view.oval(lamp, [5, 5, 2], lampColor(state, rec));
+    return { at: lamp, state, rec };
 }
 
 /**
@@ -140,20 +144,20 @@ export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: nu
     return lamps;
 }
 
-/** Red light spills from the lamps that caught the chair: flashing as it passes, then a steady small glow. */
+/** Red light spills from every lamp: a small REC blink while waiting, a flash as the chair passes, then a steady glow. */
 export function orbitWatchGlow(ctx: RenderCtx, view: SkyProjection, lamps: Lamp[], alpha = 1) {
-    for (const { at, state, glow } of lamps) {
+    for (const { at, state, glow, rec } of lamps) {
         if (view.depth(at) < 80) continue;
         if (glow) {
             eyeGlow(ctx, view, at, glow, state, alpha);
             continue;
         }
-        if (state === 'idle') continue;
+        if (state === 'idle' && !rec) continue;
         const [x, y] = view.project(at);
-        const radius = ctx.clamp(30000 / view.depth(at), 10, 60) * (state === 'flash' ? 1 : .45);
+        const radius = ctx.clamp(30000 / view.depth(at), 10, 60) * (state === 'flash' ? 1 : state === 'recorded' ? .45 : .55);
         ctx.commands.push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
             from: [x, y], to: [x + radius, y], radius, stops: [[0, ctx.rgba('#ff6b57', .95 * alpha)], [1, ctx.rgba('#ff6b57', 0)]],
-        }, layer: { key: 'orbit-cctv-light', blend: 'screen' } });
+        }, layer: { key: state === 'idle' ? 'orbit-cctv-rec' : 'orbit-cctv-light', blend: 'screen' } });
     }
 }
 

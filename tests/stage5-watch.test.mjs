@@ -41,6 +41,12 @@ test('stage five glows red only at the cameras the chair has reached', () => {
     assert.ok(glows(first - 100).some(count => count > 0));
 });
 
+test('every camera ahead keeps blinking its red REC lamp, out of step with the others', () => {
+    const rec = beats.map(t => orbitFrame(0, t).filter(command => command.layer?.key === 'orbit-cctv-rec').length);
+    assert.ok(rec.every(count => count > 0), 'some lamp is always lit');
+    assert.ok(new Set(rec).size > 1, 'lamps blink');
+});
+
 test('the reveal glides forward to exactly where stage five starts', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     assert.equal(revealTravel(settle, settle, ORBIT_WATCH.glide), -ORBIT_WATCH.glide, 'still at the far end while turning');
