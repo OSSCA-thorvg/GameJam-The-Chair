@@ -6,9 +6,9 @@ import { cctvLamp, type LampState } from './orbit-watch';
 const CEILING = 57;
 const DROP = 14;
 const SIZE = .62;
-// Only the models that sit naturally under a ceiling, with each one's top above its origin so the stem meets the housing.
-const HUNG = ['bullet', 'dome', 'long'] as const satisfies readonly CctvKind[];
-const TOP: Record<typeof HUNG[number], number> = { bullet: 15, dome: 10, long: 15 };
+// Every ceiling camera is the long-range model; TOP is its housing's height above its origin, where the stem meets it.
+const KIND: CctvKind = 'long';
+const TOP = 15;
 // How far toward the viewer a camera turns while it looks at the chair, in route units.
 const ACROSS = 260;
 
@@ -21,13 +21,7 @@ export function ceilingCctvs(ctx: RenderCtx, spacing: number, offset = 0) {
     for (let i = first; i * spacing + offset < ctx.cam + ctx.VW + 80; i++) cctv(ctx, i * spacing + offset, i);
 }
 
-function kindAt(index: number) {
-    const mixed = Math.imul(index ^ 0x5bd1e995, 0x27d4eb2d);
-    return HUNG[((mixed ^ (mixed >>> 15)) >>> 0) % HUNG.length];
-}
-
 function cctv(ctx: RenderCtx, x: number, index: number) {
-    const kind = kindAt(index);
     const pivotY = CEILING + DROP;
     const [sx, sy] = ctx.screenPoint(x, pivotY);
     // A side view looking slightly up at the ceiling, with world units matching the 2D scene.
@@ -41,16 +35,15 @@ function cctv(ctx: RenderCtx, x: number, index: number) {
     const sway = Math.sin(ctx.t * .6 + index) * .05;
     const yaw = aim(dx, ACROSS) + sway;
     const tilt = Math.max(.08, Math.min(1.1, Math.atan2(dy, Math.hypot(dx, ACROSS))));
-    const top = TOP[kind];
     const cy = Math.cos(yaw), syaw = Math.sin(yaw), ct = Math.cos(tilt), st = Math.sin(tilt);
     const place = ([u, v, w]: Point3): Point3 => {
-        const pu = u * ct + (v - top) * st, pv = -u * st + (v - top) * ct;
+        const pu = u * ct + (v - TOP) * st, pv = -u * st + (v - TOP) * ct;
         return [anchor[0] + (pu * cy + w * syaw) * SIZE, anchor[1] + pv * SIZE, anchor[2] + (w * cy - pu * syaw) * SIZE];
     };
     view.rod([0, 15 + DROP, 0], anchor, 2.4, '#69738c');
     view.profile([[-12, 0], [12, 0], [12, 3], [-12, 3]], 9, '#9aa0b0', 0, { place: ([u, v, w]) => [u, 15 + DROP - 3 + v, w] });
     view.oval(anchor, [3.5, 3.5, 3.5], '#424f6d');
-    const lamp = cctvModel(view, kind, place);
+    const lamp = cctvModel(view, KIND, place);
     const state = cctvLamp(x - ctx.p.x, ctx.t);
     view.oval(lamp, [4.5 * SIZE, 4.5 * SIZE, 4.5 * SIZE], state === 'idle' ? '#a8423c' : '#ff5a4a');
     ctx.commands.push(...view.commands());
