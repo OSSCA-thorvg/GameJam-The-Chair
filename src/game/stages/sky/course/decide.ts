@@ -1,4 +1,4 @@
-import { STAGE_FOUR, skyPlatforms, skySurface, skyWind, type SkyState } from '../data';
+import { STAGE_FOUR, skyHazards, skyHeadwind, skyPlatforms, skySurface, skyWind, type SkyHazardKind, type SkyState } from '../data';
 import type { Player, Point } from '../../../types';
 import * as Det from '../../../math';
 
@@ -23,6 +23,7 @@ export type SkyResult = Omit<SkyInput, 'time' | 'direction' | 'length' | 'sky' |
     reached: boolean;      // a new flag was saved
     fell: boolean;         // dropped below the last flag and was put back
     won: boolean;
+    hit: { kind: SkyHazardKind; focusId: number } | null;  // a paper bundle or bird knocked the chair back this tick
 };
 
 // Stage 4 above the clouds: hover in, hop across growing windows, a gusting sign and floating desks,
@@ -33,8 +34,9 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
     let { ground, coyote, jumpQ, checkpoint, sprayBurst } = input;
     let sprayDir = { ...input.sprayDir };
     let reached = false, fell = false, won = false;
+    let hit: SkyResult['hit'] = null;
     const { direction, time } = input;
-    const result = (speed: number | null): SkyResult => ({ sky, p, ground, coyote, jumpQ, checkpoint, sprayBurst, sprayDir, speed, reached, fell, won });
+    const result = (speed: number | null): SkyResult => ({ sky, p, ground, coyote, jumpQ, checkpoint, sprayBurst, sprayDir, speed, reached, fell, won, hit });
     sky.age += dt;
     jumpQ = Math.max(0, jumpQ - dt);
     if (sky.phase === 'reveal' || sky.phase === 'depth') {
@@ -68,10 +70,13 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
     } else {
         const before = skyPlatforms(sky, time - dt);
         const oldStanding = before.find(platform => platform.id === sky.standing);
-        sky.lift = Math.min(1, sky.lift + (checkpoint > 0 ? dt * .45 : 0));
+        // The windows grow once the chair has touched the arrival roof, and stay grown after a fall.
+        if (sky.lift > 0 || sky.standing === 'arrival-roof' || checkpoint > 0) sky.lift = Math.min(1, sky.lift + dt * .45);
+        sky.knock = Math.max(0, sky.knock - dt);
+        if (sky.knock === 0) sky.knockKind = null;
         const wind = skyWind(time);
+        // The sign blows flat only while a gust is on it, folding back down in the calm.
         const targetTilt = -.12 - (1 - wind) * 1.12;
-        // Weight keeps the sign down long enough to roll along its face.
         sky.signTilt += ((sky.standing === 'wind-sign' ? -.12 : targetTilt) - sky.signTilt) * Math.min(1, dt * 2);
         if (sky.standing === 'drawer-desk') {
             sky.drawer = Math.min(1, sky.drawer + dt * 1.5);
@@ -80,18 +85,36 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
         } else sky.deskTilt *= Det.exp(-dt);
         const platforms = skyPlatforms(sky, time);
         const standing = platforms.find(platform => platform.id === sky.standing);
-        if (ground && oldStanding && standing) p.y += skySurface(standing, p.x) - skySurface(oldStanding, p.x);
+        if (ground && oldStanding && standing) {
+            // Ride the rocking desk: carried sideways with it and kept on its face.
+            const carried = standing.x - oldStanding.x;
+            p.y += skySurface(standing, p.x + carried) - skySurface(oldStanding, p.x);
+            p.x += carried;
+        }
         coyote = ground ? .12 : Math.max(0, coyote - dt);
         if (jumpQ > 0 && coyote > 0) { p.vy = -330; ground = false; coyote = 0; jumpQ = 0; }
         const oldFoot = p.y + 28;
         const oldX = p.x;
-        p.vx += (direction * (ground ? 390 : 250) + (p.x > 3380 && p.x < 3890 ? wind * 65 : 0)) * dt;
-        if (ground && standing) p.vx += Det.sin(standing.angle) * 190 * dt;
+        const headwind = skyHeadwind(time) * (ground ? STAGE_FOUR.wind.ground : 1);
+        p.vx += (direction * (ground ? 390 : 250) - headwind) * dt;
+        if (ground && standing) p.vx += Det.sin(standing.angle) * STAGE_FOUR.rock.slide * dt;
         p.vx *= Det.exp(-(ground ? 1.8 : .6) * dt);
-        p.vx = Math.max(-260, Math.min(260, p.vx));
+        p.vx = Math.max(-300, Math.min(260, p.vx));
         p.vy = Math.min(580, p.vy + (p.x > 3970 ? 410 : 650) * dt);
         p.x += p.vx * dt;
         p.y += p.vy * dt;
+        if (sky.knock === 0) {
+            const body = { x: p.x, y: p.y - 20 };
+            const struck = skyHazards(time).find(item => Det.hypot(item.x - body.x, item.y - body.y) < item.r + STAGE_FOUR.knock.reach);
+            if (struck) {
+                // Papers slap the chair backwards and up; a bird clips it back and down.
+                hit = { kind: struck.kind, focusId: struck.focusId };
+                sky.knock = STAGE_FOUR.knock.cooldown;
+                sky.knockKind = struck.kind;
+                p.vx = Math.min(p.vx, 0) - (struck.kind === 'paper' ? 210 : 240);
+                p.vy = struck.kind === 'paper' ? Math.min(p.vy, -150) : Math.max(p.vy, 0) + 170;
+            }
+        }
         ground = false;
         sky.standing = null;
         if (p.vy >= 0) for (const platform of platforms) {
@@ -100,15 +123,14 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
             const old = before.find(item => item.id === platform.id) ?? platform;
             if (oldFoot > skySurface(old, oldX) + 9 || p.y + 28 < surface) continue;
             p.y = surface - 28; p.vy = 0; ground = true; sky.standing = platform.id;
-            const flag = platform.id === 'arrival-roof' ? 1 : platform.id === 'rest' ? 2 : platform.id === 'upper-rest' ? 3 : 0;
-            if (flag > checkpoint) { checkpoint = flag; reached = true; }
+            if (platform.id === 'rest' && checkpoint < 1) { checkpoint = 1; reached = true; }
             if (platform.id === 'finish') { sky.phase = 'reveal'; sky.age = 0; ground = false; }
             break;
         }
-        const safe = STAGE_FOUR.checkpoints[checkpoint];
-        if (p.y > safe.y + 650) {
-            Object.assign(p, safe, { vx: 0, vy: 0, a: 0, w: 0 });
-            fell = true; ground = false; sky.standing = null;
+        if (ground) sky.airSprays = 0;
+        if (p.y > STAGE_FOUR.fallY) {
+            Object.assign(p, STAGE_FOUR.checkpoints[checkpoint], { vx: 0, vy: 0, a: 0, w: 0 });
+            fell = true; ground = false; sky.standing = null; sky.airSprays = 0; sky.knock = 0; sky.knockKind = null;
             if (checkpoint === 0) sky.phase = 'arrival';
             sprayBurst = .24;
         }

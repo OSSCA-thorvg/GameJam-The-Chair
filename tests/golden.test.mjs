@@ -31,13 +31,16 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when the core switched from Math.sin/cos/tan/exp/atan2/hypot to the bit-exact versions in
 // src/game/math.ts so replays match across browsers: results differ only in the last bits, so the traces
 // shift slightly. Every route still ends the same way; 'office route' did not change at all.
+// Updated when the sky course got harder (three bursts per time in the air, a steady headwind with warned gusts,
+// paper bundles and birds that knock the chair back, rocking desks and a single flag): every final snapshot's
+// `sky` gained `airSprays`, `knock` and `knockKind`, and 'rooftop to sky' arrives into the windier course.
 const EXPECTED = {
-    'office route': '6d4e4ff9cb972640',
-    'office crash': 'd6929f86d136b79d',
-    'building exit': 'b05de48392c31a25',
-    'building lift': '893676e1feaecd2a',
-    'rooftop to sky': 'afcdd3b991297431',
-    'rooftop duct': '633b1f1e3351e7e8',
+    'office route': '1f6c7af5a2c9c250',
+    'office crash': '5005e98391e06449',
+    'building exit': 'eb7e41a8dd50f40a',
+    'building lift': '1b0ed8796642c3f7',
+    'rooftop to sky': '17ee6db2522b0b93',
+    'rooftop duct': 'd5138fcfc6d66e37',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

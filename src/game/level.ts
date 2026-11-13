@@ -31,7 +31,7 @@ export const LEVEL = Object.freeze({
     ].map(part => Object.freeze(part)))
 });
 // Rule durations are independent from the visual effect durations in render/effects.ts.
-export const FOCUS_DAMAGE = Object.freeze({ paper: 30, water: 30, light: 30, door: 30, copier: 15, urgentSheet: 2.5, bundle: 20 });
+export const FOCUS_DAMAGE = Object.freeze({ paper: 30, water: 30, light: 30, door: 30, copier: 15, urgentSheet: 2.5, bundle: 20, skyPaper: 15, bird: 20 });
 export const RULES = Object.freeze({ paperPenalty: 2.4, lightPenalty: 1.65, waterExposure: 1.3, bucketReset: 2.2 });
 export const FIXED_STEP = 1 / 120;
 // Chair handling shared by every stage. Changing a value changes CONFIG_VERSION (older replays then warn).

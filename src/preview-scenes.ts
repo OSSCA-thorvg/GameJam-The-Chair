@@ -443,6 +443,52 @@ function cloudEntry(): PreviewScene {
         [{ at: 0, label: 'Bread on arrival' }, { at: 1, label: 'Continuous spray' }], frames);
 }
 
+// A full gust cycle over the floating desks: calm, warning breeze and scraps, the gust with its paper bundles,
+// parrots crossing, then a parrot clipping the chair (feathers) in the last second.
+function skyGustCycle(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const w = STAGE_FOUR.wind;
+    const start = w.calm - 1;
+    const duration = 1 + w.warn + w.blow + w.fall + 2;
+    return {
+        id: 'sky-gust', label: 'Sky · Headwind gust, paper bundles, parrots, rocking desks', duration, focusX: 3900,
+        markers: [{ at: 0, label: 'Steady headwind' }, { at: 1, label: 'Warning breeze' }, { at: 1 + w.warn, label: 'Gust' },
+            { at: 1 + w.warn + w.blow, label: 'Gust fades' }, { at: duration - 1, label: 'Parrot knock' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            const knock = Math.max(0, at - (duration - 1));
+            return { state: { ...base, time: start + at,
+                sky: { ...base.sky, phase: 'course', lift: 1, drawer: 1, signTilt: -.12 - (1 - Math.min(1, Math.max(0, (at - 1 - w.warn) * 3))) * 1.12,
+                    airSprays: Math.min(3, Math.floor(at / 2)), knock: knock > 0 ? STAGE_FOUR.knock.cooldown * (1 - knock) : 0, knockKind: knock > 0 ? 'bird' : null },
+                player: { ...base.player, x: 3900, y: -2300 }, ground: false,
+            }, effects };
+        },
+    };
+}
+
+// Many passes of the upper-desk bird lane in a row: every pass draws a different lovebird colour or the macaw.
+function skyParrots(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const period = 8.2, passes = 10, duration = period * passes;
+    return {
+        id: 'sky-parrots', label: 'Sky · Parrot colours (one bird per pass)', duration, focusX: 4150,
+        markers: Array.from({ length: passes }, (_, i) => ({ at: i * period + 3.6, label: `Pass ${i + 1}` })),
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            return { state: { ...base, time: at,
+                sky: { ...base.sky, phase: 'course', lift: 1, drawer: 1 },
+                player: { ...base.player, x: 3980, y: -2330 }, ground: false,
+            }, effects };
+        },
+    };
+}
+
 function skyEnding(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -586,6 +632,8 @@ export const previewScenes: readonly PreviewScene[] = [
     urgentCopier(4, 'urgent-copier-bundle', 'Office · Urgent reports: stapled bundle'),
     rooftopTakeoff(),
     cloudEntry(),
+    skyGustCycle(),
+    skyParrots(),
     skyEnding(),
     orbitRoute(),
     officeTyping(),

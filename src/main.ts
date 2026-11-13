@@ -46,8 +46,12 @@ function applyLocale() {
     }
 }
 applyLocale();
-const directOrbit = import.meta.env.DEV && new URLSearchParams(location.search).get('stage') === '5';
-let startupSplashVisible = !directOrbit;
+// `?debug=1&stage=<1-5>` skips the splash and starts that stage directly.
+const launchParams = new URLSearchParams(location.search);
+const requestedStage = Number(launchParams.get('stage'));
+const directStage: StageId | null = [1, 2, 3, 4, 5].includes(requestedStage)
+    && launchParams.get('debug') === '1' ? requestedStage as StageId : null;
+let startupSplashVisible = directStage === null;
 if (startupSplashVisible) {
     showStartupSplash(root, () => locale, () => { startupSplashVisible = false; });
 }
@@ -101,7 +105,7 @@ const game = createGame({
         keepBrowserData();
     },
 });
-if (directOrbit) game.startStage(5);
+if (directStage !== null) game.startStage(directStage);
 document.addEventListener('visibilitychange', () => { if (document.hidden) keepBrowserData(); });
 window.addEventListener('pagehide', keepBrowserData);
 const describeError = (value: unknown) => value instanceof Error ? { message: value.message, stack: value.stack } : { message: String(value) };

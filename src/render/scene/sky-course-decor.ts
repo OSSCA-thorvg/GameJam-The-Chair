@@ -55,14 +55,16 @@ export function skyBuilding(ctx: RenderCtx) {
 }
 
 export function skyRibbon(ctx: RenderCtx) {
-    const wind = skyWind(ctx.t);
+    // The ribbon always streams left, against the course, and snaps out flat in a gust.
+    const wind = .35 + skyWind(ctx.t) * .65;
+    const flutter = Math.sin(ctx.t * (6 + wind * 10)) * (1 - wind * .6);
     ctx.rod(3475, -2100, 3475, -2245, 5, '#536d86');
     ctx.rod(3474, -2100, 3474, -2245, 2, '#b5bec8');
     ctx.ellipse(3475, -2247, 3.5, 3.5, '#b5bec8');
-    ctx.effectPath([3475, -2244], [[3500, -2240 - wind * 12, 3515, -2254 + wind * 14, 3540 + wind * 40, -2240],
-        [3520, -2234, 3505, -2220, 3475, -2223]], ctx.gradientFill(3475, -2244, 3540, -2223,
+    ctx.effectPath([3475, -2244], [[3450, -2240 - flutter * 12, 3435, -2254 + flutter * 14, 3410 - wind * 40, -2240 + (1 - wind) * 18],
+        [3430, -2234, 3445, -2220, 3475, -2223]], ctx.gradientFill(3475, -2244, 3410, -2223,
         [[0, '#dfbd85'], [.45, '#f4c582'], [1, '#b8adac']]));
-    ctx.strokePath([3477, -2241], [[3500, -2238 - wind * 8, 3518, -2246 + wind * 8, 3538 + wind * 28, -2239]],
+    ctx.strokePath([3473, -2241], [[3450, -2238 - flutter * 8, 3432, -2246 + flutter * 8, 3412 - wind * 28, -2239 + (1 - wind) * 14]],
         { width: 1.2, color: '#f7e5c6aa', cap: 'round' });
     ctx.rod(3473, -2237, 3477, -2237, 2, '#69738c');
     ctx.rod(3473, -2227, 3477, -2227, 2, '#69738c');
@@ -93,7 +95,9 @@ export function skyFlag(ctx: RenderCtx, x: number, y: number, saved: boolean) {
     ctx.rod(x - 55, y + 28, x - 55, y - 15, 3, '#bbc5c6');
     ctx.rod(x - 56, y + 27, x - 56, y - 15, .8, '#f7e5c6');
     ctx.ellipse(x - 55, y - 16, 2.5, 2.5, '#bbc5c6');
-    ctx.effectPath([x - 54, y - 15], [[x - 45, y - 19, x - 39, y - 11, x - 30, y - 9],
-        [x - 40, y - 7, x - 45, y - 4, x - 54, y - 1]], color);
+    // Flags stream back against the course with the headwind.
+    const flap = Math.sin(ctx.t * 9 + x) * 2;
+    ctx.effectPath([x - 56, y - 15], [[x - 65, y - 19 + flap, x - 71, y - 11 - flap, x - 80, y - 9 + flap],
+        [x - 70, y - 7, x - 65, y - 4, x - 56, y - 1]], color);
     ctx.rod(x - 53, y - 13, x - 53, y - 3, 1, '#f7e5c655');
 }

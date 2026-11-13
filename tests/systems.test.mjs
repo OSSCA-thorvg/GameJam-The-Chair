@@ -132,21 +132,21 @@ test('the duct sneezes on its timer at a rider in front of it once the inhale en
     assert.equal(reacting.bursts[0].age, age, 'input untouched');
 });
 
-test('the sky hovers in, lands on platforms and saves flags without touching its input', () => {
-    const sky = { phase: 'arrival', age: 0, lift: 0, drawer: 0, deskTilt: 0, signTilt: -1.28, standing: null, depth: 0, depthTravel: 0 };
+test('the sky hovers in and lands on the arrival roof without touching its input', () => {
+    const sky = { phase: 'arrival', age: 0, lift: 0, drawer: 0, deskTilt: 0, signTilt: -1.28, standing: null, depth: 0, depthTravel: 0, airSprays: 0, knock: 0, knockKind: null };
     const base = { sky, p: { x: 2380, y: -1820, vx: 0, vy: 0, a: 0, w: 0 }, ground: false, coyote: 0, jumpQ: 0, checkpoint: 0, time: 0, direction: 1, length: 6100, sprayBurst: 0, sprayDir: { x: 0, y: 1 } };
     let r = sys.skyStep(base, 1 / 120);
     assert.ok(r.p.x > 2380 && r.sprayBurst === .24 && r.speed > 0);
     assert.equal(sky.age, 0, 'input untouched');
     let input = base;
-    let reached = false;
-    for (let i = 0; i < 120 * 8 && !reached; i++) {
+    let landed = false;
+    for (let i = 0; i < 120 * 8 && !landed; i++) {
         r = sys.skyStep({ ...input, time: i / 120 }, 1 / 120);
-        reached = r.reached;
+        landed = r.ground && r.sky.standing === 'arrival-roof';
         input = { ...input, sky: r.sky, p: r.p, ground: r.ground, coyote: r.coyote, jumpQ: r.jumpQ, checkpoint: r.checkpoint };
     }
-    assert.ok(reached, 'landing on the arrival roof saves flag 1');
-    assert.equal(r.checkpoint, 1);
+    assert.ok(landed, 'the chair settles on the arrival roof');
+    assert.equal(r.checkpoint, 0, 'the only flag waits halfway along the course');
     const depth = sys.skyStep({ ...base, sky: { ...sky, phase: 'depth', age: 4 } }, 1 / 120);
     assert.equal(depth.won, true);
     assert.equal(depth.speed, 0);
