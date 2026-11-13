@@ -285,7 +285,6 @@ test('ThorVG Text keeps its place in the command order so later shapes paint ove
     assert.equal(front.calls.transform[0].e13, 100);
     assert.ok(Math.abs(front.calls.transform[0].e21 - Math.sin(.1)) < 1e-9);
 
-    // Without the sign the pooled lines are hidden, and the paint order is rebuilt without leaving gaps.
     ctx.commands = [square(10), square(100)];
     paint(ctx, TVG, canvas, pool);
     assert.equal(front.calls.visible[0], false);

@@ -88,7 +88,6 @@ test('billboard copy is ThorVG Text inside the scene, in both languages, never o
         assert.deepEqual(texts.map(text => text.content), locale === 'ko' ? ['흔들리지', '않는 기업'] : ['UNSHAKE', 'ABLE INC.']);
         assert.ok(texts.every(text => text.font === 'Black Han Sans' && text.outline && Math.abs(text.rotation + .1) < 1e-9));
         assert.ok(ctx.commands.at(-1).text, 'the copy is the last thing the sign draws, so actors drawn later cover it');
-        // Fallen past .65 rad the copy is hidden, as before.
         const tilted = createRenderCtx({}, {});
         Object.assign(tilted, { locale, cam: 4400, vertical: 2500 });
         skyCoursePlatform(tilted, { id: 'wind-sign', kind: 'sign', x: 4770, y: -2310, width: 230, angle: -1 });

@@ -35,7 +35,6 @@ export type RenderStats = {
     /** Plain shapes drawn this frame / pooled in total. 이번 프레임 사용 / 풀 전체. */
     topShapes: number;
     poolTop: number;
-    /** ThorVG Text lines drawn this frame. 이번 프레임 ThorVG Text 줄 수. */
     texts: number;
     /** Layer scenes drawn this frame / pooled in total. */
     layers: number;
