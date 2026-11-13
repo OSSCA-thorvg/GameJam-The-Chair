@@ -298,7 +298,7 @@ export function assertGameState(value: unknown, path = 'state'): asserts value i
     if (data.focusNotice !== null) {
         const notice = record(data.focusNotice, `${path}.focusNotice`);
         exact(notice, ['kind', 'life'], `${path}.focusNotice`);
-        choice(notice.kind, ['paper', 'water', 'light', 'door', 'bump', 'bird', 'gear'], `${path}.focusNotice.kind`);
+        choice(notice.kind, ['paper', 'water', 'light', 'door', 'bump', 'bird', 'gear', 'steam'], `${path}.focusNotice.kind`);
         finite(notice.life, `${path}.focusNotice.life`);
     }
     if (data.lossReason !== null) choice(data.lossReason, ['head', 'bin', 'focus', 'lift'], `${path}.lossReason`);

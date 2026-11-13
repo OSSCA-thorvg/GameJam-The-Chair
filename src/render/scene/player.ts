@@ -122,7 +122,7 @@ function riderEffects(ctx: RenderCtx) {
     const C = ctx.C;
     const state = ctx.state;
     const TAU = ctx.TAU;
-    if (state.focusNotice?.kind === 'water') ctx.rod(7, -39, 44, -57, 5, C.skin);
+    if (state.focusNotice?.kind === 'water' || state.focusNotice?.kind === 'steam') ctx.rod(7, -39, 44, -57, 5, C.skin);
     if (ctx.saveFlash > 0) {
         ctx.rect(40, -52, 11, 11, '#e0ecd2');
         ctx.rect(42, -52, 6, 4, '#728a7b');

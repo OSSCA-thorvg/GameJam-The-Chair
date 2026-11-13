@@ -32,15 +32,18 @@ export function entranceStep(entrance: { kind: 'opening'; age: number }, dt: num
 }
 
 export type RooftopInput = { p: Readonly<Player>; ground: boolean; hasExtinguisher: boolean; firstFlight: Readonly<FirstFlight>; ductReaction: Readonly<DuctReaction>; time: number };
-export type RooftopResult = { p: Player; ground: boolean; firstFlight: FirstFlight; ductReaction: DuctReaction; pickup: boolean };
+export type RooftopResult = { p: Player; ground: boolean; firstFlight: FirstFlight; ductReaction: DuctReaction; pickup: boolean; steamHits: number[] };
 
 // After collisions on the rooftop: the duct's sneeze, the steam vents, the extinguisher pickup, the ceiling
 // and the catch onto the sales graph.
 export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
     const duct = ductReactionStep(input.ductReaction, input.p, dt);
     const p = duct.p;
-    for (const vent of STAGE_THREE.vents) {
+    const steamHits: number[] = [];
+    for (const [index, vent] of STAGE_THREE.vents.entries()) {
         if (ventPhase(vent, input.time).kind !== 'blow' || !inVentBlast(vent, p)) continue;
+        // Each blast is its own distraction: vent index plus the cycle it belongs to.
+        steamHits.push(index * 100000 + Math.floor((input.time - vent.offset) / vent.period));
         if (vent.axis === 'x') p.vx += vent.dir * vent.force * dt;
         else p.vy += vent.dir * vent.force * dt;
     }
@@ -54,7 +57,7 @@ export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
     // Rolling right onto the sales graph (or landing on it) starts the ride.
     const caught = firstFlight.kind === 'course' && input.hasExtinguisher && (p.vx > 20 || p.vy >= 0) ? graphCatch(p) : null;
     if (caught !== null) firstFlight = { kind: 'ride', dist: caught, speed: Math.max(STAGE_THREE.graph.startSpeed, Math.abs(p.vx)), age: 0 };
-    return { p, ground, firstFlight, ductReaction: duct.reaction, pickup };
+    return { p, ground, firstFlight, ductReaction: duct.reaction, pickup, steamHits };
 }
 
 // The chair rides the surging sales graph: it sticks to the line, speeds up, and leaves the tip

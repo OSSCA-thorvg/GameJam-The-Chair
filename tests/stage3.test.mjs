@@ -156,3 +156,22 @@ test('the sales graph waits until the chair rolls onto it', () => {
     assert.equal(state.firstFlight.kind, 'ride');
     assert.equal(state.deaths, 0);
 });
+
+test('a steam blast costs focus once per blast', async () => {
+    const { STAGE_THREE, ventPhase } = await bundled({ stdin: { contents: `export { STAGE_THREE, ventPhase } from './src/game/stages/rooftop/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
+    const vent = STAGE_THREE.vents[0];
+    let blowAt = 0;
+    while (ventPhase(vent, blowAt + dt).kind !== 'blow') blowAt += dt;
+    const game = createGame(); game.startStage(3);
+    const state = JSON.parse(game.serialize());
+    Object.assign(state, { focus: 100, mode: 'play', time: blowAt, hasExtinguisher: true, ground: false });
+    state.rooftop.entrance = { kind: 'ready' };
+    Object.assign(state.p, { x: vent.x - 40, y: vent.y, vx: 0, vy: 0 });
+    game.restore(JSON.stringify(state));
+    game.step(dt);
+    const hit = game.getSnapshot();
+    assert.equal(hit.focusNotice?.kind, 'steam');
+    assert.ok(hit.focus < 100);
+    game.step(dt);
+    assert.equal(game.getSnapshot().focus, hit.focus, 'the same blast only counts once');
+});
