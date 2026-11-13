@@ -54,7 +54,7 @@ export function createSplashPlayer(element: HTMLCanvasElement) {
     };
 }
 
-export function showStartupSplash(root: HTMLElement, getLocale: () => 'en' | 'ko') {
+export function showStartupSplash(root: HTMLElement, getLocale: () => 'en' | 'ko', onFinish: () => void) {
     const scene = root.querySelector<HTMLElement>('.scene');
     if (!scene) throw new Error('Game scene is unavailable.');
     const screen = document.createElement('div');
@@ -77,6 +77,7 @@ export function showStartupSplash(root: HTMLElement, getLocale: () => 'en' | 'ko
         player.destroy();
         screen.remove();
         root.querySelector<HTMLButtonElement>('[data-start]')?.focus();
+        onFinish();
     };
     screen.addEventListener('click', finish);
     screen.addEventListener('keydown', event => {

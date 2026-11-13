@@ -47,7 +47,10 @@ function applyLocale() {
 }
 applyLocale();
 const directOrbit = import.meta.env.DEV && new URLSearchParams(location.search).get('stage') === '5';
-if (!directOrbit) showStartupSplash(root, () => locale);
+let startupSplashVisible = !directOrbit;
+if (startupSplashVisible) {
+    showStartupSplash(root, () => locale, () => { startupSplashVisible = false; });
+}
 for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) {
     button.addEventListener('click', () => {
         const selected = button.dataset.locale;
@@ -193,6 +196,13 @@ function frame(ms: number) {
         perf.destroy();
         return;
     }
+    // The startup splash completely covers the game. Keep its ThorVG animation at full quality while avoiding
+    // a second, viewport-sized ThorVG render behind it. Resetting `last` makes the first visible frame start at dt 0.
+    if (startupSplashVisible) {
+        last = null;
+        requestAnimationFrame(frame);
+        return;
+    }
     const dt = last === null ? 0 : Math.max(0, (ms - last) / 1000);
     last = ms;
     const profiling = perf.enabled;
@@ -226,5 +236,5 @@ const officeStageOne = {
 (window as Window & {
     officeStageOne?: typeof officeStageOne;
 }).officeStageOne = officeStageOne;
-draw();
+if (!startupSplashVisible) draw();
 requestAnimationFrame(frame);
