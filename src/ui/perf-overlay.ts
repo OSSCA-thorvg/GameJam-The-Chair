@@ -35,6 +35,10 @@ export type PerfSurface = {
     dpr: number;
     /** Pixels the vector renderer actually rasterizes, and the DPR it applied. */
     raster: { width: number; height: number; dpr: number };
+    /** Backend that was asked for; a different `backend` means ThorVG failed to start with it. */
+    requested: string;
+    /** GPU timer state: on, unsupported by this browser, idle (not created yet) or n/a (not WebGL). */
+    gpuTimer: 'on' | 'unsupported' | 'idle' | 'n/a';
 };
 
 type PerfDeps = {
@@ -52,8 +56,9 @@ const GRAPH_MIN_MS = 50;
 const GRAPH_MAX_MS = 250;
 const SERIES = ['sim', 'build', 'sync', 'render', 'labels', 'hud'] as const;
 type Series = typeof SERIES[number];
-const COLORS: Record<Series | 'other', string> = {
+const COLORS: Record<Series | 'other' | 'gpu', string> = {
     sim: '#6aa9ff', build: '#f2d16b', sync: '#f29a4a', render: '#ef5f5f', labels: '#c58cf2', hud: '#6fd49a', other: '#5c6573',
+    gpu: '#ffffff',
 };
 
 function ring() {
@@ -84,6 +89,8 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
     const dropped = ring();
     const series: Record<Series, Float64Array> = { sim: ring(), build: ring(), sync: ring(), render: ring(), labels: ring(), hud: ring() };
     const overlayCost = ring();
+    // GPU ms whose timer results arrived in each frame (NaN when none did). They describe earlier frames.
+    const gpu = ring().fill(NaN);
     const reordered = new Uint8Array(HISTORY);
     let head = 0;
     let count = 0;
@@ -108,7 +115,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
     graph.className = 'perf-graph';
     const legend = document.createElement('div');
     legend.className = 'perf-legend';
-    for (const name of [...SERIES, 'other'] as const) {
+    for (const name of [...SERIES, 'other', 'gpu'] as const) {
         const item = document.createElement('span');
         const chip = document.createElement('i');
         chip.style.background = COLORS[name];
@@ -141,6 +148,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
         head = 0;
         reorders = 0;
         reordered.fill(0);
+        gpu.fill(NaN);
         lastText = 0;
         heapPeak = 0;
         wasmStart = null;
@@ -152,6 +160,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
     function window1s() {
         const picked: number[] = [];
         const sums: Record<Series, number> = { sim: 0, build: 0, sync: 0, render: 0, labels: 0, hud: 0 };
+        const gpuPicked: number[] = [];
         let elapsed = 0, tickSum = 0, tickMax = 0, droppedSum = 0, cost = 0;
         for (let k = 0; k < count && elapsed < 1000; k++) {
             const i = (head - 1 - k + HISTORY) % HISTORY;
@@ -162,7 +171,9 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
             tickMax = Math.max(tickMax, ticks[i]);
             droppedSum += dropped[i];
             cost += overlayCost[i];
+            if (!Number.isNaN(gpu[i])) gpuPicked.push(gpu[i]);
         }
+        const gpuSorted = gpuPicked.sort((a, b) => a - b);
         const n = Math.max(1, picked.length);
         const sorted = [...picked].sort((a, b) => a - b);
         const avg = elapsed / n;
@@ -176,6 +187,12 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
             ticks: { avg: tickSum / n, max: tickMax },
             droppedMs: droppedSum,
             overlayMs: cost / n,
+            gpu: gpuSorted.length ? {
+                avg: gpuSorted.reduce((a, b) => a + b, 0) / gpuSorted.length,
+                p95: gpuSorted[Math.min(gpuSorted.length - 1, Math.floor(gpuSorted.length * .95))],
+                max: gpuSorted[gpuSorted.length - 1],
+                samples: gpuSorted.length,
+            } : null,
         };
     }
 
@@ -230,6 +247,21 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
                 g.fillRect(x, y(frames[i]), Math.max(1, bar), y(base) - y(frames[i]));
             }
         }
+        // GPU time runs alongside the CPU work, so it is a line over the bars, not another bar segment.
+        g.strokeStyle = COLORS.gpu;
+        g.lineWidth = 1.5;
+        g.beginPath();
+        let drawing = false;
+        for (let k = 0; k < count; k++) {
+            const i = (head - count + k + HISTORY) % HISTORY;
+            if (Number.isNaN(gpu[i])) continue;
+            const x = (HISTORY - count + k + .5) * bar;
+            if (drawing) g.lineTo(x, y(gpu[i]));
+            else g.moveTo(x, y(gpu[i]));
+            drawing = true;
+        }
+        g.stroke();
+        g.lineWidth = 1;
         g.font = '9px ui-monospace, monospace';
         g.fillStyle = '#ffffff99';
         g.fillText(`${range} ms`, width - 38, 9);
@@ -257,7 +289,8 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
             `sim ${ms(seg.sim)}  build ${ms(seg.build)}  sync ${ms(seg.sync)}`,
             `render ${ms(seg.render)}  labels ${ms(seg.labels)}  hud ${ms(seg.hud)}`,
             `ticks/frame ${w.ticks.avg.toFixed(2)} (max ${w.ticks.max})  dropped ${ms(w.droppedMs)} ms/s`,
-            `backend ${s?.backend ?? 'none'}${s?.renderError ? ' (fallback)' : ''}`,
+            `backend ${s?.backend ?? 'none'}${s && s.backend !== s.requested ? ` (FALLBACK, wanted ${s.requested})` : ''}`,
+            `gpu ${w.gpu ? `${ms(w.gpu.avg)} / p95 ${ms(w.gpu.p95)} / max ${ms(w.gpu.max)} ms` : 'n/a'}  (timer ${s?.gpuTimer ?? 'n/a'})`,
             s ? `canvas ${s.width}×${s.height} css · page dpr ${devicePixelRatio}` : 'canvas n/a',
             s ? `raster ${s.raster.width}×${s.raster.height} · ${(s.raster.width * s.raster.height / 1e6).toFixed(2)} Mpx · dpr ${+s.raster.dpr.toFixed(3)}` : 'raster n/a',
             `cmds ${stats.commands}  shapes ${stats.topShapes}/${stats.poolTop}`,
@@ -287,6 +320,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
         series.sync[i] = stats.syncMs;
         series.render[i] = stats.renderMs;
         series.labels[i] = stats.labelsMs;
+        gpu[i] = stats.gpuMs.length ? stats.gpuMs.reduce((a, b) => a + b, 0) / stats.gpuMs.length : NaN;
         // `reorders` counts paint-order rebuilds inside the history window.
         if (count === HISTORY && reordered[i]) reorders--;
         reordered[i] = stats.reorder ? 1 : 0;

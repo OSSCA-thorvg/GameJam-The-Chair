@@ -1,6 +1,7 @@
 import type { Locale } from '../i18n';
 import type { Canvas, ThorVGNamespace } from '@thorvg/webcanvas';
-import { loadThorvg } from './thorvg';
+import { loadThorvg, thorvgRenderer } from './thorvg';
+import { createGpuTimer, type GpuTimer } from './gpu-timer';
 import type { GameState } from '../game/game';
 import { ART } from './art';
 import type { EffectsState } from './effects';
@@ -53,6 +54,9 @@ function setup(
     let renderError: string | null = null;
     // Set only while the developer performance overlay is open. 성능 오버레이가 켜졌을 때만 설정.
     let stats: RenderStats | null = null;
+    // GPU timer queries on the WebGL2 canvas; only while profiling, and null when unsupported.
+    let gpuTimer: GpuTimer | null = null;
+    let gpuTimerTried = false;
     let overrides: LayerOverrides | null = null;
 
     function size() {
@@ -155,7 +159,14 @@ function setup(
             resetRenderStats(stats);
             stats.buildMs = performance.now() - buildStart;
         }
-        paint(ctx, TVG, tvg, pool, stats ?? undefined, overrides ?? undefined);
+        const timing = stats ? gpuTiming() : null;
+        const timed = timing?.begin() ?? false;
+        try {
+            paint(ctx, TVG, tvg, pool, stats ?? undefined, overrides ?? undefined);
+        } finally {
+            if (timed) timing!.end();
+        }
+        if (stats && timing) stats.gpuMs = timing.collect();
         return { cam: ctx.cam, scale: ctx.scale, vertical: ctx.vertical, width: ctx.W };
     }
 
@@ -175,6 +186,16 @@ function setup(
         ctx.cam = cam + (playCam - cam) * u + frame.shake[0] / ctx.scale;
         ctx.vertical = vertical + (baseVertical - vertical) * u + frame.shake[1] / ctx.scale;
         ctx.wheel = 0;
+    }
+
+    /** The GPU timer, created on first use once the WebGL2 canvas exists. */
+    function gpuTiming() {
+        if (!gpuTimerTried && tvg && tvg.renderer === 'gl') {
+            gpuTimerTried = true;
+            // ThorVG already owns a WebGL2 context on this canvas; asking again returns that same context.
+            gpuTimer = createGpuTimer(cn.getContext('webgl2'));
+        }
+        return gpuTimer;
     }
 
     async function initRenderer() {
@@ -198,6 +219,11 @@ function setup(
         /** Start (or with null, stop) filling render counters each frame. */
         profile(next: RenderStats | null) {
             stats = next;
+            if (!next) {
+                gpuTimer?.dispose();
+                gpuTimer = null;
+                gpuTimerTried = false;
+            }
         },
         /** Debug-only layer hiding and flattening; null draws every layer normally. */
         layerOverrides(next: LayerOverrides | null) {
@@ -206,6 +232,9 @@ function setup(
         /** Backend and canvas size for the performance overlay. */
         surface: () => ({
             backend: tvg ? `thorvg-${tvg.renderer}` : renderer,
+            /** The backend that was requested; differs from `backend` when ThorVG failed to start. */
+            requested: `thorvg-${thorvgRenderer()}`,
+            gpuTimer: !tvg || tvg.renderer !== 'gl' ? 'n/a' as const : gpuTimer ? 'on' as const : gpuTimerTried ? 'unsupported' as const : 'idle' as const,
             renderError,
             width: ctx.W,
             height: ctx.H,
@@ -215,6 +244,8 @@ function setup(
         }),
         destroy() {
             observer.disconnect();
+            gpuTimer?.dispose();
+            gpuTimer = null;
             tvg?.destroy();
         },
     };

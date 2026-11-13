@@ -26,6 +26,11 @@ export type RenderStats = {
     renderMs: number;
     /** System-font label canvas. 라벨 캔버스 시간. */
     labelsMs: number;
+    /**
+     * GPU time (WebGL2 timer queries) of earlier frames whose results arrived this frame, oldest first.
+     * Empty with the software renderer or without timer-query support. 이번 프레임에 도착한 GPU 시간.
+     */
+    gpuMs: number[];
     commands: number;
     /** Plain shapes drawn this frame / pooled in total. 이번 프레임 사용 / 풀 전체. */
     topShapes: number;
@@ -90,4 +95,5 @@ export function resetRenderStats(stats: RenderStats) {
     stats.gaussianBlurs = stats.motionBlurs = stats.blurAmount = stats.blurArea = 0;
     stats.masks = stats.clips = 0;
     stats.layerList = [];
+    stats.gpuMs = [];
 }

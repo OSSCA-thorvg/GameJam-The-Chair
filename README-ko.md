@@ -20,9 +20,13 @@ http://127.0.0.1:5173/ 을 엽니다.
 
 청소부, 물통, 복사기, 덕트, 머리 충돌, 소화기 모션과 하늘 엔딩은 개발 서버를 실행한 상태에서 http://127.0.0.1:5173/preview.html 로 확인합니다. 장면을 선택하고 시간 슬라이더를 드래그하거나, 한 프레임씩 이동하거나, 반복 재생할 수 있습니다. 선택한 장면과 시간은 URL에 저장되어 새로고침 후에도 유지됩니다. 스테이지 4 엔딩은 http://127.0.0.1:5173/preview.html?motion=sky-ending 에서 확인합니다. 의자는 1초 동안 측면을 유지하고, 7초 동안 카메라가 뒤쪽으로 돌아간 뒤, 2초 동안 뒷모습을 보여 주고 스테이지가 끝납니다.
 
+## 렌더러
+
+게임은 브라우저에 하드웨어 WebGL2가 있으면 ThorVG GPU 렌더러(`gl`, WebGL2)로 그리고, 없으면 ThorVG 소프트웨어 렌더러(`sw`)로 대체합니다. WebGL이 CPU로 흉내만 내는 환경도 소프트웨어 렌더러를 씁니다. 소프트웨어 렌더러는 모든 픽셀을 CPU 코어 하나로 칠하므로 크거나 DPR이 높은 화면에서 느려집니다. 비교할 때는 URL에 `?renderer=sw` 또는 `?renderer=gl`을 붙여 강제할 수 있습니다.
+
 ## 성능 오버레이
 
-게임에서 `F3` 또는 `` ` `` 키를 누르거나 http://127.0.0.1:5173/?debug=1 로 열면 개발자 지표가 나타납니다. 최근 1초의 FPS와 프레임 시간(평균, p95, 최대), 구간별 누적 그래프, 구간별 시간(`sim`, `build`, `sync`, `render`, `labels`, `hud`), 프레임당 고정 틱 수와 버린 시뮬레이션 시간, 렌더 백엔드, CSS 픽셀 기준 캔버스 크기와 ThorVG가 실제로 그리는 래스터 크기(ThorVG는 자체 DPR `1 + (dpr - 1) × 0.75`를 적용), ThorVG 카운터(draw command, 풀의 shape와 layer scene, paint 순서 재구성, gaussian·motion blur 개수와 화면 면적, mask, clip), JS 힙(Chrome 전용), ThorVG WebAssembly 메모리를 보여 줍니다. **지표 복사**는 JSON 스냅샷을 클립보드에 넣습니다. **레이어** 목록은 최근 그린 layer scene마다 shape 수, 화면 점유율, 효과를 보여 줍니다. **숨김**은 그 layer를 그리지 않고, **평면**은 scene 없이(투명도, 블렌드, 블러, 클립, 마스크 없이) 일반 shape로 그리므로 `render` 변화로 layer 비용을 알 수 있습니다. 스위치는 오버레이를 닫으면 초기화됩니다. 콘솔에서는 `officeStageOne.perf.layers.hide(key)`, `.flatten(key)`, `.reset()`, `.list()`를 씁니다. 측정은 게임 코어 밖에서만 하며 오버레이를 닫으면 측정하지 않습니다.
+게임에서 `F3` 또는 `` ` `` 키를 누르거나 http://127.0.0.1:5173/?debug=1 로 열면 개발자 지표가 나타납니다. 최근 1초의 FPS와 프레임 시간(평균, p95, 최대), 구간별 누적 그래프, 구간별 시간(`sim`, `build`, `sync`, `render`, `labels`, `hud`), 프레임당 고정 틱 수와 버린 시뮬레이션 시간, 렌더 백엔드(요청한 백엔드로 시작하지 못하면 경고), WebGL2 타이머 쿼리로 잰 GPU 시간(평균, p95, 최대, 그래프의 흰 선. 대부분의 데스크톱 Chrome에서 동작하며 소프트웨어 렌더러에서는 `n/a`), CSS 픽셀 기준 캔버스 크기와 ThorVG가 실제로 그리는 래스터 크기(ThorVG는 자체 DPR `1 + (dpr - 1) × 0.75`를 적용), ThorVG 카운터(draw command, 풀의 shape와 layer scene, paint 순서 재구성, gaussian·motion blur 개수와 화면 면적, mask, clip), JS 힙(Chrome 전용), ThorVG WebAssembly 메모리를 보여 줍니다. **지표 복사**는 JSON 스냅샷을 클립보드에 넣습니다. **레이어** 목록은 최근 그린 layer scene마다 shape 수, 화면 점유율, 효과를 보여 줍니다. **숨김**은 그 layer를 그리지 않고, **평면**은 scene 없이(투명도, 블렌드, 블러, 클립, 마스크 없이) 일반 shape로 그리므로 `render` 변화로 layer 비용을 알 수 있습니다. 스위치는 오버레이를 닫으면 초기화됩니다. 콘솔에서는 `officeStageOne.perf.layers.hide(key)`, `.flatten(key)`, `.reset()`, `.list()`를 씁니다. 측정은 게임 코어 밖에서만 하며 오버레이를 닫으면 측정하지 않습니다.
 
 ## 플레이
 

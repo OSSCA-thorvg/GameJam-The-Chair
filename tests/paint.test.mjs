@@ -28,6 +28,8 @@ function fakeThorvg() {
         }
     }
     for (const name of ['resetEffects', 'gaussianBlur', 'motionBlur', 'blend', 'opacity', 'clip', 'mask', 'visible']) Scene.prototype[name] = chain;
+    Scene.prototype.mask = function (shape, method) { this.maskShape = shape; this.maskMethod = method; return this; };
+    Scene.prototype.clip = function (shape) { this.clipShape = shape; return this; };
     class Gradient { setStops() { return this; } dispose() {} }
     class Canvas {
         constructor() { this.paints = []; }
@@ -183,4 +185,48 @@ test('debug layer overrides hide a layer or draw it as plain shapes, and leave o
     assert.deepEqual(run(), { keys: ['sun', 'fog'], top: 1, commands: 4 });
     // The scene's own commands are never changed by an override.
     assert.equal(ctx.commands[0].layer, sun);
+});
+
+test('a layer that drops its mask or clip gets a fresh scene instead of a pass-through stand-in', () => {
+    // ThorVG cannot detach a mask or clip. The old stand-in (a huge white rect) made the GL renderer smear a
+    // Screen-blended water layer over the frame once its mask ended, only when frames were drawn in sequence.
+    const { TVG, canvas } = fakeThorvg();
+    const lg = { save() {}, restore() {} };
+    const ctx = createRenderCtx({}, lg);
+    Object.assign(ctx, { W: 400, H: 300 });
+    const pool = createPaintPool();
+    const sceneOf = () => canvas.paints.find(paint => paint instanceof TVG.Scene);
+    const draw = layer => {
+        ctx.commands = [square(20, layer), square(200)];
+        ctx.foregroundActors = [];
+        paint(ctx, TVG, canvas, pool);
+        paint(ctx, TVG, canvas, pool);
+    };
+
+    draw({ key: 'glint', blend: 'screen', mask: square(0), clip: square(0) });
+    const masked = sceneOf();
+    assert.ok(masked.maskShape && masked.clipShape);
+    assert.equal(masked.maskMethod, TVG.MaskMethod.Alpha);
+
+    draw({ key: 'glint', blend: 'screen', clip: square(0) });
+    const unmasked = sceneOf();
+    assert.notEqual(unmasked, masked, 'dropping the mask replaces the scene');
+    assert.equal(unmasked.maskShape, undefined);
+    assert.ok(unmasked.clipShape, 'the clip it still has is set up again');
+    assert.ok(!canvas.paints.includes(masked), 'the old scene left the canvas');
+
+    draw({ key: 'glint', blend: 'screen', clip: square(0) });
+    assert.equal(sceneOf(), unmasked, 'an unchanged layer keeps its scene');
+
+    draw({ key: 'glint', blend: 'screen', clip: square(0), mask: square(0), maskInvert: true });
+    assert.equal(sceneOf(), unmasked, 'adding a mask reuses the scene');
+    assert.equal(unmasked.maskMethod, TVG.MaskMethod.InvAlpha);
+
+    draw({ key: 'glint', blend: 'screen', clip: square(0), mask: square(0) });
+    const flipped = sceneOf();
+    assert.notEqual(flipped, unmasked, 'flipping the mask mode replaces the scene');
+    assert.equal(flipped.maskMethod, TVG.MaskMethod.Alpha);
+
+    draw({ key: 'glint', blend: 'screen' });
+    assert.equal(sceneOf().clipShape, undefined, 'dropping the clip replaces the scene too');
 });

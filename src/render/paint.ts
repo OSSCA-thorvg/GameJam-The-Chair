@@ -58,6 +58,13 @@ function canvasBox(cmd: DrawCommand, width: number, height: number, extent?: num
     return [Math.max(0, Math.min(width - 1, xMin)), Math.max(0, Math.min(height - 1, yMin))];
 }
 
+/** Whether a pooled layer scene carries a clip or mask this frame's layer no longer has (or a flipped mask mode). */
+function staleSlot(slot: LayerSlot, spec: LayerSpec) {
+    if (slot.clip && !spec.clip) return true;
+    if (slot.mask && (!spec.mask || slot.maskInvert !== !!spec.maskInvert)) return true;
+    return false;
+}
+
 /** Group consecutive commands that share a layer into one item. */
 function collect(commands: DrawCommand[]): Item[] {
     const items: Item[] = [];
@@ -195,6 +202,19 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         signature += '+';
     }
     signature += pool.top.length;
+    // ThorVG cannot take a clip or mask off a scene. A stand-in that lets everything through (a huge rect) is
+    // drawn wrongly by the GL renderer: a Screen-blended, masked water layer smeared other actors across the
+    // frame once its mask ended. A layer that loses its clip or mask, or flips its mask mode, starts over with
+    // a fresh scene, and the canvas order is rebuilt because the old scene leaves it.
+    // ThorVG는 scene의 clip/mask를 뗄 수 없고, GL 렌더러는 대체 mask를 잘못 그리므로 scene을 새로 만든다.
+    for (const item of items) {
+        if ('cmd' in item) continue;
+        const slot = pool.layers.get(item.key);
+        if (slot && staleSlot(slot, item.layer)) {
+            pool.layers.delete(item.key);
+            pool.signature = '';
+        }
+    }
     // ThorVG 1.1.3 crashes ("null function") when a scene that is already on the canvas gets new children and
     // is then removed before the next update. Empty the canvas first, so this frame's new children are only
     // ever added to scenes that are off the canvas.
@@ -275,6 +295,7 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         }
         scene.blend(blendOf(spec.blend));
         scene.opacity(Math.round(Math.max(0, Math.min(1, spec.opacity ?? 1)) * 255));
+        // A slot never keeps a clip or mask its layer dropped: staleSlot() replaced it before this loop.
         if (spec.clip) {
             if (!slot.clip) {
                 slot.clip = new TVG.Shape();
@@ -282,16 +303,12 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
             }
             tracePath(slot.clip, spec.clip);
             slot.clip.fill(255, 255, 255, 255);
-        } else if (slot.clip) {
-            slot.clip.reset();
-            slot.clip.appendRect(-1e4, -1e4, 2e4, 2e4);
         }
         if (spec.mask) {
-            const invert = !!spec.maskInvert;
-            if (!slot.mask || slot.maskInvert !== invert) {
-                slot.mask ??= new TVG.Shape();
-                slot.maskInvert = invert;
-                scene.mask(slot.mask, invert ? TVG.MaskMethod.InvAlpha : TVG.MaskMethod.Alpha);
+            if (!slot.mask) {
+                slot.mask = new TVG.Shape();
+                slot.maskInvert = !!spec.maskInvert;
+                scene.mask(slot.mask, slot.maskInvert ? TVG.MaskMethod.InvAlpha : TVG.MaskMethod.Alpha);
             }
             const fill = spec.mask.c;
             tracePath(slot.mask, spec.mask);
@@ -302,11 +319,6 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
                 slot.mask.fill(g);
                 g.dispose();
             }
-        } else if (slot.mask) {
-            // A spent mask must let the whole layer through: everything for alpha, nothing for inverse alpha.
-            slot.mask.reset();
-            slot.mask.appendRect(-1e4, -1e4, 2e4, 2e4);
-            slot.mask.fill(255, 255, 255, slot.maskInvert ? 0 : 255);
         }
         scene.visible(true);
         order.push(scene);
