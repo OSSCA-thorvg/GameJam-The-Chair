@@ -3,12 +3,14 @@ import { seeded } from './cloud-art';
 import { STAGE_FIVE } from '../../game/stages/orbit/data';
 import { aim, CCTV_KINDS, cctvModel, placer, rect, type CctvKind } from './cctv-models';
 import type { Point3, SkyProjection } from './sky-projection';
+import type { SkyRobot } from '../../game/stages/sky/data';
+import { robotBirdModel } from './orbit-robot-bird';
 
 /** Maps a stage-five route point (x across, y up, z ahead) into a projection's coordinates. */
 export type RoutePoint = (x: number, y: number, z: number) => Point3;
 
 /** `appear`: how far the reveal's turn into 3D has gone (0 side, 1 behind) before this camera comes into view. */
-type Spot = { x: number; y: number; z: number; seed: number; kind: CctvKind; size: number; appear: number };
+type Spot = { x: number; y: number; z: number; seed: number; kind: CctvKind; size: number; appear: number; bird?: SkyRobot };
 
 const pick = (random: () => number) => CCTV_KINDS[Math.floor(random() * CCTV_KINDS.length)];
 
@@ -24,6 +26,8 @@ function routeCctvs(seed: number, count: number, from: number, to: number): Spot
 // Where the reveal cameras sit on a 1000×510 screen once the camera is behind the chair: every edge and corner, none over the chair.
 const REVEAL_COLUMNS = [60, 210, 360, 640, 790, 940], REVEAL_ROWS = [50, 170, 300, 430];
 const REVEAL_VIEW = { focal: 841.5, centerY: 188.7, camera: 480 };
+// A few spots in the field are stage four's chrome robot parrots instead, staring at the chair along with the cameras.
+const REVEAL_BIRDS: Record<number, SkyRobot> = { 1: 'liquid', 6: 'black', 11: 'liquid', 16: 'black', 19: 'liquid' };
 
 /** Cameras hanging in the air all around the chair, turning up one by one as the view turns into 3D; `glide` later carries it past every one. */
 function revealCctvs(seed: number, glide: number): Spot[] {
@@ -33,10 +37,10 @@ function revealCctvs(seed: number, glide: number): Spot[] {
     return REVEAL_ROWS.flatMap((row, r) => REVEAL_COLUMNS.map((column, c) => {
         const depth = 700 + random() * 860;
         const sx = column + (random() - .5) * 90, sy = row + (random() - .5) * 70;
-        const scale = depth / REVEAL_VIEW.focal;
+        const scale = depth / REVEAL_VIEW.focal, index = r * REVEAL_COLUMNS.length + c;
         return { x: (sx - 500) * scale, y: (REVEAL_VIEW.centerY - sy) * scale, z: depth - REVEAL_VIEW.camera - glide,
             seed: seed + r * 10 + c, kind: pick(random), size: 1.3 + random() * 1.3,
-            appear: .04 + .56 * order.indexOf(r * REVEAL_COLUMNS.length + c) / count };
+            appear: .04 + .56 * order.indexOf(index) / count, ...(REVEAL_BIRDS[index] ? { bird: REVEAL_BIRDS[index] } : {}) };
     }));
 }
 
@@ -72,9 +76,10 @@ export const ORBIT_WATCH = {
     before: 200, after: 40, blink: 7,
 };
 
-/** idle: a dim red dot · flash: blinking while the chair passes · recorded: steady once it has gone by. */
+/** idle: the slow REC blink every camera keeps up · flash: blinking while the chair passes · recorded: steady once it has gone by. */
 export type LampState = 'idle' | 'flash' | 'recorded';
-type Lamp = { at: Point3; state: LampState };
+/** `glow`: a robot parrot's lens eye, always glowing like the stage four 2D lens; its world radius. */
+type Lamp = { at: Point3; state: LampState; glow?: number; rec?: boolean };
 
 /** Lamp state of a camera `ahead` route units in front of the chair. */
 export function cctvLamp(ahead: number, t: number): LampState {
@@ -83,16 +88,23 @@ export function cctvLamp(ahead: number, t: number): LampState {
     return 'recorded';
 }
 
-const lampColor = (state: LampState) => state === 'idle' ? '#a8423c' : '#ff5a4a';
+/** Each camera's REC lamp blinks on its own beat, so the whole sky winks red out of step. */
+const recording = (t: number, seed: number) => (t * .8 + seed * .618) % 1 < .55;
+const lampColor = (state: LampState, rec: boolean) => state !== 'idle' || rec ? '#ff4a3a' : '#5e1d1a';
 
-function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: number, t: number) {
+function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: number, t: number): Lamp[] {
     const anchor = point(spot.x, spot.y + Math.sin(t * .9 + spot.seed) * 8, spot.z);
     // The lens keeps turning toward the chair at the projection's origin.
     const yaw = aim(-anchor[0], -anchor[2]) + Math.sin(t * .6 + spot.seed) * .05;
     const state = cctvLamp(spot.z - travel, t);
+    if (spot.bird) {
+        const { eyes, glow } = robotBirdModel(view, spot.bird, placer(anchor, yaw, spot.size * 1.2), t * 9 + spot.seed);
+        return eyes.map(at => ({ at, state, glow: glow * spot.size * 1.2 }));
+    }
     const lamp = cctvModel(view, spot.kind, placer(anchor, yaw, spot.size));
-    view.oval(lamp, [4.5 * spot.size, 4.5 * spot.size, 4.5 * spot.size], lampColor(state));
-    return { at: lamp, state };
+    const rec = recording(t, spot.seed);
+    view.oval(lamp, [4.5 * spot.size, 4.5 * spot.size, 4.5 * spot.size], lampColor(state, rec));
+    return [{ at: lamp, state, rec }];
 }
 
 function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: number; z: number }, travel: number, t: number): Lamp {
@@ -113,8 +125,9 @@ function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: n
     view.oval(place([2, -13, 30]), [3, 3, 1], '#7d9fbb');
     const state = cctvLamp(z - travel, t);
     const lamp = place([-18, 22, 29]);
-    view.oval(lamp, [5, 5, 2], lampColor(state));
-    return { at: lamp, state };
+    const rec = recording(t, z);
+    view.oval(lamp, [5, 5, 2], lampColor(state, rec));
+    return { at: lamp, state, rec };
 }
 
 /**
@@ -123,7 +136,7 @@ function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: n
  * `shown` is how far the reveal has turned into 3D; watchers that come later stay hidden.
  */
 export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, cameras: 'reveal' | 'route', shown = 1) {
-    const lamps = ORBIT_WATCH[cameras].filter(spot => spot.appear <= shown).map(spot => floating(view, point, spot, travel, t));
+    const lamps = ORBIT_WATCH[cameras].filter(spot => spot.appear <= shown).flatMap(spot => floating(view, point, spot, travel, t));
     // Far satellites are left out until the chair is within sight of them.
     if (ORBIT_WATCH.satelliteAppear <= shown) for (const at of ORBIT_WATCH.satellites) {
         if (at.z - travel < 6000) lamps.push(satellite(view, point, at, travel, t));
@@ -131,16 +144,31 @@ export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: nu
     return lamps;
 }
 
-/** Red light spills from the lamps that caught the chair: flashing as it passes, then a steady small glow. */
+/** Red light spills from every lamp: a small REC blink while waiting, a flash as the chair passes, then a steady glow. */
 export function orbitWatchGlow(ctx: RenderCtx, view: SkyProjection, lamps: Lamp[], alpha = 1) {
-    for (const { at, state } of lamps) {
-        if (state === 'idle' || view.depth(at) < 80) continue;
+    for (const { at, state, glow, rec } of lamps) {
+        if (view.depth(at) < 80) continue;
+        if (glow) {
+            eyeGlow(ctx, view, at, glow, state, alpha);
+            continue;
+        }
+        if (state === 'idle' && !rec) continue;
         const [x, y] = view.project(at);
-        const radius = ctx.clamp(30000 / view.depth(at), 10, 60) * (state === 'flash' ? 1 : .45);
+        const radius = ctx.clamp(30000 / view.depth(at), 10, 60) * (state === 'flash' ? 1 : state === 'recorded' ? .45 : .55);
         ctx.commands.push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
             from: [x, y], to: [x + radius, y], radius, stops: [[0, ctx.rgba('#ff6b57', .95 * alpha)], [1, ctx.rgba('#ff6b57', 0)]],
-        }, layer: { key: 'orbit-cctv-light', blend: 'screen' } });
+        }, layer: { key: state === 'idle' ? 'orbit-cctv-rec' : 'orbit-cctv-light', blend: 'screen' } });
     }
+}
+
+function eyeGlow(ctx: RenderCtx, view: SkyProjection, at: Point3, glow: number, state: LampState, alpha: number) {
+    const [x, y] = view.project(at);
+    const radius = Math.max(4, Math.abs(view.project([at[0], at[1] + glow, at[2]])[1] - y)) * (state === 'flash' ? 1.5 : 1);
+    const pulse = (.8 + Math.sin(ctx.t * 3 + at[0]) * .2) * alpha;
+    ctx.commands.push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
+        from: [x, y], to: [x + radius, y], radius,
+        stops: [[0, ctx.rgba('#ff3a1a', .85 * pulse)], [.4, ctx.rgba('#ff2a1a', .45 * pulse)], [1, ctx.rgba('#ff2a1a', 0)]],
+    }, layer: { key: 'orbit-robot-eye', blend: 'screen' } });
 }
 
 /** One small point twinkles high above the door, too far away to make out yet. */
