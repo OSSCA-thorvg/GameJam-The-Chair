@@ -523,6 +523,23 @@ function skyGustCycle(): PreviewScene {
     };
 }
 
+// The floating office facade with its staff still at work behind the windows.
+function skyOfficeFacade(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    return {
+        id: 'sky-facade', label: 'Sky · Floating office facade and its workers', duration: 6, focusX: 3225,
+        markers: [{ at: 0, label: 'Office at work' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(6, time));
+            return { state: { ...base, time: at, sky: { ...base.sky, phase: 'course', lift: 1 },
+                player: { ...base.player, x: 3330, y: -2038 }, ground: true }, effects };
+        },
+    };
+}
+
 // Office gear drifting over the gap to the drawer desk, then a tower PC clanging into the chair.
 function skyOfficeGear(): PreviewScene {
     const game = createGame();
@@ -758,6 +775,7 @@ export const previewScenes: readonly PreviewScene[] = [
     cloudEntry(),
     skyGustCycle(),
     skyOfficeGear(),
+    skyOfficeFacade(),
     skyWindFeedback(),
     skyParrots(),
     skySignDepth(),

@@ -5,7 +5,7 @@ import { sprayPlume } from './spray';
 import { drawSkyReveal } from './sky-reveal';
 import { breadCloud as cloud } from './cloud-art';
 import { skyCoursePlatform } from './sky-course-art';
-import { skyBuilding, skyFlag, skyRibbon } from './sky-course-decor';
+import { skyBuilding, skyFlag } from './sky-course-decor';
 import { skyKnockKeycaps } from './sky-gear';
 import { sunGlow } from './sun';
 import { skyHazardsArt, skyKnockFeathers, skySprayGauge, skyWarningScraps } from './sky-wind';
@@ -46,7 +46,6 @@ export function drawSky(ctx: RenderCtx) {
     atmosphere(ctx);
     skyWarningScraps(ctx);
     skyBuilding(ctx);
-    skyRibbon(ctx);
     for (const spec of skyPlatforms(ctx.state.sky, ctx.t)) skyCoursePlatform(ctx, spec);
     for (let i = 1; i < STAGE_FOUR.checkpoints.length; i++) {
         const cp = STAGE_FOUR.checkpoints[i];
