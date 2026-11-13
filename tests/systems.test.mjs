@@ -147,7 +147,8 @@ test('the sky hovers in and lands on the arrival roof without touching its input
     }
     assert.ok(landed, 'the chair settles on the arrival roof');
     assert.equal(r.checkpoint, 0, 'the only flag waits halfway along the course');
-    const depth = sys.skyStep({ ...base, sky: { ...sky, phase: 'depth', age: 4 } }, 1 / 120);
+    // Past the end of the depth hold (5 s), whatever its exact length.
+    const depth = sys.skyStep({ ...base, sky: { ...sky, phase: 'depth', age: 6 } }, 1 / 120);
     assert.equal(depth.won, true);
     assert.equal(depth.speed, 0);
 });

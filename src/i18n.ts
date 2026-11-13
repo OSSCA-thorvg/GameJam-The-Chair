@@ -86,6 +86,7 @@ const messages = {
     'opening.chairHope':         { en: 'Six o\'clock~ Time to oil my wheels♪',                          ko: '6시 땡~ 오늘은 바퀴에 기름칠 좀 해야지♪' },
     'opening.chairRage':         { en: "I can't take this wicked life anymore!",                         ko: '이런 극악무도한 생활, 더는 못 참아!' },
     'opening.riderTyping':       { en: '(tap tap tap)',                                                  ko: '(타닥타닥)' },
+    'orbit.attendance':          { en: 'Attendance confirmed.',                                          ko: '근태 확인됨.' },
     'opening.skip':              { en: 'Skip opening',                                                   ko: '오프닝 건너뛰기' },
 
     'menu.paused':               { en: 'Paused',                                                         ko: '잠깐' },

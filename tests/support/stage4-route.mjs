@@ -2,7 +2,10 @@
 // so before each hop the driver tries launches at different moments on a saved copy of the game and replays the
 // first one that lands cleanly on the next platform.
 import { loadSource } from './load.mjs';
-const { skyPlatforms } = await loadSource(`export { skyPlatforms } from './src/game/stages/sky/data';`);
+const { skyPlatforms, STAGE_FOUR } = await loadSource(`export { skyPlatforms, STAGE_FOUR } from './src/game/stages/sky/data';`);
+// The last hop waits out the whole stage four ending before stage five starts.
+const { settle, turn, hold } = STAGE_FOUR.reveal;
+const FINISH_TIME = 6 + settle + turn + hold;
 
 export const STAGE_FOUR_ROUTE = ['arrival-roof', 'window-one', 'window-two', 'wind-sign', 'rest', 'drawer-desk', 'little-desk', 'upper-rest', 'last-sign', 'finish'];
 const STEP = 1 / 120;
@@ -41,7 +44,7 @@ function hopKeys(state, id) {
 // the platform the chair next settles on (the target, or wherever the wind and hazards put it instead).
 function run(game, plan, id, visit) {
     let frames = 0, launched = false;
-    const limit = Math.round((plan.wait + (id === 'finish' ? 16 : 5)) / STEP);
+    const limit = Math.round((plan.wait + (id === 'finish' ? FINISH_TIME : 5)) / STEP);
     while (frames++ < limit) {
         const state = game.getSnapshot();
         if (state.stage === 5) return 'won';

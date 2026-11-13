@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, drawOrbit, CLOUD_TONES, createSkyProjection, endingChair, endingHair, endingGlasses, skyCoursePlatform } = await loadSource(`
+const { SKY_DEPARTURE, createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, drawOrbit, CLOUD_TONES, createSkyProjection, endingChair, endingHair, endingGlasses, skyCoursePlatform } = await loadSource(`
     export { createGame } from './src/game/game';
     export { createSky, STAGE_FOUR } from './src/game/stages/sky/data';
     export { skyStep } from './src/game/stages/sky/course/decide';
@@ -11,6 +11,7 @@ const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, dr
     export { drawOrbit } from './src/render/scene/orbit';
     export { CLOUD_TONES } from './src/render/scene/cloud-art';
     export { createSkyProjection } from './src/render/scene/sky-projection';
+    export { SKY_DEPARTURE } from './src/render/scene/sky-camera';
     export { endingChair } from './src/render/scene/sky-ending-art';
     export { endingHair } from './src/render/scene/sky-player-hair';
     export { endingGlasses } from './src/render/scene/sky-player-glasses';
@@ -67,25 +68,27 @@ test('the ending settles before turning and finishes on its timer regardless of 
     assert.equal(input.sky.age, 0);
 });
 
-test('the ending draws only the chair and sky without slogans at every camera phase', () => {
+test('the ending draws no slogans and only the attendance line at every camera phase', () => {
     const game = createGame();
     game.startStage(4);
     const base = game.getSnapshot();
     for (const locale of ['en', 'ko']) for (const width of [320, 1000]) {
-        for (const [phase, age] of [['reveal', 1], ['reveal', 5], ['depth', 0], ['depth', 3]]) {
+        for (const [phase, age] of [['reveal', 1], ['reveal', 5], ['depth', 0], ['depth', 3], ['depth', 4.9]]) {
             const state = structuredClone(base);
             Object.assign(state.sky, { phase, age });
             const labels = [], transforms = [];
             const ctx = createRenderCtx({}, {
                 save() {}, restore() {},
                 transform(...matrix) { transforms.push(matrix); },
+                measureText: text => ({ width: [...text].length * 8 }),
                 fillText(text) { labels.push(text); },
             });
             Object.assign(ctx, { state, p: state.player, mode: 'play', locale, W: width, H: 510 });
             const before = structuredClone(state);
             drawSky(ctx);
             assert.deepEqual(state, before, 'cinematic rendering leaves gameplay untouched');
-            assert.deepEqual(labels, []);
+            // The attendance bubble is up for the last second of stage four.
+            assert.deepEqual(labels, phase === 'depth' && age > 4 ? [locale === 'ko' ? '근태 확인됨.' : 'Attendance confirmed.'] : []);
             assert.deepEqual(transforms, []);
             assert.ok(ctx.commands.length > 100);
             for (const command of ctx.commands) {
@@ -200,39 +203,61 @@ function renderFrame(stage, setup) {
     game.startStage(stage);
     const state = structuredClone(game.getSnapshot());
     setup?.(state);
-    const ctx = createRenderCtx({}, {});
+    const ctx = createRenderCtx({}, labelCanvas());
     Object.assign(ctx, { state, p: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t: 0 });
     (stage === 4 ? drawSky : drawOrbit)(ctx);
     return ctx.commands;
 }
+/** Records the words written on the label canvas, measuring 8px per character. */
+function labelCanvas(written = []) {
+    return { written, save() {}, restore() {}, measureText: text => ({ width: [...text].length * 8 }), fillText: text => written.push(text) };
+}
+const withoutBubble = commands => commands.filter(command => command.layer?.key !== 'attendance-bubble');
 const revealFrame = (phase, age) => renderFrame(4, state => Object.assign(state.sky, { phase, age }));
-test('the reveal turns to 45 degrees in four seconds and holds that view through the hand-off', () => {
+test('the reveal turns slowly and steadily from the side to behind the chair, with no stop on the way', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
-    for (const [elapsed, angle] of [[settle, 0], [settle + 2, .25], [settle + 4, .5],
-        [settle + turn, .5], [settle + turn + hold, .5]]) {
+    for (const [elapsed, angle] of [[settle, 0], [settle + turn, 1], [settle + turn + hold, 1]]) {
         const view = createSkyProjection(1000, 510, angle);
         endingChair(view, elapsed);
         const expected = view.commands();
         const phase = elapsed >= settle + turn ? 'depth' : 'reveal';
         const age = phase === 'depth' ? elapsed - settle - turn : elapsed;
-        const actual = revealFrame(phase, age).slice(-expected.length);
+        const actual = withoutBubble(revealFrame(phase, age)).slice(-expected.length);
         assert.deepEqual(actual, expected, `chair camera at ${elapsed} seconds`);
-        assert.ok(actual.some(command => command.c === '#83c8e4'), 'blue glasses remain visible');
+        if (angle < 1) assert.ok(actual.some(command => command.c === '#83c8e4'), 'blue glasses remain visible');
     }
 });
 
-test('stage five keeps the 45-degree character view from the reveal', () => {
+test('stage five starts from the rear character view the reveal ends on', () => {
     const isSpray = command => typeof command.c === 'string' && command.c.startsWith('#f6e6df');
-    const view = createSkyProjection(1000, 510, .5);
+    const view = createSkyProjection(1000, 510, 1);
     endingChair(view, 10);
     const expected = view.commands();
-    const entry = renderFrame(5).slice(-expected.length);
+    const entry = withoutBubble(renderFrame(5)).slice(-expected.length);
     assert.deepEqual(entry.filter(command => !isSpray(command)), expected.filter(command => !isSpray(command)));
+});
+
+test('the watchers stay out of the flat side view and turn up, without fading, as the view turns into 3D', () => {
+    const { settle, turn } = STAGE_FOUR.reveal;
+    const watch = (phase, age) => revealFrame(phase, age).filter(command => command.layer?.key === 'sky-ending-watch');
+    assert.equal(watch('reveal', settle * .9).length, 0, 'nothing in the 2D side view');
+    const early = watch('reveal', settle + turn * .3), late = watch('reveal', settle + turn * .8);
+    assert.ok(early.length > 0 && late.length > early.length, 'more cameras come into view as the turn goes on');
+    for (const commands of [early, late, watch('depth', 1)]) assert.ok(commands.every(command => command.layer.opacity === undefined), 'no fade');
+    assert.ok(revealFrame('reveal', settle + turn - .1).some(command => command.layer?.key === 'orbit-beacon'), 'the far speck shows before stage five');
+});
+
+test('the attendance bubble appears just before stage five and stays into its first moments', () => {
+    const bubble = commands => commands.filter(command => command.layer?.key === 'attendance-bubble');
+    assert.equal(bubble(revealFrame('reveal', 8)).length, 0, 'not while the chair is still gliding past the cameras');
+    assert.equal(bubble(revealFrame('depth', STAGE_FOUR.reveal.hold - .5)).length, 1, 'up during the last moments of stage four');
+    assert.equal(bubble(renderFrame(5)).length, 1, 'still up when stage five starts');
+    assert.equal(bubble(renderFrame(5, state => { state.orbit.age = 4; })).length, 0, 'gone once stage five is under way');
 });
 
 test('the departure leaves scenery behind before the quiet side view and is seekable', () => {
     const scenery = age => revealFrame('reveal', age).filter(command => command.layer?.key === 'sky-ending-departure');
-    const start = scenery(0), leaving = scenery(STAGE_FOUR.reveal.settle * .4);
+    const start = scenery(0), leaving = scenery(SKY_DEPARTURE * .57);
     assert.ok(start.length > 0 && leaving.length > 0);
     assert.ok(leaving[0].layer.opacity < start[0].layer.opacity);
     const bounds = commands => {
@@ -240,7 +265,8 @@ test('the departure leaves scenery behind before the quiet side view and is seek
         return { right: Math.max(...points.map(([x]) => x)), bottom: Math.max(...points.map(([, y]) => y)) };
     };
     assert.ok(bounds(leaving).right < bounds(start).right, 'the ledge retreats behind the chair');
-    assert.deepEqual(scenery(STAGE_FOUR.reveal.settle * .7), [], 'open sky remains before the camera turns');
+    assert.deepEqual(scenery(SKY_DEPARTURE), [], 'open sky remains before the camera turns');
+    assert.ok(SKY_DEPARTURE < STAGE_FOUR.reveal.settle, 'the ledge is gone before the turn starts');
     assert.deepEqual(scenery(0), start, 'backward seeking restores the departure scenery');
 });
 
@@ -254,9 +280,10 @@ test('arrival spray shortens and settles into the existing chair animation', () 
     const bottom = commands => Math.max(...plume(commands).flatMap(command => [...command.v, ...command.curves]).map(point => point[1]));
     assert.ok(bottom(chair(0, 2.5, 0)) > bottom(chair(0, 1, 0)) + 30);
     assert.notDeepEqual(chair(.1, 1, 1), chair(.1, 1, 0), 'arrival initially shakes the chair');
-    assert.deepEqual(revealFrame('reveal', 1).slice(-chair(1, 1, 0).length), chair(1, 1, 0),
+    const settled = SKY_DEPARTURE + .1;
+    assert.deepEqual(revealFrame('reveal', settled).slice(-chair(settled, 1, 0).length), chair(settled, 1, 0),
         'arrival motion returns to the original animated model before the camera turns');
-    assert.deepEqual(plume(revealFrame('reveal', 1)), plume(chair(1, 1, 0)));
+    assert.deepEqual(plume(revealFrame('reveal', settled)), plume(chair(settled, 1, 0)));
 });
 const hex = color => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
 // Cloud bodies are the vertical gradients whose first stop is a cloud crown colour.

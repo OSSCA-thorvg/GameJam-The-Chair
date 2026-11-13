@@ -7,7 +7,8 @@ export const STAGE_FIVE = deepFreeze({
     bankSpeed: 650, bankResponse: 5, cruiseRecovery: .6,
     ringClearance: 40, approachSpeed: 55, arrivalSpeed: 45, arrivalDistance: 600,
     bounds: { x: 680, y: 430 },
-    rings: [{ x: 0, y: 0, z: 1400, radius: 400 }, { x: 100, y: 45, z: 3000, radius: 340 }],
+    // No hoops: after the entry the chair heads straight for the office door.
+    rings: [] as { x: number; y: number; z: number; radius: number }[],
     door: { x: 0, y: -150, z: 5100, width: 240, height: 340, clearance: 100, stopDistance: 220 },
     checkpoint: { x: 0, y: -150, z: 4880 },
 });

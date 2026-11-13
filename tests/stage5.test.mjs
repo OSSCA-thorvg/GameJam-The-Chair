@@ -30,25 +30,18 @@ test('orbit steering is screen-relative, coasts after release and speeds up with
     assert.deepEqual(parseCommand({ type: 'startStage', id: 5 }), { type: 'startStage', id: 5 });
 });
 
-test('a missed hoop remains available without deaths or focus damage', () => {
+test('stage five has no hoops: after the entry the chair heads straight for the door', () => {
+    assert.deepEqual(STAGE_FIVE.rings, []);
     const game = fresh();
     const state = JSON.parse(game.serialize());
-    Object.assign(state.orbit, { phase: 'rings', z: STAGE_FIVE.rings[0].z - 1 });
-    Object.assign(state.p, { x: 600, y: 0 });
-    const before = structuredClone(state);
+    Object.assign(state.orbit, { phase: 'entry', age: STAGE_FIVE.entryTime });
     const result = stepGame(state);
-    assert.deepEqual(state, before);
-    assert.equal(result.state.orbit.rings, 0);
-    assert.ok(result.state.orbit.z < STAGE_FIVE.rings[0].z);
+    assert.equal(result.state.orbit.phase, 'door');
     assert.equal(result.state.focus, 100);
     assert.equal(result.state.deaths, 0);
-    result.state.p.x = 0;
-    const aligned = stepGame(result.state);
-    for (let i = 0; i < 10 && aligned.state.orbit.rings === 0; i++) Object.assign(aligned, stepGame(aligned.state));
-    assert.equal(aligned.state.orbit.rings, 1);
 });
 
-test('the cloud entry ends at the office door after both hoops, without clearing all of stage five', () => {
+test('the cloud entry ends at the office door, without clearing all of stage five', () => {
     const game = fresh();
     for (let i = 0; i < 120 * 60 && game.getSnapshot().checkpoint === 0; i++) {
         const state = game.getSnapshot(), p = state.player;
@@ -59,7 +52,7 @@ test('the cloud entry ends at the office door after both hoops, without clearing
     }
     const end = game.getSnapshot();
     assert.equal(end.orbit.phase, 'parked');
-    assert.equal(end.orbit.rings, 2);
+    assert.equal(end.orbit.rings, 0);
     assert.equal(end.checkpoint, 1);
     assert.equal(end.deaths, 0);
     assert.equal(end.focus, 100);
@@ -100,7 +93,7 @@ test('the orbit preview reaches the office door, seeks backwards, and renders fi
     assert.deepEqual(scene.sample(4), early);
     for (const width of [320, 1000]) for (const at of [0, 5, 15, 30, scene.duration]) {
         const frame = scene.sample(at), labels = [];
-        const ctx = createRenderCtx({}, { save() {}, restore() {}, fillText(text) { labels.push(text); } });
+        const ctx = createRenderCtx({}, { save() {}, restore() {}, measureText: text => ({ width: [...text].length * 8 }), fillText(text) { labels.push(text); } });
         Object.assign(ctx, { state: frame.state, t: at, W: width, H: 510 });
         const before = structuredClone(frame.state);
         drawOrbit(ctx);
@@ -109,7 +102,8 @@ test('the orbit preview reaches the office door, seeks backwards, and renders fi
         assert.ok(ctx.commands.reduce((n,c) => n+(c.curves?.length ?? 0), 0) <= 5000, 'cloud entry stays within its curve budget');
         assert.ok(ctx.commands.filter(c => c.c && typeof c.c === 'object').length <= 140, 'cloud entry stays within its gradient budget');
         const commands = ctx.commands;
-        assert.ok(commands.some(cmd => cmd.curves && cmd.stroke), 'hoops and clouds use vector curves');
+        assert.ok(commands.some(cmd => cmd.curves), 'clouds use vector curves');
+        assert.ok(!commands.some(cmd => cmd.stroke?.color === '#bff5bd'), 'no green hoops');
         assert.ok(commands.every(cmd => !cmd.layer?.blur && !cmd.layer?.motionBlur), 'the cloud entry uses no blur');
         for (const cmd of commands) for (const point of [...cmd.v, ...(cmd.curves ?? [])]) assert.ok(point.every(Number.isFinite));
     }

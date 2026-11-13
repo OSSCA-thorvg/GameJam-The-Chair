@@ -1,21 +1,5 @@
-import type { RenderCtx } from '../context';
-import type { Curve, DrawCommand, Vector } from '../types';
 import type { SkyProjection, Point3 } from './sky-projection';
 import { STAGE_FIVE } from '../../game/stages/orbit/data';
-
-export function orbitHoop(ctx: RenderCtx, view: SkyProjection, center: Point3, radius: number, passed: boolean) {
-    if (view.depth(center) < 80) return;
-    const point = (x: number, y: number): Vector => view.project([center[0], center[1] + y * radius, center[2] + x * radius]);
-    const k = .55228475;
-    const curve = (a: Vector, b: Vector, c: Vector): Curve => [...point(...a), ...point(...b), ...point(...c)];
-    const curves = [curve([1,k],[k,1],[0,1]), curve([-k,1],[-1,k],[-1,0]),
-        curve([-1,-k],[-k,-1],[0,-1]), curve([k,-1],[1,-k],[1,0])];
-    const projectedRadius = Math.abs(point(1,0)[0] - point(0,0)[0]);
-    const path: DrawCommand = { v: [point(1,0)], curves, c: null, stroke: {
-        width: Math.max(1.5, projectedRadius * .027), color: passed ? '#b6d5c75c' : '#bff5bd',
-    } };
-    ctx.commands.push(path);
-}
 
 export function orbitDoor(view: SkyProjection, center: Point3) {
     const [z, y, x] = center;
