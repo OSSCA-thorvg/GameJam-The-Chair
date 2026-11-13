@@ -66,6 +66,22 @@ export type LayerSpec = {
     /** Shrink expensive blur sampling when this layer's expanded screen area exceeds the budget. */
     effectBudget?: { area: number; minScale?: number };
 };
+/**
+ * A line of vector text drawn by ThorVG Text inside the scene, so later commands paint over it.
+ * Screen space: centred on (x, y), rotated by `rotation` radians. The command's `v` is its screen box.
+ */
+export type TextSpec = {
+    content: string;
+    font: string;
+    /** Font size in screen px. */
+    size: number;
+    x: number;
+    y: number;
+    rotation: number;
+    fill: string;
+    /** Outline drawn under the fill, like Canvas2D strokeText() before fillText(). */
+    outline?: { width: number; color: string };
+};
 export type DrawCommand = {
     v: Vector[];
     curves?: Curve[];
@@ -77,4 +93,6 @@ export type DrawCommand = {
     trim?: [number, number];
     blend?: Blend;
     layer?: LayerSpec;
+    /** Draw this text instead of the path; `v` is then only the text's screen box. */
+    text?: TextSpec;
 };

@@ -16,29 +16,18 @@ const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, dr
 `);
 
 test('the stage four billboard slogan fills its space without covering the portrait', () => {
+    const ems = { '흔들리지': 4, '않는 기업': 3.25, UNSHAKE: 5.2, 'ABLE INC.': 4.8 };
     const renderLabels = (locale, width) => {
-        const labels = [];
-        let originX = 0, originY = 0;
-        const lg = {
-            save() {}, restore() {}, rotate() {},
-            translate(x, y) { originX = x; originY = y; },
-            measureText(text) {
-                const ems = { '흔들리지 않는 기업': 7.7, '흔들리지': 4, '않는 기업': 3.25,
-                    'UNSHAKEABLE INC.': 10, UNSHAKE: 5.2, 'ABLE INC.': 4.8 }[text];
-                return { width: Number(this.font.match(/([\d.]+)px/)?.[1]) * ems };
-            },
-            strokeText() {},
-            fillText(text, x, y) {
-                const measured = this.measureText(text).width;
-                labels.push({ text, fontSize: Number(this.font.match(/([\d.]+)px/)?.[1]),
-                    left: originX + x - measured / 2, right: originX + x + measured / 2, y: originY + y });
-            },
-        };
+        // Only measuring touches the label canvas; the copy itself is ThorVG Text in the command list.
+        const lg = { measureText(text) { return { width: Number(this.font.match(/([\d.]+)px/)?.[1]) * ems[text] }; } };
         const ctx = createRenderCtx({}, lg);
         ctx.locale = locale;
         ctx.scale = 1 / 1.12;
         skyCoursePlatform(ctx, { id: 'last-sign', kind: 'sign', x: 0, y: 0, width, angle: 0 });
-        return labels;
+        return ctx.commands.filter(command => command.text).map(({ text }) => ({
+            text: text.content, fontSize: text.size,
+            left: text.x - text.size * ems[text.content] / 2, right: text.x + text.size * ems[text.content] / 2, y: text.y,
+        }));
     };
 
     const ko = renderLabels('ko', 230);

@@ -2,7 +2,8 @@ import type { Locale } from '../i18n';
 import { LEVEL } from '../game/level';
 import type { GameState } from '../game/game';
 import type { DeepReadonly, Mode } from '../game/types';
-import type { Vector, Curve, Color, Gradient, DrawCommand, LayerSpec, Blend, Stroke, Bounds } from './types';
+import type { Vector, Curve, Color, Gradient, DrawCommand, LayerSpec, Blend, Stroke, Bounds, TextSpec } from './types';
+import { signFontCss, SIGN_FONT } from './fonts';
 import { ART } from './art';
 import type { EffectsState } from './effects';
 import type { PersonalBoxReaction } from './personal-box-motion';
@@ -88,6 +89,10 @@ export type RenderCtx = {
     ellipse(x: number, y: number, rx: number, ry: number, c: string | Gradient, opts?: PathOptions): void;
     rod(x: number, y: number, xx: number, yy: number, w: number, c: string): void;
     label(text: string, x: number, y: number, size?: number, color?: string, align?: CanvasTextAlign): void;
+    /** Width of one line of sign text at `size` local units, in local units. */
+    measureSignText(content: string, size: number): number;
+    /** One centred line of sign text as a ThorVG Text command, ordered with the shapes around it. */
+    signText(content: string, x: number, y: number, size: number, fill: string, outline?: { width: number; color: string }): void;
 };
 
 export type PathOptions = { blend?: Blend; trim?: [number, number] };
@@ -290,6 +295,26 @@ export function createRenderCtx(bg: CanvasRenderingContext2D, lg: CanvasRenderin
         ctx.lg.fillStyle = color;
         ctx.lg.textAlign = align;
         ctx.lg.fillText(text, (x - ctx.cam) * ctx.scale, (y + ctx.vertical) * ctx.scale);
+    };
+    ctx.measureSignText = (content, size) => {
+        // Measured at a fixed size in the loaded face; widths scale linearly with font size.
+        const lg = ctx.lg as Partial<CanvasRenderingContext2D>;
+        if (typeof lg.measureText !== 'function') return content.length * size * .62;
+        lg.font = signFontCss(100);
+        return lg.measureText(content).width / 100 * size;
+    };
+    ctx.signText = (content, x, y, size, fill, outline) => {
+        const unit = ctx.scale * ctx.localScale;
+        const [cx, cy] = ctx.screenPoint(x, y);
+        const halfWidth = ctx.measureSignText(content, size) / 2 + (outline?.width ?? 0);
+        const halfHeight = size * .6 + (outline?.width ?? 0);
+        const box = ([[-halfWidth, -halfHeight], [halfWidth, -halfHeight], [halfWidth, halfHeight], [-halfWidth, halfHeight]] as Vector[])
+            .map(([bx, by]) => ctx.screenPoint(x + bx, y + by));
+        const text: TextSpec = {
+            content, font: SIGN_FONT, size: size * unit, x: cx, y: cy, rotation: ctx.rotation, fill,
+            ...(outline ? { outline: { width: outline.width * unit, color: outline.color } } : {}),
+        };
+        push({ v: box, c: fill, text });
     };
 
     return ctx;

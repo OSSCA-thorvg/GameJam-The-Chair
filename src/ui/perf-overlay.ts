@@ -293,7 +293,7 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
             `gpu ${w.gpu ? `${ms(w.gpu.avg)} / p95 ${ms(w.gpu.p95)} / max ${ms(w.gpu.max)} ms` : 'n/a'}  (timer ${s?.gpuTimer ?? 'n/a'})`,
             s ? `canvas ${s.width}×${s.height} css · page dpr ${devicePixelRatio}` : 'canvas n/a',
             s ? `raster ${s.raster.width}×${s.raster.height} · ${(s.raster.width * s.raster.height / 1e6).toFixed(2)} Mpx · dpr ${+s.raster.dpr.toFixed(3)}` : 'raster n/a',
-            `cmds ${stats.commands}  shapes ${stats.topShapes}/${stats.poolTop}`,
+            `cmds ${stats.commands}  shapes ${stats.topShapes}/${stats.poolTop}  text ${stats.texts}`,
             `layers ${stats.layers}/${stats.layerSlots}  layer shapes ${stats.layerShapes} (parked ${stats.parkedShapes})`,
             `reorder ${stats.reorder ? 'YES' : 'no'}  (${reorders}/${count} frames)`,
             `blur g${stats.gaussianBlurs} m${stats.motionBlurs}  Σ${stats.blurAmount.toFixed(1)}  area ${(stats.blurArea / 1e3).toFixed(0)}k px²` +
