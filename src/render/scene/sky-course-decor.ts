@@ -25,12 +25,12 @@ export function skyBuilding(ctx: RenderCtx) {
         const x = 3018 + i * 71;
         ctx.rect(x - 3, y - 270, 61, 152, '#304962');
         // Two warm, lit floors behind the glass, each with its staff, then the tinted pane over them.
-        for (const [top, floor, row] of [[-267, -197, 1], [-192, -121, 0]] as const) {
+        for (const [top, floor, row] of [[-267, -197, 0], [-192, -121, 1]] as const) {
             ctx.gradientPolygon([[x, y + top], [x + 55, y + top], [x + 55, y + floor], [x, y + floor]],
                 ctx.gradientFill(x, y + top, x, y + floor, [[0, '#f3e6c8'], [.7, '#d9c6a0'], [1, '#b7a07c']]));
             ctx.rect(x, y + floor - 14, 55, 14, '#a8957a');
             ctx.rect(x + 8, y + top + 1, 39, 2, '#fffbea');
-            officeWorker(ctx, i + row * 6, x, y + floor);
+            officeWorker(ctx, row * 6 + i + 1, x, y + floor);
         }
         ctx.gradientPolygon([[x, y - 267], [x + 55, y - 267], [x + 55, y - 121], [x, y - 121]],
             ctx.gradientFill(x, y - 267, x + 55, y - 121, [[0, '#91a8b255'], [.55, '#7e91a533'], [1, '#526b8266']]));

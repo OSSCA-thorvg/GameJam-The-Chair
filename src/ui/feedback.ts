@@ -91,9 +91,6 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
             case 'practice-cleared':
                 say('player.approved');
                 break;
-            case 'gear-hit':
-                say('player.gearHit');
-                break;
             case 'checkpoint':
                 status = 'status.checkpoint';
                 break;
