@@ -535,7 +535,7 @@ function skyOfficeFacade(): PreviewScene {
         sample(time) {
             const at = Math.max(0, Math.min(6, time));
             return { state: { ...base, time: at, sky: { ...base.sky, phase: 'course', lift: 1 },
-                player: { ...base.player, x: 3330, y: -2038 }, ground: true }, effects };
+                player: { ...base.player, x: 3110, y: -1918 }, ground: true }, effects };
         },
     };
 }

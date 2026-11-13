@@ -2,7 +2,7 @@ import type { RenderCtx } from '../context';
 
 // Office staff behind the floating facade. Local units: origin at the window's floor centre, facing right.
 type Look = { skin: string; shade: string; hair: string; shirt: string; fold: string; tie: string | null; pants: string; long: boolean };
-type Pose = 'typing' | 'asleep' | 'waving';
+type Pose = 'typing' | 'phone' | 'stamping';
 
 const LOOKS: readonly Look[] = [
     { skin: '#e4cba6', shade: '#c9a983', hair: '#3c424f', shirt: '#f1eee4', fold: '#d3cfc2', tie: '#c8463b', pants: '#3f4a5c', long: false },
@@ -58,10 +58,11 @@ function arm(ctx: RenderCtx, L: Look, from: [number, number], elbow: [number, nu
     ctx.ellipse(hand[0], hand[1], 2, 1.8, L.skin);
 }
 
-function desk(ctx: RenderCtx, t: number) {
+function desk(ctx: RenderCtx, t: number, monitor: boolean) {
     ctx.rect(6, -26, 18, 2.6, '#e8bb79');
     ctx.rect(6, -23.4, 18, 1, '#b98d55');
     ctx.rect(21, -23, 2, 23, '#455e76');
+    if (!monitor) return;
     ctx.rect(18, -43, 3.4, 15, '#2c3a50');
     ctx.rect(19.6, -28, 1.4, 2, '#455e76');
     ctx.rect(15, -26.6, 4, 1, '#3c4658');
@@ -73,51 +74,65 @@ function desk(ctx: RenderCtx, t: number) {
 
 function worker(ctx: RenderCtx, pose: Pose, L: Look, t: number, look: number) {
     if (pose === 'typing') {
-        desk(ctx, t);
+        desk(ctx, t, true);
         seated(ctx, L, -8);
         torso(ctx, L, -8, -26, 1.5);
         const tap = Math.sin(t * 22) * 1.1;
         arm(ctx, L, [-5, -44], [1, -34], [12, -28.5 + tap]);
         head(ctx, L, -6, -54, look);
-    } else if (pose === 'asleep') {
-        desk(ctx, t);
+    } else if (pose === 'phone') {
+        // Handset at the ear, scribbling the caller's demands on a memo pad.
+        desk(ctx, t, false);
+        ctx.rect(9, -27.6, 10, 1.6, '#fbf6e8');
+        for (let i = 0; i < 3; i++) ctx.rod(10, -27 + i * .5, 11 + ((t * 3 + i) % 1) * 6, -27 + i * .5, .3, '#5d6d82');
+        ctx.rect(15, -29, 6, 3, '#e8e2cc');
         seated(ctx, L, -8);
-        // Slumped forward, head down on the desk, breathing slowly, with a rising snore of Z shapes.
-        const breath = Math.sin(t * 1.6) * .6;
-        ctx.polygon([[-15, -26], [-2, -26], [7, -35 + breath], [-3, -45 + breath]], L.shirt);
-        ctx.polygon([[-15, -26], [-10, -26], [-4, -39 + breath], [-3, -45 + breath]], L.fold);
-        arm(ctx, L, [1, -40 + breath], [9, -29], [16, -28]);
-        head(ctx, L, 8, -33 + breath, 0, true);
-        for (let i = 0; i < 3; i++) {
-            const k = (t * .45 + i / 3) % 1;
-            const zx = 10 + k * 8 + i, zy = -42 - k * 24, s = 1.4 + k * 1.6;
-            ctx.strokePath([zx - s, zy - s], [[zx + s, zy - s, zx + s, zy - s, zx + s, zy - s], [zx - s, zy + s, zx - s, zy + s, zx - s, zy + s],
-                [zx + s, zy + s, zx + s, zy + s, zx + s, zy + s]], { width: .9, color: ctx.tint('#2f3a4c', 1 - k), cap: 'round' });
-        }
+        arm(ctx, L, [-7, -44], [-13, -38], [-11, -50]);
+        torso(ctx, L, -8, -26, 1);
+        head(ctx, L, -6, -54, look);
+        ctx.rod(-13, -59, -8.5, -46, 3.4, '#e8e2cc');
+        ctx.ellipse(-12.6, -58.4, 2.4, 1.8, '#c8c2ac');
+        ctx.ellipse(-8.8, -46.4, 2.4, 1.8, '#c8c2ac');
+        ctx.ellipse(-11, -51, 2, 2.2, L.skin);
+        ctx.strokePath([-9, -47], [[-4, -40, 4, -34, 16, -29]], { width: .7, color: '#c8c2ac', cap: 'round' });
+        const talk = Math.max(0, Math.sin(t * 6));
+        ctx.ellipse(-1, -50, .9, .4 + talk * .8, '#6a3b35');
+        const scribble = Math.sin(t * 17) * 1.2;
+        arm(ctx, L, [-4, -44], [2, -33], [12 + scribble, -29]);
+        ctx.rod(12 + scribble, -29, 14 + scribble, -33, .8, '#e0503f');
     } else {
-        // Standing at the glass, waving at the flying chair.
-        const sway = Math.sin(t * 2) * .8;
-        ctx.polygon([[-8, -27], [-1, -27], [-2, -3], [-7, -3]], L.pants);
-        ctx.polygon([[-3, -27], [3, -27], [4, -3], [0, -3]], L.pants);
-        ctx.ellipse(-4, -2, 4, 1.8, '#22262e');
-        ctx.ellipse(3, -2, 4, 1.8, '#22262e');
-        torso(ctx, L, -3 + sway * .3, -27, sway * .4);
-        const wave = Math.sin(t * 9) * 5;
-        arm(ctx, L, [0, -45], [9, -52], [13 + wave * .4, -64 + Math.abs(wave) * .2]);
-        ctx.ellipse(13 + wave * .4, -64, 2.6, 3, L.skin);
-        arm(ctx, L, [-3, -44], [-2, -34], [1, -26]);
-        head(ctx, L, -2 + sway * .4, -56, look);
-        ctx.ellipse(4.2 + sway * .4, -51.6, 1.6, 1.2, '#7a3a35');
+        // Approving a stack of documents one thump of the stamp at a time.
+        desk(ctx, t, false);
+        const cycle = (t * 1.6) % 1;
+        const lift = cycle < .75 ? Math.sin(cycle / .75 * Math.PI / 2) : 1 - (cycle - .75) / .25;
+        for (let i = 0; i < 4; i++) ctx.rect(9 + (i % 2) * .6, -27.4 - i * 1.3, 12, 1.2, i % 2 ? '#f3ecd8' : '#fbf6e8');
+        const marks = Math.floor(t * 1.6) % 4;
+        for (let i = 0; i < marks; i++) ctx.ellipse(11 + i * 3, -32.4, 1.1, .4, '#e0503f');
+        seated(ctx, L, -8);
+        torso(ctx, L, -8, -26, 2.5);
+        arm(ctx, L, [-6, -44], [2, -33], [19, -32]);
+        const hand: [number, number] = [14, -34 - lift * 12];
+        arm(ctx, L, [-3, -44], [4, -36 - lift * 6], hand);
+        ctx.rect(hand[0] - 1.2, hand[1] - 4, 2.4, 5, '#b98d55');
+        ctx.ellipse(hand[0], hand[1] - 4.4, 1.8, 1.4, '#8a5a3a');
+        ctx.rect(hand[0] - 2.4, hand[1] + 1, 4.8, 1.6, '#e0503f');
+        if (lift < .08) ctx.strokePath([hand[0] - 5, hand[1] + 1], [[hand[0] - 7, hand[1], hand[0] - 7, hand[1] - 2, hand[0] - 6, hand[1] - 3]],
+            { width: .6, color: '#2f3a4c', cap: 'round' });
+        head(ctx, L, -5, -53, Math.max(look, .6));
     }
 }
 
-// Only three of the twelve windows are staffed. Slots count left to right, upper row 1-6, lower row 7-12.
+// Only three of the twelve facade cells are windows, each with someone at work. Slots count left to right, upper row 1-6, lower row 7-12.
 const STAFF: Readonly<Record<number, { pose: Pose; look: number; dx: number }>> = {
-    2: { pose: 'waving', look: 3, dx: 0 },
+    2: { pose: 'phone', look: 3, dx: -1 },
     5: { pose: 'typing', look: 1, dx: -2 },
-    9: { pose: 'asleep', look: 2, dx: -2 },
+    9: { pose: 'stamping', look: 2, dx: -2 },
 };
 const SCALE = 1.05;
+
+export function hasWorker(slot: number) {
+    return slot in STAFF;
+}
 
 /** The worker in window `slot`, if any. `left` is the window's left edge and `floor` the room's floor line in world space. */
 export function officeWorker(ctx: RenderCtx, slot: number, left: number, floor: number) {

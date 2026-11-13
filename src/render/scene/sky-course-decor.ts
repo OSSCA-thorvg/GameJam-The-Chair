@@ -1,5 +1,5 @@
 import type { RenderCtx } from '../context';
-import { officeWorker } from './sky-office-workers';
+import { hasWorker, officeWorker } from './sky-office-workers';
 
 export function skyBuilding(ctx: RenderCtx) {
     if (3450 < ctx.cam - 100 || 3000 > ctx.cam + ctx.VW + 100) return;
@@ -24,20 +24,31 @@ export function skyBuilding(ctx: RenderCtx) {
     for (let i = 0; i < 6; i++) {
         const x = 3018 + i * 71;
         ctx.rect(x - 3, y - 270, 61, 152, '#304962');
-        // Two warm, lit floors behind the glass, each with its staff, then the tinted pane over them.
         for (const [top, floor, row] of [[-267, -197, 0], [-192, -121, 1]] as const) {
-            ctx.gradientPolygon([[x, y + top], [x + 55, y + top], [x + 55, y + floor], [x, y + floor]],
-                ctx.gradientFill(x, y + top, x, y + floor, [[0, '#f3e6c8'], [.7, '#d9c6a0'], [1, '#b7a07c']]));
-            ctx.rect(x, y + floor - 14, 55, 14, '#a8957a');
-            ctx.rect(x + 8, y + top + 1, 39, 2, '#fffbea');
-            officeWorker(ctx, row * 6 + i + 1, x, y + floor);
+            const slot = row * 6 + i + 1;
+            const a = y + top, b = y + floor;
+            if (!hasWorker(slot)) {
+                // Cells nobody works in are plain facade panels.
+                ctx.gradientPolygon([[x, a], [x + 55, a], [x + 55, b], [x, b]],
+                    ctx.gradientFill(x, a, x + 55, b, [[0, '#4d6680'], [1, '#3a5270']]));
+                ctx.rect(x, (a + b) / 2, 55, 1.2, '#304962');
+                ctx.rect(x, a, 55, 1.2, '#7e91a566');
+                for (const rx of [x + 4, x + 51]) for (const ry of [a + 4, b - 4]) ctx.ellipse(rx, ry, 1.2, 1.2, '#7e91a5');
+                continue;
+            }
+            // A warm, lit office behind the glass, its worker, then the tinted pane over them.
+            ctx.gradientPolygon([[x, a], [x + 55, a], [x + 55, b], [x, b]],
+                ctx.gradientFill(x, a, x, b, [[0, '#f3e6c8'], [.7, '#d9c6a0'], [1, '#b7a07c']]));
+            ctx.rect(x, b - 14, 55, 14, '#a8957a');
+            ctx.rect(x + 8, a + 1, 39, 2, '#fffbea');
+            officeWorker(ctx, slot, x, b);
+            ctx.gradientPolygon([[x, a], [x + 55, a], [x + 55, b], [x, b]],
+                ctx.gradientFill(x, a, x + 55, b, [[0, '#91a8b255'], [.55, '#7e91a533'], [1, '#526b8266']]));
+            ctx.polygon([[x + 3, a + 4], [x + 24, a + 4], [x + 6, b - 20], [x + 3, b - 20]], '#ffffff2e');
+            ctx.polygon([[x + 36, a + 4], [x + 48, a + 4], [x + 20, b - 4], [x + 9, b - 4]], '#ffffff1a');
+            ctx.rod(x + 1, a + 1, x + 1, b - 1, 1.5, '#a7b4c1');
         }
-        ctx.gradientPolygon([[x, y - 267], [x + 55, y - 267], [x + 55, y - 121], [x, y - 121]],
-            ctx.gradientFill(x, y - 267, x + 55, y - 121, [[0, '#91a8b255'], [.55, '#7e91a533'], [1, '#526b8266']]));
-        ctx.polygon([[x + 3, y - 263], [x + 26, y - 263], [x + 6, y - 199], [x + 3, y - 199]], '#ffffff2e');
-        ctx.polygon([[x + 35, y - 263], [x + 49, y - 263], [x + 18, y - 126], [x + 6, y - 126]], '#ffffff1a');
         ctx.rect(x, y - 197, 55, 5, '#455e76');
-        ctx.rod(x + 1, y - 266, x + 1, y - 123, 1.5, '#a7b4c1');
         ctx.rect(x + 3, y - 125, 50, 3, '#304962');
         ctx.rect(x + 4, y - 108, 16, 1, '#7e91a5');
     }
