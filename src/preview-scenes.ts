@@ -3,6 +3,7 @@ import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
 import { STAGE_FOUR } from './game/stages/sky/data';
+import { SKY_TURN } from './render/scene/sky-camera';
 import { STAGE_TWO } from './game/stages/building/data';
 import { ductTimings, STAGE_THREE, GRAPH_CORNERS } from './game/stages/rooftop/data';
 import { createEffects, type EffectsState } from './render/effects';
@@ -543,10 +544,11 @@ function skyEnding(): PreviewScene {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const duration = settle + turn + hold;
     return {
-        id: 'sky-ending', label: 'Sky · Departure and side-to-back reveal', duration, focusX: STAGE_FOUR.goal,
+        id: 'sky-ending', label: 'Sky · Departure and 45-degree reveal', duration, focusX: STAGE_FOUR.goal,
         markers: [{ at: 0, label: 'Leaving the ledge' }, { at: settle * .7, label: 'Quiet side view' },
-            { at: settle + turn / 2, label: 'Camera turning' },
-            { at: settle + turn, label: 'Back view' },
+            { at: settle + SKY_TURN.duration / 2, label: 'Clouds opening' },
+            { at: settle + SKY_TURN.duration, label: '45-degree hold' },
+            { at: settle + turn, label: 'Forward view revealed' },
             { at: duration, label: 'Stage 5 hand-off' }],
         sample(time) {
             const at = Math.max(0, Math.min(duration, time));
@@ -564,7 +566,7 @@ function orbitRoute(): PreviewScene {
     game.startStage(5);
     const effects = createEffects();
     const frames = [capture(game, effects)];
-    const markers = [{ at: 0, label: 'Stage 4 rear view' }];
+    const markers = [{ at: 0, label: 'Stage 4 three-quarter view' }];
     let previous = '';
     for (let i = 0; i < 3600; i++) {
         const state = game.getSnapshot(), orbit = state.orbit;

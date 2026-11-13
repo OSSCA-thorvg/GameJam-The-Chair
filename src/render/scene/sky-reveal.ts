@@ -5,6 +5,7 @@ import type { LayerSpec } from '../types';
 import { createSkyProjection, type Point3 } from './sky-projection';
 import { endingChair } from './sky-ending-art';
 import { skyDeparture } from './sky-departure';
+import { SKY_TURN } from './sky-camera';
 import { basinCloudSeeds, doorGlow, orbitCloudBank, orbitSky } from './orbit-atmosphere';
 import { orbitDoor, orbitHoop } from './orbit-art';
 
@@ -24,17 +25,18 @@ function inLayer(ctx: RenderCtx, layer: LayerSpec, draw: () => void) {
 }
 
 // Screen-space commands still go through the shared ThorVG paint pool and Canvas2D fallback.
-// The camera swings from the chair's side to its back through stage five's bread-cloud basin,
+// The camera swings from the chair's side to a three-quarter view through the cloud basin,
 // so the last frame here is the first frame of stage five.
 export function drawSkyReveal(ctx: RenderCtx) {
     const { sky } = ctx.state;
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const elapsed = sky.phase === 'depth' ? settle + turn + sky.age : sky.age;
-    const orbit = smooth((elapsed - settle) / turn);
+    const progress = smooth((elapsed - settle) / Math.min(turn, SKY_TURN.duration));
+    const orbit = progress * SKY_TURN.orbit;
     const goal = smooth((elapsed - settle - turn) / (hold * .6));
     const view = createSkyProjection(ctx.W, ctx.H, orbit);
     // The clouds use the stage-five camera framing by the end of the turn.
-    const basin = createSkyProjection(ctx.W, ctx.H, orbit, { centerY: .5 - .13 * orbit, eyeY: 45 - 30 * orbit });
+    const basin = createSkyProjection(ctx.W, ctx.H, progress, { centerY: .5 - .13 * progress, eyeY: 45 - 30 * progress });
     const point = (x: number, y: number, z: number): Point3 => [z, 15 + y, x];
     // Only the clouds of stage five's first frame are drawn, so none appears mid-turn and then vanishes.
     const only = basinCloudSeeds(ctx, createSkyProjection(ctx.W, ctx.H, 1, { centerY: .37, level: true }), 0, BASIN);
@@ -51,7 +53,7 @@ export function drawSkyReveal(ctx: RenderCtx) {
         },
     });
     orbitCloudBank(ctx, basin, 0, false, { anchor: BASIN, only, nearDepth: 1100 });
-    // While the camera holds behind the chair, stage five's rings and door appear before control returns.
+    // Keep the forward scenery aligned with stage five while the chair holds its three-quarter view.
     if (goal > 0) doorGlow(ctx, basin, point(STAGE_FIVE.door.x, STAGE_FIVE.door.y + 60, STAGE_FIVE.door.z), goal);
     if (goal > 0) inLayer(ctx, { key: 'sky-ending-goal', opacity: goal }, () => {
         orbitDoor(basin, point(STAGE_FIVE.door.x, STAGE_FIVE.door.y, STAGE_FIVE.door.z));

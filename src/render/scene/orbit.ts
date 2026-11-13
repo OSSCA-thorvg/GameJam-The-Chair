@@ -2,6 +2,7 @@ import type { RenderCtx } from '../context';
 import type { Point3 } from './sky-projection';
 import { createSkyProjection } from './sky-projection';
 import { endingChair } from './sky-ending-art';
+import { SKY_TURN } from './sky-camera';
 import { orbitDoor, orbitHoop } from './orbit-art';
 import { orbitSky, orbitCloudBank, doorGlow } from './orbit-atmosphere';
 import { STAGE_FIVE as C } from '../../game/stages/orbit/data';
@@ -24,7 +25,7 @@ export function drawOrbit(ctx: RenderCtx) {
         orbitHoop(ctx, view, point(ring.x,ring.y,ring.z), ring.radius, i < orbit.rings);
     }
     orbitCloudBank(ctx, view, orbit.z, true);
-    const chair = createSkyProjection(ctx.W, ctx.H, 1, {
+    const chair = createSkyProjection(ctx.W, ctx.H, SKY_TURN.orbit, {
         zoom: 1 - blend*.3, centerY: .5 + blend*.2 - p.y/C.bounds.y*.12,
         offsetX: p.x/C.bounds.x*ctx.W*.18, roll: p.a,
     });

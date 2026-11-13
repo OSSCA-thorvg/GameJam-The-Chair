@@ -206,6 +206,30 @@ function renderFrame(stage, setup) {
     return ctx.commands;
 }
 const revealFrame = (phase, age) => renderFrame(4, state => Object.assign(state.sky, { phase, age }));
+test('the reveal turns to 45 degrees in four seconds and holds that view through the hand-off', () => {
+    const { settle, turn, hold } = STAGE_FOUR.reveal;
+    for (const [elapsed, angle] of [[settle, 0], [settle + 2, .25], [settle + 4, .5],
+        [settle + turn, .5], [settle + turn + hold, .5]]) {
+        const view = createSkyProjection(1000, 510, angle);
+        endingChair(view, elapsed);
+        const expected = view.commands();
+        const phase = elapsed >= settle + turn ? 'depth' : 'reveal';
+        const age = phase === 'depth' ? elapsed - settle - turn : elapsed;
+        const actual = revealFrame(phase, age).slice(-expected.length);
+        assert.deepEqual(actual, expected, `chair camera at ${elapsed} seconds`);
+        assert.ok(actual.some(command => command.c === '#83c8e4'), 'blue glasses remain visible');
+    }
+});
+
+test('stage five keeps the 45-degree character view from the reveal', () => {
+    const isSpray = command => typeof command.c === 'string' && command.c.startsWith('#f6e6df');
+    const view = createSkyProjection(1000, 510, .5);
+    endingChair(view, 10);
+    const expected = view.commands();
+    const entry = renderFrame(5).slice(-expected.length);
+    assert.deepEqual(entry.filter(command => !isSpray(command)), expected.filter(command => !isSpray(command)));
+});
+
 test('the departure leaves scenery behind before the quiet side view and is seekable', () => {
     const scenery = age => revealFrame('reveal', age).filter(command => command.layer?.key === 'sky-ending-departure');
     const start = scenery(0), leaving = scenery(STAGE_FOUR.reveal.settle * .4);
