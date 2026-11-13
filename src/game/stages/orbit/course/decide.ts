@@ -11,7 +11,7 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     // Parked in the Earth's shadow, `settled` counts on from 1 so the ending knows how far it has played.
     if (next.phase === 'parked') {
         next.settled += dt;
-        return { orbit: next, p, checkpoint: false, praised: false };
+        return { orbit: next, p, checkpoint: false, praised: false, spraying: false };
     }
     if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
     const controlled = next.phase !== 'entry';
@@ -25,17 +25,20 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     if (Math.abs(p.x) === C.bounds.x) p.vx = 0;
     if (Math.abs(p.y) === C.bounds.y) p.vy = 0;
     p.a += (-p.vx / C.bankSpeed - p.a) * Math.min(1, dt * C.bankResponse);
+    // Deep in the approach the Earth's shadow draws the chair in; before that only spraying moves it forward.
+    // During the entry the glide from stage four still carries it at the speed it arrived with.
     const arriving = next.phase === 'door' && next.z > C.door.z - C.arrivalDistance;
-    const cruise = arriving ? C.arrivalSpeed : C.cruise;
     const thrust = controlled && held('spray') && !arriving;
-    next.speed = Math.min(C.maxSpeed, next.speed + (thrust ? C.thrust : (cruise - next.speed) * C.cruiseRecovery) * dt);
+    if (arriving) next.speed += (C.arrivalSpeed - next.speed) * C.cruiseRecovery * dt;
+    else if (thrust) next.speed = Math.min(C.maxSpeed, next.speed + C.thrust * dt);
+    else if (controlled) next.speed *= Det.exp(-C.coast * dt);
     const beam = controlled ? praiseBeamOn(next.age, p, next.z) : null;
     if (beam) praiseShove(next, p, beam, dt);
     const praised = beam !== null;
     next.z += next.speed * dt;
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
-    return { orbit: next, p, checkpoint, praised };
+    return { orbit: next, p, checkpoint, praised, spraying: thrust || !controlled };
 }
 
 type Beam = typeof C.praise.beams[number];

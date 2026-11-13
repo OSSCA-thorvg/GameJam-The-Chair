@@ -242,3 +242,14 @@ test('steering fades in during the entry instead of being locked out', () => {
     const thrust = orbitStep({ ...state.orbit, age: .2 }, state.p, ['spray'], 1 / 120);
     assert.ok(thrust.orbit.speed <= STAGE_FIVE.cruise, 'thrust waits until the entry is over');
 });
+
+test('only the extinguisher moves the chair forward: it coasts to a crawl without spraying', () => {
+    const coast = fresh(), spray = fresh();
+    for (let i = 0; i < 120 * 6; i++) { coast.step(); spray.setInput('spray'); spray.step(); }
+    const idle = coast.getSnapshot(), pushed = spray.getSnapshot();
+    assert.ok(idle.orbit.speed < STAGE_FIVE.cruise * .2, `coasting slows to ${idle.orbit.speed.toFixed(1)}`);
+    assert.equal(idle.spray.burst, 0, 'no plume while coasting');
+    assert.ok(pushed.orbit.speed > STAGE_FIVE.cruise, 'spraying speeds the chair up');
+    assert.ok(pushed.spray.burst > 0, 'the plume shows while spraying');
+    assert.ok(pushed.orbit.z > idle.orbit.z + 600, 'and carries it much further');
+});

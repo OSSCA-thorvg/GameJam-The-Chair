@@ -9,7 +9,8 @@ export function applyOrbit(s: GameState, out: GameEvent[], dt: number) {
     s.orbit = result.orbit;
     setPlayer(s, result.p);
     s.actualSpeed = s.orbit.speed;
-    s.sprayBurst = s.orbit.phase === 'parked' ? 0 : .24;
+    // The plume shows while the extinguisher pushes and trails off for a moment after.
+    s.sprayBurst = result.spraying ? .24 : Math.max(0, s.sprayBurst - dt);
     // Every second under the praise beam costs focus once; running out ends the attempt like any distraction.
     if (result.praised && !applyFocusHit(s, out, { kind: 'praise', id: Math.floor(s.orbit.age), damage: FOCUS_DAMAGE.praise })) return;
     // The takeover skips the shared tick, so focus comes back here (not while the beam is on the chair).

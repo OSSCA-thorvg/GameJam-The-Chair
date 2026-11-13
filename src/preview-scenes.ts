@@ -704,12 +704,14 @@ function skyToOrbit(): PreviewScene {
         const state = game.getSnapshot();
         if (state.stage === 5 && !markers.some(marker => marker.label === 'Stage 5')) markers.push({ at: i / 60, label: 'Stage 5' });
         const age = state.stage === 5 && state.orbit ? state.orbit.age : -1;
-        game.setInput(...(age < 0 ? [] : age < 1.6 ? ['right' as const] : age < 3.2 ? ['left' as const, 'forward' as const] : []));
+        // Steer while spraying, let go to coast (the plume dies and the chair slows), then spray again.
+        game.setInput(...(age < 0 ? [] : age < 1.6 ? ['right' as const, 'spray' as const] : age < 3.2 ? ['left' as const, 'forward' as const, 'spray' as const]
+            : age < 5.5 ? [] : ['spray' as const]));
         stepGame(game, effects);
         frames.push(capture(game, effects));
-        if (age > 5) break;
+        if (age > 7.5) break;
     }
-    return recordedScene('sky-to-orbit', 'Sky → Orbit · Seamless hand-off and steering fade-in', 0, markers, frames);
+    return recordedScene('sky-to-orbit', 'Sky → Orbit · Hand-off, steering fade-in, spray to fly', 0, markers, frames);
 }
 
 /** Steering for the stage five previews: duck into 5-1's shelter clouds, then keep to the widest gap between beams. */
@@ -733,6 +735,8 @@ export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSn
     if (target.x - p.x < p.vx * .65 - 6) keys.push('left');
     if (target.y - p.y > p.vy * .65 + 6) keys.push('forward');
     if (target.y - p.y < p.vy * .65 - 6) keys.push('back');
+    // Only the extinguisher moves the chair forward: keep it near cruise speed.
+    if (orbit.speed < STAGE_FIVE.cruise) keys.push('spray');
     return keys;
 }
 

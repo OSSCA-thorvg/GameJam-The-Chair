@@ -9,7 +9,8 @@ type PraiseBeam = {
 export const STAGE_FIVE = deepFreeze({
     length: 10000, goal: 9600,
     // The stage four glide hands over at cruise speed; steering fades in over the entry instead of waiting for it.
-    entryTime: 1, cruise: 145, thrust: 100, maxSpeed: 270,
+    // Only the extinguisher drives the chair forward: `thrust` while spraying, otherwise it coasts and `coast` slows it.
+    entryTime: 1, cruise: 145, thrust: 140, coast: .45, maxSpeed: 270,
     acceleration: 250, drag: 1.8,
     bankSpeed: 650, bankResponse: 5, cruiseRecovery: .6,
     ringClearance: 40, approachSpeed: 55, arrivalSpeed: 45, arrivalDistance: 600,

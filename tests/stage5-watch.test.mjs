@@ -139,6 +139,9 @@ test('5-1: a shelter cloud hides the chair, and outside the beam nothing happens
     assert.equal(inPraise(age, chairAt(shelter.x, shelter.y), shelter.z), false, 'hidden while the beam is right on it');
     assert.equal(inPraise(age, chairAt(shelter.x), first.from - 10), false, 'no beam before the 5-1 stretch');
     const before = cruising(first.from - 400);
-    const { orbit } = orbitStep(before, chairAt(0), [], 1 / 120);
-    assert.equal(orbit.speed, STAGE_FIVE.cruise);
+    // Outside a beam only the extinguisher and the coast change the speed.
+    const pushed = orbitStep(before, chairAt(0), ['spray'], 1 / 120).orbit.speed;
+    const coasting = orbitStep(before, chairAt(0), [], 1 / 120).orbit.speed;
+    assert.ok(Math.abs(pushed - (STAGE_FIVE.cruise + STAGE_FIVE.thrust / 120)) < 1e-9);
+    assert.ok(Math.abs(coasting - STAGE_FIVE.cruise * Math.exp(-STAGE_FIVE.coast / 120)) < 1e-6);
 });
