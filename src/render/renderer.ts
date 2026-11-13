@@ -12,7 +12,7 @@ import { drawBuilding } from './scene/building';
 import { drawRooftop } from './scene/rooftop';
 import { drawCloudStart } from './scene/clouds';
 import { focusVignette } from './scene/focus-vignette';
-import { createPaintPool, paint } from './paint';
+import { createPaintPool, paint, thorvgTextWidth } from './paint';
 import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
 import { resetRenderStats, type LayerOverrides, type RenderStats } from './perf';
 
@@ -26,25 +26,21 @@ export const VIEW_HEIGHT = 510;
 export function createRenderer(root: HTMLElement, getLocale: () => Locale = () => 'en') {
     const base = root.querySelector<HTMLCanvasElement>('[data-base]');
     const cn = root.querySelector<HTMLCanvasElement>('[data-tvg]');
-    const labels = root.querySelector<HTMLCanvasElement>('[data-labels]');
     const bg = base?.getContext('2d');
-    const lg = labels?.getContext('2d');
-    if (!base || !cn || !labels || !bg || !lg) {
+    if (!base || !cn || !bg) {
         throw new Error('Game canvases are unavailable.');
     }
-    return setup(root, base, cn, labels, bg, lg, getLocale);
+    return setup(root, base, cn, bg, getLocale);
 }
 
 function setup(
     root: HTMLElement,
     base: HTMLCanvasElement,
     cn: HTMLCanvasElement,
-    labels: HTMLCanvasElement,
     bg: CanvasRenderingContext2D,
-    lg: CanvasRenderingContext2D,
     getLocale: () => Locale,
 ) {
-    const ctx = createRenderCtx(bg, lg);
+    const ctx = createRenderCtx(bg);
     let lastTime = 0;
     let lastStage = 0;
     const pool = createPaintPool();
@@ -66,10 +62,8 @@ function setup(
         ctx.scale = ctx.W / ctx.VW;
         ctx.vertical = Math.max(0, ctx.H / ctx.scale - VIEW_HEIGHT) * .7;
         ctx.dpr = Math.min(devicePixelRatio || 1, 2);
-        for (const c of [base, labels]) {
-            c.width = Math.round(ctx.W * ctx.dpr);
-            c.height = Math.round(ctx.H * ctx.dpr);
-        }
+        base.width = Math.round(ctx.W * ctx.dpr);
+        base.height = Math.round(ctx.H * ctx.dpr);
         tvg?.resize(ctx.W, ctx.H);
     }
     const observer = new ResizeObserver(size);
@@ -139,9 +133,6 @@ function setup(
         lastStage = next.stage;
         lastTime = t;
         const buildStart = stats ? performance.now() : 0;
-        lg.setTransform(ctx.dpr, 0, 0, ctx.dpr, 0, 0);
-        lg.clearRect(0, 0, ctx.W, ctx.H);
-        ctx.foregroundActors = [];
         if (opening) {
             drawOpening(ctx, opening);
         } else if (next.stage === 5) {
@@ -204,6 +195,7 @@ function setup(
             TVG = await loadThorvg();
             if (!root.isConnected) return;
             tvg = new TVG.Canvas('#chair-office-one-tvg', { width: ctx.W, height: ctx.H });
+            ctx.textWidth = thorvgTextWidth(TVG);
             renderer = 'thorvg';
             cn.hidden = false;
         } catch (e) {

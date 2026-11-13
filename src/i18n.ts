@@ -275,3 +275,8 @@ export function resolveLocale(languages: readonly string[]): Locale {
 export function isMessage(value: string): value is Message {
     return Object.hasOwn(messages, value);
 }
+
+/** Every translated string in every locale; the font subsets must cover these characters. */
+export function messageTexts(): string[] {
+    return Object.values(messages).flatMap(entry => Object.values(entry));
+}

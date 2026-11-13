@@ -23,8 +23,6 @@ export type RenderStats = {
     syncMs: number;
     /** `Canvas.update().render()` (or the Canvas2D fallback paint). */
     renderMs: number;
-    /** System-font label canvas. */
-    labelsMs: number;
     /**
      * GPU time (WebGL2 timer queries) of earlier frames whose results arrived this frame, oldest first.
      * Empty with the software renderer or without timer-query support.
@@ -95,7 +93,7 @@ export function createRenderStats(): RenderStats {
 }
 
 export function resetRenderStats(stats: RenderStats) {
-    stats.buildMs = stats.syncMs = stats.renderMs = stats.labelsMs = 0;
+    stats.buildMs = stats.syncMs = stats.renderMs = 0;
     stats.commands = stats.topShapes = stats.poolTop = stats.layers = stats.layerSlots = 0;
     stats.layerShapes = stats.parkedShapes = stats.texts = 0;
     stats.reorder = false;

@@ -14,7 +14,7 @@ const { createRenderCtx, player, sprayPlume, drawSky, skyWindResponse, previewSc
 const scene = previewScenes.find(scene => scene.id === 'sky-wind-feedback');
 function context(time, over = {}) {
     const { state } = scene.sample(time);
-    const ctx = createRenderCtx({}, { fillText() {} });
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { state: { ...state, ...over }, p: state.player, mode: 'play', t: time,
         cam: state.player.x - 380, vertical: 330 - state.player.y });
     return ctx;
@@ -80,15 +80,15 @@ test('open-air wind preview has no wind strokes, remains finite and supports rev
 
 test('billboard copy is ThorVG Text inside the scene, in both languages, never on the label canvas', () => {
     for (const locale of ['en', 'ko']) {
-        // A label canvas that throws on any drawing: the copy must not go there any more.
-        const ctx = createRenderCtx({}, new Proxy({}, { get: (_, key) => key === 'measureText' ? undefined : () => assert.fail(`lg.${String(key)}`) }));
+        // A base canvas that throws on any drawing: building commands never paints directly.
+        const ctx = createRenderCtx(new Proxy({}, { get: (_, key) => key === 'measureText' ? undefined : () => assert.fail(`bg.${String(key)}`) }));
         Object.assign(ctx, { locale, cam: 4400, vertical: 2500 });
         skyCoursePlatform(ctx, { id: 'last-sign', kind: 'sign', x: 4770, y: -2310, width: 230, angle: -.1 });
         const texts = ctx.commands.filter(command => command.text).map(command => command.text);
         assert.deepEqual(texts.map(text => text.content), locale === 'ko' ? ['흔들리지', '않는 기업'] : ['UNSHAKE', 'ABLE INC.']);
         assert.ok(texts.every(text => text.font === 'Black Han Sans' && text.outline && Math.abs(text.rotation + .1) < 1e-9));
         assert.ok(ctx.commands.at(-1).text, 'the copy is the last thing the sign draws, so actors drawn later cover it');
-        const tilted = createRenderCtx({}, {});
+        const tilted = createRenderCtx({});
         Object.assign(tilted, { locale, cam: 4400, vertical: 2500 });
         skyCoursePlatform(tilted, { id: 'wind-sign', kind: 'sign', x: 4770, y: -2310, width: 230, angle: -1 });
         assert.equal(tilted.commands.some(command => command.text), false);

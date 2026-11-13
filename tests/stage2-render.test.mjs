@@ -11,9 +11,7 @@ const { createGame, createRenderCtx, drawBuilding } = await bundled({ stdin: {
 }, bundle: true, write: false, platform: 'node', format: 'esm' });
 const escape = s => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 function render(state, locale, width) {
-    const labels = [];
-    const lg = { fillText(text, x, y) { labels.push({ text, x, y, font: this.font, color: this.fillStyle }); } };
-    const ctx = createRenderCtx({}, lg);
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { state, p: state.player, mode: state.mode, locale, t: state.time,
         cam: Math.max(0, Math.min(state.player.x - width * .35, state.level.length - width)),
         VW: width, W: width, H: 510, LEN: state.level.length, GOAL: state.level.goal,
@@ -21,8 +19,10 @@ function render(state, locale, width) {
     });
     drawBuilding(ctx);
     assert.ok(ctx.commands.length > 100);
+    const labels = ctx.commands.filter(c => c.text).map(({ text }) => ({ text: text.content, x: text.x, y: text.y, font: `${text.size}px ${text.font}`, color: text.fill }));
     let defs = '', shapes = '';
     ctx.commands.forEach((c, i) => {
+        if (c.text) return;
         for (const point of c.v) for (const n of point) assert.ok(Number.isFinite(n));
         for (const curve of c.curves ?? []) for (const n of curve) assert.ok(Number.isFinite(n));
         const d = `M${c.v[0].join(',')} ${c.v.slice(1).map(v => `L${v.join(',')}`).join(' ')} ${(c.curves ?? []).map(v => `C${v.join(',')}`).join(' ')}`;
@@ -43,7 +43,7 @@ function render(state, locale, width) {
     });
     for (const label of labels) {
         assert.ok(Number.isFinite(label.x) && Number.isFinite(label.y));
-        shapes += `<text x="${label.x}" y="${label.y}" text-anchor="middle" style="font:${label.font};fill:${label.color}">${escape(label.text)}</text>`;
+        shapes += `<text x="${label.x}" y="${label.y}" text-anchor="middle" dominant-baseline="middle" style="font:${label.font};fill:${label.color}">${escape(label.text)}</text>`;
     }
     return { labels, svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="510" data-player-x="${state.player.x}" data-time="${state.time}" data-cam="${ctx.cam}"><defs>${defs}</defs>${shapes}</svg>` };
 }

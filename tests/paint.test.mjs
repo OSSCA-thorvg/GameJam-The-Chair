@@ -72,13 +72,11 @@ function frame(ctx, layerShapes, plainShapes) {
         ...Array.from({ length: layerShapes }, (_, i) => square(20 + i * 12, layer)),
         ...Array.from({ length: plainShapes }, (_, i) => square(200 + i * 12)),
     ];
-    ctx.foregroundActors = [];
 }
 
 test('a layer that gains children on a reordering frame does not blank the canvas', () => {
     const { TVG, canvas } = fakeThorvg();
-    const lg = { save() {}, restore() {} };
-    const ctx = createRenderCtx({}, lg);
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
 
@@ -92,8 +90,7 @@ test('a layer that gains children on a reordering frame does not blank the canva
 
 test('a failed rebuild is retried on the next frame instead of leaving the canvas empty', () => {
     const { TVG, canvas } = fakeThorvg();
-    const lg = { save() {}, restore() {} };
-    const ctx = createRenderCtx({}, lg);
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
     // Plain shapes before the layer, so the signature records how many come first.
@@ -122,14 +119,12 @@ test('a failed rebuild is retried on the next frame instead of leaving the canva
 
 test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds without changing the picture', () => {
     const { TVG, canvas } = fakeThorvg();
-    const lg = { save() {}, restore() {} };
-    const ctx = createRenderCtx({}, lg);
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
     const stats = createRenderStats();
     const blurred = { key: 'glow', blur: 4, motionBlur: { distance: 6, angle: 0 }, clip: square(0), mask: square(0) };
     ctx.commands = [square(20, blurred), square(40, blurred), square(200), square(220), square(1000)];
-    ctx.foregroundActors = [];
 
     paint(ctx, TVG, canvas, pool, stats);
     assert.equal(stats.commands, 5);
@@ -148,7 +143,7 @@ test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds w
     // Two 10×10 squares at x 20 and 40 (each padded by 1 px): x 19–51, y 9–21.
     assert.equal(stats.blurArea, 32 * 12);
     assert.deepEqual(stats.layerList, [{ key: 'glow', shapes: 2, area: 32 * 12, effects: ['blur4', 'motion', 'clip', 'mask'] }]);
-    assert.ok(stats.syncMs >= 0 && stats.renderMs >= 0 && stats.labelsMs >= 0);
+    assert.ok(stats.syncMs >= 0 && stats.renderMs >= 0);
 
     // The frame after the pool grew rebuilds once more; a steady layout after that does not.
     resetRenderStats(stats);
@@ -165,8 +160,7 @@ test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds w
 
 test('debug layer overrides hide a layer or draw it as plain shapes, and leave other layers alone', () => {
     const { TVG, canvas } = fakeThorvg();
-    const lg = { save() {}, restore() {} };
-    const ctx = createRenderCtx({}, lg);
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
     const stats = createRenderStats();
@@ -174,7 +168,6 @@ test('debug layer overrides hide a layer or draw it as plain shapes, and leave o
     const sun = { key: 'sun', blend: 'screen', opacity: .5 };
     const fog = { key: 'fog', blur: 2 };
     ctx.commands = [square(20, sun), square(40, fog), square(60, fog), square(200)];
-    ctx.foregroundActors = [];
     const run = () => {
         resetRenderStats(stats);
         paint(ctx, TVG, canvas, pool, stats, overrides);
@@ -198,14 +191,12 @@ test('a layer that drops its mask or clip gets a fresh scene instead of a pass-t
     // ThorVG cannot detach a mask or clip. The old stand-in (a huge white rect) made the GL renderer smear a
     // Screen-blended water layer over the frame once its mask ended, only when frames were drawn in sequence.
     const { TVG, canvas } = fakeThorvg();
-    const lg = { save() {}, restore() {} };
-    const ctx = createRenderCtx({}, lg);
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
     const sceneOf = () => canvas.paints.find(paint => paint instanceof TVG.Scene);
     const draw = layer => {
         ctx.commands = [square(20, layer), square(200)];
-        ctx.foregroundActors = [];
         paint(ctx, TVG, canvas, pool);
         paint(ctx, TVG, canvas, pool);
     };
@@ -240,8 +231,7 @@ test('a layer that drops its mask or clip gets a fresh scene instead of a pass-t
 
 test('retained geometry is traced once while its ThorVG Scene transform can change every frame', () => {
     const { TVG, canvas, log } = fakeThorvg();
-    const lg = { save() {}, restore() {} };
-    const ctx = createRenderCtx({}, lg);
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
     const retained = tx => ({
@@ -254,7 +244,6 @@ test('retained geometry is traced once while its ThorVG Scene transform can chan
     });
 
     ctx.commands = [square(10, retained(0))];
-    ctx.foregroundActors = [];
     paint(ctx, TVG, canvas, pool);
     const firstTraceCount = log.filter(item => item === 'shape-reset').length;
 
@@ -266,13 +255,12 @@ test('retained geometry is traced once while its ThorVG Scene transform can chan
 
 test('ThorVG Text keeps its place in the command order so later shapes paint over it', () => {
     const { TVG, canvas } = fakeThorvg();
-    const ctx = createRenderCtx({}, { save() {}, restore() {} });
+    const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
     const text = { content: '흔들리지', font: 'Black Han Sans', size: 40, x: 100, y: 50, rotation: .1, fill: '#fff0cc',
         outline: { width: 3, color: '#27344d' } };
     ctx.commands = [square(10), { v: [[60, 30], [140, 30], [140, 70], [60, 70]], c: '#fff0cc', text }, square(100)];
-    ctx.foregroundActors = [];
     paint(ctx, TVG, canvas, pool);
 
     const kinds = canvas.paints.map(paint => paint.constructor.name);

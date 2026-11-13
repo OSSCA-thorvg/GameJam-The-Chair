@@ -81,6 +81,8 @@ export type TextSpec = {
     fill: string;
     /** Outline drawn under the fill, like Canvas2D strokeText() before fillText(). */
     outline?: { width: number; color: string };
+    /** Multiplies the fill's own alpha; text never joins a layer, so it carries its own fade. */
+    opacity?: number;
 };
 export type DrawCommand = {
     v: Vector[];

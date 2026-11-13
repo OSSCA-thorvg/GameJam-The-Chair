@@ -7,7 +7,7 @@ const { createRenderCtx, breadCloud, puffCloud, CLOUD_TONES } = await loadSource
     export { breadCloud } from './src/render/scene/cloud-art';
     export { puffCloud, CLOUD_TONES } from './src/render/scene/cloud-art';
 `);
-const context = () => Object.assign(createRenderCtx({}, {}), { W: 1000, H: 510, scale: 1, cam: 0, vertical: 0 });
+const context = () => Object.assign(createRenderCtx({}), { W: 1000, H: 510, scale: 1, cam: 0, vertical: 0 });
 
 test('shared bread clouds use the exact stage four silhouette, gradients and underside fade', () => {
     for (const near of [false,true]) {
