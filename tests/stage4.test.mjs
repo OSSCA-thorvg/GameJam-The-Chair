@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { driveStageFour, STAGE_FOUR_ROUTE } from './support/stage4-route.mjs';
 import { bundled } from './support/load.mjs';
-const { createGame, skyPlatforms, skySurface, skyGust, skyHazards, skyStep, createSky, STAGE_FOUR } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { skyPlatforms, skySurface, skyGust, skyHazards, createSky, STAGE_FOUR } from './src/game/stages/sky/data'; export { skyStep } from './src/game/stages/sky/course/decide';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
+const { createGame, FOCUS_DAMAGE, skyPlatforms, skySurface, skyGust, skyHazards, skyStep, createSky, STAGE_FOUR } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { skyPlatforms, skySurface, skyGust, skyHazards, createSky, STAGE_FOUR } from './src/game/stages/sky/data'; export { skyStep } from './src/game/stages/sky/course/decide'; export { FOCUS_DAMAGE } from './src/game/level';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
 test('stage 4 traverses growing building, gust sign, rocking desks and depth reveal without falling', () => {
     const game = createGame(); game.startStage(4);
@@ -108,6 +108,26 @@ test('paper bundles ride the gusts and birds knock the chair backwards and cost 
         const again = skyStep({ ...course({ time: time + 1 / 120, p: r.p }), sky: r.sky }, 1 / 120);
         assert.equal(again.hit, null, 'one knock at a time');
     }
+});
+
+test('a monitor, keyboard, mouse and tower PC float over the course and knock the chair back at a focus cost', () => {
+    const gear = skyHazards(0).filter(h => h.kind === 'gear');
+    assert.deepEqual([...new Set(gear.map(h => h.item))].sort(), ['keyboard', 'monitor', 'mouse', 'tower']);
+    const drift = skyHazards(2).filter(h => h.kind === 'gear');
+    assert.ok(gear.every((h, i) => Math.hypot(h.x - drift[i].x, h.y - drift[i].y) > 1), 'every piece keeps drifting');
+    const game = createGame(); game.startStage(4);
+    const state = JSON.parse(game.serialize());
+    const tower = skyHazards(state.time + 1 / 120).find(h => h.item === 'tower');
+    Object.assign(state, { focus: 100, mode: 'play', ground: false });
+    Object.assign(state.sky, { phase: 'course', lift: 1, knock: 0, knockKind: null, standing: null });
+    Object.assign(state.p, { x: tower.x, y: tower.y + 20, vx: 120, vy: 0 });
+    game.restore(JSON.stringify(state));
+    game.step(1 / 120);
+    const after = game.getSnapshot();
+    assert.equal(after.sky.knockKind, 'gear');
+    assert.ok(after.player.vx < -100, 'the gear bounces the chair back');
+    assert.equal(after.focus, 100 - FOCUS_DAMAGE.gear);
+    assert.equal(after.focusNotice?.kind, 'gear');
 });
 
 test('hazards never blink out on screen: they leave the view before their path restarts', () => {

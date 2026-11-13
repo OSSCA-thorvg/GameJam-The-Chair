@@ -70,26 +70,6 @@ export function skyRibbon(ctx: RenderCtx) {
     ctx.rod(3473, -2227, 3477, -2227, 2, '#69738c');
 }
 
-export function skyMonitor(ctx: RenderCtx, index: number) {
-    const x = 2580 + index * 430;
-    ctx.ox = x; ctx.oy = -1990 - index * 67 + Math.sin(ctx.t * .6 + index) * 15;
-    ctx.rotation = Math.sin(ctx.t * .3 + index) * .19;
-    ctx.polygon([[-22, -16], [22, -16], [27, -12], [-17, -12]], '#aab4c0');
-    ctx.polygon([[22, -16], [27, -12], [27, 17], [22, 14]], '#465b79');
-    ctx.gradientPolygon([[-22, -16], [22, -16], [22, 14], [-22, 14]],
-        ctx.gradientFill(-22, -16, 22, 14, [[0, '#a6afbf'], [.6, '#aab4c0'], [1, '#8a9aaf']]));
-    ctx.rect(-19, -13, 38, 24, '#465b79');
-    ctx.gradientPolygon([[-17, -11], [17, -11], [17, 9], [-17, 9]],
-        ctx.gradientFill(-17, -11, 17, 9, [[0, '#8a9aaf'], [.4, '#465b79'], [1, '#465b79']]));
-    ctx.polygon([[-16, -10], [2, -10], [-9, 8], [-16, 8]], '#aab4c033');
-    for (let y = -6; y < 8; y += 5) ctx.rod(-11, y, -3 + y * .3, y, .6, '#aab4c044');
-    ctx.ellipse(15, 12, .9, .9, '#aab4c0');
-    ctx.rod(0, 15, 0, 23, 4, '#8a9aaf');
-    ctx.ellipse(0, 24, 13, 2.5, '#8a9aaf');
-    ctx.rod(-10, 23, 10, 23, 1, '#aab4c0');
-    ctx.ox = ctx.oy = ctx.rotation = 0;
-}
-
 export function skyFlag(ctx: RenderCtx, x: number, y: number, saved: boolean) {
     const color = saved ? '#dfb979' : '#b3c5cc';
     ctx.rod(x - 55, y + 28, x - 55, y - 15, 3, '#bbc5c6');

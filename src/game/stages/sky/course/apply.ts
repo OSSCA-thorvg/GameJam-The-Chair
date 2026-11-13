@@ -28,8 +28,9 @@ export function applySky(s: GameState, out: GameEvent[], dt: number) {
     }
     if (r.hit) {
         if (r.hit.kind === 'paper') out.push({ type: 'cue', id: 'paper-hit' });
-        // Each bundle or bird costs focus once per pass; running out ends the attempt like any distraction.
-        const damage = r.hit.kind === 'paper' ? FOCUS_DAMAGE.skyPaper : FOCUS_DAMAGE.bird;
+        if (r.hit.kind === 'gear') out.push({ type: 'cue', id: 'gear-hit' });
+        // Each bundle, bird or gear loop costs focus once; running out ends the attempt like any distraction.
+        const damage = r.hit.kind === 'paper' ? FOCUS_DAMAGE.skyPaper : r.hit.kind === 'gear' ? FOCUS_DAMAGE.gear : FOCUS_DAMAGE.bird;
         if (!applyFocusHit(s, out, { kind: r.hit.kind, id: r.hit.focusId, damage })) return;
     }
     // The takeover skips the shared tick, so focus comes back here while the course is under way.

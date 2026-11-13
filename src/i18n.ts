@@ -22,6 +22,7 @@ const messages = {
     'player.bumpHit':            { en: 'Bump… my spreadsheet cells shifted!',                            ko: '덜컹… 엑셀 칸이 밀렸어!' },
     'player.urgentVolley':       { en: 'Urgent reports… was it due yesterday?',                          ko: '긴급 보고서… 마감이 어제였나?' },
     'player.bundleHit':          { en: 'The whole quarter, stapled…',                                    ko: '분기 실적을 통째로 찍어 버렸어…' },
+    'player.gearHit':            { en: 'Did IT finally throw out my PC?!',                               ko: '전산팀이 내 PC를 버렸나?!' },
     'player.lightHit':           { en: "Too bright… I can't see my numbers!",                            ko: '눈부셔… 실적 칸이 안 보여!' },
     'player.approved':           { en: 'Approved',                                                       ko: '결재 완료' },
     'player.laptop':             { en: 'My laptop?!',                                                    ko: '노트북은?!' },

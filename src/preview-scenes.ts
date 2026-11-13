@@ -523,6 +523,28 @@ function skyGustCycle(): PreviewScene {
     };
 }
 
+// Office gear drifting over the gap to the drawer desk, then a tower PC clanging into the chair.
+function skyOfficeGear(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const duration = 6;
+    return {
+        id: 'sky-gear', label: 'Sky · Floating monitor, keyboard, mouse and tower PC', duration, focusX: 4100,
+        markers: [{ at: 0, label: 'Drifting gear' }, { at: duration - 1, label: 'Gear knock' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(duration, time));
+            const knock = Math.max(0, at - (duration - 1));
+            return { state: { ...base, time: at,
+                sky: { ...base.sky, phase: 'course', lift: 1, drawer: 1,
+                    knock: knock > 0 ? STAGE_FOUR.knock.cooldown * (1 - knock) : 0, knockKind: knock > 0 ? 'gear' : null },
+                player: { ...base.player, x: 3960 - knock * 60, y: -2220 }, ground: false,
+            }, effects };
+        },
+    };
+}
+
 // Hold a spray in open air so its response is readable through a full gust cycle.
 function skyWindFeedback(): PreviewScene {
     const game = createGame();
@@ -735,6 +757,7 @@ export const previewScenes: readonly PreviewScene[] = [
     rooftopTakeoff(),
     cloudEntry(),
     skyGustCycle(),
+    skyOfficeGear(),
     skyWindFeedback(),
     skyParrots(),
     skySignDepth(),
