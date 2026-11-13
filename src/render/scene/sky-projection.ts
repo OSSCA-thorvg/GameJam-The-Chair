@@ -7,11 +7,13 @@ const mul = (a: Point3, s: number): Point3 => [a[0] * s, a[1] * s, a[2] * s];
 const dot = (a: Point3, b: Point3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: Point3, b: Point3): Point3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const norm = (a: Point3) => mul(a, 1 / Math.max(.0001, Math.hypot(...a)));
-export function createSkyProjection(width: number, height: number, orbit: number, framing: { zoom?: number; centerY?: number; offsetX?: number; roll?: number; level?: boolean } = {}) {
+export function createSkyProjection(width: number, height: number, orbit: number, framing: { zoom?: number; centerY?: number; offsetX?: number; roll?: number; level?: boolean; eyeY?: number } = {}) {
     const angle = orbit * Math.PI / 2;
     const distance = 480;
     const target: Point3 = [0, 15, 0];
-    const camera: Point3 = [-Math.sin(angle) * distance, framing.level ? 15 : 45, Math.cos(angle) * distance];
+    // `level` puts the eye at the chair's height; `eyeY` eases between the two heights.
+    const eye = framing.eyeY ?? (framing.level ? 15 : 45);
+    const camera: Point3 = [-Math.sin(angle) * distance, eye, Math.cos(angle) * distance];
     const forward = norm(sub(target, camera));
     const right = norm(cross(forward, [0, 1, 0]));
     const up = norm(cross(right, forward));

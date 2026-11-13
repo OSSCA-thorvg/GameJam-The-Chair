@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, createSkyProjection, endingChair, skyCoursePlatform } = await loadSource(`
+const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, drawOrbit, CLOUD_TONES, createSkyProjection, endingChair, skyCoursePlatform } = await loadSource(`
     export { createGame } from './src/game/game';
     export { createSky, STAGE_FOUR } from './src/game/stages/sky/data';
     export { skyStep } from './src/game/stages/sky/course/decide';
     export { createRenderCtx } from './src/render/context';
     export { drawSky } from './src/render/scene/sky';
+    export { drawOrbit } from './src/render/scene/orbit';
+    export { CLOUD_TONES } from './src/render/scene/cloud-art';
     export { createSkyProjection } from './src/render/scene/sky-projection';
     export { endingChair } from './src/render/scene/sky-ending-art';
     export { skyCoursePlatform } from './src/render/scene/sky-course-art';
@@ -151,4 +153,54 @@ test('the crown stays covered by hair throughout the orbit', () => {
             assert.ok(parseInt(visible.c.slice(1, 3), 16) < 128, `skin must not cover the hair at orbit ${frame}/12`);
         }
     }
+});
+
+function renderFrame(stage, setup) {
+    const game = createGame();
+    game.startStage(stage);
+    const state = structuredClone(game.getSnapshot());
+    setup?.(state);
+    const ctx = createRenderCtx({}, {});
+    Object.assign(ctx, { state, p: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t: 0 });
+    (stage === 4 ? drawSky : drawOrbit)(ctx);
+    return ctx.commands;
+}
+const revealFrame = (phase, age) => renderFrame(4, state => Object.assign(state.sky, { phase, age }));
+const hex = color => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
+// Cloud bodies are the vertical gradients whose first stop is a cloud crown colour.
+const cloudBodies = (commands, tone) => commands.filter(command =>
+    Array.isArray(command.c?.stops) && command.c.stops[0][1].slice(0, 3).join() === hex(tone.top).join());
+
+test('the ending clouds are bread clouds, not flat pale ovals', () => {
+    const { settle, turn, hold } = STAGE_FOUR.reveal;
+    for (const [phase, age] of [['reveal', 0], ['reveal', settle + turn / 2], ['depth', 0], ['depth', hold]]) {
+        const commands = revealFrame(phase, age);
+        assert.ok(cloudBodies(commands, CLOUD_TONES.bread).length >= 5, `${phase} ${age}: bread clouds stay on screen`);
+        // The old ending drew its clouds as flat ovals in these two colours (the spray shares the base colour).
+        assert.ok(!commands.some(command => command.c === '#f6e6dfbe' || command.c === '#f6e6dfc3'));
+    }
+});
+
+test('ending clouds are bread from the start and none vanishes while the camera turns', () => {
+    const { settle, turn, hold } = STAGE_FOUR.reveal;
+    // Cloud bodies: linear crown-to-belly gradients whose underside fades out.
+    const bodies = commands => commands.filter(command => Array.isArray(command.c?.stops) && !command.c.radius
+        && command.c.stops.length === 3 && command.c.stops[2][1][3] === 0);
+    const bread = hex(CLOUD_TONES.bread.top).join();
+    let previous = 0;
+    for (let at = 0; at <= settle + turn + hold; at += 1 / 30) {
+        const turning = at < settle + turn;
+        const clouds = bodies(revealFrame(turning ? 'reveal' : 'depth', turning ? at : at - settle - turn));
+        assert.deepEqual(clouds.map(command => command.c.stops[0][1].slice(0, 3).join()).filter(crown => crown !== bread), [],
+            `every cloud is bread at ${at.toFixed(2)} s`);
+        assert.ok(clouds.length >= previous, `no cloud disappears at ${at.toFixed(2)} s`);
+        previous = clouds.length;
+    }
+});
+
+test('the last ending frame shows the same bread clouds as the first frame of stage five', () => {
+    const ending = cloudBodies(revealFrame('depth', STAGE_FOUR.reveal.hold), CLOUD_TONES.bread);
+    const stageFive = cloudBodies(renderFrame(5), CLOUD_TONES.bread);
+    assert.ok(stageFive.length >= 5);
+    assert.deepEqual(ending.map(({ v, curves }) => ({ v, curves })), stageFive.map(({ v, curves }) => ({ v, curves })));
 });

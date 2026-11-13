@@ -86,14 +86,3 @@ export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
     }
 }
 
-export function endingClouds(view: SkyProjection, elapsed: number) {
-    const seeds = [
-        [-900, 180, -900, 260], [350, -180, -1100, 230], [950, 230, -450, 300],
-        [-1100, -150, 150, 250], [-650, 280, 1000, 280], [850, -200, 900, 300],
-    ];
-    for (const [i, [x, y, z, r]] of seeds.entries()) {
-        const cx = x + Math.sin(elapsed * .1 + i) * 15;
-        view.oval([cx, y, z], [r, r * .18, r * .22], '#f6e6dfbe');
-        view.oval([cx - r * .18, y + r * .1, z], [r * .43, r * .22, r * .2], '#f6e6dfc3');
-    }
-}
