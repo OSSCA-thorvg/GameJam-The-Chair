@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, drawOrbit, CLOUD_TONES, createSkyProjection, endingChair, skyCoursePlatform } = await loadSource(`
+const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, drawOrbit, CLOUD_TONES, createSkyProjection, endingChair, endingHair, skyCoursePlatform } = await loadSource(`
     export { createGame } from './src/game/game';
     export { createSky, STAGE_FOUR } from './src/game/stages/sky/data';
     export { skyStep } from './src/game/stages/sky/course/decide';
@@ -12,6 +12,7 @@ const { createGame, createSky, STAGE_FOUR, skyStep, createRenderCtx, drawSky, dr
     export { CLOUD_TONES } from './src/render/scene/cloud-art';
     export { createSkyProjection } from './src/render/scene/sky-projection';
     export { endingChair } from './src/render/scene/sky-ending-art';
+    export { endingHair } from './src/render/scene/sky-player-hair';
     export { skyCoursePlatform } from './src/render/scene/sky-course-art';
 `);
 
@@ -153,6 +154,23 @@ test('the crown stays covered by hair throughout the orbit', () => {
             assert.ok(parseInt(visible.c.slice(1, 3), 16) < 128, `skin must not cover the hair at orbit ${frame}/12`);
         }
     }
+});
+
+test('the rear hair has a swept crown and a tapered nape instead of a rectangular silhouette', () => {
+    const view = createSkyProjection(1000, 510, 1);
+    endingHair(view, 0);
+    const commands = view.commands();
+    const vertices = commands.flatMap(command => command.v);
+    const left = Math.min(...vertices.map(([x]) => x)), right = Math.max(...vertices.map(([x]) => x));
+    const top = Math.min(...vertices.map(([, y]) => y)), bottom = Math.max(...vertices.map(([, y]) => y));
+    const edge = (x, end) => vertices.filter(([px]) => Math.abs(px - x) < (right - left) * .08)
+        .map(([, y]) => y).reduce((best, y) => end === 'top' ? Math.min(best, y) : Math.max(best, y),
+            end === 'top' ? Infinity : -Infinity);
+    assert.ok(edge(left, 'top') > top + 3 && edge(right, 'top') > top + 3, 'crown slopes down toward both temples');
+    assert.ok(Math.abs(edge(left, 'top') - edge(right, 'top')) > .5, 'swept crown is not symmetric');
+    assert.ok(edge(left, 'bottom') < bottom - 2 && edge(right, 'bottom') < bottom - 2, 'nape tapers at both sides');
+    assert.ok(commands.some(command => command.c === '#505968'), 'rear surface carries a small swept lock');
+    for (const [x, y] of vertices) assert.ok(Number.isFinite(x) && Number.isFinite(y));
 });
 
 function renderFrame(stage, setup) {

@@ -2,8 +2,18 @@ import { ART } from '../art';
 import { PLAYER_OUTLINES } from './player-art';
 import type { Vector } from '../types';
 import type { Point3, SkyProjection } from './sky-projection';
+import { endingHair } from './sky-player-hair';
 
 export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
+    const draw = chairDrawing(view, elapsed);
+    chairFrame(draw);
+    riderBody(draw);
+    riderHead(view, draw);
+    riderArms(draw);
+    extinguisher(draw, spray);
+}
+
+function chairDrawing(view: SkyProjection, elapsed: number) {
     const C = ART.palette;
     const bob = Math.sin(elapsed * 1.6) * 1.5;
     const point = (x: number, y: number, z = 0): Point3 => [x, -y - 35 + bob, z];
@@ -13,6 +23,12 @@ export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
         view.oval(point(x, y, z), [rx, ry, rz], color);
     const rod = (a: Point3, b: Point3, radius: number, color: string) => view.rod(point(...a), point(...b), radius, color);
 
+    return { C, bob, point, profile, oval, rod, elapsed };
+}
+
+type ChairDrawing = ReturnType<typeof chairDrawing>;
+
+function chairFrame({ C, rod, oval, profile }: ChairDrawing) {
     rod([0, -4, 0], [0, 16, 0], 3, C.steel);
     for (const [x, z] of [[-27, 22], [27, 22], [-27, -22], [27, -22], [0, -30]]) {
         rod([0, 13, 0], [x, 21, z], 2.5, C.steel);
@@ -22,7 +38,9 @@ export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
     rod([-24, -10, 0], [-31, -61, 0], 3.5, '#515665');
     profile(PLAYER_OUTLINES.backrest, 24, '#666d80');
     profile([[-30, -15], [32, -15], [32, -3], [-30, -3]], 27, '#6f7687');
+}
 
+function riderBody({ C, profile }: ChairDrawing) {
     // Keep the same silhouettes and palette as the ordinary player illustration.
     profile(PLAYER_OUTLINES.farLeg, 5, '#4e5b70', -12);
     profile([[35, 3], [42, 3], [50, 6], [55, 9], [52, 10], [35, 7]], 7, '#383f4e', -12);
@@ -35,16 +53,16 @@ export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
     profile([[-5, -69], [2, -68], [3, -61], [1, -58], [-4, -62]], 4.2, '#d5b18b');
     profile([[-9, -65], [0, -60], [6, -60], [4, -55], [0, -52], [-6, -57]], .8, '#fff6de', 17);
     profile([[1, -58], [5, -57], [5, -54], [8, -36], [6, -33], [1, -34], [2, -54]], .5, '#a65e44', 17.8);
+}
 
+function riderHead(view: SkyProjection, { C, bob, point, profile, oval, rod }: ChairDrawing) {
     // Only the face below the hairline needs skin. Hidden scalp faces can sort over the hair while orbiting.
     const face: Vector[] = [[-10, -77], [-3, -83], [3, -89], [10, -92], ...PLAYER_OUTLINES.head.slice(3)];
     view.profile(face.map(([x, y]) => [x, -y - 35 + bob]), 12, C.skin, 0, { widthAt: (_x, y) => {
         const fullness = Math.max(0, Math.min(1, (y - 31 - bob) / 20));
         return 5 + fullness * 7;
     } });
-    const hair: Vector[] = [...PLAYER_OUTLINES.hair.slice(0, 3), [15, -92], [6, -91], [-2, -84], [-10, -77]];
-    view.profile(hair.map(([x, y]) => [x, -y - 35 + bob]), 14.2, '#3c424f', 0, { bevel: 1 });
-    profile([[-7, -93], [-4, -98], [3, -96]], .4, '#687380', 14.7);
+    endingHair(view, bob);
     for (const side of [-1, 1]) {
         oval(-7, -81, side * 13, 2.7, 3.4, 1.5, C.skin);
         oval(10.5, -82.4, side * 12.4, .8, 1.1, .35, '#446d82');
@@ -61,7 +79,9 @@ export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
         for (let i = 0; i < lens.length; i++) rod(lens[i], lens[(i + 1) % lens.length], .55, '#50606a');
     }
     rod([17.5, -83, -2], [17.5, -83, 2], .5, '#50606a');
+}
 
+function riderArms({ C, elapsed, profile }: ChairDrawing) {
     profile(PLAYER_OUTLINES.laptop, 23, '#555f70');
     profile([[35, -55], [59, -55], [51, -35], [27, -35]], .5, '#a8b9c3', 23.8);
     for (const z of [-19, 19]) {
@@ -71,7 +91,9 @@ export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
         const tap = Math.sin(elapsed * 24) * 1.2;
         profile([[21, -36 + tap], [25, -39 + tap], [30, -38 + tap], [35, -35 + tap], [36, -33 + tap], [29, -35 + tap], [23, -33 + tap]], 2, C.skin, z);
     }
+}
 
+function extinguisher({ elapsed, rod, oval }: ChairDrawing, spray: number) {
     rod([-39, -49, 0], [-45, -13, 0], 2, '#394657');
     rod([-46, -48, 0], [-46, -9, 0], 8, '#b75f4a');
     oval(-46, -48, 0, 8, 5, 8, '#c7765c');
@@ -85,4 +107,3 @@ export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
         oval(-46 - age * 4, -7 + age * 50 * spray, 0, 3 + age * 7, 4 + age * 9, 3 + age * 6, '#f6e6df' + alpha);
     }
 }
-
