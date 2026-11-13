@@ -725,11 +725,17 @@ export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSn
     if (shelter) target = shelter;
     else {
         const ahead = beams.filter(b => orbit.z + 250 >= b.from && orbit.z <= b.to);
-        let best = -1;
-        for (let x = -620; x <= 620; x += 40) {
-            const room = Math.min(...ahead.map(b => Math.abs(x - praiseBeamX(b, orbit.age + .6)) - b.halfWidth), 9999) - Math.abs(x - p.x) * .15;
-            if (room > best) { best = room; target = { x, y: 0 }; }
-        }
+        // Each axis on its own: the widest gap from the down beams across, and from the side beams up and down.
+        const gap = (axis: 'x' | 'y', at: number, range: number) => {
+            const facing = ahead.filter(b => b.axis === axis);
+            let best = -Infinity, pick = 0;
+            for (let v = -range; v <= range; v += 40) {
+                const room = Math.min(...facing.map(b => Math.abs(v - praiseBeamX(b, orbit.age + .6)) - b.halfWidth), 9999) - Math.abs(v - at) * .15;
+                if (room > best) { best = room; pick = v; }
+            }
+            return facing.length ? pick : 0;
+        };
+        target = { x: gap('x', p.x, 620), y: gap('y', p.y, 400) };
     }
     const keys: Input[] = [];
     if (target.x - p.x > p.vx * .65 + 6) keys.push('right');

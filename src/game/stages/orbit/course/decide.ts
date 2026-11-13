@@ -11,19 +11,16 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     // Parked in the Earth's shadow, `settled` counts on from 1 so the ending knows how far it has played.
     if (next.phase === 'parked') {
         next.settled += dt;
-        return { orbit: next, p, checkpoint: false, praised: false, spraying: false };
+        return { orbit: next, p, checkpoint: false, praised: false, spraying: false, sipped: false };
     }
     if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
     const controlled = next.phase !== 'entry';
     // Steering grows from nothing to full over the entry, so the chair is under control right after the glide.
     const steer = controlled ? 1 : Math.min(1, next.age / C.entryTime);
-    const damping = Det.exp(-C.drag * dt);
-    p.vx = (p.vx + (held('right') - held('left')) * steer * C.acceleration * dt) * damping;
-    p.vy = (p.vy + (held('forward') - held('back')) * steer * C.acceleration * dt) * damping;
-    p.x = clamp(p.x + p.vx * dt, C.bounds.x);
-    p.y = clamp(p.y + p.vy * dt, C.bounds.y);
-    if (Math.abs(p.x) === C.bounds.x) p.vx = 0;
-    if (Math.abs(p.y) === C.bounds.y) p.vy = 0;
+    p.vx = steerAxis(p.vx, p.x, (held('right') - held('left')) * steer, C.bounds.x, dt);
+    p.vy = steerAxis(p.vy, p.y, (held('forward') - held('back')) * steer, C.bounds.y, dt);
+    p.x = clamp(p.x + p.vx * dt, C.bounds.x + C.steer.overshoot);
+    p.y = clamp(p.y + p.vy * dt, C.bounds.y + C.steer.overshoot);
     p.a += (-p.vx / C.bankSpeed - p.a) * Math.min(1, dt * C.bankResponse);
     // Deep in the approach the Earth's shadow draws the chair in; before that only spraying moves it forward.
     // During the entry the glide from stage four still carries it at the speed it arrived with.
@@ -35,18 +32,34 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     const beam = controlled ? praiseBeamOn(next.age, p, next.z) : null;
     if (beam) praiseShove(next, p, beam, dt);
     const praised = beam !== null;
+    const before = next.z;
     next.z += next.speed * dt;
+    next.sip = Math.max(0, next.sip - dt);
+    const sipped = drinkCoffee(next, p, before);
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
-    return { orbit: next, p, checkpoint, praised, spraying: thrust || !controlled };
+    return { orbit: next, p, checkpoint, praised, spraying: thrust || !controlled, sipped };
 }
 
 type Beam = typeof C.praise.beams[number];
 
-/** Lateral centre of a praise beam at `age` seconds into stage five. */
+/**
+ * One steering axis: chase the held direction's velocity, settle quickly on release, and past `bound` let the
+ * company geofence push back harder the further out the chair is.
+ */
+function steerAxis(v: number, at: number, input: number, bound: number, dt: number) {
+    const over = Math.max(0, Math.abs(at) - bound) * Math.sign(at);
+    const target = input * C.steer.speed - over * C.steer.edge;
+    const rate = input !== 0 || over !== 0 ? C.steer.response : C.steer.release;
+    return v + (target - v) * (1 - Det.exp(-rate * dt));
+}
+
+/** Centre of a praise beam along its own axis (across for `x`, up for `y`) at `age` seconds into stage five. */
 export function praiseBeamX(beam: Beam, age: number) {
     return beam.amplitude * Det.sin(age * beam.rate + beam.phase);
 }
+
+const along = (beam: Beam, p: Readonly<Pick<Player, 'x' | 'y'>>) => beam.axis === 'y' ? p.y : p.x;
 
 /** Whether the chair is tucked into one of the 5-1 shelter clouds, out of the satellites' sight. */
 export function praiseSheltered(p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
@@ -58,7 +71,7 @@ export function praiseSheltered(p: Readonly<Pick<Player, 'x' | 'y'>>, z: number)
 export function praiseBeamOn(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number): Beam | null {
     if (praiseSheltered(p, z)) return null;
     for (const beam of C.praise.beams) {
-        if (z >= beam.from && z <= beam.to && Math.abs(p.x - praiseBeamX(beam, age)) < beam.halfWidth) return beam;
+        if (z >= beam.from && z <= beam.to && Math.abs(along(beam, p) - praiseBeamX(beam, age)) < beam.halfWidth) return beam;
     }
     return null;
 }
@@ -72,7 +85,23 @@ export function inPraise(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: n
 function praiseShove(next: OrbitState, p: Player, beam: Beam, dt: number) {
     const { slowSpeed, slowResponse, shove } = C.praise;
     next.speed += (slowSpeed - next.speed) * Math.min(1, slowResponse * dt);
-    p.vx += (p.x >= praiseBeamX(beam, next.age) ? 1 : -1) * shove * dt;
+    const push = (along(beam, p) >= praiseBeamX(beam, next.age) ? 1 : -1) * shove * dt;
+    if (beam.axis === 'y') p.vy += push;
+    else p.vx += push;
+}
+
+/** Flying through a cup's depth close enough to it drinks it: a bit per cup, and the rider takes a sip. */
+function drinkCoffee(next: OrbitState, p: Player, before: number) {
+    const { cups, reach, sip } = C.coffee;
+    let sipped = false;
+    cups.forEach((cup, i) => {
+        if (next.coffee & (1 << i) || before >= cup.z || next.z < cup.z) return;
+        if (Math.abs(p.x - cup.x) > reach || Math.abs(p.y - cup.y) > reach) return;
+        next.coffee |= 1 << i;
+        next.sip = sip;
+        sipped = true;
+    });
+    return sipped;
 }
 
 function advanceRings(next: OrbitState, p: Player) {

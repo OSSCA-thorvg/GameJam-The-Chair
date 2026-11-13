@@ -1,7 +1,7 @@
 import { STAGE_FOUR } from '../../game/stages/sky/data';
 import { createOrbitState } from '../../game/stages/orbit/state';
 import type { RenderCtx } from '../context';
-import { REVEAL_DURATION, revealChairOrbit, revealTravel, SKY_DEPARTURE } from './sky-camera';
+import { REVEAL_DURATION, revealChairOrbit, revealSpeed, revealTravel, SKY_DEPARTURE } from './sky-camera';
 import { ORBIT_WATCH } from './orbit-watch';
 import { orbitEnding } from './orbit-ending';
 import { drawOrbitShot } from './orbit-shot';
@@ -24,7 +24,10 @@ export function drawSkyReveal(ctx: RenderCtx) {
     drawOrbitShot(ctx, {
         since: elapsed - REVEAL_DURATION,
         travel: revealTravel(elapsed, settle, ORBIT_WATCH.glide),
-        p: { x: 0, y: 0, a: 0 },
+        p: { x: 0, y: 0, vx: 0, vy: 0, a: 0 },
+        // The glide's own speed, so the rush past the cameras widens the view and streaks like flight does.
+        speed: revealSpeed(elapsed, settle, ORBIT_WATCH.glide),
+        push: 0, drunk: 0, sip: 0,
         turn: revealChairOrbit(elapsed, settle),
         clock: elapsed,
         spray: 1 + 1.5 * (1 - departure), arrival: 1 - departure, departure,

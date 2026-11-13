@@ -56,12 +56,6 @@ export function endingNebula(ctx: RenderCtx, strength: number) {
     }
 }
 
-/** Chair camera framing: from the flight framing toward a smaller chair sitting just above the horizon. */
-export function endingChairFraming(ctx: RenderCtx, flight: { zoom: number; centerY: number; offsetX: number; roll: number }, e: OrbitEndingState) {
-    const mix = (a: number, b: number) => a + (b - a) * e.wide;
-    return { zoom: mix(flight.zoom, .5), centerY: mix(flight.centerY, .64), offsetX: mix(flight.offsetX, 0), roll: mix(flight.roll, 0) };
-}
-
 /** The laptop's blue light on the rider while the screen is on, and the last praise drifting away behind. */
 export function endingChairLights(ctx: RenderCtx, chair: SkyProjection, e: OrbitEndingState) {
     if (!e.parked) return;

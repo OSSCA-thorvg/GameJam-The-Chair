@@ -34,3 +34,11 @@ export function revealTravel(elapsed: number, settle: number, distance: number) 
     const u = Math.max(0, Math.min(1, (elapsed - start) / span));
     return -distance + distance * (3 * u * u - 2 * u * u * u) + span * STAGE_FIVE.cruise * (u * u * u - u * u);
 }
+
+/** Forward speed of the glide at `elapsed`: 0 before it starts, exactly stage five's cruise speed at the hand-off. */
+export function revealSpeed(elapsed: number, settle: number, distance: number) {
+    const start = revealGlideStart(settle), span = REVEAL_DURATION - start;
+    const u = (elapsed - start) / span;
+    if (u <= 0 || u > 1) return u > 1 ? STAGE_FIVE.cruise : 0;
+    return (distance * (6 * u - 6 * u * u) + span * STAGE_FIVE.cruise * (3 * u * u - 2 * u)) / span;
+}

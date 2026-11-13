@@ -17,14 +17,15 @@ const CLOUDS = (() => {
 /** Where the chair sits in the stage-five cloud basin; the stage-four ending passes the origin. */
 export type BasinAnchor = { x: number; y: number };
 
-export function orbitSky(ctx: RenderCtx, anchor: BasinAnchor = ctx.state.player) {
+/** `yaw`: how far the camera has turned to follow the bending route, sliding the far city sideways. */
+export function orbitSky(ctx: RenderCtx, anchor: BasinAnchor = ctx.state.player, yaw = 0) {
     ctx.commands.push({ v: [[0,0],[ctx.W,0],[ctx.W,ctx.H],[0,ctx.H]], c: {
         from: [0,0], to: [0,ctx.H], stops: [[0,ctx.rgba('#7499b9')],[.55,ctx.rgba('#a7bdd0')],[1,ctx.rgba('#efd0bc')]],
     } });
     const horizon = ctx.H * .6;
-    const offset = (anchor.x / 680) * ctx.W * .025;
+    const offset = (anchor.x / 680) * ctx.W * .025 + yaw * ctx.W * .35;
     for (const building of CITY) {
-        const x = building.x * ctx.W - offset;
+        const x = ((building.x * ctx.W - offset) % ctx.W + ctx.W) % ctx.W;
         const w = building.w * ctx.W, h = building.h * ctx.H;
         ctx.commands.push({ v: [[x,horizon],[x,horizon-h],[x+w,horizon-h],[x+w,horizon]], c: '#7d9fbb48' });
     }
@@ -48,6 +49,8 @@ export type CloudBankOptions = {
      * gliding in before stage five (negative travel) stay continuous with its first frame.
      */
     unwrapped?: boolean;
+    /** Sideways swing of the drawn route at `dz` ahead of the chair. */
+    bend?: (dz: number) => number;
 };
 
 type PlacedCloud = { seed: number; x: number; y: number; size: number; opacity: number };
@@ -59,7 +62,7 @@ function placeClouds(ctx: RenderCtx, view: SkyProjection, travel: number, foregr
         if (options.only && !options.only.has(cloud.seed)) continue;
         const z = options.unwrapped ? ((cloud.z + 12000) % 10000) - 500 - travel : ((cloud.z - travel + 12000) % 10000) - 500;
         if (z < -160 || (z < 900) !== foreground) continue;
-        const center: [number,number,number] = [z, cloud.y - anchor.y * .45, cloud.x - anchor.x * .55];
+        const center: [number,number,number] = [z, cloud.y - anchor.y * .45, cloud.x - anchor.x * .55 + (options.bend?.(z) ?? 0)];
         const depth = view.depth(center);
         if (depth < (options.nearDepth ?? 200)) continue;
         const [x,y] = view.project(center);
