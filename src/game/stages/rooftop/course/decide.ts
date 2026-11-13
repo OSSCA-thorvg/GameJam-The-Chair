@@ -31,6 +31,8 @@ export function entranceStep(entrance: { kind: 'opening'; age: number }, dt: num
     return { entrance: done ? { kind: 'ready' } : { kind: 'opening', age }, pose, done };
 }
 
+const DUCT_STEAM_ID = 1_000_000;
+
 export type RooftopInput = { p: Readonly<Player>; ground: boolean; hasExtinguisher: boolean; firstFlight: Readonly<FirstFlight>; ductReaction: Readonly<DuctReaction>; time: number };
 export type RooftopResult = { p: Player; ground: boolean; firstFlight: FirstFlight; ductReaction: DuctReaction; pickup: boolean; steamHits: number[] };
 
@@ -40,6 +42,8 @@ export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
     const duct = ductReactionStep(input.ductReaction, input.p, dt);
     const p = duct.p;
     const steamHits: number[] = [];
+    // The duct's sneeze is steam too; each sneeze counts once, keyed by its shot number.
+    if (duct.knocked && duct.reaction.kind !== 'idle') steamHits.push(DUCT_STEAM_ID + duct.reaction.shots);
     for (const [index, vent] of STAGE_THREE.vents.entries()) {
         if (ventPhase(vent, input.time).kind !== 'blow' || !inVentBlast(vent, p)) continue;
         // Each blast is its own distraction: vent index plus the cycle it belongs to.

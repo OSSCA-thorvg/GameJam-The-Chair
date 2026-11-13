@@ -175,3 +175,25 @@ test('a steam blast costs focus once per blast', async () => {
     game.step(dt);
     assert.equal(game.getSnapshot().focus, hit.focus, 'the same blast only counts once');
 });
+
+test('the duct sneeze steam costs focus when it knocks the chair back', async () => {
+    const { STAGE_THREE } = await bundled({ stdin: { contents: `export { STAGE_THREE } from './src/game/stages/rooftop/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
+    const duct = STAGE_THREE.duct;
+    const game = createGame(); game.startStage(3);
+    const state = JSON.parse(game.serialize());
+    Object.assign(state, { focus: 100, mode: 'play', hasExtinguisher: true, ground: true });
+    state.rooftop.entrance = { kind: 'ready' };
+    state.rooftop.duct = { kind: 'idle', rest: duct.firstSneezeAt - dt / 2 };
+    game.restore(JSON.stringify(state));
+    let hit = null;
+    for (let i = 0; i < 120 && !hit; i++) {
+        const now = JSON.parse(game.serialize());
+        Object.assign(now.p, { x: duct.x - 120, y: duct.y, vx: 0, vy: 0 });
+        game.restore(JSON.stringify(now));
+        game.step(dt);
+        const snap = game.getSnapshot();
+        if (snap.focusNotice?.kind === 'steam') hit = snap;
+    }
+    assert.ok(hit, 'the sneeze registers as a steam hit');
+    assert.equal(hit.focus, 100 - 15);
+});

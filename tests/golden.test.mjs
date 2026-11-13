@@ -39,7 +39,7 @@ const EXPECTED = {
     'office crash': '5005e98391e06449',
     'building exit': 'eb7e41a8dd50f40a',
     'building lift': '1b0ed8796642c3f7',
-    'rooftop to sky': '17ee6db2522b0b93',
+    'rooftop to sky': 'c357bc9fdf2e3684',
     'rooftop duct': 'd5138fcfc6d66e37',
 };
 
