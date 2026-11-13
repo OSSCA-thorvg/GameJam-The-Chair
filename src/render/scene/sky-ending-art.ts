@@ -5,8 +5,8 @@ import type { Point3, SkyProjection } from './sky-projection';
 import { endingHair } from './sky-player-hair';
 import { endingGlasses } from './sky-player-glasses';
 
-export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
-    const draw = chairDrawing(view, elapsed);
+export function endingChair(view: SkyProjection, elapsed: number, spray = 1, arrival = 0) {
+    const draw = chairDrawing(view, elapsed, arrival);
     chairFrame(draw);
     riderBody(draw);
     riderHead(view, draw);
@@ -14,9 +14,9 @@ export function endingChair(view: SkyProjection, elapsed: number, spray = 1) {
     extinguisher(draw, spray);
 }
 
-function chairDrawing(view: SkyProjection, elapsed: number) {
+function chairDrawing(view: SkyProjection, elapsed: number, arrival: number) {
     const C = ART.palette;
-    const bob = Math.sin(elapsed * 1.6) * 1.5;
+    const bob = Math.sin(elapsed * 1.6) * 1.5 + Math.sin(elapsed * 25) * 3 * arrival;
     const point = (x: number, y: number, z = 0): Point3 => [x, -y - 35 + bob, z];
     const profile = (points: Vector[], width: number, color: string, z = 0) =>
         view.profile(points.map(([x, y]) => [x, -y - 35 + bob]), width, color, z);

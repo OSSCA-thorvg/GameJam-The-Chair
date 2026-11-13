@@ -4,6 +4,7 @@ import type { RenderCtx } from '../context';
 import type { LayerSpec } from '../types';
 import { createSkyProjection, type Point3 } from './sky-projection';
 import { endingChair } from './sky-ending-art';
+import { skyDeparture } from './sky-departure';
 import { basinCloudSeeds, doorGlow, orbitCloudBank, orbitSky } from './orbit-atmosphere';
 import { orbitDoor, orbitHoop } from './orbit-art';
 
@@ -61,6 +62,8 @@ export function drawSkyReveal(ctx: RenderCtx) {
         }
     });
     orbitCloudBank(ctx, basin, 0, true, { anchor: BASIN, only, nearDepth: 1100 });
-    endingChair(view, elapsed);
+    const departure = smooth(elapsed / (settle * .7));
+    skyDeparture(ctx, departure);
+    endingChair(view, elapsed, 1 + 1.5 * (1 - departure), 1 - departure);
     ctx.commands.push(...view.commands());
 }

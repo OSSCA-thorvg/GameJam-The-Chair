@@ -217,6 +217,34 @@ function renderFrame(stage, setup) {
     return ctx.commands;
 }
 const revealFrame = (phase, age) => renderFrame(4, state => Object.assign(state.sky, { phase, age }));
+test('the departure leaves scenery behind before the quiet side view and is seekable', () => {
+    const scenery = age => revealFrame('reveal', age).filter(command => command.layer?.key === 'sky-ending-departure');
+    const start = scenery(0), leaving = scenery(STAGE_FOUR.reveal.settle * .4);
+    assert.ok(start.length > 0 && leaving.length > 0);
+    assert.ok(leaving[0].layer.opacity < start[0].layer.opacity);
+    const bounds = commands => {
+        const points = commands.flatMap(command => command.v);
+        return { right: Math.max(...points.map(([x]) => x)), bottom: Math.max(...points.map(([, y]) => y)) };
+    };
+    assert.ok(bounds(leaving).right < bounds(start).right, 'the ledge retreats behind the chair');
+    assert.deepEqual(scenery(STAGE_FOUR.reveal.settle * .7), [], 'open sky remains before the camera turns');
+    assert.deepEqual(scenery(0), start, 'backward seeking restores the departure scenery');
+});
+
+test('arrival spray shortens and settles into the existing chair animation', () => {
+    const chair = (time, spray, arrival) => {
+        const view = createSkyProjection(1000, 510, 0);
+        endingChair(view, time, spray, arrival);
+        return view.commands();
+    };
+    const plume = commands => commands.filter(command => typeof command.c === 'string' && command.c.startsWith('#f6e6df'));
+    const bottom = commands => Math.max(...plume(commands).flatMap(command => [...command.v, ...command.curves]).map(point => point[1]));
+    assert.ok(bottom(chair(0, 2.5, 0)) > bottom(chair(0, 1, 0)) + 30);
+    assert.notDeepEqual(chair(.1, 1, 1), chair(.1, 1, 0), 'arrival initially shakes the chair');
+    assert.deepEqual(revealFrame('reveal', 1).slice(-chair(1, 1, 0).length), chair(1, 1, 0),
+        'arrival motion returns to the original animated model before the camera turns');
+    assert.deepEqual(plume(revealFrame('reveal', 1)), plume(chair(1, 1, 0)));
+});
 const hex = color => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
 // Cloud bodies are the vertical gradients whose first stop is a cloud crown colour.
 const cloudBodies = (commands, tone) => commands.filter(command =>
