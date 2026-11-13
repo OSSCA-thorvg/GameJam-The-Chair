@@ -34,17 +34,14 @@ function band(path: Path, width: number): Vector[] {
 const BODY = outline({ start: [-22, -10], curves: [[-14, -18, 2, -12, 14, -5], [22, 0, 16, 10, 4, 11], [-6, 12, -14, 6, -18, 2], [-24, -2, -26, -6, -22, -10]] });
 const BEAK = outline({ start: [-22, -8], curves: [[-28, -10, -33, -5, -31, 1], [-28, 0, -25, -1, -22, -1]] });
 const TAIL = outline({ start: [12, -3], curves: [[26, -6, 40, -6, 52, -3], [40, 2, 26, 6, 13, 5]] });
-// The 2D wings, rebuilt every frame from the same beat: the far wing sweeps up as the near wing sweeps down.
-const farWing = (flap: number) => outline({ start: [2, -3], curves: [[8, -16 * flap - 8, 16, -28 * flap - 6, 26, -24 * flap - 2], [18, -12 * flap - 1, 12, -2, 12, 1]] });
-const nearWing = (flap: number) => outline({ start: [-2, -1], curves: [[8, 10 * flap + 2, 18, 12 * flap + 4, 24, 8 * flap + 8], [12, 8, 4, 6, -2, -1]] });
+// The 2D far wing at the top of its beat, its full swept-back shape; both 3D wings spread it out sideways.
+const WING = outline({ start: [2, -3], curves: [[8, -24, 16, -34, 26, -26], [18, -13, 12, -2, 12, 1]] });
 // The darker lower half of the 2D chrome gradient.
 const BELLY = outline({ start: [16, 3], curves: [[18, 7, 14, 10, 4, 11], [-6, 12, -14, 6, -18, 2], [-6, 2.5, 6, 2.8, 16, 3]] });
 const SHINE = band({ start: [-16, -12], curves: [[-8, -15, 4, -11, 12, -6]] }, 1.6);
 const RIM = band({ start: [-22, -10], curves: [[-14, -17, 2, -12, 14, -5]] }, 1.4);
 const EYE: Vector = [14, 5];
 const SHOULDER = 1;
-// How far both wings stand out from the body plane, so they still read from the front.
-const SPREAD = .45;
 
 type Finish = { body: string; belly: string; tail: string; wing: string; beak: string; shine: string; eye: number; rim?: string };
 const FINISH: Record<SkyRobot, Finish> = {
@@ -76,23 +73,24 @@ function lensEye(view: SkyProjection, place: Place, side: number, r: number) {
 /** Draws one robot parrot; `spin` is the 2D hazard's wing beat. Returns both lens eyes and their glow radius. */
 export function robotBirdModel(view: SkyProjection, robot: SkyRobot, place: Place, spin: number) {
     const f = FINISH[robot];
-    const flap = Math.sin(spin);
     view.profile(TAIL, 3, f.tail, 0, { place });
     view.profile(BODY, HALF, f.body, 0, { place, bevel: .72, widthAt: u => bodyWidth(u) });
     view.profile(BELLY, HALF + .7, f.belly, 0, { place, bevel: .8, widthAt: u => bodyWidth(u) + .7 });
     view.profile(BEAK, 2.6, f.beak, 0, { place });
     view.profile(SHINE, HALF + .4, f.shine, 0, { place, widthAt: u => bodyWidth(u) + .4 });
     if (f.rim) view.profile(RIM, HALF + .5, f.rim, 0, { place, widthAt: u => bodyWidth(u) + .5 });
-    const cos = Math.cos(SPREAD), sin = Math.sin(SPREAD);
-    // Local -w is the near side in the 2D-matching side view, so it carries the near wing.
-    for (const [side, shape] of [[-1, nearWing(flap)], [1, farWing(flap)]] as const) {
+    // Wings spread wide in a V that beats down to level; the leading edge tips up so the wing faces ahead too.
+    const angle = .95 + .55 * Math.sin(spin);
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    for (const side of [-1, 1]) {
         const root = side * bodyWidth(-6) * .8;
         const wing = ([u, v, z]: Point3): Point3 => {
-            const d = v - SHOULDER;
-            return place([u, SHOULDER + d * cos, root + side * (Math.abs(d) * sin + z)]);
+            const d = (v - SHOULDER) * 1.6;
+            return place([u, SHOULDER + d * cos - z * sin + (u + 8) * .35, root + side * (d * sin + z * cos)]);
         };
         // 'ff' alpha keeps the thin wing visible from both faces.
-        view.profile(shape, .9, f.wing + 'ff', 0, { place: wing });
+        view.profile(WING, 1.6, f.wing + 'ff', 0, { place: wing });
+        view.profile(WING.map(([u, v]) => [u * .8 - 1, SHOULDER + (v - SHOULDER) * .6] as [number, number]), .6, f.belly + 'ff', 1.8, { place: wing });
     }
     return { eyes: [lensEye(view, place, -1, f.eye), lensEye(view, place, 1, f.eye)], glow: f.eye * 2.6 };
 }
