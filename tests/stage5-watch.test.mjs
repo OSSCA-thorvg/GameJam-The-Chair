@@ -58,11 +58,18 @@ test('the reveal glides forward to exactly where stage five starts', () => {
     assert.ok(ORBIT_WATCH.reveal.every(spot => spot.z + 480 < 30), 'every reveal camera is behind the view before stage five');
 });
 
-test('the glide sets off mid-turn and arrives at stage five already at cruise speed', () => {
+test('the cameras get time to sink in before the glide, which arrives at stage five already at cruise speed', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const start = revealGlideStart(settle), end = settle + turn + hold;
-    const orbit = revealChairOrbit(start, settle);
-    assert.ok(orbit > .3 && orbit < .7, 'the camera is still turning when the glide begins');
+    // When the camera turn has brought a watcher of the given `appear` into view.
+    const seen = appear => {
+        for (let at = settle; at <= settle + turn; at += 1 / 120) if (revealChairOrbit(at, settle) >= appear) return at;
+        return Infinity;
+    };
+    const appears = ORBIT_WATCH.reveal.map(spot => spot.appear);
+    const first = seen(Math.min(...appears)), last = seen(Math.max(...appears));
+    assert.ok(last - first >= 3.5, `the cameras turn up one by one over ${(last - first).toFixed(1)} s`);
+    assert.ok(start - last >= 1.5, `every camera is in view for ${(start - last).toFixed(1)} s before the glide`);
     assert.equal(revealTravel(start, settle, ORBIT_WATCH.glide), -ORBIT_WATCH.glide, 'no forward travel before the glide');
     const step = 1 / 120;
     let previous = -Infinity;

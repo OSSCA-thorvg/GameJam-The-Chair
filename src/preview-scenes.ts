@@ -670,10 +670,11 @@ function skyEnding(): PreviewScene {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const duration = settle + turn + hold;
     return {
-        id: 'sky-ending', label: 'Sky · Turn among cameras, glide into stage 5 at cruise speed', duration, focusX: STAGE_FOUR.goal,
+        id: 'sky-ending', label: 'Sky · Slow turn among cameras, glide into stage 5 at cruise speed', duration, focusX: STAGE_FOUR.goal,
         markers: [{ at: 0, label: 'Leaving the ledge' }, { at: SKY_DEPARTURE, label: 'Quiet side view' },
             { at: settle + SKY_TURN.duration * .25, label: 'Cameras turning up' },
-            { at: revealGlideStart(settle), label: 'Three-quarter view · glide starts' },
+            { at: settle + SKY_TURN.duration / 2, label: 'Three-quarter view' },
+            { at: revealGlideStart(settle), label: 'All cameras watching · glide starts' },
             { at: settle + SKY_TURN.duration, label: 'Rear view · gliding past the cameras' },
             { at: duration - ATTENDANCE.lead, label: 'Attendance confirmed' },
             { at: duration, label: 'Stage 5 hand-off' }],

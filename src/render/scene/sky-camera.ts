@@ -1,9 +1,10 @@
 import { STAGE_FOUR } from '../../game/stages/sky/data';
 import { STAGE_FIVE } from '../../game/stages/orbit/data';
 
-// The reveal turns the chair camera from the chair's side to its back. Halfway through the turn the chair starts
-// gliding forward past the watching cameras, and it reaches stage five's start already at stage five's cruise speed.
-export const SKY_TURN = { duration: STAGE_FOUR.reveal.turn, rear: 1, glideFrom: .5 };
+// The reveal turns the chair camera slowly from the chair's side to its back while the watching cameras turn up one
+// by one. Only once all of them have been in view for a while does the chair glide forward past them, reaching
+// stage five's start already at stage five's cruise speed.
+export const SKY_TURN = { duration: STAGE_FOUR.reveal.turn, rear: 1, glideFrom: .8 };
 
 /** Seconds the last ledge takes to drift away behind the chair, inside the settle before the turn. */
 export const SKY_DEPARTURE = .7 / .3;
@@ -21,7 +22,7 @@ export function revealChairOrbit(elapsed: number, settle: number) {
     return smooth((elapsed - settle) / SKY_TURN.duration) * SKY_TURN.rear;
 }
 
-/** Seconds into the reveal when the glide begins, partway through the turn. */
+/** Seconds into the reveal when the glide begins, near the end of the turn. */
 export const revealGlideStart = (settle: number) => settle + SKY_TURN.duration * SKY_TURN.glideFrom;
 
 /**
