@@ -1,49 +1,6 @@
 import { STAGE_FOUR, skyGust, skyHazards, type SkyHazard } from '../../game/stages/sky/data';
 import type { RenderCtx } from '../context';
 
-// Wind lines rush right to left, against the course. A few faint ones warn of a gust; during the gust they
-// thicken, multiply and curl, and a ThorVG motion blur smears the whole layer along the wind.
-export function skyWindLines(ctx: RenderCtx) {
-    const { warn, strength } = skyGust(ctx.t);
-    const top = -ctx.vertical, height = ctx.H / ctx.scale;
-    const span = ctx.VW + 500;
-    const lines = 3 + Math.round(warn * 5 + strength * 12);
-    ctx.beginLayer({
-        key: 'sky-wind-lines', opacity: .35 + warn * .25 + strength * .4,
-        motionBlur: strength > .05 ? { distance: 18 * strength * ctx.scale, angle: 180 } : undefined,
-        effectBudget: { area: 160_000, minScale: .6 },
-    });
-    for (let i = 0; i < lines; i++) {
-        const speed = 420 + warn * 250 + strength * 900 + (i % 4) * 60;
-        const x = ctx.cam + ctx.VW + 250 - (ctx.t * speed + i * 397) % span;
-        const y = top + height * ((i * .618 + .07) % 1) + Math.sin(ctx.t * 2 + i) * 8;
-        const length = 70 + warn * 40 + strength * 190;
-        const lift = (i % 2 ? -1 : 1) * (4 + strength * 10);
-        ctx.strokePath([x, y], [[x + length * .3, y + lift, x + length * .7, y - lift, x + length, y]],
-            { width: 1.2 + strength * 2.6, color: strength > .1 ? '#ffffff' : '#f6efe0', cap: 'round' });
-    }
-    ctx.endLayer();
-    if (strength <= .05) return;
-    // Big curling gusts unwind across the screen with a trimmed stroke.
-    ctx.beginLayer({ key: 'sky-gust-curls', opacity: strength * .85 });
-    for (let i = 0; i < 3; i++) {
-        const age = (ctx.t * .9 + i / 3) % 1;
-        const x = ctx.cam + ctx.VW * (1.05 - age * 1.2);
-        const y = top + height * (.22 + i * .24);
-        const r = 26 + i * 6;
-        ctx.strokePath([x + 220, y], [
-            [x + 140, y - 6, x + 60, y + 4, x, y],
-            [x - r, y - 2, x - r, y - r * 1.6, x, y - r * 1.5],
-            [x + r * .8, y - r * 1.4, x + r * .6, y - r * .5, x - 10, y - r * .6],
-        ], { width: 3 + strength * 2, color: '#fffdf6', cap: 'round' }, { trim: [Math.max(0, age * 1.4 - .4), Math.min(1, age * 1.4 + .1)] });
-    }
-    ctx.endLayer();
-    // The whole sky leans white from the windward edge.
-    const right = ctx.cam + ctx.VW;
-    ctx.gradientPolygon([[right - ctx.VW * .45, top], [right, top], [right, top + height], [right - ctx.VW * .45, top + height]],
-        ctx.gradientFill(right - ctx.VW * .45, 0, right, 0, [[0, '#ffffff00'], [1, '#ffffff']], .22 * strength));
-}
-
 // Papers rattle loose a moment before the gust: a few scraps tumble along with the warning breeze.
 export function skyWarningScraps(ctx: RenderCtx) {
     const { warn, strength } = skyGust(ctx.t);

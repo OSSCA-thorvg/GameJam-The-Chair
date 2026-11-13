@@ -469,6 +469,32 @@ function skyGustCycle(): PreviewScene {
     };
 }
 
+// Hold a spray in open air so its response is readable through a full gust cycle.
+function skyWindFeedback(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const base = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    const w = STAGE_FOUR.wind;
+    const gustAt = w.calm + w.warn;
+    return {
+        id: 'sky-wind-feedback', label: 'Sky · Open-air wind response (spray held)',
+        duration: w.period, focusX: 3900,
+        markers: [{ at: 0, label: 'Calm' }, { at: w.calm + w.warn * .65, label: 'Chair warns' },
+            { at: gustAt + w.rise * .6, label: 'Gust onset' }, { at: gustAt + .8, label: 'Smoke bends left' },
+            { at: gustAt + w.blow + w.fall + .1, label: 'Calm returns' }],
+        sample(time) {
+            const at = Math.max(0, Math.min(w.period, time));
+            return { state: { ...base, time: at, ground: false, hasExtinguisher: true,
+                lessons: { ...base.lessons, moved: true },
+                player: { ...base.player, x: 3900, y: -3000, a: 0, vx: 0, vy: 0 },
+                sky: { ...base.sky, phase: 'course', airSprays: 1 },
+                spray: { ...base.spray, burst: .24, dir: { x: 0, y: 1 } },
+            }, effects };
+        },
+    };
+}
+
 // Many passes of the upper-desk bird lane in a row: every pass draws a different lovebird colour or the macaw.
 function skyParrots(): PreviewScene {
     const game = createGame();
@@ -633,6 +659,7 @@ export const previewScenes: readonly PreviewScene[] = [
     rooftopTakeoff(),
     cloudEntry(),
     skyGustCycle(),
+    skyWindFeedback(),
     skyParrots(),
     skyEnding(),
     orbitRoute(),

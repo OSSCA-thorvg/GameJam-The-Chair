@@ -1,4 +1,4 @@
-import { skyPlatforms, skyWind, STAGE_FOUR } from '../../game/stages/sky/data';
+import { skyPlatforms, STAGE_FOUR } from '../../game/stages/sky/data';
 import type { RenderCtx } from '../context';
 import { player } from './player';
 import { sprayPlume } from './spray';
@@ -7,7 +7,7 @@ import { breadCloud as cloud } from './cloud-art';
 import { skyCoursePlatform } from './sky-course-art';
 import { skyBuilding, skyFlag, skyMonitor, skyRibbon } from './sky-course-decor';
 import { sunGlow } from './sun';
-import { skyHazardsArt, skyKnockFeathers, skySprayGauge, skyWarningScraps, skyWindLines } from './sky-wind';
+import { skyHazardsArt, skyKnockFeathers, skySprayGauge, skyWarningScraps } from './sky-wind';
 
 function atmosphere(ctx: RenderCtx) {
     const top = -ctx.vertical, height = ctx.H / ctx.scale, bottom = top + height;
@@ -32,14 +32,6 @@ function atmosphere(ctx: RenderCtx) {
         cloud(ctx, x, top + height * (.98 + Math.sin(i * 4) * .065), .8 + (i % 2) * .2, 700 + id * 2, false);
         if (i % 2 === 0) cloud(ctx, x + 110, top + height * .08, .65, 701 + id * 2, false);
     }
-    // Broken wisps, never a solid cloud floor or an apparent landing surface.
-    ctx.beginLayer({ key: 'sky-wisps', opacity: .5 });
-    for (let i = 0; i < 7; i++) {
-        const x = ctx.cam + i * 210 - (ctx.t * (16 + skyWind(ctx.t) * 110) + ctx.cam * .4) % 210;
-        const y = top + height * (.26 + (i % 3) * .18);
-        ctx.strokePath([x, y], [[x + 25, y - 12, x + 89, y - 7, x + 144, y - 26]], { width: 2, color: '#faf0df66', cap: 'round' });
-    }
-    ctx.endLayer();
 }
 
 export function drawSky(ctx: RenderCtx) {
@@ -68,7 +60,6 @@ export function drawSky(ctx: RenderCtx) {
     }
     ctx.ox = ctx.oy = ctx.rotation = 0;
     skyHazardsArt(ctx);
-    skyWindLines(ctx);
     sprayPlume(ctx); player(ctx);
     skyKnockFeathers(ctx);
     skySprayGauge(ctx);
