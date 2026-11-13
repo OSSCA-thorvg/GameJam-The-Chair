@@ -31,6 +31,12 @@ function fakeThorvg() {
     for (const name of ['resetEffects', 'gaussianBlur', 'motionBlur', 'blend', 'opacity', 'clip', 'mask', 'visible', 'transform']) Scene.prototype[name] = chain;
     Scene.prototype.mask = function (shape, method) { this.maskShape = shape; this.maskMethod = method; return this; };
     Scene.prototype.clip = function (shape) { this.clipShape = shape; return this; };
+    class Text extends Paint {
+        constructor() { super(); this.calls = {}; }
+    }
+    for (const name of ['align', 'font', 'text', 'fontSize', 'fill', 'outline', 'opacity', 'transform', 'visible']) {
+        Text.prototype[name] = function (...args) { this.calls[name] = args; return this; };
+    }
     class Gradient { setStops() { return this; } dispose() {} }
     class Canvas {
         constructor() { this.paints = []; }
@@ -51,7 +57,7 @@ function fakeThorvg() {
         }
     }
     const TVG = {
-        Shape, Scene, Canvas, LinearGradient: Gradient, RadialGradient: Gradient,
+        Shape, Scene, Text, Canvas, LinearGradient: Gradient, RadialGradient: Gradient,
         BlendMethod: { Normal: 0, Multiply: 1, Screen: 2, Add: 3, Overlay: 4 },
         StrokeCap: { Butt: 0, Round: 1 }, StrokeJoin: { Round: 1 }, MaskMethod: { Alpha: 1, InvAlpha: 2 },
     };
@@ -256,4 +262,32 @@ test('retained geometry is traced once while its ThorVG Scene transform can chan
     paint(ctx, TVG, canvas, pool);
     assert.equal(log.filter(item => item === 'shape-reset').length, firstTraceCount,
         'moving the retained Scene does not retrace its child path');
+});
+
+test('ThorVG Text keeps its place in the command order so later shapes paint over it', () => {
+    const { TVG, canvas } = fakeThorvg();
+    const ctx = createRenderCtx({}, { save() {}, restore() {} });
+    Object.assign(ctx, { W: 400, H: 300 });
+    const pool = createPaintPool();
+    const text = { content: '흔들리지', font: 'Black Han Sans', size: 40, x: 100, y: 50, rotation: .1, fill: '#fff0cc',
+        outline: { width: 3, color: '#27344d' } };
+    ctx.commands = [square(10), { v: [[60, 30], [140, 30], [140, 70], [60, 70]], c: '#fff0cc', text }, square(100)];
+    ctx.foregroundActors = [];
+    paint(ctx, TVG, canvas, pool);
+
+    const kinds = canvas.paints.map(paint => paint.constructor.name);
+    assert.deepEqual(kinds, ['Shape', 'Text', 'Text', 'Shape'], 'outline, fill, then the actor drawn after the sign');
+    const [back, front] = canvas.paints.slice(1, 3);
+    assert.deepEqual(back.calls.outline, [3, 0x27, 0x34, 0x4d], 'the outline sits under the fill');
+    assert.equal(front.calls.outline, undefined);
+    assert.deepEqual(front.calls.fontSize, [30], 'CSS px are converted to ThorVG points');
+    assert.deepEqual(front.calls.align, [.5, .5]);
+    assert.equal(front.calls.transform[0].e13, 100);
+    assert.ok(Math.abs(front.calls.transform[0].e21 - Math.sin(.1)) < 1e-9);
+
+    // Without the sign the pooled lines are hidden, and the paint order is rebuilt without leaving gaps.
+    ctx.commands = [square(10), square(100)];
+    paint(ctx, TVG, canvas, pool);
+    assert.equal(front.calls.visible[0], false);
+    assert.equal(canvas.paints.filter(paint => paint.constructor.name === 'Shape').length, 2);
 });

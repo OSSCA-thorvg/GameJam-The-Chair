@@ -35,6 +35,8 @@ export type RenderStats = {
     /** Plain shapes drawn this frame / pooled in total. 이번 프레임 사용 / 풀 전체. */
     topShapes: number;
     poolTop: number;
+    /** ThorVG Text lines drawn this frame. 이번 프레임 ThorVG Text 줄 수. */
+    texts: number;
     /** Layer scenes drawn this frame / pooled in total. */
     layers: number;
     layerSlots: number;
@@ -98,7 +100,7 @@ export function createRenderStats(): RenderStats {
 export function resetRenderStats(stats: RenderStats) {
     stats.buildMs = stats.syncMs = stats.renderMs = stats.labelsMs = 0;
     stats.commands = stats.topShapes = stats.poolTop = stats.layers = stats.layerSlots = 0;
-    stats.layerShapes = stats.parkedShapes = 0;
+    stats.layerShapes = stats.parkedShapes = stats.texts = 0;
     stats.reorder = false;
     stats.gaussianBlurs = stats.motionBlurs = stats.blurAmount = stats.blurArea = 0;
     stats.masks = stats.clips = 0;

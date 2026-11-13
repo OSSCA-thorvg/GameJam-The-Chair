@@ -1,6 +1,7 @@
-import type { Canvas, LinearGradient, RadialGradient, Scene, Shape, ThorVGNamespace } from '@thorvg/webcanvas';
+import type { Canvas, LinearGradient, RadialGradient, Scene, Shape, Text, ThorVGNamespace } from '@thorvg/webcanvas';
 import type { RenderCtx } from './context';
-import type { Blend, DrawCommand, Gradient, LayerSpec } from './types';
+import type { Blend, DrawCommand, Gradient, LayerSpec, TextSpec } from './types';
+import { signFontCss } from './fonts';
 import { applyLayerOverrides, effectScaleForArea, type LayerOverrides, type RenderStats } from './perf';
 
 type LayerSlot = {
@@ -11,23 +12,27 @@ type LayerSlot = {
     maskInvert: boolean;
     retainedGeometry: string | null;
 };
-type Item = { cmd: DrawCommand } | { layer: LayerSpec; key: string; cmds: DrawCommand[] };
+type Item = { cmd: DrawCommand } | { text: TextSpec } | { layer: LayerSpec; key: string; cmds: DrawCommand[] };
+/** A pooled line of ThorVG Text: `back` carries the outline under `front`'s fill, like strokeText then fillText. */
+type TextSlot = { back: Text; front: Text; font: string; content: string };
 
 // Shapes are pooled and reused; these bits remember which non-default
 // styles a pooled shape carries so they can be cleared when it is reused.
 const STROKED = 1;
 const TRIMMED = 2;
 const BLENDED = 4;
+const PX_TO_PT = 72 / 96;
 
 export type PaintPool = {
     top: Shape[];
+    texts: TextSlot[];
     layers: Map<string, LayerSlot>;
     styled: Map<Shape, number>;
     signature: string;
 };
 
 export function createPaintPool(): PaintPool {
-    return { top: [], layers: new Map(), styled: new Map(), signature: '' };
+    return { top: [], texts: [], layers: new Map(), styled: new Map(), signature: '' };
 }
 
 /**
@@ -78,6 +83,12 @@ function collect(commands: DrawCommand[]): Item[] {
     const seen = new Map<string, number>();
     let open: Extract<Item, { layer: LayerSpec }> | null = null;
     for (const cmd of commands) {
+        // Text is always its own canvas paint, so it breaks a layer run; it never joins a layer Scene.
+        if (cmd.text) {
+            open = null;
+            items.push({ text: cmd.text });
+            continue;
+        }
         if (!cmd.layer) {
             open = null;
             items.push({ cmd });
@@ -196,26 +207,60 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         s.visible(true);
     };
 
-    // The canvas paint order only has to be rebuilt when a layer appears,
+    const applyText = (slot: TextSlot, spec: TextSpec) => {
+        if (slot.font !== spec.font) {
+            slot.back.font(spec.font);
+            slot.front.font(spec.font);
+            slot.font = spec.font;
+        }
+        if (slot.content !== spec.content) {
+            slot.back.text(spec.content);
+            slot.front.text(spec.content);
+            slot.content = spec.content;
+        }
+        const c = Math.cos(spec.rotation), s = Math.sin(spec.rotation);
+        const matrix = { e11: c, e12: -s, e13: spec.x, e21: s, e22: c, e23: spec.y, e31: 0, e32: 0, e33: 1 };
+        // ThorVG 1.1.3 Text sizes are points (96/72 px each); TextSpec sizes are CSS px like Canvas2D.
+        const size = spec.size * PX_TO_PT;
+        const [r, g, b, a] = ctx.rgba(spec.fill);
+        slot.front.fontSize(size).fill(r, g, b).opacity(a).transform(matrix).visible(true);
+        if (spec.outline) {
+            const [or, og, ob, oa] = ctx.rgba(spec.outline.color);
+            slot.back.fontSize(size).fill(or, og, ob).outline(spec.outline.width, or, og, ob)
+                .opacity(oa).transform(matrix).visible(true);
+        } else {
+            slot.back.visible(false);
+        }
+    };
+
+    // The canvas paint order only has to be rebuilt when a layer or a text line appears,
     // disappears, or moves relative to the plain shapes around it.
     let topCount = 0;
+    let textCount = 0;
     let signature = '';
     for (const item of items) {
         if ('cmd' in item) topCount++;
+        else if ('text' in item) signature += `${topCount}:text${textCount++};`;
         else signature += `${topCount}:${item.key};`;
     }
     while (pool.top.length < topCount) {
         pool.top.push(new TVG.Shape());
         signature += '+';
     }
-    signature += pool.top.length;
+    while (pool.texts.length < textCount) {
+        // Centre-anchored, so the command's (x, y) and rotation act about the middle of the line.
+        const make = () => new TVG.Text().align(.5, .5);
+        pool.texts.push({ back: make(), front: make(), font: '', content: '' });
+        signature += '+';
+    }
+    signature += `${pool.top.length}/${pool.texts.length}`;
     // ThorVG cannot take a clip or mask off a scene. A stand-in that lets everything through (a huge rect) is
     // drawn wrongly by the GL renderer: a Screen-blended, masked water layer smeared other actors across the
     // frame once its mask ended. A layer that loses its clip or mask, or flips its mask mode, starts over with
     // a fresh scene, and the canvas order is rebuilt because the old scene leaves it.
     // ThorVG는 scene의 clip/mask를 뗄 수 없고, GL 렌더러는 대체 mask를 잘못 그리므로 scene을 새로 만든다.
     for (const item of items) {
-        if ('cmd' in item) continue;
+        if (!('layer' in item)) continue;
         const slot = pool.layers.get(item.key);
         if (slot && staleSlot(slot, item.layer)) {
             pool.layers.delete(item.key);
@@ -232,12 +277,20 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
     }
 
     let topIndex = 0;
-    const order: (Shape | Scene)[] = [];
+    let textIndex = 0;
+    const order: (Shape | Scene | Text)[] = [];
     for (const item of items) {
         if ('cmd' in item) {
             const s = pool.top[topIndex++];
             apply(s, item.cmd);
             order.push(s);
+            continue;
+        }
+        if ('text' in item) {
+            const slot = pool.texts[textIndex++];
+            applyText(slot, item.text);
+            order.push(slot.back, slot.front);
+            if (stats) stats.texts++;
             continue;
         }
         let slot = pool.layers.get(item.key);
@@ -349,10 +402,15 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
         order.push(scene);
     }
     for (let i = topIndex; i < pool.top.length; i++) pool.top[i].visible(false);
+    for (let i = textIndex; i < pool.texts.length; i++) {
+        pool.texts[i].back.visible(false);
+        pool.texts[i].front.visible(false);
+    }
 
     if (reorder) {
         for (const paint of order) tvg.add(paint);
         for (let i = topIndex; i < pool.top.length; i++) tvg.add(pool.top[i]);
+        for (let i = textIndex; i < pool.texts.length; i++) tvg.add(pool.texts[i].back).add(pool.texts[i].front);
         // Only a completed rebuild counts: if anything above throws, the next frame rebuilds again instead of
         // drawing an empty canvas until the layer set happens to change.
         pool.signature = signature;
@@ -394,9 +452,31 @@ function style2d(ctx: RenderCtx, bg: CanvasRenderingContext2D, c: string | Gradi
     return g;
 }
 
+function text2d(bg: CanvasRenderingContext2D, spec: TextSpec) {
+    bg.save();
+    bg.translate(spec.x, spec.y);
+    bg.rotate(spec.rotation);
+    bg.font = signFontCss(spec.size);
+    bg.textAlign = 'center';
+    bg.textBaseline = 'middle';
+    if (spec.outline) {
+        bg.lineJoin = 'round';
+        bg.lineWidth = spec.outline.width;
+        bg.strokeStyle = spec.outline.color;
+        bg.strokeText(spec.content, 0, 0);
+    }
+    bg.fillStyle = spec.fill;
+    bg.fillText(spec.content, 0, 0);
+    bg.restore();
+}
+
 /** Canvas2D fallback: same commands, with the layer features Canvas2D can express. */
 function paintCanvas(ctx: RenderCtx, bg: CanvasRenderingContext2D, commands: DrawCommand[]) {
     for (const cmd of commands) {
+        if (cmd.text) {
+            text2d(bg, cmd.text);
+            continue;
+        }
         const layer = cmd.layer;
         const styled = layer || cmd.blend || cmd.stroke;
         if (styled) {
