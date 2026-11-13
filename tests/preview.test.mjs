@@ -110,7 +110,7 @@ test('the sky ending preview seeks through side view, the orbit and back view', 
     const depthStart = scene.markers.find(marker => marker.label.startsWith('Rear view')).at;
     assert.equal(scene.sample(1.5).state.sky.phase, 'reveal');
     assert.equal(scene.sample(depthStart + .5).state.sky.phase, 'depth');
-    assert.equal(scene.sample(scene.duration).state.sky.age, scene.duration - depthStart);
+    assert.ok(Math.abs(scene.sample(scene.duration).state.sky.age - (scene.duration - depthStart)) < 1e-9);
     const ending = scene.sample(scene.duration);
     scene.sample(0);
     assert.deepEqual(scene.sample(scene.duration), ending);

@@ -15,9 +15,11 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     }
     if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
     const controlled = next.phase !== 'entry';
+    // Steering grows from nothing to full over the entry, so the chair is under control right after the glide.
+    const steer = controlled ? 1 : Math.min(1, next.age / C.entryTime);
     const damping = Det.exp(-C.drag * dt);
-    p.vx = (p.vx + (controlled ? held('right') - held('left') : 0) * C.acceleration * dt) * damping;
-    p.vy = (p.vy + (controlled ? held('forward') - held('back') : 0) * C.acceleration * dt) * damping;
+    p.vx = (p.vx + (held('right') - held('left')) * steer * C.acceleration * dt) * damping;
+    p.vy = (p.vy + (held('forward') - held('back')) * steer * C.acceleration * dt) * damping;
     p.x = clamp(p.x + p.vx * dt, C.bounds.x);
     p.y = clamp(p.y + p.vy * dt, C.bounds.y);
     if (Math.abs(p.x) === C.bounds.x) p.vx = 0;
@@ -44,13 +46,13 @@ export function praiseBeamX(beam: Beam, age: number) {
 }
 
 /** Whether the chair is tucked into one of the 5-1 shelter clouds, out of the satellites' sight. */
-export function praiseSheltered(p: Readonly<Player>, z: number) {
+export function praiseSheltered(p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
     const { shelters, shelterSize: size } = C.praise;
     return shelters.some(s => Math.abs(p.x - s.x) < size.x && Math.abs(p.y - s.y) < size.y && Math.abs(z - s.z) < size.z);
 }
 
 /** The beam falling on the chair at route depth `z`, if any. */
-export function praiseBeamOn(age: number, p: Readonly<Player>, z: number): Beam | null {
+export function praiseBeamOn(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number): Beam | null {
     if (praiseSheltered(p, z)) return null;
     for (const beam of C.praise.beams) {
         if (z >= beam.from && z <= beam.to && Math.abs(p.x - praiseBeamX(beam, age)) < beam.halfWidth) return beam;
@@ -59,7 +61,7 @@ export function praiseBeamOn(age: number, p: Readonly<Player>, z: number): Beam 
 }
 
 /** Whether a praise beam is falling on the chair at route depth `z`. */
-export function inPraise(age: number, p: Readonly<Player>, z: number) {
+export function inPraise(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
     return praiseBeamOn(age, p, z) !== null;
 }
 

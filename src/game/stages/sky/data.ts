@@ -6,7 +6,7 @@ export const STAGE_FOUR = deepFreeze({
     goal: 5410,
     arrivalY: -1820,
     // The 3D turn to the chair's back, then the glide past the watching cameras into stage five.
-    reveal: { settle: 2.65, turn: 9.6, hold: 5 },
+    reveal: { settle: 2.65, turn: 4.8, hold: 2 },
     spawn: { x: 2380, y: -1820 },
     // One flag halfway: the start, then the floating desk after the gusty sign.
     checkpoints: [{ x: 2380, y: -1820 }, { x: 3790, y: -2078 }],

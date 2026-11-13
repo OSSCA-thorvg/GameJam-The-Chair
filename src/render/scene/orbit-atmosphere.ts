@@ -43,6 +43,11 @@ export type CloudBankOptions = {
     only?: ReadonlySet<number>;
     /** Clouds nearer the camera than this are skipped and fade in beyond it; the ending camera passes close to some. */
     nearDepth?: number;
+    /**
+     * Place each cloud by its stage five start position minus `travel`, without wrapping round the loop, so clouds
+     * gliding in before stage five (negative travel) stay continuous with its first frame.
+     */
+    unwrapped?: boolean;
 };
 
 type PlacedCloud = { seed: number; x: number; y: number; size: number; opacity: number };
@@ -52,7 +57,7 @@ function placeClouds(ctx: RenderCtx, view: SkyProjection, travel: number, foregr
     const placed: PlacedCloud[] = [];
     for (const cloud of CLOUDS) {
         if (options.only && !options.only.has(cloud.seed)) continue;
-        const z = ((cloud.z - travel + 12000) % 10000) - 500;
+        const z = options.unwrapped ? ((cloud.z + 12000) % 10000) - 500 - travel : ((cloud.z - travel + 12000) % 10000) - 500;
         if (z < -160 || (z < 900) !== foreground) continue;
         const center: [number,number,number] = [z, cloud.y - anchor.y * .45, cloud.x - anchor.x * .55];
         const depth = view.depth(center);

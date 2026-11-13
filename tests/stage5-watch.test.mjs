@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, revealChairOrbit, revealGlideStart, revealTravel, STAGE_FOUR, attendanceBubble } = await loadSource(`
+const { FIVE, createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, revealChairOrbit, revealGlideStart, revealTravel, STAGE_FOUR, attendanceBubble } = await loadSource(`
     export { createGame } from './src/game/game';
+    export { STAGE_FIVE as FIVE } from './src/game/stages/orbit/data';
     export { createRenderCtx } from './src/render/context';
     export { drawOrbit } from './src/render/scene/orbit';
     export { cctvLamp, ORBIT_WATCH } from './src/render/scene/orbit-watch';
@@ -57,12 +58,24 @@ test('the reveal glides forward to exactly where stage five starts', () => {
     assert.ok(ORBIT_WATCH.reveal.every(spot => spot.z + 480 < 30), 'every reveal camera is behind the view before stage five');
 });
 
-test('the glide waits until the camera is fully behind the chair', () => {
-    const { settle } = STAGE_FOUR.reveal;
-    const start = revealGlideStart(settle);
-    assert.equal(revealChairOrbit(start, settle), 1);
-    assert.ok(revealChairOrbit(start - .3, settle) < 1);
-    assert.equal(revealTravel(start, settle, ORBIT_WATCH.glide), -ORBIT_WATCH.glide, 'no forward travel before the rear view');
+test('the glide sets off mid-turn and arrives at stage five already at cruise speed', () => {
+    const { settle, turn, hold } = STAGE_FOUR.reveal;
+    const start = revealGlideStart(settle), end = settle + turn + hold;
+    const orbit = revealChairOrbit(start, settle);
+    assert.ok(orbit > .3 && orbit < .7, 'the camera is still turning when the glide begins');
+    assert.equal(revealTravel(start, settle, ORBIT_WATCH.glide), -ORBIT_WATCH.glide, 'no forward travel before the glide');
+    const step = 1 / 120;
+    let previous = -Infinity;
+    for (let at = start; at <= end; at += step) {
+        const travel = revealTravel(at, settle, ORBIT_WATCH.glide);
+        assert.ok(travel >= previous, `the glide only moves forward (${at.toFixed(2)} s)`);
+        previous = travel;
+    }
+    const speed = (revealTravel(end, settle, ORBIT_WATCH.glide) - revealTravel(end - step, settle, ORBIT_WATCH.glide)) / step;
+    assert.ok(Math.abs(speed - FIVE.cruise) < 2, `hand-off speed ${speed.toFixed(1)} matches stage five's cruise`);
+    const game = createGame();
+    game.startStage(5);
+    assert.equal(game.getSnapshot().orbit.speed, FIVE.cruise, 'stage five starts at the same cruise speed');
 });
 
 test('the cameras come in several models and sizes, spread to every corner of the rear view', () => {

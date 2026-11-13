@@ -232,3 +232,13 @@ test('the ending: horizon and nebula, the laptop goes dark, everything fades, th
     assert.deepEqual(end.labels.filter(label => label === 'THE END'), ['THE END']);
     assert.deepEqual(wide.labels.filter(label => label === 'THE END'), []);
 });
+
+test('steering fades in during the entry instead of being locked out', () => {
+    const state = JSON.parse(fresh().serialize());
+    const at = age => orbitStep({ ...state.orbit, age }, state.p, ['right'], 1 / 120).p.vx;
+    assert.ok(at(0) < at(STAGE_FIVE.entryTime * .3), 'the first tick barely steers');
+    assert.ok(at(STAGE_FIVE.entryTime * .3) > 0, 'the chair already answers early in the entry');
+    assert.ok(at(STAGE_FIVE.entryTime * .3) < at(STAGE_FIVE.entryTime * .9), 'and answers more as the entry goes on');
+    const thrust = orbitStep({ ...state.orbit, age: .2 }, state.p, ['spray'], 1 / 120);
+    assert.ok(thrust.orbit.speed <= STAGE_FIVE.cruise, 'thrust waits until the entry is over');
+});

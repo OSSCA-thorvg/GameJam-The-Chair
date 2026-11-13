@@ -4,7 +4,7 @@ import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
 import { praiseBeamX } from './game/stages/orbit/course/decide';
 import { STAGE_FOUR } from './game/stages/sky/data';
-import { SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
+import { revealGlideStart, SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
 import { ATTENDANCE } from './render/scene/attendance-bubble';
 import { ORBIT_ENDING } from './render/scene/orbit-ending';
 import { STAGE_TWO } from './game/stages/building/data';
@@ -670,10 +670,10 @@ function skyEnding(): PreviewScene {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const duration = settle + turn + hold;
     return {
-        id: 'sky-ending', label: 'Sky · Slow turn among cameras, glide to stage 5', duration, focusX: STAGE_FOUR.goal,
+        id: 'sky-ending', label: 'Sky · Turn among cameras, glide into stage 5 at cruise speed', duration, focusX: STAGE_FOUR.goal,
         markers: [{ at: 0, label: 'Leaving the ledge' }, { at: SKY_DEPARTURE, label: 'Quiet side view' },
             { at: settle + SKY_TURN.duration * .25, label: 'Cameras turning up' },
-            { at: settle + SKY_TURN.duration / 2, label: 'Three-quarter view' },
+            { at: revealGlideStart(settle), label: 'Three-quarter view · glide starts' },
             { at: settle + SKY_TURN.duration, label: 'Rear view · gliding past the cameras' },
             { at: duration - ATTENDANCE.lead, label: 'Attendance confirmed' },
             { at: duration, label: 'Stage 5 hand-off' }],
@@ -686,6 +686,30 @@ function skyEnding(): PreviewScene {
             }, effects };
         },
     };
+}
+
+// The real hand-off: the stage four reveal plays out, stage five takes over mid-glide, and steering fades in.
+function skyToOrbit(): PreviewScene {
+    const game = createGame();
+    game.startStage(4);
+    const start = JSON.parse(game.serialize());
+    Object.assign(start.sky, { phase: 'reveal', age: 0 });
+    Object.assign(start.p, { x: 5045, y: -2338, vx: 0, vy: 0 });
+    start.ground = false;
+    game.restore(JSON.stringify(start));
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    const markers = [{ at: 0, label: 'Leaving the ledge' }, { at: revealGlideStart(STAGE_FOUR.reveal.settle), label: 'Glide starts' }];
+    for (let i = 0; i < 60 * 16; i++) {
+        const state = game.getSnapshot();
+        if (state.stage === 5 && !markers.some(marker => marker.label === 'Stage 5')) markers.push({ at: i / 60, label: 'Stage 5' });
+        const age = state.stage === 5 && state.orbit ? state.orbit.age : -1;
+        game.setInput(...(age < 0 ? [] : age < 1.6 ? ['right' as const] : age < 3.2 ? ['left' as const, 'forward' as const] : []));
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+        if (age > 5) break;
+    }
+    return recordedScene('sky-to-orbit', 'Sky → Orbit · Seamless hand-off and steering fade-in', 0, markers, frames);
 }
 
 /** Steering for the stage five previews: duck into 5-1's shelter clouds, then keep to the widest gap between beams. */
@@ -912,6 +936,7 @@ export const previewScenes: readonly PreviewScene[] = [
     skyRobotParrot(),
     skySignDepth(),
     skyEnding(),
+    skyToOrbit(),
     orbitRoute(),
     orbitPraiseScene(),
     orbitEndingScene(),
