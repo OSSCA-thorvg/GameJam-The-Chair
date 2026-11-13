@@ -54,6 +54,8 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         style('[data-focus-fill]', 'width', focus + '%');
         style('[data-focus-trail]', 'width', focus + '%');
         style('[data-focus-fill]', 'background', focus <= 20 ? '#d88e7e' : '#d2b783');
+        hidden('[data-focus-alert]', !(active && state.stage === 1 && state.focusNotice));
+        q('[data-play-hud]')?.classList.toggle('critical', active && focus <= 20);
         q('[data-play-hud]')?.classList.toggle('hit', active && !!state.focusNotice && state.focusNotice.life > 1.25);
         q('[data-focus-meter]')?.setAttribute('aria-valuenow', String(focus));
         text('[data-focus]', focus + '%');
