@@ -8,7 +8,11 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     const next = { ...orbit, age: orbit.age + dt };
     const p = { ...player };
     const held = (key: Input) => keys.includes(key) ? 1 : 0;
-    if (next.phase === 'parked') return { orbit: next, p, checkpoint: false, praised: false };
+    // Parked in the Earth's shadow, `settled` counts on from 1 so the ending knows how far it has played.
+    if (next.phase === 'parked') {
+        next.settled += dt;
+        return { orbit: next, p, checkpoint: false, praised: false };
+    }
     if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
     const controlled = next.phase !== 'entry';
     const damping = Det.exp(-C.drag * dt);

@@ -47,5 +47,6 @@ export type OrbitState = {
     z: number;
     speed: number;
     rings: number;
+    /** 1 on arriving in the Earth's shadow, then counting up in seconds while the ending plays. */
     settled: number;
 };

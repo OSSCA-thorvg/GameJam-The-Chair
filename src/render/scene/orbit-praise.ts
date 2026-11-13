@@ -14,12 +14,12 @@ import type { SkyProjection } from './sky-projection';
 
 const P = STAGE_FIVE.praise;
 const FLOOR = -160;
-const KINDS = ['trophy', 'certificate', 'star', 'badge'] as const;
-type Kind = typeof KINDS[number];
+export const PRAISE_KINDS = ['trophy', 'certificate', 'star', 'badge'] as const;
+type Kind = typeof PRAISE_KINDS[number];
 const GOLD = '#f2c14e', GOLD_DARK = '#c9932e', CREAM = '#f7efdc', RED = '#c94a3c';
 
 const SHOWER = Array.from({ length: 40 }, (_, i) => ({
-    kind: KINDS[i % KINDS.length], across: ((i * 37) % 40) / 39, along: ((i * 23) % 40) / 39,
+    kind: PRAISE_KINDS[i % PRAISE_KINDS.length], across: ((i * 37) % 40) / 39, along: ((i * 23) % 40) / 39,
     rate: .32 + ((i * 13) % 10) * .03, phase: ((i * 29) % 40) / 40, spin: ((i * 7) % 5 - 2) * .9,
 }));
 
@@ -53,7 +53,7 @@ function beam(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, a
     layer: { key: 'orbit-praise-beam', blend: 'screen' } });
 }
 
-function item(ctx: RenderCtx, kind: Kind, [x, y]: Vector, size: number, angle: number) {
+export function praiseItem(ctx: RenderCtx, kind: Kind, [x, y]: Vector, size: number, angle: number) {
     const turn = (dx: number, dy: number): Vector =>
         [x + dx * size * Math.cos(angle) - dy * size * Math.sin(angle), y + dx * size * Math.sin(angle) + dy * size * Math.cos(angle)];
     const shape = (points: [number, number][], color: string) => ctx.commands.push({ v: points.map(([dx, dy]) => turn(dx, dy)), c: color });
@@ -88,7 +88,7 @@ function shower(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam,
         if (z < travel + 60) continue;
         const at = point(x + (piece.across * 2 - 1) * b.halfWidth * (.2 + .8 * fall), b.satellite.y - 40 - fall * drop, z);
         if (view.depth(at) < 60) continue;
-        item(ctx, piece.kind, view.project(at), ctx.clamp(9000 / view.depth(at), 3, 26), ctx.t * piece.spin + piece.phase * 6);
+        praiseItem(ctx, piece.kind, view.project(at), ctx.clamp(9000 / view.depth(at), 3, 26), ctx.t * piece.spin + piece.phase * 6);
     }
 }
 
@@ -128,6 +128,6 @@ export function orbitPraiseOnChair(ctx: RenderCtx, chairAt: Vector, age: number,
     if (!inPraise(age, p, travel)) return;
     for (let i = 0; i < 8; i++) {
         const a = ctx.t * 3 + i * Math.PI / 4, r = ctx.H * (.1 + .04 * Math.sin(ctx.t * 9 + i));
-        item(ctx, KINDS[i % KINDS.length], [chairAt[0] + Math.cos(a) * r, chairAt[1] - ctx.H * .05 + Math.sin(a) * r * .6], ctx.H / 40, a);
+        praiseItem(ctx, PRAISE_KINDS[i % PRAISE_KINDS.length], [chairAt[0] + Math.cos(a) * r, chairAt[1] - ctx.H * .05 + Math.sin(a) * r * .6], ctx.H / 40, a);
     }
 }

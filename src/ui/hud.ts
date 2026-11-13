@@ -28,7 +28,9 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         const { player: p, mode, focus } = state;
         const { cam, scale, vertical, width } = view;
         const active = mode === 'play' && !cutscene;
-        const ending = state.stage === 4 && (state.sky.phase === 'reveal' || state.sky.phase === 'depth');
+        // The stage four turn into 3D and the stage five ending (parked in the Earth's shadow) play without HUD.
+        const ending = (state.stage === 4 && (state.sky.phase === 'reveal' || state.sky.phase === 'depth'))
+            || (state.stage === 5 && state.orbit?.phase === 'parked');
         const paused = mode === 'pause';
         const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
         if (state.stage !== lastStage || state.time < lastTime) {

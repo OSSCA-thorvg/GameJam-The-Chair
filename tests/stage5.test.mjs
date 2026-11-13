@@ -199,3 +199,36 @@ test('5-1: outside the beam focus recovers, and running out of focus ends the at
     assert.ok(events.some(event => event.id === 'focus-lost'));
     assert.equal(state.deaths, 1);
 });
+
+/** Renders stage five parked in the Earth shadow, `t` seconds into the ending. */
+function endingFrame(t) {
+    const state = JSON.parse(fresh().serialize());
+    Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 + t });
+    const labels = [];
+    const ctx = createRenderCtx({}, { save() {}, restore() {}, measureText: text => ({ width: [...text].length * 8 }), fillText(text) { labels.push(text); } });
+    Object.assign(ctx, { state: { ...state, player: state.p }, t: 80 + t, W: 1000, H: 510 });
+    drawOrbit(ctx);
+    const layer = key => ctx.commands.filter(command => command.layer?.key === key);
+    return { labels, layer };
+}
+
+test('parked in the Earth shadow, the ending clock counts on and the chair stays put', () => {
+    const state = JSON.parse(fresh().serialize());
+    Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 });
+    const { state: after } = run(state, 2);
+    assert.ok(Math.abs(after.orbit.settled - 3) < 1e-6);
+    assert.equal(after.orbit.z, STAGE_FIVE.checkpoint.z);
+});
+
+test('the ending: horizon and nebula, the laptop goes dark, everything fades, then THE END', () => {
+    const start = endingFrame(0), wide = endingFrame(10), out = endingFrame(15), end = endingFrame(20);
+    assert.deepEqual(start.layer('orbit-nebula'), [], 'it starts from the shadow 5-3 ended in');
+    assert.ok(start.labels.some(label => label.startsWith('Network')), 'the connection-lost bubble is up first');
+    assert.ok(wide.layer('orbit-nebula').length > 0 && wide.layer('orbit-atmosphere-glow').length > 0);
+    assert.ok(wide.layer('orbit-laptop-light').length > 0, 'the laptop still glows');
+    assert.deepEqual(wide.layer('orbit-ending-black'), []);
+    assert.deepEqual(out.layer('orbit-laptop-light'), [], 'the screen has gone dark');
+    assert.ok(out.layer('orbit-ending-black').length === 1, 'fading out');
+    assert.deepEqual(end.labels.filter(label => label === 'THE END'), ['THE END']);
+    assert.deepEqual(wide.labels.filter(label => label === 'THE END'), []);
+});

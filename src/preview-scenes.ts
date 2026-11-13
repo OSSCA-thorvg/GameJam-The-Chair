@@ -6,6 +6,7 @@ import { praiseBeamX } from './game/stages/orbit/course/decide';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
 import { ATTENDANCE } from './render/scene/attendance-bubble';
+import { ORBIT_ENDING } from './render/scene/orbit-ending';
 import { STAGE_TWO } from './game/stages/building/data';
 import { ductTimings, STAGE_THREE, GRAPH_CORNERS } from './game/stages/rooftop/data';
 import { createEffects, type EffectsState } from './render/effects';
@@ -602,12 +603,33 @@ function orbitRoute(): PreviewScene {
         game.setInput(...orbitKeys(state));
         stepGame(game, effects);
         frames.push(capture(game, effects));
-        const section = orbit.phase === 'parked' ? 'Earth shadow · disconnected' : orbit.z < air ? '5-1 clouds'
+        const section = orbit.phase === 'parked' ? 'Ending' : orbit.z < air ? '5-1 clouds'
             : orbit.z < space ? '5-2 atmosphere' : orbit.z < shadow ? '5-3 space' : 'Earth shadow';
         if (section !== previous) { markers.push({ at: i / 60, label: section }); previous = section; }
-        if (orbit.phase === 'parked' && i / 60 - (markers.at(-1)?.at ?? 0) > 3) break;
+        // Keep recording through the whole ending, so the hand-off from 5-3 can be watched in one go.
+        if (orbit.phase === 'parked' && i / 60 - (markers.at(-1)?.at ?? 0) > ORBIT_ENDING.end + 1) break;
     }
-    return recordedScene('orbit-route', 'Orbit · 5-1 to 5-3: praise beams to the Earth shadow', 0, markers, frames);
+    return recordedScene('orbit-route', 'Orbit · 5-1 to 5-3 and the ending', 0, markers, frames);
+}
+
+// The ending, from the moment the chair parks in the Earth's shadow to THE END.
+function orbitEndingScene(): PreviewScene {
+    const game = createGame();
+    game.startStage(5);
+    const parked = JSON.parse(game.serialize());
+    Object.assign(parked.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1, age: 76 });
+    parked.checkpoint = 1;
+    game.restore(JSON.stringify(parked));
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    const { calm, wide, lightsOut, dark, end } = ORBIT_ENDING;
+    const markers = [{ at: 0, label: '05 Spray dies down' }, { at: calm, label: '06 Horizon and nebula' }, { at: wide, label: '07 Laptop goes dark' },
+        { at: lightsOut, label: 'Fading out' }, { at: dark, label: '08 THE END' }];
+    for (let i = 0; i < (end + 1) * 60; i++) {
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene('orbit-ending', 'Orbit · Ending: horizon, lights out, THE END', 0, markers, frames);
 }
 
 // 5-1: duck from shelter cloud to shelter cloud while the satellite's praise beam sweeps the cloud layer.
@@ -731,5 +753,6 @@ export const previewScenes: readonly PreviewScene[] = [
     skyEnding(),
     orbitRoute(),
     orbitPraiseScene(),
+    orbitEndingScene(),
     officeTyping(),
 ];
