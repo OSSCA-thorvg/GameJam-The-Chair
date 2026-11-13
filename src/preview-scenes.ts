@@ -444,7 +444,7 @@ function cloudEntry(): PreviewScene {
 }
 
 // A full gust cycle over the floating desks: calm, warning breeze and scraps, the gust with its paper bundles,
-// pigeons crossing, then a pigeon clipping the chair (feathers) in the last second.
+// parrots crossing, then a parrot clipping the chair (feathers) in the last second.
 function skyGustCycle(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -454,9 +454,9 @@ function skyGustCycle(): PreviewScene {
     const start = w.calm - 1;
     const duration = 1 + w.warn + w.blow + w.fall + 2;
     return {
-        id: 'sky-gust', label: 'Sky · Headwind gust, paper bundles, pigeons, rocking desks', duration, focusX: 3900,
+        id: 'sky-gust', label: 'Sky · Headwind gust, paper bundles, parrots, rocking desks', duration, focusX: 3900,
         markers: [{ at: 0, label: 'Steady headwind' }, { at: 1, label: 'Warning breeze' }, { at: 1 + w.warn, label: 'Gust' },
-            { at: 1 + w.warn + w.blow, label: 'Gust fades' }, { at: duration - 1, label: 'Pigeon knock' }],
+            { at: 1 + w.warn + w.blow, label: 'Gust fades' }, { at: duration - 1, label: 'Parrot knock' }],
         sample(time) {
             const at = Math.max(0, Math.min(duration, time));
             const knock = Math.max(0, at - (duration - 1));

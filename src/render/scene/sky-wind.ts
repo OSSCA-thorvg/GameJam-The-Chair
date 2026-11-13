@@ -77,22 +77,33 @@ function paperBundle(ctx: RenderCtx, h: SkyHazard) {
     ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
 }
 
+const PARROT = { red: '#d63a2f', deep: '#a8251f', blue: '#2f6fd0', navy: '#23477f', yellow: '#f2c230', face: '#f5efe6', beak: '#efe3c8' };
+
 function bird(ctx: RenderCtx, h: SkyHazard) {
     const flap = Math.sin(h.spin);
+    const P = PARROT;
     ctx.ox = h.x; ctx.oy = h.y; ctx.rotation = flap * .06; ctx.localScale = 1.45;
-    // A grey pigeon flying left, wearing a tiny office tie.
-    ctx.polygon([[2, -2], [18, -26 * flap - 4], [26, -22 * flap - 2], [12, 2]], '#7d8794');
-    ctx.ellipse(4, 2, 17, 10, '#9aa4b1');
-    ctx.polygon([[18, 0], [32, -6], [32, 8], [19, 6]], '#6c7684');
-    ctx.ellipse(-12, -4, 9, 8, '#8a95a3');
-    ctx.ellipse(-11, -1, 6, 4, '#7fa58f');
-    ctx.polygon([[-20, -5], [-28, -2], [-20, -1]], '#e3a640');
-    ctx.ellipse(-14, -7, 2.2, 2.2, '#ffffff');
-    ctx.ellipse(-14.6, -7, 1.1, 1.1, '#20242c');
-    ctx.polygon([[-6, 4], [-2, 4], [-1, 13], [-4, 16], [-7, 13]], '#c8463b');
-    ctx.polygon([[-2, -3], [16, 10 * flap + 3], [22, 7 * flap + 6], [8, 6]], '#a8b1bd');
-    ctx.rod(4, 11, 2, 16, 1.4, '#e3a640');
-    ctx.rod(10, 11, 9, 16, 1.4, '#e3a640');
+    // A scarlet parrot flying left, long tail streaming behind, still wearing its office tie.
+    ctx.polygon([[14, -1], [50, -6 + flap * 3], [53, -1 + flap * 3], [16, 5]], P.red);
+    ctx.polygon([[15, 2], [46, 6 + flap * 2], [47, 11 + flap * 2], [16, 7]], P.blue);
+    ctx.polygon([[2, -3], [16, -28 * flap - 5], [27, -24 * flap - 2], [12, 1]], P.navy);
+    ctx.ellipse(4, 2, 17, 10, P.red);
+    ctx.ellipse(6, 5, 12, 5, P.deep);
+    ctx.ellipse(-12, -4, 10, 9, P.red);
+    ctx.ellipse(-15, -4, 5.5, 4.5, P.face);
+    for (let i = 0; i < 3; i++) ctx.rod(-18, -6 + i * 2, -13, -6.5 + i * 2, .5, '#c9bfb0');
+    ctx.ellipse(-15, -5, 2.2, 2.2, '#ffffff');
+    ctx.ellipse(-15.6, -5, 1.1, 1.1, '#20242c');
+    // A big hooked beak: pale upper mandible curling over a dark lower one.
+    ctx.effectPath([-20, -9], [[-26, -11, -32, -7, -31, -1], [-30, 2, -28, 3, -27, 1], [-26, -2, -23, -2, -21, -1]], P.beak);
+    ctx.polygon([[-21, -1], [-26, 1], [-24, 4], [-20, 3]], '#2b2b2b');
+    ctx.polygon([[-6, 4], [-2, 4], [-1, 13], [-4, 16], [-7, 13]], P.navy);
+    ctx.rod(-5, 7, -2, 6, 1, P.yellow);
+    // Near wing: yellow coverts over blue flight feathers.
+    ctx.polygon([[-2, -3], [18, 11 * flap + 2], [26, 8 * flap + 6], [8, 6]], P.blue);
+    ctx.polygon([[-2, -3], [10, 6 * flap + 1], [14, 5 * flap + 4], [4, 4]], P.yellow);
+    ctx.rod(4, 11, 2, 16, 1.4, '#7d8794');
+    ctx.rod(10, 11, 9, 16, 1.4, '#7d8794');
     ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
 }
 
@@ -107,7 +118,7 @@ export function skyHazardsArt(ctx: RenderCtx) {
     for (const h of visible) if (h.kind === 'bird') bird(ctx, h);
 }
 
-// Feathers burst off the chair for a moment after a pigeon clips it.
+// Red, blue and yellow feathers burst off the chair for a moment after a parrot clips it.
 export function skyKnockFeathers(ctx: RenderCtx) {
     const sky = ctx.state.sky;
     if (sky.knockKind !== 'bird' || sky.knock <= 0) return;
@@ -117,9 +128,10 @@ export function skyKnockFeathers(ctx: RenderCtx) {
         const reach = 45 + age * 80;
         ctx.ox = ctx.p.x + Math.cos(angle) * reach; ctx.oy = ctx.p.y - 40 + Math.sin(angle) * reach * .7 + age * age * 30;
         ctx.rotation = angle + age * 4; ctx.localScale = 1.8;
-        ctx.ellipse(0, 0, 10, 3.6, ctx.tint('#7d8794', 1 - age));
-        ctx.ellipse(0, -.6, 8.5, 2.6, ctx.tint('#eef1f5', 1 - age));
-        ctx.rod(-9, 0, 9, 0, 1, ctx.tint('#5c6674', 1 - age));
+        const color = [PARROT.red, PARROT.blue, PARROT.yellow][i % 3];
+        ctx.ellipse(0, 0, 10, 3.6, ctx.tint(color, 1 - age));
+        ctx.ellipse(0, -.6, 7, 2, ctx.tint('#ffffff', (1 - age) * .35));
+        ctx.rod(-9, 0, 9, 0, 1, ctx.tint('#3a2a2a', 1 - age));
     }
     ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
 }
