@@ -20,6 +20,7 @@ export function applySky(s: GameState, out: GameEvent[], dt: number) {
     s.sprayDir = r.sprayDir;
     if (r.speed !== null) s.actualSpeed = r.speed;
     if (r.reached) out.push({ type: 'cue', id: 'checkpoint' });
+    if (r.hit === 'paper') out.push({ type: 'cue', id: 'paper-hit' });
     if (r.fell) s.deaths++;
     if (r.won) {
         s.completedStage = 4;

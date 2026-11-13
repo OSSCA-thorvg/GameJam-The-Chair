@@ -7,6 +7,7 @@ import { breadCloud as cloud } from './cloud-art';
 import { skyCoursePlatform } from './sky-course-art';
 import { skyBuilding, skyFlag, skyMonitor, skyRibbon } from './sky-course-decor';
 import { sunGlow } from './sun';
+import { skyHazardsArt, skyKnockFeathers, skySprayGauge, skyWarningScraps, skyWindLines } from './sky-wind';
 
 function atmosphere(ctx: RenderCtx) {
     const top = -ctx.vertical, height = ctx.H / ctx.scale, bottom = top + height;
@@ -34,7 +35,7 @@ function atmosphere(ctx: RenderCtx) {
     // Broken wisps, never a solid cloud floor or an apparent landing surface.
     ctx.beginLayer({ key: 'sky-wisps', opacity: .5 });
     for (let i = 0; i < 7; i++) {
-        const x = ctx.cam + i * 210 - (ctx.t * (10 + skyWind(ctx.t) * 20) + ctx.cam * .4) % 210;
+        const x = ctx.cam + i * 210 - (ctx.t * (16 + skyWind(ctx.t) * 110) + ctx.cam * .4) % 210;
         const y = top + height * (.26 + (i % 3) * .18);
         ctx.strokePath([x, y], [[x + 25, y - 12, x + 89, y - 7, x + 144, y - 26]], { width: 2, color: '#faf0df66', cap: 'round' });
     }
@@ -50,6 +51,7 @@ export function drawSky(ctx: RenderCtx) {
         return;
     }
     atmosphere(ctx);
+    skyWarningScraps(ctx);
     skyBuilding(ctx);
     skyRibbon(ctx);
     for (const spec of skyPlatforms(ctx.state.sky, ctx.t)) skyCoursePlatform(ctx, spec);
@@ -65,7 +67,11 @@ export function drawSky(ctx: RenderCtx) {
         skyMonitor(ctx, i);
     }
     ctx.ox = ctx.oy = ctx.rotation = 0;
+    skyHazardsArt(ctx);
+    skyWindLines(ctx);
     sprayPlume(ctx); player(ctx);
+    skyKnockFeathers(ctx);
+    skySprayGauge(ctx);
     // Foreground cloud edges frame open space without hiding the next landing.
     ctx.beginLayer({ key: 'sky-near-clouds', opacity: .75 });
     const bottom = ctx.H / ctx.scale - ctx.vertical;

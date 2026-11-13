@@ -237,10 +237,12 @@ function rooftop(value: unknown, path: string) {
 
 function sky(value: unknown, path: string) {
     const data = record(value, path);
-    exact(data, ['phase', 'age', 'lift', 'drawer', 'deskTilt', 'signTilt', 'standing', 'depth', 'depthTravel'], path);
+    exact(data, ['phase', 'age', 'lift', 'drawer', 'deskTilt', 'signTilt', 'standing', 'depth', 'depthTravel', 'airSprays', 'knock', 'knockKind'], path);
     choice(data.phase, ['arrival', 'course', 'reveal', 'depth'], `${path}.phase`);
-    for (const key of ['age', 'lift', 'drawer', 'deskTilt', 'signTilt', 'depth', 'depthTravel']) finite(data[key], `${path}.${key}`);
+    for (const key of ['age', 'lift', 'drawer', 'deskTilt', 'signTilt', 'depth', 'depthTravel', 'knock']) finite(data[key], `${path}.${key}`);
     if (data.standing !== null) string(data.standing, `${path}.standing`, 100);
+    integer(data.airSprays, `${path}.airSprays`);
+    if (data.knockKind !== null) choice(data.knockKind, ['paper', 'bird'], `${path}.knockKind`);
 }
 
 function orbit(value: unknown, path: string) {
