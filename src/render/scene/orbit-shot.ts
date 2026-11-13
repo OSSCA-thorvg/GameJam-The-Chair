@@ -1,7 +1,7 @@
 import type { RenderCtx } from '../context';
 import { createSkyProjection, placedProjection, type Point3, type SkyProjection } from './sky-projection';
 import { routeBend, routeHeading } from './orbit-route';
-import { orbitCoffee, orbitDebris, orbitGeofence, orbitSpeedLines } from './orbit-flight';
+import { orbitCoffee, orbitDebris, orbitGeofence, orbitSlipstream, orbitSpeedLines } from './orbit-flight';
 import { endingChair } from './sky-ending-art';
 import { skyDeparture } from './sky-departure';
 import { basinCloudSeeds, orbitCloudBank, orbitSky, type CloudBankOptions } from './orbit-atmosphere';
@@ -84,17 +84,22 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     const heights = backdrop(ctx, shot, clouds, cam, heading);
     const fast = smooth((shot.speed - C.cruise) / (C.maxSpeed - C.cruise));
     const push = shot.push * blend;
+    // How hard the chair is rushing forward. Speed only climbs while the extinguisher fires, so as the chair
+    // accelerates the camera falls back behind it, and eases in again as it coasts.
+    const rush = smooth((shot.speed - .4 * C.cruise) / (C.maxSpeed - .4 * C.cruise));
+    const distance = 480 + 210 * blend + 150 * rush * (1 - wide);
     // One camera for the world and the chair. It swings from the reveal's raised side view to behind the chair,
     // dollies back once stage five is under way, widens with speed, rolls a little with the bank and shakes
     // while the extinguisher fires; the ending pulls it back onto the wide horizon.
     const view = createSkyProjection(ctx.W, ctx.H, turn, {
         centerY: .5 - .13 * turn + Math.sin(ctx.t * 47) * .002 * push, eyeY: 45 - 30 * turn,
-        distance: 480 + 210 * blend, zoom: mix(1 - .08 * fast, .72, wide), roll: mix(p.a * .35, 0, wide),
+        distance, zoom: mix(1 - .08 * fast, .72, wide), roll: mix(p.a * .35, 0, wide),
         offsetX: Math.sin(ctx.t * 53) * 1.2 * push,
     });
     const point = (x: number, y: number, z: number): Point3 => [z - travel, 15 + y - cam.y, x - cam.x + routeBend(travel, heading, z - travel)];
-    // The chair sits a little below the camera's line of sight, banking and pitching with its own motion.
-    const sink = 38 * turn + 72 * blend;
+    // The chair sits a little below the camera's line of sight, banking and pitching with its own motion. Its
+    // drop scales with the camera distance, so a pulled-back camera shows it smaller at the same height.
+    const sink = (38 * turn + 72 * blend) * distance / (480 + 210 * blend) / (1 - .08 * fast * (1 - wide));
     const bank = mix(p.a * .65, 0, wide), pitch = mix(Math.max(-.2, Math.min(.2, p.vy / 900)), 0, wide);
     const pivot = -25, offset: Point3 = [0, -sink + p.y - cam.y, p.x - cam.x];
     const chair = placedProjection(view, ([x, y, z]) => {
@@ -130,9 +135,14 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     orbitShadow(ctx, heights, wide);
     skyDeparture(ctx, shot.departure);
     orbitSpeedLines(ctx, view.project(point(0, 0, travel + 100000)), fast * (1 - wide));
-    endingChair(chair, shot.clock, shot.spray, shot.arrival);
+    // The air resistance shows as streaks wrapping round the chair, strongest while the extinguisher pushes,
+    // and the plume stretches out behind it.
+    const air = orbitSlipstream(ctx, chair, rush * (.35 + .65 * push) * (1 - wide));
+    ctx.commands.push(...air.behind);
+    endingChair(chair, shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival);
     if (shot.sip > 0) sipCup(chair, shot.sip);
     ctx.commands.push(...view.commands({ ...split, part: 'near' }));
+    ctx.commands.push(...air.over);
     endingChairLights(ctx, chair, ending);
     orbitPraiseOnChair(ctx, chair.project([0, 0, 0]), since, p, travel);
     const head = chair.project([4, 70, 0]);

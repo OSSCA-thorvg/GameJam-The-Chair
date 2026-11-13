@@ -238,7 +238,9 @@ test('the reveal turns steadily from the side to behind the chair, keeping it ce
         const chair = bounds(withoutBubble(revealFrame(phase, age)).filter(command => colours.has(command.c) && !command.layer));
         const alone = bounds(rear.commands());
         assert.ok(Math.abs((chair.left + chair.right) / 2 - 500) < 30, 'the chair stays centred');
-        assert.ok(Math.abs((chair.right - chair.left) - (alone.right - alone.left)) < (alone.right - alone.left) * .25, 'at the same size');
+        // The glide's speed pulls the camera back a little, so the chair may look somewhat smaller, never tiny.
+        const width = chair.right - chair.left, model = alone.right - alone.left;
+        assert.ok(width <= model * 1.05 && width > model * .6, `at about the same size (${(width / model).toFixed(2)})`);
     }
 });
 

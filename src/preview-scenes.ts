@@ -701,7 +701,7 @@ function skyToOrbit(): PreviewScene {
     const effects = createEffects();
     const frames = [capture(game, effects)];
     const markers = [{ at: 0, label: 'Leaving the ledge' }, { at: revealGlideStart(STAGE_FOUR.reveal.settle), label: 'Glide starts' }];
-    for (let i = 0; i < 60 * 16; i++) {
+    for (let i = 0; i < 60 * 30; i++) {
         const state = game.getSnapshot();
         if (state.stage === 5 && !markers.some(marker => marker.label === 'Stage 5')) markers.push({ at: i / 60, label: 'Stage 5' });
         const age = state.stage === 5 && state.orbit ? state.orbit.age : -1;

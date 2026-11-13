@@ -351,3 +351,19 @@ test('papers drift past on both sides of the chair and sort in depth with it', (
     assert.ok(xs.some(x => x < 400) && xs.some(x => x > 600), 'on both sides');
     assert.ok(chair > 0 && sheets.some(({ i }) => i > chair), 'some pass nearer than the chair and are painted over it');
 });
+
+test('rushing forward pulls the camera back and streams air round the chair', () => {
+    const casters = commands => {
+        const points = commands.filter(command => command.c === '#3f4650').flatMap(command => command.v);
+        const xs = points.map(([x]) => x), ys = points.map(([, y]) => y);
+        return { width: Math.max(...xs) - Math.min(...xs), y: (Math.max(...ys) + Math.min(...ys)) / 2 };
+    };
+    const air = commands => commands.filter(command => command.layer?.key === 'orbit-slipstream');
+    const frame = (speed, burst) => flightFrame(state => { state.orbit.speed = speed; state.sprayBurst = burst; });
+    const slow = frame(STAGE_FIVE.cruise * .4, 0), cruise = frame(STAGE_FIVE.cruise, 0), rushing = frame(STAGE_FIVE.maxSpeed, .24);
+    assert.ok(casters(rushing).width < casters(cruise).width * .92, 'the chair looks smaller as the camera falls back');
+    assert.ok(Math.abs(casters(rushing).y - casters(cruise).y) < 20, 'but stays at the same height on screen');
+    assert.equal(air(slow).length, 0, 'no air streaks at a crawl');
+    assert.ok(air(rushing).length > 10, 'streaks flat out');
+    assert.ok(air(rushing)[0].layer.opacity > air(frame(STAGE_FIVE.maxSpeed, 0))[0].layer.opacity, 'stronger while the extinguisher pushes');
+});
