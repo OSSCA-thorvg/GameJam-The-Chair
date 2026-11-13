@@ -1,13 +1,11 @@
 import { STAGE_FOUR } from '../../game/stages/sky/data';
-import { STAGE_FIVE } from '../../game/stages/orbit/data';
 import type { RenderCtx } from '../context';
 import type { LayerSpec } from '../types';
 import { createSkyProjection, type Point3 } from './sky-projection';
 import { endingChair } from './sky-ending-art';
 import { skyDeparture } from './sky-departure';
 import { revealChairOrbit, revealTravel, SKY_DEPARTURE, SKY_TURN } from './sky-camera';
-import { basinCloudSeeds, doorGlow, orbitCloudBank, orbitSky } from './orbit-atmosphere';
-import { orbitDoor } from './orbit-art';
+import { basinCloudSeeds, orbitCloudBank, orbitSky } from './orbit-atmosphere';
 import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGlow, type RoutePoint } from './orbit-watch';
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
 import { orbitPraiseShelters } from './orbit-praise';
@@ -42,16 +40,6 @@ function revealWatchers(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, 
     });
 }
 
-/** Stage five's door, still `travel` short of where stage five starts. */
-function revealGoal(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, goal: number) {
-    if (goal <= 0) return;
-    doorGlow(ctx, view, point(STAGE_FIVE.door.x, STAGE_FIVE.door.y + 60, STAGE_FIVE.door.z), goal);
-    inLayer(ctx, { key: 'sky-ending-goal', opacity: goal }, () => {
-        orbitDoor(view, point(STAGE_FIVE.door.x, STAGE_FIVE.door.y, STAGE_FIVE.door.z));
-        ctx.commands.push(...view.commands());
-    });
-}
-
 // Screen-space commands still go through the shared ThorVG paint pool and Canvas2D fallback.
 // The camera swings slowly from the chair's side to its back while the watching cameras turn up; then the
 // chair glides forward past them, so the last frame here is the first frame of stage five.
@@ -60,7 +48,6 @@ export function drawSkyReveal(ctx: RenderCtx) {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const elapsed = sky.phase === 'depth' ? settle + turn + sky.age : sky.age;
     const progress = smooth((elapsed - settle) / Math.min(turn, SKY_TURN.duration));
-    const goal = smooth((elapsed - settle - turn) / (hold * .6));
     const travel = revealTravel(elapsed, settle, ORBIT_WATCH.glide);
     const orbit = revealChairOrbit(elapsed, settle);
     const view = createSkyProjection(ctx.W, ctx.H, orbit);
@@ -87,7 +74,6 @@ export function drawSkyReveal(ctx: RenderCtx) {
     orbitPraiseShelters(ctx, basin, point);
     if (orbit >= ORBIT_WATCH.glintsFrom) orbitCloudGlints(ctx);
     revealWatchers(ctx, createSkyProjection(ctx.W, ctx.H, progress, framing), point, travel, orbit);
-    revealGoal(ctx, basin, point, goal);
     orbitCloudBank(ctx, basin, 0, true, { anchor: BASIN, only, nearDepth: 1100 });
     const departure = smooth(elapsed / SKY_DEPARTURE);
     skyDeparture(ctx, departure);

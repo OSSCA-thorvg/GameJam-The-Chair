@@ -61,8 +61,9 @@ export const ORBIT_WATCH = {
     glide: GLIDE,
     reveal: revealCctvs(4100, GLIDE),
     route: routeCctvs(5200, 10, 600, 4700),
-    // The 5-1 satellite whose beam showers the chair with praise.
-    satellite: { ...STAGE_FIVE.praise.satellite, appear: .35 },
+    // The satellites whose beams shower the chair with praise (5-1 to 5-3).
+    satellites: STAGE_FIVE.praise.beams.map(beam => beam.satellite),
+    satelliteAppear: .35,
     // A far speck in the sky above the office door, the last landing of the route.
     beacon: { x: 90, y: 760, z: 7400, appear: .55 },
     // Lenses and lamps glinting out of the low cloud floor, from when the camera is behind the chair.
@@ -94,8 +95,8 @@ function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: nu
     return { at: lamp, state };
 }
 
-function satellite(view: SkyProjection, point: RoutePoint, travel: number, t: number): Lamp {
-    const { x, y, z } = ORBIT_WATCH.satellite;
+function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: number; z: number }, travel: number, t: number): Lamp {
+    const { x, y, z } = at;
     const place = placer(point(x, y + Math.sin(t * .7) * 12, z), aim(0, 1) + Math.sin(t * .4) * .08);
     view.profile([[-24, -30], [24, -30], [32, -20], [32, 20], [24, 30], [-24, 30], [-32, 20], [-32, -20]], 28, '#dcd7cf', 0, { place });
     view.profile(rect(-15, 4, 15, 16), .6, '#2f6fb5', 28.6, { place });
@@ -123,7 +124,10 @@ function satellite(view: SkyProjection, point: RoutePoint, travel: number, t: nu
  */
 export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, cameras: 'reveal' | 'route', shown = 1) {
     const lamps = ORBIT_WATCH[cameras].filter(spot => spot.appear <= shown).map(spot => floating(view, point, spot, travel, t));
-    if (ORBIT_WATCH.satellite.appear <= shown) lamps.push(satellite(view, point, travel, t));
+    // Far satellites are left out until the chair is within sight of them.
+    if (ORBIT_WATCH.satelliteAppear <= shown) for (const at of ORBIT_WATCH.satellites) {
+        if (at.z - travel < 6000) lamps.push(satellite(view, point, at, travel, t));
+    }
     return lamps;
 }
 
@@ -158,7 +162,8 @@ export function orbitBeacon(ctx: RenderCtx, view: SkyProjection, point: RoutePoi
 }
 
 /** White lens glints and red recording lamps blink out of the clouds. */
-export function orbitCloudGlints(ctx: RenderCtx) {
+export function orbitCloudGlints(ctx: RenderCtx, alpha = 1) {
+    if (alpha <= 0) return;
     const layer = { key: 'orbit-cloud-glint', blend: 'screen' as const };
     for (const glint of ORBIT_WATCH.glints) {
         const wave = Math.sin(ctx.t * glint.rate + glint.phase);
@@ -167,8 +172,9 @@ export function orbitCloudGlints(ctx: RenderCtx) {
         const glow = 7 + 9 * k, core = 2 + 1.6 * k;
         const color = glint.red ? '#ff6b57' : '#fff3cf';
         ctx.commands.push({ v: [[x - glow, y - glow], [x + glow, y - glow], [x + glow, y + glow], [x - glow, y + glow]], c: {
-            from: [x, y], to: [x + glow, y], radius: glow, stops: [[0, ctx.rgba(color, .9 * k)], [1, ctx.rgba(color, 0)]],
+            from: [x, y], to: [x + glow, y], radius: glow, stops: [[0, ctx.rgba(color, .9 * k * alpha)], [1, ctx.rgba(color, 0)]],
         }, layer });
-        ctx.commands.push({ v: [[x - core, y], [x, y - core], [x + core, y], [x, y + core]], c: glint.red ? '#ff5a4a' : '#ffffff', layer });
+        const tint = Math.round(alpha * 255).toString(16).padStart(2, '0');
+        ctx.commands.push({ v: [[x - core, y], [x, y - core], [x + core, y], [x, y + core]], c: (glint.red ? '#ff5a4a' : '#ffffff') + tint, layer });
     }
 }

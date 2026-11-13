@@ -1,4 +1,4 @@
-import { translate } from '../../i18n';
+import { translate, type Message } from '../../i18n';
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
 import { PathBuilder, push } from './opening/shapes';
@@ -27,11 +27,11 @@ function bubblePath(anchor: Vector, x: number, y: number, w: number, h: number, 
 }
 
 /** Draws "Attendance confirmed." over the worker's head, `age` seconds after it appeared, just above `anchor`. */
-export function attendanceBubble(ctx: RenderCtx, anchor: Vector, age: number) {
+export function attendanceBubble(ctx: RenderCtx, anchor: Vector, age: number, message: Message = 'orbit.attendance') {
     if (age < 0 || age > ATTENDANCE.fade + ATTENDANCE.out) return;
     const alpha = 1 - ctx.clamp((age - ATTENDANCE.fade) / ATTENDANCE.out, 0, 1);
     const lg = ctx.lg, size = ctx.clamp(ctx.W / 46, 13, 20);
-    const text = translate('orbit.attendance', ctx.locale);
+    const text = translate(message, ctx.locale);
     lg.font = `600 ${size}px system-ui,sans-serif`;
     const w = lg.measureText(text).width + size * 1.8, h = size * 2.5, gap = size * .9;
     const x = ctx.clamp(anchor[0] - w / 2, 10, Math.max(10, ctx.W - 10 - w));

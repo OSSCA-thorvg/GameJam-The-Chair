@@ -3,11 +3,13 @@ import type { Player } from '../../game/types';
 import type { Vector } from '../types';
 import { STAGE_FIVE } from '../../game/stages/orbit/data';
 import { inPraise, praiseBeamX, praiseSheltered } from '../../game/stages/orbit/course/decide';
+
+type Beam = typeof STAGE_FIVE.praise.beams[number];
 import { breadCloud, CLOUD_TONES, puffCloud } from './cloud-art';
 import type { RoutePoint } from './orbit-watch';
 import type { SkyProjection } from './sky-projection';
 
-// 5-1: the satellite's beam sweeps the cloud layer and showers whatever it lights with praise.
+// Every satellite's beam sweeps across the route and showers whatever it lights with praise.
 // Scenery reads the same pure checks the course uses, so what is drawn is what pushes the chair.
 
 const P = STAGE_FIVE.praise;
@@ -34,15 +36,18 @@ function hull(points: Vector[]) {
     return [...lower.slice(0, -1), ...upper.slice(0, -1)];
 }
 
-function beam(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, age: number, travel: number) {
-    const near = Math.max(P.from, travel + 60);
-    if (near >= P.to) return;
-    const x = praiseBeamX(age), apex = point(P.satellite.x, P.satellite.y - 40, P.satellite.z);
-    const corners = [[x - P.halfWidth, near], [x + P.halfWidth, near], [x + P.halfWidth, P.to], [x - P.halfWidth, P.to]]
+// Beams this far ahead are not drawn yet; their satellite still is.
+const DRAW_AHEAD = 4200;
+
+function beam(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, age: number, travel: number) {
+    const near = Math.max(b.from, travel + 60);
+    if (near >= b.to || b.from - travel > DRAW_AHEAD) return;
+    const x = praiseBeamX(b, age), apex = point(b.satellite.x, b.satellite.y - 40, b.satellite.z);
+    const corners = [[x - b.halfWidth, near], [x + b.halfWidth, near], [x + b.halfWidth, b.to], [x - b.halfWidth, b.to]]
         .map(([cx, cz]) => point(cx, FLOOR, cz));
     const visible = [apex, ...corners].filter(p => view.depth(p) > 30).map(view.project);
     if (visible.length < 3) return;
-    const top = view.project(apex), bottom = view.project(point(x, FLOOR, (near + P.to) / 2));
+    const top = view.project(apex), bottom = view.project(point(x, FLOOR, (near + b.to) / 2));
     ctx.commands.push({ v: hull(visible), c: { from: top, to: bottom,
         stops: [[0, ctx.rgba('#fff3c4', .55)], [.7, ctx.rgba('#ffe9a8', .28)], [1, ctx.rgba('#ffe9a8', .12)]] },
     layer: { key: 'orbit-praise-beam', blend: 'screen' } });
@@ -73,14 +78,15 @@ function item(ctx: RenderCtx, kind: Kind, [x, y]: Vector, size: number, angle: n
     }
 }
 
-/** Trophies, certificates, star stickers and badges pour down the beam. */
-function shower(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, age: number, travel: number) {
-    const x = praiseBeamX(age), drop = P.satellite.y - 40 - FLOOR;
+/** Trophies, certificates, star stickers and badges pour down a beam. */
+function shower(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, age: number, travel: number) {
+    if (b.to < travel || b.from - travel > DRAW_AHEAD) return;
+    const x = praiseBeamX(b, age), drop = b.satellite.y - 40 - FLOOR;
     for (const piece of SHOWER) {
         const fall = (ctx.t * piece.rate + piece.phase) % 1;
-        const z = P.satellite.z + (P.from + piece.along * (P.to - P.from) - P.satellite.z) * fall;
+        const z = b.satellite.z + (b.from + piece.along * (b.to - b.from) - b.satellite.z) * fall;
         if (z < travel + 60) continue;
-        const at = point(x + (piece.across * 2 - 1) * P.halfWidth * (.2 + .8 * fall), P.satellite.y - 40 - fall * drop, z);
+        const at = point(x + (piece.across * 2 - 1) * b.halfWidth * (.2 + .8 * fall), b.satellite.y - 40 - fall * drop, z);
         if (view.depth(at) < 60) continue;
         item(ctx, piece.kind, view.project(at), ctx.clamp(9000 / view.depth(at), 3, 26), ctx.t * piece.spin + piece.phase * 6);
     }
@@ -106,11 +112,11 @@ export function orbitPraiseShelters(ctx: RenderCtx, view: SkyProjection, point: 
     }));
 }
 
-/** The beam, its shower and the shelter clouds, all ahead of the chair. */
+/** Every beam, its shower and the shelter clouds, all ahead of the chair. */
 export function orbitPraise(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, age: number, travel: number) {
-    beam(ctx, view, point, age, travel);
+    for (const b of P.beams) beam(ctx, view, point, b, age, travel);
     orbitPraiseShelters(ctx, view, point);
-    shower(ctx, view, point, age, travel);
+    for (const b of P.beams) shower(ctx, view, point, b, age, travel);
 }
 
 /** Over the chair: a cloud veil while it hides, or praise bouncing off it while the beam has it. */

@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, orbitStep, praiseBeamX, STAGE_FIVE, stepGame, parseCommand, previewScenes, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
+const { createGame, orbitStep, praiseBeamX, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
     export { createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } from './src/game/replay';
     export { actionForKey } from './src/ui/controls';
     export { createGame, stepGame } from './src/game/game';
     export { orbitStep, praiseBeamX } from './src/game/stages/orbit/course/decide';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
     export { parseCommand } from './src/game/commands';
-    export { previewScenes } from './src/preview-scenes';
+    export { previewScenes, orbitKeys } from './src/preview-scenes';
     export { drawOrbit } from './src/render/scene/orbit';
     export { createRenderCtx } from './src/render/context';
 `);
@@ -41,33 +41,41 @@ test('stage five has no hoops: after the entry the chair heads straight for the 
     assert.equal(result.state.deaths, 0);
 });
 
-test('the cloud entry ends at the office door, without clearing all of stage five', () => {
+test('stage five climbs through 5-1 to 5-3 and stops in the Earth shadow, without clearing all of stage five', () => {
     const game = fresh();
-    // This driver never hides from the 5-1 praise beam, so it crawls through it; allow for that.
-    for (let i = 0; i < 120 * 120 && game.getSnapshot().checkpoint === 0; i++) {
-        const state = game.getSnapshot(), p = state.player;
-        const target = STAGE_FIVE.rings[state.orbit.rings] ?? STAGE_FIVE.door;
-        const dy = target.y-p.y-p.vy*.65, dx = target.x-p.x-p.vx*.65;
-        // The 5-1 beam shoves the chair sideways, so the driver steers back across as well.
-        game.setInput(...(dy > 6 ? ['forward'] : dy < -6 ? ['back'] : []), ...(dx > 6 ? ['right'] : dx < -6 ? ['left'] : []));
+    // The preview driver hides in 5-1's clouds and keeps to the widest gap between the beams after that.
+    let lowest = 100;
+    for (let i = 0; i < 120 * 150 && game.getSnapshot().checkpoint === 0; i++) {
+        game.setInput(...orbitKeys(game.getSnapshot()));
         game.step();
+        lowest = Math.min(lowest, game.getSnapshot().focus);
     }
     const end = game.getSnapshot();
     assert.equal(end.orbit.phase, 'parked');
-    assert.equal(end.orbit.rings, 0);
+    assert.ok(end.orbit.z >= STAGE_FIVE.heights.shadow, 'parked inside the Earth shadow');
     assert.equal(end.checkpoint, 1);
     assert.equal(end.deaths, 0);
-    assert.equal(end.focus, 100);
+    assert.ok(lowest > 20, `careful steering keeps some focus (lowest ${lowest})`);
+    assert.equal(end.focus, 100, 'reaching the shadow clears the head');
     assert.equal(end.completedStage, 4);
     game.restart();
     assert.equal(game.getSnapshot().orbit.phase, 'parked');
     assert.equal(game.getSnapshot().orbit.z, STAGE_FIVE.checkpoint.z);
+    // The whole shadow is the goal: arriving off to one side still parks there.
     const state = JSON.parse(game.serialize());
     Object.assign(state.orbit, { phase: 'door', z: STAGE_FIVE.checkpoint.z, speed: 50 });
     state.p.x = 650;
-    const outside = orbitStep(state.orbit, state.p, [], 1 / 120);
-    assert.equal(outside.checkpoint, false);
-    assert.equal(outside.orbit.phase, 'door');
+    const aside = orbitStep(state.orbit, state.p, [], 1 / 120);
+    assert.equal(aside.checkpoint, true);
+    assert.equal(aside.orbit.phase, 'parked');
+});
+
+test('no praise beam reaches into the Earth shadow, and every beam sweeps slower than the chair steers', () => {
+    const { beams } = STAGE_FIVE.praise;
+    assert.ok(beams.every(beam => beam.to <= STAGE_FIVE.heights.shadow));
+    const steer = STAGE_FIVE.acceleration / STAGE_FIVE.drag;
+    assert.ok(beams.every(beam => beam.amplitude * beam.rate < steer), 'the chair can always outrun a sweep');
+    assert.equal(beams.filter(beam => beam.from >= STAGE_FIVE.heights.air && beam.to <= STAGE_FIVE.heights.space).length, 3, '5-2 has three satellites');
 });
 
 test('saved orbit movement resumes exactly and pause freezes it', () => {
@@ -84,7 +92,7 @@ test('saved orbit movement resumes exactly and pause freezes it', () => {
     assert.equal(game.serialize(), frozen);
 });
 
-test('the orbit preview reaches the office door, seeks backwards, and renders finite geometry on narrow screens', () => {
+test('the orbit preview reaches the Earth shadow, seeks backwards, and renders finite geometry on narrow screens', () => {
     const scene = previewScenes.find(scene => scene.id === 'orbit-route');
     assert.ok(scene);
     assert.equal(STAGE_FIVE.drawer, undefined);
@@ -171,19 +179,20 @@ const run = (state, seconds) => {
 };
 
 test('5-1: each second under the praise beam costs focus, and it does not come back meanwhile', () => {
-    const z = STAGE_FIVE.praise.from + 30;
-    const { state } = run(praiseState(z, praiseBeamX(10)), 1.5);
+    const first = STAGE_FIVE.praise.beams[0], z = first.from + 30;
+    const { state } = run(praiseState(z, praiseBeamX(first, 10)), 1.5);
     assert.ok(state.focus < 100, `focus ${state.focus}`);
-    assert.ok(state.focus >= 100 - 2 * 7, 'at most one hit per second');
+    assert.ok(state.focus >= 100 - 2 * 5, 'at most one hit per second');
     assert.equal(state.focusNotice?.kind, 'praise');
     assert.equal(state.deaths, 0);
 });
 
 test('5-1: outside the beam focus recovers, and running out of focus ends the attempt', () => {
-    const calm = praiseState(STAGE_FIVE.praise.from - 900, 0);
+    const first = STAGE_FIVE.praise.beams[0];
+    const calm = praiseState(first.from - 900, 0);
     calm.focus = 80;
     assert.ok(run(calm, 4.1).state.focus > 80, 'recovers away from the beam');
-    const shaky = praiseState(STAGE_FIVE.praise.from + 30, praiseBeamX(10));
+    const shaky = praiseState(first.from + 30, praiseBeamX(first, 10));
     shaky.focus = 5;
     const { state, events } = run(shaky, .2);
     assert.equal(state.mode, 'focuslost');
