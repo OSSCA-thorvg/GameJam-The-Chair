@@ -1,5 +1,6 @@
 import type { RenderCtx } from '../context';
 import { seeded } from './cloud-art';
+import { STAGE_FIVE } from '../../game/stages/orbit/data';
 import { aim, CCTV_KINDS, cctvModel, placer, rect, type CctvKind } from './cctv-models';
 import type { Point3, SkyProjection } from './sky-projection';
 
@@ -60,7 +61,8 @@ export const ORBIT_WATCH = {
     glide: GLIDE,
     reveal: revealCctvs(4100, GLIDE),
     route: routeCctvs(5200, 10, 600, 4700),
-    satellite: { x: 420, y: 430, z: 2900, appear: .35 },
+    // The 5-1 satellite whose beam showers the chair with praise.
+    satellite: { ...STAGE_FIVE.praise.satellite, appear: .35 },
     // A far speck in the sky above the office door, the last landing of the route.
     beacon: { x: 90, y: 760, z: 7400, appear: .55 },
     // Lenses and lamps glinting out of the low cloud floor, from when the camera is behind the chair.

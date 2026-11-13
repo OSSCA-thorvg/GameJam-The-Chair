@@ -90,3 +90,33 @@ test('there are no billboards, and lenses and lamps glint out of the clouds in s
     assert.ok(glints.some(count => count > 0) && new Set(glints).size > 1, 'they blink on and off');
     assert.ok(ORBIT_WATCH.glints.some(glint => glint.red) && ORBIT_WATCH.glints.some(glint => !glint.red), 'both white and red');
 });
+
+const { orbitStep, inPraise, praiseBeamX, praiseSheltered, STAGE_FIVE } = await loadSource(`
+    export { orbitStep, inPraise, praiseBeamX, praiseSheltered } from './src/game/stages/orbit/course/decide';
+    export { STAGE_FIVE } from './src/game/stages/orbit/data';
+`);
+
+const chairAt = (x, y = 0) => ({ x, y, vx: 0, vy: 0, a: 0, w: 0 });
+const cruising = z => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, rings: 0, settled: 0 });
+
+test('5-1: the praise beam slows the chair and shoves it out of the beam', () => {
+    const age = 10, x = praiseBeamX(age) + 40, z = (STAGE_FIVE.praise.from + STAGE_FIVE.praise.to) / 2;
+    assert.ok(STAGE_FIVE.praise.shelters.every(s => Math.abs(s.z - z) > STAGE_FIVE.praise.shelterSize.z || Math.abs(s.x - x) > STAGE_FIVE.praise.shelterSize.x));
+    assert.ok(inPraise(age, chairAt(x), z));
+    let orbit = cruising(z), p = chairAt(x);
+    for (let i = 0; i < 120; i++) ({ orbit, p } = orbitStep(orbit, p, [], 1 / 120));
+    assert.ok(orbit.speed < STAGE_FIVE.cruise * .7, `slowed to ${orbit.speed}`);
+    assert.ok(p.x > x, 'pushed away from the beam centre');
+});
+
+test('5-1: a shelter cloud hides the chair, and outside the beam nothing happens', () => {
+    const shelter = STAGE_FIVE.praise.shelters[1];
+    const age = Array.from({ length: 400 }, (_, i) => i / 10).find(t => Math.abs(praiseBeamX(t) - shelter.x) < 20);
+    assert.ok(age !== undefined);
+    assert.ok(praiseSheltered(chairAt(shelter.x, shelter.y), shelter.z));
+    assert.equal(inPraise(age, chairAt(shelter.x, shelter.y), shelter.z), false, 'hidden while the beam is right on it');
+    assert.equal(inPraise(age, chairAt(shelter.x), STAGE_FIVE.praise.from - 10), false, 'no beam before the 5-1 stretch');
+    const before = cruising(STAGE_FIVE.praise.from - 400);
+    const { orbit } = orbitStep(before, chairAt(0), [], 1 / 120);
+    assert.equal(orbit.speed, STAGE_FIVE.cruise);
+});

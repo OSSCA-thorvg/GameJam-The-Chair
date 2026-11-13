@@ -7,6 +7,7 @@ import { orbitDoor } from './orbit-art';
 import { orbitSky, orbitCloudBank, doorGlow } from './orbit-atmosphere';
 import { orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGlow } from './orbit-watch';
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
+import { orbitPraise, orbitPraiseOnChair } from './orbit-praise';
 import { STAGE_FIVE as C } from '../../game/stages/orbit/data';
 
 export function drawOrbit(ctx: RenderCtx) {
@@ -26,6 +27,7 @@ export function drawOrbit(ctx: RenderCtx) {
     const lamps = orbitWatchers(view, point, orbit.z, ctx.t, 'route');
     ctx.commands.push(...view.commands());
     orbitWatchGlow(ctx, view, lamps);
+    orbitPraise(ctx, view, point, orbit.age, orbit.z);
     orbitCloudBank(ctx, view, orbit.z, true);
     const chair = createSkyProjection(ctx.W, ctx.H, SKY_TURN.rear, {
         zoom: 1 - blend*.3, centerY: .5 + blend*.2 - p.y/C.bounds.y*.12,
@@ -33,6 +35,7 @@ export function drawOrbit(ctx: RenderCtx) {
     });
     endingChair(chair, ctx.t+10, orbit.phase === 'parked' ? .2 : Math.max(.3,orbit.speed/C.cruise));
     ctx.commands.push(...chair.commands());
+    orbitPraiseOnChair(ctx, chair.project([0, 0, 0]), orbit.age, p, orbit.z);
     // The bubble from the end of stage four stays up for the first moments of stage five.
     attendanceBubble(ctx, chair.project([4, 70, 0]), orbit.age + ATTENDANCE.lead);
 }

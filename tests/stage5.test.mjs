@@ -43,11 +43,13 @@ test('stage five has no hoops: after the entry the chair heads straight for the 
 
 test('the cloud entry ends at the office door, without clearing all of stage five', () => {
     const game = fresh();
-    for (let i = 0; i < 120 * 60 && game.getSnapshot().checkpoint === 0; i++) {
+    // This driver never hides from the 5-1 praise beam, so it crawls through it; allow for that.
+    for (let i = 0; i < 120 * 120 && game.getSnapshot().checkpoint === 0; i++) {
         const state = game.getSnapshot(), p = state.player;
         const target = STAGE_FIVE.rings[state.orbit.rings] ?? STAGE_FIVE.door;
-        const dy = target.y-p.y-p.vy*.65;
-        game.setInput(...(dy > 6 ? ['forward'] : dy < -6 ? ['back'] : []));
+        const dy = target.y-p.y-p.vy*.65, dx = target.x-p.x-p.vx*.65;
+        // The 5-1 beam shoves the chair sideways, so the driver steers back across as well.
+        game.setInput(...(dy > 6 ? ['forward'] : dy < -6 ? ['back'] : []), ...(dx > 6 ? ['right'] : dx < -6 ? ['left'] : []));
         game.step();
     }
     const end = game.getSnapshot();

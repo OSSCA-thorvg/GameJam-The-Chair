@@ -10,6 +10,7 @@ import { basinCloudSeeds, doorGlow, orbitCloudBank, orbitSky } from './orbit-atm
 import { orbitDoor } from './orbit-art';
 import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGlow, type RoutePoint } from './orbit-watch';
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
+import { orbitPraiseShelters } from './orbit-praise';
 import type { SkyProjection } from './sky-projection';
 
 const smooth = (value: number) => {
@@ -83,6 +84,7 @@ export function drawSkyReveal(ctx: RenderCtx) {
     });
     // The clouds stay put so none slips past the camera; the cameras streaming by carry the forward glide.
     orbitCloudBank(ctx, basin, 0, false, { anchor: BASIN, only, nearDepth: 1100 });
+    orbitPraiseShelters(ctx, basin, point);
     if (orbit >= ORBIT_WATCH.glintsFrom) orbitCloudGlints(ctx);
     revealWatchers(ctx, createSkyProjection(ctx.W, ctx.H, progress, framing), point, travel, orbit);
     revealGoal(ctx, basin, point, goal);

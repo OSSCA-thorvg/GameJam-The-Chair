@@ -590,6 +590,33 @@ function orbitRoute(): PreviewScene {
     return recordedScene('orbit-route', 'Orbit · Concept 01: cloud basin & office door', 0, markers, frames);
 }
 
+// 5-1: duck from shelter cloud to shelter cloud while the satellite's praise beam sweeps the cloud layer.
+function orbitPraiseScene(): PreviewScene {
+    const game = createGame();
+    game.startStage(5);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    const markers = [{ at: 0, label: 'Stage 5 start' }];
+    const { shelters, from, to } = STAGE_FIVE.praise;
+    let previous = '';
+    for (let i = 0; i < 2400; i++) {
+        const state = game.getSnapshot(), orbit = state.orbit, p = state.player;
+        if (!orbit || orbit.z > to + 200) break;
+        const target = shelters.find(s => s.z > orbit.z - 120) ?? STAGE_FIVE.door;
+        const keys: Input[] = [];
+        if (target.x - p.x > p.vx * .65 + 6) keys.push('right');
+        if (target.x - p.x < p.vx * .65 - 6) keys.push('left');
+        if (target.y - p.y > p.vy * .65 + 6) keys.push('forward');
+        if (target.y - p.y < p.vy * .65 - 6) keys.push('back');
+        game.setInput(...keys);
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+        const stage = orbit.z < from ? 'clouds' : orbit.z < to ? 'praise beam' : 'past the beam';
+        if (stage !== previous) { markers.push({ at: i / 60, label: stage }); previous = stage; }
+    }
+    return recordedScene('orbit-praise', 'Orbit · 5-1: hide from the praise beam', 0, markers, frames);
+}
+
 // The duct's timed sneezes: the first big one that spits out the overtime junk, and the later gusts.
 function ductSneeze(gust = false): PreviewScene {
     const game = createGame();
@@ -689,5 +716,6 @@ export const previewScenes: readonly PreviewScene[] = [
     skySignDepth(),
     skyEnding(),
     orbitRoute(),
+    orbitPraiseScene(),
     officeTyping(),
 ];
