@@ -34,6 +34,8 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // Updated when the sky course got harder (three bursts per time in the air, a steady headwind with warned gusts,
 // paper bundles and birds that knock the chair back, rocking desks and a single flag): every final snapshot's
 // `sky` gained `airSprays`, `knock` and `knockKind`, and 'rooftop to sky' arrives into the windier course.
+// Updated when rooftop steam started costing focus: the 'rooftop to sky' route is knocked back by the duct's
+// sneeze, so its focus trace now dips. The route still ends the same way.
 const EXPECTED = {
     'office route': '1f6c7af5a2c9c250',
     'office crash': '5005e98391e06449',
