@@ -40,7 +40,6 @@ function structure(ctx: RenderCtx) {
         ctx.rod(TOWER.left + 4, y, TOWER.right - 2, y, 4, steel);
     }
     ctx.rod(TOWER.left + 4, TOWER.top, TOWER.right - 2, TOWER.top, 4, steel);
-    // Base plates bolted to the roof.
     for (const x of [TOWER.left - 6, TOWER.right - 14]) ctx.rect(x, ROOF - 6, 20, 6, '#2c3442');
     // Facade brackets and struts carrying the overhanging board.
     ctx.rect(EDGE, ROOF + 96, 14, 26, dark);
@@ -97,7 +96,6 @@ export function rooftopGraphSign(ctx: RenderCtx) {
 
 function board(ctx: RenderCtx, surging: boolean) {
     const t = ctx.t;
-    // The board with an LED grid.
     ctx.rect(PANEL.left - 6, PANEL.top, PANEL.right - PANEL.left + 12, PANEL.bottom - PANEL.top + 6, '#2b3242');
     ctx.gradientPolygon(quad(PANEL.left, PANEL.top + 4, PANEL.right, PANEL.bottom),
         ctx.gradientFill(0, PANEL.top, 0, PANEL.bottom, [[0, '#101a2b'], [1, '#1b2a3e']]));

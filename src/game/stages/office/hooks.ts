@@ -37,7 +37,6 @@ export const officeHooks: StageHooks = {
             s.office.slipCooldown = 7;
         }
     },
-    // The wet floor makes the wheels slip.
     drive: s => ({ slip: s.office.slip }),
     afterMove(s, out) {
         if (!fallsIntoBin(s.p, s.office.binCooldown)) return false;

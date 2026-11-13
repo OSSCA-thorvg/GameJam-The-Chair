@@ -18,7 +18,6 @@ import { resetRenderStats, type LayerOverrides, type RenderStats } from './perf'
 /**
  * Logical game view. The scene keeps this aspect ratio and scales uniformly to fill the screen, so a
  * bigger window shows the same framing larger instead of revealing more of the level.
- * 논리 화면 크기. 화면이 커져도 같은 구도를 비율 그대로 크게 보여 준다.
  */
 export const VIEW_WIDTH = 1000;
 export const VIEW_HEIGHT = 510;
@@ -52,7 +51,7 @@ function setup(
     let tvg: Canvas | null = null;
     let renderer = 'canvas2d';
     let renderError: string | null = null;
-    // Set only while the developer performance overlay is open. 성능 오버레이가 켜졌을 때만 설정.
+    // Set only while the developer performance overlay is open.
     let stats: RenderStats | null = null;
     // GPU timer queries on the WebGL2 canvas; only while profiling, and null when unsupported.
     let gpuTimer: GpuTimer | null = null;

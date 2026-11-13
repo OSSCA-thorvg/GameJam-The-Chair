@@ -5,8 +5,6 @@
  * A timer query brackets the frame's GL commands and reports, a few frames later, how long the GPU spent
  * on them. Results arrive late and may be dropped (a "disjoint" event such as a clock change voids them),
  * so this feeds averages, not per-frame decisions. Used only by the developer performance overlay.
- *
- * ThorVG WebGL2 캔버스의 GPU 시간. 결과는 몇 프레임 늦게 도착하며 개발자 오버레이에서만 쓴다.
  */
 
 /** Constants of EXT_disjoint_timer_query_webgl2. */

@@ -54,7 +54,6 @@ export function drawRooftop(ctx: RenderCtx) {
         ctx.label(SPRAY_KEY, STAGE_THREE.pickup.x, STAGE_THREE.pickup.y - 97, 20, '#f0dfb9');
     }
 
-    // Checkpoint flags.
     for (let i = 1; i < STAGE_THREE.checkpoints.length; i++) {
         const mark = STAGE_THREE.checkpoints[i];
         if (ctx.visible({ left: mark.x - 35, top: mark.y - 80, right: mark.x + 35, bottom: mark.y + 40 }, 30)) {
@@ -62,7 +61,6 @@ export function drawRooftop(ctx: RenderCtx) {
         }
     }
 
-    // Chair shadow and player.
     if (state.ground) ctx.ellipse(p.x, p.y + 28, 45, 5, '#414d6455');
     const behindDoor = state.rooftopEntrance.kind === 'opening' && state.rooftopEntrance.age < STAGE_THREE.entrance.emergeEnd;
     if (!behindDoor && entranceVisible) entranceDoor(ctx);

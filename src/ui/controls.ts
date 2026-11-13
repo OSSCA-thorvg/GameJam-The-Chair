@@ -95,7 +95,6 @@ export function bindControls(root: HTMLElement, game: Game, hooks: ControlHooks,
     }, options);
     window.addEventListener('blur', game.clearInput, options);
 
-    // Touch buttons.
     const hold = (el: HTMLElement | null, input: Input) => {
         el?.addEventListener('pointerdown', e => {
             e.preventDefault();

@@ -4,13 +4,11 @@ import type { RenderCtx } from '../context';
 export function plant(ctx: RenderCtx, x: number) {
     // Monstera deliciosa variegata: white pot, moss pole, big split variegated leaves.
     const F = ctx.F;
-    // Shadow under pot.
     ctx.ellipse(x + 2, F - 10, 20, 3.2, '#515c6d40');
     // White ceramic pot with subtle rim and cream shadow.
     ctx.rect(x - 14, F - 40, 28, 30, '#f2efe6');
     ctx.rect(x - 14, F - 40, 28, 3, '#ffffff');
     ctx.rect(x + 8, F - 37, 6, 25, '#dcd6c6');
-    // Soil line.
     ctx.rect(x - 12, F - 42, 24, 3, '#4a3a2c');
     // Moss pole rising from the pot.
     ctx.rod(x - 1, F - 42, x - 1, F - 110, 6, '#6b5436');
@@ -50,7 +48,6 @@ export function plant(ctx: RenderCtx, x: number) {
         const bg = '#a0a7b1';
         ctx.polygon([rot(len * .4, -wid), rot(len * .5, -wid * .35), rot(len * .6, -wid)], bg);
         ctx.polygon([rot(len * .45, wid), rot(len * .55, wid * .35), rot(len * .65, wid)], bg);
-        // Midrib.
         ctx.rod(cx, cy, rot(len * .95, 0)[0], rot(len * .95, 0)[1], 1.2, '#2e4f2a');
     };
     // Six leaves arranged around the moss pole at different heights and angles.

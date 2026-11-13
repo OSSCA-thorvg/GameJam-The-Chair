@@ -46,13 +46,11 @@ export type StageHooks = {
     hazards?(s: GameState, out: GameEvent[], dt: number): boolean;
     /** Before the jump and wheel drive. `grounded` is whether the wheels were down. */
     beforeDrive?(s: GameState, out: GameEvent[], grounded: boolean): void;
-    /** A jump has just started. */
     onJump?(s: GameState): void;
     /** Changes to wheel drive this tick (for example the chair convoy). */
     drive?(s: GameState, inputDir: number): Partial<Pick<Drive, 'dir' | 'slip' | 'convoyJump' | 'expressJump'>>;
     /** After moving and before collisions. True ends the tick. */
     afterMove?(s: GameState, out: GameEvent[], dt: number, previousX: number): boolean;
-    /** After collisions. */
     afterCollide?(s: GameState, out: GameEvent[], dt: number, previousX: number): void;
     /** After the shared scoring cues, before the fall check (small effects such as wet-floor specks). */
     afterScore?(s: GameState, out: GameEvent[], dt: number): void;
@@ -68,7 +66,6 @@ export type StageHooks = {
     onSpray?(s: GameState, direction: number): void;
     /** The interact command (Down): enter or leave a room. */
     interact?(s: GameState): void;
-    /** The leave-meeting command. */
     leave?(s: GameState): void;
     /** Whether the interact command would do something now (shown as a hint). Default: no. */
     canInteract?(s: Readonly<GameState>): boolean;

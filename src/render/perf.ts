@@ -1,6 +1,6 @@
 import type { DrawCommand } from './types';
 
-/** One layer scene drawn this frame. 이번 프레임에 그린 layer 하나. */
+/** One layer scene drawn this frame. */
 export type LayerInfo = {
     /** `LayerSpec.key`; a key used twice in one frame appears twice. */
     key: string;
@@ -15,24 +15,23 @@ export type LayerInfo = {
 /**
  * Per-frame render counters for the developer performance overlay. Only filled while the overlay is on;
  * the game core never sees them. Times are milliseconds from `performance.now()`.
- * 개발자 성능 오버레이용 프레임별 렌더 카운터. 오버레이가 켜졌을 때만 채운다.
  */
 export type RenderStats = {
-    /** Scene functions turning the snapshot into `DrawCommand[]`. 장면 함수 시간. */
+    /** Scene functions turning the snapshot into `DrawCommand[]`. */
     buildMs: number;
-    /** Copying commands onto pooled ThorVG shapes and scenes (JS → WASM calls). 풀 객체 동기화 시간. */
+    /** Copying commands onto pooled ThorVG shapes and scenes (JS → WASM calls). */
     syncMs: number;
-    /** `Canvas.update().render()` (or the Canvas2D fallback paint). 래스터화 시간. */
+    /** `Canvas.update().render()` (or the Canvas2D fallback paint). */
     renderMs: number;
-    /** System-font label canvas. 라벨 캔버스 시간. */
+    /** System-font label canvas. */
     labelsMs: number;
     /**
      * GPU time (WebGL2 timer queries) of earlier frames whose results arrived this frame, oldest first.
-     * Empty with the software renderer or without timer-query support. 이번 프레임에 도착한 GPU 시간.
+     * Empty with the software renderer or without timer-query support.
      */
     gpuMs: number[];
     commands: number;
-    /** Plain shapes drawn this frame / pooled in total. 이번 프레임 사용 / 풀 전체. */
+    /** Plain shapes drawn this frame / pooled in total. */
     topShapes: number;
     poolTop: number;
     texts: number;
@@ -60,7 +59,6 @@ export type RenderStats = {
  * Debug-only layer switches, by `LayerSpec.key`: `hidden` layers are not drawn, `flat` layers draw their
  * commands as plain shapes (no scene, so no opacity, blend, blur, clip or mask). Comparing frame times
  * with a layer on, flattened and hidden shows what that layer costs.
- * 디버그 전용 layer 스위치. hidden은 그리지 않고, flat은 scene 없이 일반 shape로 그린다.
  */
 export type LayerOverrides = { hidden: Set<string>; flat: Set<string> };
 
