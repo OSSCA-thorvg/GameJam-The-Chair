@@ -5,9 +5,6 @@ import type { LayerInfo, LayerOverrides } from '../render/perf';
  * Layer list for the performance overlay. Each layer scene drawn recently gets a row with its size and
  * effects and two switches: hide (not drawn) and flatten (drawn as plain shapes, without the scene and its
  * opacity, blend, blur, clip or mask). Watching `render` while flipping them shows what a layer costs.
- *
- * 성능 오버레이의 layer 목록. 각 layer를 숨기거나(그리지 않음) 평면화(scene 효과 없이 일반 shape)해서
- * render 시간 변화를 보고 layer 비용을 찾는다.
  */
 
 type Row = { el: HTMLElement; info: HTMLElement; hide: HTMLButtonElement; flat: HTMLButtonElement; text: string; seen: number };

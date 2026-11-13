@@ -8,8 +8,6 @@ import { createLayerPanel } from './perf-layers';
  * It lives outside the deterministic core: everything here is presentation-side timing. While closed it
  * measures nothing, and while open it keeps its own cost low — text refreshes a few times a second and the
  * graph is a separate Canvas2D element, so the ThorVG canvas being measured never draws overlay pixels.
- *
- * 개발자 성능 오버레이(F3 또는 ` 키, `?debug=1`). 결정적 코어 밖에서만 측정하며, 닫혀 있으면 아무것도 재지 않는다.
  */
 
 /** Main-loop timings for one browser frame (ms). */

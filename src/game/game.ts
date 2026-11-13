@@ -124,7 +124,7 @@ export function createGame(options: GameOptions = {}) {
             tick();
             ticks++;
             acc -= FIXED_STEP;
-            // A new mode starts counting from the next frame, as before fixed ticks.
+            // A new mode starts counting from the next frame.
             if (s.mode !== mode) {
                 dropped = acc;
                 acc = 0;
@@ -157,7 +157,6 @@ export function createGame(options: GameOptions = {}) {
         /** One fixed step (1/120 s). The argument is ignored and kept for older callers. */
         step: (_dt?: number) => tick(),
         advance,
-        // Preview-only scrubbing at arbitrary frame times. Never used by real play or replays.
         advanceImpact: (dt: number) => preview((next, out) => applyImpact(next, out, dt)),
         advanceFocusLoss: (dt: number) => preview((next, out) => applyFocusLoss(next, out, dt)),
         /** Full game state as JSON. Restoring it into any game continues the run exactly. */

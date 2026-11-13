@@ -1,7 +1,6 @@
 import { startMark, type StageDefinition } from '../types';
 import { STAGE_FOUR } from './data';
 
-// Stage 4 · Above the clouds.
 export const sky: StageDefinition = {
     id: 4,
     name: 'cloud-stage-four',

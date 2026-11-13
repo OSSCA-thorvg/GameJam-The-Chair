@@ -258,7 +258,6 @@ function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: Pa
     // drawn wrongly by the GL renderer: a Screen-blended, masked water layer smeared other actors across the
     // frame once its mask ended. A layer that loses its clip or mask, or flips its mask mode, starts over with
     // a fresh scene, and the canvas order is rebuilt because the old scene leaves it.
-    // ThorVG는 scene의 clip/mask를 뗄 수 없고, GL 렌더러는 대체 mask를 잘못 그리므로 scene을 새로 만든다.
     for (const item of items) {
         if (!('layer' in item)) continue;
         const slot = pool.layers.get(item.key);

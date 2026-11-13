@@ -139,7 +139,6 @@ export function openingFrame(time: number): OpeningFrame {
 
     const dusk = t < B.irisClose ? 0 : t < B.darkChair ? smooth(progress(t, B.sevenPm, B.ninePm)) : 1;
 
-    // Chair performance.
     const hum = t >= B.chairHope && t < B.irisClose ? Math.min(1, (t - B.chairHope) / .3, (B.irisClose - t) / .3) : 0;
     const rageRise = progress(t, B.rage, B.rage + .25);
     const rage = t >= B.rage ? rageRise * (1 - progress(t, B.handoff - .2, B.handoff + .5)) : 0;

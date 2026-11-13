@@ -77,7 +77,7 @@ function column(ctx: RenderCtx, x: number, top: number, bottom: number) {
     }
 }
 
-// Lamps stay inside the machine room; the last one used to hang past the wall into the sky.
+// Lamps stay inside the machine room.
 const CEILING_LAMPS = [-180, -30, 120, 270];
 
 // Drawn after the entrance door and cabinets so the beams fall across them instead of being cut off.

@@ -53,7 +53,6 @@ export function expressFloor(ctx: RenderCtx) {
         ctx.polygon([[x - 6, y - 4], [x + 4, y], [x - 6, y + 2]], '#f2c14e');
     }
 
-    // Cones and tape on the far edge.
     cone(ctx, pit.right + 34);
     ctx.rod(pit.right + 4, FLOOR - 30, pit.right + 34, FLOOR - 26, 3, '#f2c14e');
 }

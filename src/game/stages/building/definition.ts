@@ -1,7 +1,6 @@
 import { startMark, type StageDefinition } from '../types';
 import { CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES, STAGE_TWO } from './data';
 
-// Stage 2 · Inside the building.
 export const building: StageDefinition = {
     id: 2,
     name: 'building-stage-two',

@@ -3,7 +3,7 @@
 import { LEVEL } from '../level';
 import { monitorPhase } from './office/monitor/decide';
 
-/** Office monitor lights at `time` (shown in the snapshot for every stage, as before). */
+/** Office monitor lights at `time` (shown in the snapshot for every stage). */
 export function monitorsView(time: number) {
     return LEVEL.monitors.map(monitor => ({ ...monitor, ...monitorPhase(monitor, time) }));
 }
