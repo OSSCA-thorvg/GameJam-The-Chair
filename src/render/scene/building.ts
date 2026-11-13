@@ -26,6 +26,8 @@ function bubble(ctx: RenderCtx, text: Message, x: number, y: number, width: numb
     if (tail) ctx.polygon([[x - 8, y + 20], [x + 9, y + 20], [x + (tail === 'right' ? 18 : -10), y + 36]], fill);
     ctx.label(translate(text, ctx.locale), x, y + 5, 13, ctx.tint('#344955', alpha));
 }
+// Typing bubbles stay in the band above the chair chatter (y >= 193) so the two never overlap.
+const OFFICE_BUBBLE_TOP = 70;
 type WorkerRole = 'facilitator' | 'jacket' | 'vest';
 
 type HairStyle = 'parted' | 'bun' | 'bob' | 'crop' | 'wavy';
@@ -293,7 +295,7 @@ export function drawBuilding(ctx: RenderCtx) {
         ctx.rect(x - 105, 180, 210, 170, '#6d8b9970');
         ctx.rod(x, 175, x, 355, 5, '#849a9e');
         ctx.polygon([[x - 98, 184], [x - 75, 184], [x + 55, 347], [x + 32, 347]], '#edf4e719');
-        if ((c.departure.kind === 'none' || c.departure.kind === 'gone') && office.life > 0) bubble(ctx, TYPING_SOUNDS[office.phrase], x + office.offset.x, 174 + office.offset.y, 156, false, Math.min(.78, office.life * 2), false);
+        if ((c.departure.kind === 'none' || c.departure.kind === 'gone') && office.life > 0) bubble(ctx, TYPING_SOUNDS[office.phrase], x + office.offset.x, OFFICE_BUBBLE_TOP + office.offset.y * .55, 156, false, Math.min(.78, office.life * 2), false);
     }
     const mx = STAGE_TWO.meeting;
     ctx.rect(mx - 78, 180, 156, 240, '#687f80');
