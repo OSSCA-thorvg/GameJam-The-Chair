@@ -192,7 +192,7 @@ function chairActors(ctx: RenderCtx) {
         if (!item.released || departure.kind === 'gone' || departure.kind === 'lost') return;
         const reacting = c.chat.kind === 'wary' || c.chat.kind === 'realizing' || c.chat.kind === 'welcoming';
         const bob = departure.kind === 'boarding' ? Math.sin(departure.age * 9 + i) * 2 : reacting ? Math.sin(c.chat.age * 7 + i) * 2 : Math.sin(ctx.t * 5 + i) * .7;
-        chair(ctx, item.x, item.y + drop + bob - chairLift(item.x) - obstacleHop(item.x, c.robot));
+        chair(ctx, item.x, item.y + drop + bob - chairLift(item.x) - obstacleHop(item.x));
     });
     if (departure.kind !== 'lost') {
         const actorStart = ctx.commands.length;

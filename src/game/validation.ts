@@ -167,7 +167,7 @@ function building(value: unknown, path: string) {
         boolean(chair.released, `${path}.furniture[${index}].released`);
     });
     const corridor = record(data.corridor, `${path}.corridor`);
-    exact(corridor, ['appearanceSeed', 'room', 'meetingVisited', 'dispatchAge', 'dispatchStarted', 'chat', 'lesson', 'robot', 'tripped', 'convoy', 'pace', 'departure',
+    exact(corridor, ['appearanceSeed', 'room', 'meetingVisited', 'dispatchAge', 'dispatchStarted', 'chat', 'lesson', 'tripped', 'convoy', 'pace', 'departure',
         'lift', 'typingCooldown', 'offices'], `${path}.corridor`);
     integer(corridor.appearanceSeed, `${path}.corridor.appearanceSeed`, 0, 0xffffffff);
     room(corridor.room, `${path}.corridor.room`);
@@ -176,9 +176,8 @@ function building(value: unknown, path: string) {
     boolean(corridor.dispatchStarted, `${path}.corridor.dispatchStarted`);
     chat(corridor.chat, `${path}.corridor.chat`);
     integer(corridor.lesson, `${path}.corridor.lesson`, -1, STAGE_TWO.orientation.lines.length);
-    finite(corridor.robot, `${path}.corridor.robot`);
     integer(corridor.tripped, `${path}.corridor.tripped`, -1, STAGE_TWO.orientation.obstacles.length - 1);
-    choice(corridor.convoy, ['free', 'carried', 'leading', 'airborne', 'leading-airborne', 'dropped'], `${path}.corridor.convoy`);
+    choice(corridor.convoy, ['free', 'carried', 'leading', 'airborne', 'leading-airborne'], `${path}.corridor.convoy`);
     choice(corridor.pace, ['casual', 'express'], `${path}.corridor.pace`);
     departure(corridor.departure, `${path}.corridor.departure`);
     lift(corridor.lift, `${path}.corridor.lift`);

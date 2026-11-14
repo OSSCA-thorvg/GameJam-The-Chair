@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { bundled } from './support/load.mjs';
+import { orientationHop } from './support/harness.mjs';
 
 const { createGame, createRenderCtx, drawBuilding } = await bundled({ stdin: {
     contents: `export { createGame } from './src/game/game';
@@ -69,14 +70,16 @@ test('corridor and meeting render finite vector paths in both languages and narr
         if (state.corridor.dispatchAge > 1.8 && state.corridor.dispatchAge < 2.1 && !frames.has('chairs')) frames.set('chairs', state);
         if (state.corridor.room.kind === 'meeting' && state.corridor.room.age > 3.7 && !frames.has('meeting')) frames.set('meeting', state);
         if (state.corridor.pace === 'express' && state.corridor.chat.kind === 'rush' && !frames.has('rush')) frames.set('rush', state);
-        if (frames.size === 4) break;
+        if (state.player.x > 5200 && state.player.x < 5300 && !frames.has('sleeper')) frames.set('sleeper', state);
+        if (frames.size === 5) break;
         assert.equal(state.mode, 'play');
         const waitingForMeeting = !visited && state.player.x > 510;
         const correction = -state.player.a * 12 - state.player.w * 4;
         game.setInput(...(waitingForMeeting ? (state.player.vx > 10 ? ['left'] : state.player.vx < -10 ? ['right'] : []) : ['right']), ...(correction < -.4 ? ['q'] : correction > .4 ? ['e'] : []));
+        if (orientationHop(state)) game.jump();
         game.step(1/120); game.drainEvents();
     }
-    assert.deepEqual(new Set(frames.keys()), new Set(['entrance', 'chairs', 'meeting', 'rush']));
+    assert.deepEqual(new Set(frames.keys()), new Set(['entrance', 'chairs', 'meeting', 'sleeper', 'rush']));
     for (const [name, state] of frames) for (const locale of ['en', 'ko']) for (const width of [540, 1000]) {
         const frame = render(state, locale, width);
         if (name === 'entrance') assert.ok(frame.labels.some(({ text }) => text === (locale === 'en' ? '↓ Enter' : '↓ 들어가기')));

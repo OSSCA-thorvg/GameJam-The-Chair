@@ -80,25 +80,21 @@ export function balancePolicy(state, game) {
     if (state.mode === 'dead' || state.mode === 'won') game.reset();
 }
 
-const EXPRESS = { bump: 10130, pit: { left: 10730, right: 11070 } };
-// The orientation obstacles before the express (the robot vacuum drives left at 60 px/s).
-const ORIENTATION = [
-    { x: 4050 }, { x: 5370 }, { x: 6250 }, { robot: true, speed: 60 }, { x: 8450 }, { x: 8620 },
-];
+const EXPRESS = { pit: { left: 10650, right: 10990 } };
+// The orientation cables and sleepers before the express.
+const ORIENTATION = [4050, 4400, 4750, 5370, 5700, 5960, 6450, 6700, 6970, 7190, 7450, 7640, 7830, 8110, 8330, 8590, 8790, 8990];
 // Whether to hop now: the jump peaks over the nearest obstacle ahead.
 export function orientationHop(state) {
     const p = state.player;
     if (!state.ground) return false;
-    return ORIENTATION.some(obstacle => {
-        const x = obstacle.robot ? state.corridor.robot : obstacle.x;
-        const closing = p.vx + (obstacle.robot ? obstacle.speed : 0);
-        const time = (x - p.x) / Math.max(1, closing);
+    return ORIENTATION.some(x => {
+        const time = (x - p.x) / Math.max(1, p.vx);
         return time > .36 && time < .44;
     });
 }
-// Rides the orientation convoy, hopping each obstacle, then the express convoy through the rush-hour corridor:
-// hops the speed bump (a jump without pushing on lands back on the chairs), jumps from the launch ramp,
-// then jumps off the convoy again with a push before the lift. With `stayAboard` it stays on the chairs and gets swept into the lift.
+// Rides the orientation convoy, hopping each obstacle, then the express convoy: jumps from the launch ramp,
+// then jumps off the convoy again with a push before the lift. With `stayAboard` it stays on the chairs and
+// gets swept into the lift.
 // Returns the keys to hold this tick, or null when the convoy is not involved.
 export function createExpressRider(stayAboard = false) {
     let off = false;
@@ -108,8 +104,6 @@ export function createExpressRider(stayAboard = false) {
         if (pace !== 'express' && state.stage === 2 && orientationHop(state)) game.jump();
         if (pace !== 'express' || convoy === 'free') return null;
         if (convoy !== 'carried' || !state.ground) return [];
-        const toBump = EXPRESS.bump - p.x;
-        if (toBump > 0 && toBump < 70) game.jump();
         const toLip = EXPRESS.pit.left - p.x;
         if (toLip > 0 && toLip < 35) game.jump();
         if (!stayAboard && p.x > EXPRESS.pit.right + 120) { game.jump(); off = true; return ['right']; }

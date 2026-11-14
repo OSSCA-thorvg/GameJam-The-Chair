@@ -48,12 +48,9 @@ export function applyCorridor(s: GameState, out: GameEvent[], dt: number, previo
         s.coyote = 0;
         s.jumpQ = 0;
     }
-    if (r.kick === 'bump') {
+    if (r.kick === 'trip') {
         out.push({ type: 'cue', id: 'convoy-bump' });
-        applyFocusHit(s, out, { kind: 'bump', id: 0, damage: 10 });
-    } else if (r.kick === 'trip') {
-        out.push({ type: 'cue', id: 'convoy-bump' });
-        applyFocusHit(s, out, { kind: 'bump', id: 1 + r.tripped, damage: STAGE_TWO.orientation.damage });
+        applyFocusHit(s, out, { kind: 'bump', id: r.tripped, damage: STAGE_TWO.orientation.damage });
     }
 }
 

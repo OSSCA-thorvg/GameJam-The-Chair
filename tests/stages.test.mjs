@@ -49,7 +49,7 @@ test('stage2 completes through chair dispatch and the clock-out lift', () => {
     assert.deepEqual([...seen.checkpoints], [0, 1, 2, 3, 4]);
     assert.ok(state.furniture.every(chair => chair.released));
     assert.ok(seen.express, 'the convoy speeds up before the lift');
-    assert.equal(seen.bumps, 0, 'the speed bump was hopped');
+    assert.equal(seen.bumps, 0, 'every cable and sleeper was hopped');
     assert.ok(seen.chats.has('ramp'), 'the chairs shout back about the ramp');
     assert.notEqual(state.corridor.departure.kind, 'none', 'the chairs head into the lift');
     assert.notEqual(state.corridor.departure.reason, 'abduction', 'the rider is not taken along');
@@ -69,7 +69,7 @@ test('staying aboard the express convoy ends in a forced clock-out', () => {
     assert.equal(game.getSnapshot().checkpoint, 3, 'retry starts from the last flag before the lift');
 });
 
-test('hopping the bump and flying off the ramp with the convoy reaches the exit without losing focus', () => {
+test('hopping every obstacle and flying off the ramp with the convoy reaches the exit without losing focus', () => {
     const game = createGame(); game.startStage(2);
     const { state } = drive(game);
     assert.equal(state.mode, 'won');
@@ -81,13 +81,13 @@ test('hopping the bump and flying off the ramp with the convoy reaches the exit 
 test('the express convoy does not carry a rider across the pit without a ramp jump', () => {
     const game = createGame(); game.startStage(2);
     drive(game, state => state.corridor.pace === 'express' && state.corridor.convoy === 'carried'
-        && state.player.x >= 10650);
+        && state.player.x >= 10570);
     game.clearInput();
     let crossed = false;
     for (let i = 0; i < 120 * 4 && game.getSnapshot().deaths === 0; i++) {
         game.step(dt);
         const state = game.getSnapshot();
-        crossed ||= state.player.x > 11070;
+        crossed ||= state.player.x > 10990;
     }
     const state = game.getSnapshot();
     assert.equal(crossed, false, 'rolling with the chairs cannot clear the construction hole');
@@ -97,40 +97,33 @@ test('the express convoy does not carry a rider across the pit without a ramp ju
 test('jumping at the start of the ramp falls short of the far side', () => {
     const game = createGame(); game.startStage(2);
     drive(game, state => state.corridor.pace === 'express' && state.corridor.convoy === 'carried'
-        && state.player.x >= 10580);
+        && state.player.x >= 10500);
     game.jump();
     game.clearInput();
     let crossed = false;
     for (let i = 0; i < 120 * 4 && game.getSnapshot().deaths === 0; i++) {
         game.step(dt);
-        crossed ||= game.getSnapshot().player.x > 11070;
+        crossed ||= game.getSnapshot().player.x > 10990;
     }
     assert.equal(crossed, false);
     assert.equal(game.getSnapshot().deaths, 1);
 });
 
-test('riding the express without hopping: the bump throws the rookie off and on foot the ramp falls short', () => {
+test('tripping on the orientation obstacles costs focus until the rookie loses it', () => {
     const game = createGame(); game.startStage(2);
-    drive(game, state => state.corridor.pace === 'express' && state.corridor.convoy === 'carried');
-    game.clearInput();
-    const cues = [];
-    let kicked = null;
-    for (let i = 0; i < 120 * 12 && game.getSnapshot().deaths === 0; i++) {
+    drive(game, state => state.corridor.convoy === 'carried' && state.player.x > 3600);
+    let trips = 0;
+    for (let i = 0; i < 120 * 40 && game.getSnapshot().mode === 'play'; i++) {
+        const p = game.getSnapshot().player;
+        const keys = ['right'];
+        if (-p.a * 12 - p.w * 4 < -.4) keys.push('q');
+        if (-p.a * 12 - p.w * 4 > .4) keys.push('e');
+        game.setInput(...keys);
         game.step(dt);
-        const state = game.getSnapshot();
-        for (const event of game.drainEvents()) if (event.type === 'cue') cues.push(event.id);
-        if (kicked === null && cues.includes('convoy-bump')) kicked = state;
-        // Back on its wheels, it chases the chairs on foot.
-        if (kicked && state.ground && state.corridor.convoy !== 'carried') game.setInput('right');
+        for (const event of game.drainEvents()) if (event.type === 'cue' && event.id === 'convoy-bump') trips++;
     }
-    assert.ok(kicked, 'the speed bump kicks the carried rider');
-    assert.ok(kicked.player.vy < 0 && kicked.player.vx < 100, 'up and slowed: no brakes for the rookie');
-    assert.equal(kicked.corridor.convoy, 'dropped', 'thrown out of the convoy');
-    assert.equal(kicked.focus, 90);
-    const state = game.getSnapshot();
-    assert.equal(state.deaths, 1, 'left behind, the rider rolls off the ramp into the construction hole');
-    assert.equal(state.checkpoint, 3);
-    assert.equal(state.player.x, 6950, 'the retry starts at the flag before the rush');
+    assert.ok(trips >= 5 && trips <= 6, 'about five trips at twenty focus each');
+    assert.equal(game.getSnapshot().lossReason, 'focus');
 });
 
 test('restart resumes at the last reached checkpoint and stage selection starts fresh', () => {
@@ -141,7 +134,7 @@ test('restart resumes at the last reached checkpoint and stage selection starts 
     const saved = game.getSnapshot();
     assert.equal(saved.stage, 2);
     assert.equal(saved.checkpoint, 4);
-    assert.equal(saved.player.x, 11850);
+    assert.equal(saved.player.x, 11770);
     assert.equal(saved.deaths, 1);
     assert.equal(saved.corridor.departure.kind, 'gone');
     assert.equal(saved.corridor.room.kind, 'corridor');

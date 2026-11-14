@@ -55,11 +55,6 @@ test('a rider leading the nearby convoy joins its express run and clears the con
         const state = game.getSnapshot();
         led ||= state.corridor.convoy === 'leading';
         launched ||= state.corridor.convoy === 'leading-airborne' && state.player.x >= STAGE_TWO.express.pit.left;
-        const toBump = STAGE_TWO.express.bump - state.player.x;
-        if (state.corridor.convoy === 'leading' && state.ground && toBump > 0 && toBump < 70) {
-            game.jump();
-            game.clearInput();
-        }
         const toLip = STAGE_TWO.express.pit.left - state.player.x;
         if (state.corridor.convoy === 'leading' && state.ground && toLip > 0 && toLip < 35) {
             game.jump();
@@ -123,7 +118,7 @@ test('the chairs teach the rookie each rule before its obstacle, and a hopping r
     game.startStage(2);
     const { state, lines } = rideOrientation(game, orientationHop, s => s.corridor.pace === 'express');
     assert.deepEqual(lines.map(entry => entry.line), STAGE_TWO.orientation.lines.map((_, i) => i), 'every line is said once, in order');
-    const rules = { 0: 'cable', 3: 'sign', 5: 'sleeper', 8: 'robot', 10: 'strip' };
+    const rules = { 0: 'cable', 3: 'sleeper' };
     for (const [line, kind] of Object.entries(rules)) {
         const obstacle = STAGE_TWO.orientation.obstacles.find(o => o.kind === kind);
         const said = lines.find(entry => entry.line === Number(line));
