@@ -2,6 +2,7 @@ import { LEVEL } from '../../game/level';
 import { ART } from '../art';
 import { playerChair } from './player-chair';
 import { PLAYER_OUTLINES } from './player-art';
+import { chairStains, riderFaceStains, riderSplash, riderStains } from './player-stains';
 import type { RenderCtx } from '../context';
 
 export function player(ctx: RenderCtx) {
@@ -12,6 +13,7 @@ export function player(ctx: RenderCtx) {
     ctx.rotation = p.a + (ctx.mode === 'play' && ctx.t < 1 && !state.lessons.moved ? Math.sin(ctx.t * 12) * .025 : 0);
     ctx.localScale = ART.player.scale;
     playerChair(ctx);
+    chairStains(ctx, ctx.soaks);
     riderBody(ctx);
     const lift = focusTension(ctx).lift;
     const base = { ox: ctx.ox, oy: ctx.oy };
@@ -77,6 +79,8 @@ function riderBody(ctx: RenderCtx) {
     ctx.polygon([[26, 11], [33, 10], [35, 15], [26, 16]], '#383f4e');
 
     ctx.polygon(PLAYER_OUTLINES.shirt, C.shirt);
+    // Dirty bucket water soaks into the clothes themselves, under the collar, tie and arms.
+    riderStains(ctx, ctx.soaks);
     ctx.polygon([[-17, -62], [-11, -61], [-11, -24], [-17, -23]], '#d9d6c5');
     ctx.polygon([[-7, -70], [4, -68], [5, -60], [1, -56], [-7, -62]], '#d5b18b');
     ctx.polygon([[-9, -65], [0, -60], [6, -60], [4, -55], [0, -52], [-6, -57]], '#fff6de');
@@ -90,6 +94,7 @@ function riderHead(ctx: RenderCtx) {
     ctx.polygon([[-11, -76], [-7, -72], [1, -69], [11, -69], [11, -66], [2, -66], [-9, -69]], '#d3b18c');
     ctx.polygon(PLAYER_OUTLINES.hair, '#3c424f');
     ctx.polygon([[-7, -93], [-4, -98], [3, -96]], '#687380');
+    riderFaceStains(ctx, ctx.soaks);
     const notice = state.lossReason === 'focus' ? .5 + .5 * Math.sin(state.focusLossTime * 6) : state.focusNotice ? Math.sin((1.7 - state.focusNotice.life) / 1.7 * Math.PI) : 0;
     const tension = focusTension(ctx);
     const glance = Math.max(notice, tension.drift, tension.lift);
@@ -135,11 +140,8 @@ function riderEffects(ctx: RenderCtx) {
         ctx.rod(-8, -82, 9, -80, 1, '#a8a79e');
         ctx.rod(-8, -77, 7, -75, 1, '#a8a79e');
     }
-    if (ctx.soaked) {
-        for (const [x, y] of [[-13, -49], [5, -29], [34, -44]]) {
-            ctx.ellipse(x, y, 4, 6, '#8b9c777d');
-        }
-    }
+    // Fresh spray just after a splash.
+    if (state.focusNotice?.kind === 'water') riderSplash(ctx, state.focusNotice.life);
     if (ctx.dirty) {
         for (let i = 0; i < 9; i++) {
             const x = -25 + (i * 17) % 60;
