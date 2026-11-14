@@ -1,7 +1,7 @@
 import { translate, type Message } from '../../i18n';
 import { STAGE_TWO } from '../../game/stages/building/data';
 import type { RenderCtx } from '../context';
-import { bubble } from './building-bubble';
+import { bubble, chairBubble } from './building-bubble';
 import { head, officeAppearance, worker } from './building-workers';
 import { player } from './player';
 import { entryDoorOpening, doorPanel } from './meeting-doors';
@@ -98,8 +98,7 @@ function chairSpeech(ctx: RenderCtx, index: number) {
     const x = STAGE_TWO.meeting + 30 + index * 90;
     const seat = 420 - 48 + meetingChairPose(ctx.t, index).sink;
     const y = 460;
-    ctx.polygon([[x-42,y-22],[x-31,y-22],[x-24,seat-22]], ctx.tint('#e2e8df', .85));
-    bubble(ctx, COMPLAINTS[index], x, y, 250, false, .85, false);
+    chairBubble(ctx, COMPLAINTS[index], x, y, 250, { alpha: .85, to: [x - 24, seat - 22] });
 }
 
 export function meetingRoom(ctx: RenderCtx) {
