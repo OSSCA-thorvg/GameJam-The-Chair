@@ -99,9 +99,23 @@ function riderHead(view: SkyProjection, { C, bob, oval }: ChairDrawing) {
     endingGlasses(view, bob);
 }
 
+/**
+ * The laptop in 3D: a thin base under the hands with its keyboard and trackpad, and a thin lid hinged at the base's
+ * back edge, tipped a little back, its screen towards the rider. (The side view's outline is a single slab; extruded
+ * as it was, it read as a desktop monitor.) Coordinates as the side-view outlines; the screen face is LAPTOP_SCREEN.
+ */
+function laptop(profile: ChairDrawing['profile']) {
+    // Base: 34 deep, 3 thick, 44 wide, resting just under the fingertips.
+    profile([[16, -31], [50, -31], [50, -34], [16, -34]], 22, '#555f70');
+    profile([[20, -34], [45, -34], [45, -34.6], [20, -34.6]], 18, '#3c4350');
+    profile([[24, -34], [33, -34], [33, -34.8], [24, -34.8]], 6, '#6b7486');
+    // Lid: hinged at the base's back edge and tipped back past upright.
+    profile([[48, -33], [51, -33], [58, -62], [55, -62]], 22, '#555f70');
+    profile([[47, -36], [48, -36], [54.6, -60], [53.6, -60]], 20, '#a8b9c3');
+}
+
 function riderArms({ C, elapsed, profile }: ChairDrawing, rest = 0) {
-    profile(PLAYER_OUTLINES.laptop, 23, '#555f70');
-    profile([[35, -55], [59, -55], [51, -35], [27, -35]], .5, '#a8b9c3', 23.8);
+    laptop(profile);
     for (const z of [-19, 19]) {
         profile([[-17, -58], [-13, -60], [-9, -57], [-8, -35], [-18, -34]], 4, '#e6e0cc', z);
         profile([[-19, -39], [-8, -39], [-8, -34], [-19, -33]], 4.5, '#fff6de', z);

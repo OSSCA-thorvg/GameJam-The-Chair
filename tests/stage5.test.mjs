@@ -287,6 +287,17 @@ test('the chair swivels and leans back to look out while he keeps his eyes on th
     assert.equal(orbitEndingState(spinFrom - .5).swivel, 0);
 });
 
+test('the rider works on a laptop, not a monitor: a keyboard base under his hands and a thin lid with the screen', () => {
+    const over = endingFrame(ORBIT_ENDING.focus + 1);
+    // Faces seen at an angle are shaded a few percent, so match colours closely rather than exactly.
+    const rgb = color => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
+    const near = (color, target) => typeof color === 'string' && color.length >= 7
+        && rgb(color).every((channel, i) => Math.abs(channel - rgb(target)[i]) <= 8);
+    for (const [color, part] of [['#3c4350', 'keyboard'], ['#6b7486', 'trackpad'], ['#a8b9c3', 'screen']]) {
+        assert.ok(over.commands.some(command => near(command.c, color)), `the ${part} shows over his shoulder`);
+    }
+});
+
 test('steering fades in during the entry instead of being locked out', () => {
     const state = JSON.parse(fresh().serialize());
     const at = age => orbitStep({ ...state.orbit, age }, state.p, ['right'], 1 / 120).p.vx;

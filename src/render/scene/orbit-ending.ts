@@ -97,7 +97,8 @@ export function endingChairLights(ctx: RenderCtx, chair: SkyProjection, e: Orbit
     if (!e.parked) return;
     const light = 1 - e.lightsOut;
     if (light > 0) {
-        const [x, y] = chair.project([36, 20, 0]), r = ctx.H * .09;
+        // Between the screen and the rider's face.
+        const [x, y] = chair.project([42, 14, 0]), r = ctx.H * .09;
         ctx.commands.push({ v: [[x - r, y - r], [x + r, y - r], [x + r, y + r], [x - r, y + r]],
             c: { from: [x, y], to: [x + r, y], radius: r, stops: [[0, ctx.rgba('#9fd4ff', .55 * light)], [1, ctx.rgba('#9fd4ff', 0)]] },
             layer: { key: 'orbit-laptop-light', blend: 'screen' } });
@@ -149,9 +150,9 @@ export function endingSignal(ctx: RenderCtx, head: Vector, e: OrbitEndingState) 
 
 /** A point on the laptop screen: `u` across (0 left to 1 right), `v` up, lifted just off the lid towards the rider. */
 function screenPoint(u: number, v: number): Point3 {
-    // The lid's face towards the rider runs from the hinge (21, -4) up to its top edge (33, 24), 42 wide.
+    // The screen on the laptop lid faces the rider: from just above the hinge (47, 1) up to (53.6, 25), 40 wide.
     const lift = .7;
-    return [21 + 12 * v - .92 * lift, -4 + 28 * v + .39 * lift, -21 + 42 * u];
+    return [47 + 6.6 * v - .96 * lift, 1 + 24 * v + .26 * lift, -20 + 40 * u];
 }
 
 /**
