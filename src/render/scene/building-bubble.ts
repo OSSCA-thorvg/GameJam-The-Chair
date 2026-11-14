@@ -39,19 +39,21 @@ export function bubble(ctx: RenderCtx, text: Message, x: number, y: number, widt
  * a tail. `to` is the point the trail runs down to (the speaking chair); omitted, a short trail drops below.
  */
 export function chairBubble(ctx: RenderCtx, text: Message, x: number, y: number, width: number,
-    { spiky = false, alpha = 1, side = -1, to }: { spiky?: boolean; alpha?: number; side?: number; to?: Vector } = {}) {
+    { spiky = false, alpha = 1, side = -1, to, dots = 3 }: { spiky?: boolean; alpha?: number; side?: number; to?: Vector; dots?: number } = {}) {
     const fill = ctx.tint(CHAIR_SLATE, alpha * .92);
     body(ctx, x, y, width, spiky, fill, null, alpha);
     // The trail leaves the edge that faces the chair: the bottom, or the top when the chair sits above the bubble.
     const edge = spiky ? 30 : 22, above = to !== undefined && to[1] < y;
     const start: Vector = [to ? Math.max(x - width / 2 + 16, Math.min(x + width / 2 - 16, to[0])) : x + side * 6, above ? y - edge : y + edge];
-    chairTrail(ctx, start, to ?? [x + side * 20, y + 50], fill);
+    chairTrail(ctx, start, to ?? [x + side * 20, y + 50], fill, dots);
     ctx.label(translate(text, ctx.locale), x, y + 5, 13, ctx.tint(CHAIR_INK, alpha), SPEECH_FONT);
 }
 
-/** Three shrinking bubbles from a bubble's edge toward the chair that is talking. */
-export function chairTrail(ctx: RenderCtx, from: Vector, to: Vector, fill: string) {
-    for (const [k, r] of [[.25, 5], [.58, 3.6], [.88, 2.4]]) {
+/** `dots` shrinking bubbles from a bubble's edge toward the chair that is talking (three by default). */
+export function chairTrail(ctx: RenderCtx, from: Vector, to: Vector, fill: string, dots = 3) {
+    const steps = dots === 3 ? [[.25, 5], [.58, 3.6], [.88, 2.4]]
+        : Array.from({ length: dots }, (_, i) => [.12 + .82 * i / (dots - 1), 5 - 2.8 * i / (dots - 1)]);
+    for (const [k, r] of steps) {
         ctx.ellipse(from[0] + (to[0] - from[0]) * k, from[1] + (to[1] - from[1]) * k, r, r, fill);
     }
 }

@@ -98,7 +98,7 @@ function chairSpeech(ctx: RenderCtx, index: number) {
     const x = STAGE_TWO.meeting + 30 + index * 90;
     const seat = 420 - 48 + meetingChairPose(ctx.t, index).sink;
     const y = 460;
-    chairBubble(ctx, COMPLAINTS[index], x, y, 250, { alpha: .85, to: [x - 24, seat - 22] });
+    chairBubble(ctx, COMPLAINTS[index], x, y, 250, { alpha: .85, to: [x - 24, seat - 22], dots: 7 });
 }
 
 export function meetingRoom(ctx: RenderCtx) {
