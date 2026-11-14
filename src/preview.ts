@@ -1,7 +1,7 @@
 import { createRenderer } from './render/renderer';
 import { previewScenes, type PreviewScene } from './preview-scenes';
 import { createSplashPlayer } from './ui/splash';
-import type { Locale } from './i18n';
+import { browserLocale, keepLangOnLinks, type Locale } from './i18n';
 import './style.css';
 import './preview.css';
 
@@ -12,14 +12,10 @@ const value = document.querySelector<HTMLOutputElement>('#time-value')!;
 const playButton = document.querySelector<HTMLButtonElement>('#play')!;
 const markers = document.querySelector<HTMLElement>('#markers')!;
 const backend = document.querySelector<HTMLElement>('#renderer')!;
-// `?locale=ko` or `?locale=en` picks the language of the copy drawn in the scene (speech bubbles, the stage-four
+// `?lang=ko` or `?lang=en` picks the language of the copy drawn in the scene (speech bubbles, the stage-four
 // billboard); without it the preview follows the language last chosen in the game.
-function previewLocale(): Locale {
-    const asked = new URLSearchParams(location.search).get('locale');
-    if (asked === 'ko' || asked === 'en') return asked;
-    try { return localStorage.getItem('the-chair-locale') === 'ko' ? 'ko' : 'en'; } catch { return 'en'; }
-}
-const locale: Locale = previewLocale();
+const locale: Locale = browserLocale();
+keepLangOnLinks();
 const renderer = createRenderer(root, () => locale);
 const splashCanvas = document.querySelector<HTMLCanvasElement>('#splash-preview')!;
 const splash = createSplashPlayer(splashCanvas);

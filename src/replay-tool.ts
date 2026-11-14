@@ -3,7 +3,7 @@
 import { FIXED_STEP } from './game/level';
 import { normalizeReplaySettings, readReplaySources, REPLAY_DEFAULTS, type ReplaySettings, type ReplaySource } from './game/replay';
 import { CONFIG_VERSION } from './game/stages/index';
-import { isMessage, resolveLocale, translate, type Locale, type Message } from './i18n';
+import { browserLocale, isMessage, keepLangOnLinks, translate, type Locale, type Message } from './i18n';
 import { createRenderer } from './render/renderer';
 import { createReplayPlayer } from './ui/replay-player';
 import { copyText, downloadJson, loadBrowserData, stamp } from './ui/replay-store';
@@ -12,7 +12,8 @@ import './preview.css';
 import './replay-tool.css';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
-const locale: Locale = resolveLocale(navigator.languages);
+const locale: Locale = browserLocale();
+keepLangOnLinks();
 const t = (message: Message) => translate(message, locale);
 document.documentElement.lang = locale;
 for (const element of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
