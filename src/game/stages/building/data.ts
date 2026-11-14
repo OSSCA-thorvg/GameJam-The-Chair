@@ -61,7 +61,7 @@ export const STAGE_TWO = deepFreeze({
     dispatch: { room: 1840, trigger: 1320 },
     lift: 11620,
     offices: [220, 1030, 1560, 2370],
-    checkpoints: [{ x: 100, y: 392 }, { x: 1300, y: 392 }, { x: 2200, y: 392 }, { x: 6150, y: 392 }, { x: 11770, y: 392 }],
+    checkpoints: [{ x: 100, y: 392 }, { x: 1300, y: 392 }, { x: 2200, y: 392 }, { x: 6150, y: 392 }, { x: 11080, y: 392 }],
     orientation: ORIENTATION,
     express: EXPRESS,
     terrain: [

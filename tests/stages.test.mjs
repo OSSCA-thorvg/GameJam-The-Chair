@@ -66,7 +66,9 @@ test('staying aboard the express convoy ends in a forced clock-out', () => {
     assert.equal(state.corridor.departure.kind, 'lost');
     game.reset();
     assert.equal(game.getSnapshot().mode, 'play');
-    assert.equal(game.getSnapshot().checkpoint, 3, 'retry starts from the last flag before the lift');
+    assert.equal(game.getSnapshot().checkpoint, 4, 'retry starts from the flag past the ramp');
+    assert.equal(game.getSnapshot().player.x, 11080);
+    assert.equal(game.getSnapshot().corridor.lift.kind, 'departed', 'the lift has already left');
 });
 
 test('hopping every obstacle and flying off the ramp with the convoy reaches the exit without losing focus', () => {
@@ -134,7 +136,7 @@ test('restart resumes at the last reached checkpoint and stage selection starts 
     const saved = game.getSnapshot();
     assert.equal(saved.stage, 2);
     assert.equal(saved.checkpoint, 4);
-    assert.equal(saved.player.x, 11770);
+    assert.equal(saved.player.x, 11080);
     assert.equal(saved.deaths, 1);
     assert.equal(saved.corridor.departure.kind, 'gone');
     assert.equal(saved.corridor.room.kind, 'corridor');
