@@ -92,10 +92,8 @@ function riderHead(view: SkyProjection, { C, bob, oval }: ChairDrawing) {
         return 5 + fullness * 7;
     } });
     endingHair(view, bob);
-    for (const side of [-1, 1]) {
-        oval(-7, -81, side * 13, 2.7, 3.4, 1.5, C.skin);
-        oval(10.5, -82.4, side * 12.4, .8, 1.1, .35, '#446d82');
-    }
+    // Ears on the sides; the eyes are behind the glasses on the front of the face (endingGlasses).
+    for (const side of [-1, 1]) oval(-7, -81, side * 13, 2.7, 3.4, 1.5, C.skin);
     endingGlasses(view, bob);
 }
 

@@ -163,36 +163,44 @@ test('the rear hair has a swept crown and a tapered nape instead of a rectangula
     for (const [x, y] of vertices) assert.ok(Number.isFinite(x) && Number.isFinite(y));
 });
 
-test('the 3D side view retains the ordinary player’s blue lens size and reflection', () => {
-    const view = createSkyProjection(1000, 510, 0);
-    endingGlasses(view, 0);
-    const commands = view.commands();
-    const panes = commands.filter(command => command.c === '#83c8e4');
-    assert.equal(panes.length, 1, 'only the outward-facing side lens is drawn');
-    const lens = panes[0].v;
-    const width = Math.max(...lens.map(([x]) => x)) - Math.min(...lens.map(([x]) => x));
-    const height = Math.max(...lens.map(([, y]) => y)) - Math.min(...lens.map(([, y]) => y));
-    assert.ok(width > 15 && height > 6, 'blue lens is a readable face rather than a thin edge');
-    assert.ok(Math.abs(width / height - 9 / 4) < .15, 'matches the original side lens proportions');
-    assert.ok(commands.some(command => command.c === '#bfe6ef'), 'keeps the original pale reflection');
-    assert.ok(commands.some(command => command.c === '#446d82'), 'eye remains visible on the blue lens');
+/** The glasses' dark arm, shaded a little on the faces of its rod. */
+const isArm = color => typeof color === 'string' && color.length >= 7
+    && [1, 3, 5].every((i, k) => Math.abs(parseInt(color.slice(i, i + 2), 16) - [0x3a, 0x41, 0x4b][k]) <= 4);
+const lensPanes = commands => commands.filter(command => command.c === '#83c8e4');
+const lensBounds = pane => {
+    const xs = pane.v.map(([x]) => x), ys = pane.v.map(([, y]) => y);
+    return { left: Math.min(...xs), right: Math.max(...xs), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) };
+};
+
+test('the 3D glasses have lenses on the front of the face only: none on the sides', () => {
+    // Side on, the forward-facing lenses are edge-on and culled; only the frame's arm shows.
+    const side = createSkyProjection(1000, 510, 0);
+    endingGlasses(side, 0);
+    assert.deepEqual(lensPanes(side.commands()), [], 'no lens painted on the side of the face');
+    assert.ok(side.commands().some(command => isArm(command.c)), 'the arm runs back along the side of the head');
+    // Face on: exactly two lenses, side by side, each wider than tall, with reflection and eyes.
+    const front = createSkyProjection(1000, 510, 3, { zoom: 3 });
+    endingGlasses(front, 0);
+    const panes = lensPanes(front.commands()).map(lensBounds).sort((a, b) => a.left - b.left);
+    assert.equal(panes.length, 2, 'two lenses');
+    assert.ok(panes[0].right < panes[1].left, 'side by side, not overlapping');
+    for (const pane of panes) assert.ok(pane.width > pane.height * 1.4 && pane.height > 8, 'each a readable, wider-than-tall lens');
+    assert.ok(front.commands().some(command => command.c === '#bfe6ef'), 'keeps the pale reflection');
+    assert.equal(front.commands().filter(command => command.c === '#446d82').length, 2, 'an eye behind each lens');
 });
 
-test('blue lenses stay readable during the turn and do not face through the back of the head', () => {
-    for (const orbit of [0, .25, .5]) {
+test('blue lenses never number more than two while turning, and do not face through the back of the head', () => {
+    for (const orbit of [0, .25, .5, 1, 1.5, 2, 2.5, 3, 3.5]) {
         const view = createSkyProjection(1000, 510, orbit);
         endingGlasses(view, 0);
-        const pane = view.commands().find(command => command.c === '#83c8e4');
-        assert.ok(pane, `lens remains visible at orbit ${orbit}`);
-        const area = Math.abs(pane.v.reduce((sum, p, i) => {
-            const next = pane.v[(i + 1) % pane.v.length];
-            return sum + p[0] * next[1] - next[0] * p[1];
-        }, 0)) / 2;
-        assert.ok(area > 30, 'turning lens retains a blue surface');
+        assert.ok(lensPanes(view.commands()).length <= 2, `at most two lenses at orbit ${orbit}`);
     }
+    const quarter = createSkyProjection(1000, 510, 3.5);
+    endingGlasses(quarter, 0);
+    assert.ok(lensPanes(quarter.commands()).length > 0, 'a three-quarter front view shows the lenses');
     const rear = createSkyProjection(1000, 510, 1);
     endingGlasses(rear, 0);
-    assert.ok(!rear.commands().some(command => command.c === '#83c8e4'), 'side lens back faces are culled');
+    assert.deepEqual(lensPanes(rear.commands()), [], 'lens back faces are culled from behind');
 });
 
 function renderFrame(stage, setup) {
@@ -226,7 +234,8 @@ test('the reveal turns steadily from the side to behind the chair, keeping it ce
     endingChair(side, settle);
     const model = side.commands();
     near(withoutBubble(revealFrame('reveal', settle)).slice(-model.length), model);
-    assert.ok(model.some(command => command.c === '#83c8e4'), 'blue glasses remain visible');
+    // Side on, the glasses show as their frame and arm; the lenses are on the front of the face.
+    assert.ok(model.some(command => command.c === '#50606a' || command.c === '#3a414b' || isArm(command.c)), 'the glasses remain visible');
     let previous = -1;
     for (let at = settle; at <= settle + turn + hold; at += .5) previous = (assert.ok(revealChairOrbit(at, settle) >= previous), revealChairOrbit(at, settle));
     assert.ok(Math.abs(revealChairOrbit(settle + turn, settle) - 1) < 1e-9, 'behind the chair once the turn is done');

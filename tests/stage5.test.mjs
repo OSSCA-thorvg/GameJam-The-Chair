@@ -252,12 +252,13 @@ test('the ending: the extinguisher floats off, the signal drops bar by bar, the 
 test('after the network is lost the camera circles the chair once, all the way round, with the sky turning too', () => {
     const { disconnect, spinFrom, spin } = ORBIT_ENDING;
     assert.ok(spinFrom > disconnect, 'the circle starts once the network is gone');
-    // The rider's blue glasses sit on the sides of the face: hidden from behind, seen once the camera comes round.
+    // The rider's blue lenses are on the front of the face: hidden from behind, seen once the camera comes round.
     const glasses = t => endingFrame(t).commands.some(command => command.c === '#83c8e4');
     assert.equal(glasses(spinFrom), false, 'it starts from behind');
     const round = Array.from({ length: 9 }, (_, i) => spinFrom + (spin - spinFrom) * (i + 1) / 10).map(glasses);
     assert.ok(round.filter(Boolean).length >= 2, `the rider's face comes into view on the way round (${round})`);
-    assert.equal(glasses(spin), false, 'and it ends behind the chair again');
+    // The camera ends behind where it started, but the chair has swivelled half round to face it.
+    assert.equal(glasses(spin), true, 'and the chair ends turned towards the camera, the rider still on his screen');
     const stars = t => endingFrame(t).commands.filter(command => typeof command.c === 'string' && command.c.startsWith('#ffffff') && command.v.length === 4 && !command.layer).map(command => command.v[0][0]);
     assert.notDeepEqual(stars(spinFrom), stars((spinFrom + spin) / 2), 'the stars swing past');
 });
