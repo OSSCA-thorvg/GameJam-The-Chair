@@ -13,8 +13,10 @@ export function drawOpening(ctx: RenderCtx, frame: OpeningFrame) {
     if (frame.shot === 'office') {
         ctx.chairPose = { backrest: frame.chair.backrest, riderPop: frame.chair.riderPop, shiver: frame.chair.shiver };
         ctx.cutscene = true;
+        ctx.windowDusk = frame.dusk;
         drawWorld(ctx);
         ctx.cutscene = false;
+        ctx.windowDusk = 1;
         ctx.chairPose = { backrest: 0, riderPop: 0, shiver: 0 };
         drawSunbeams(ctx, frame);
         drawOfficeLight(ctx, frame);

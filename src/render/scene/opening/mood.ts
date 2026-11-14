@@ -1,6 +1,7 @@
 import type { RenderCtx } from '../../context';
 import type { OpeningFrame } from './timeline';
-import { linear, mix, radial, screenRect } from './shapes';
+import { linear, radial, screenRect } from './shapes';
+import { officeTint } from '../window-view';
 
 // Office lighting for the cutscene (sunset → night) and the chair's moods (humming, rage).
 
@@ -22,8 +23,9 @@ export function drawSunbeams(ctx: RenderCtx, frame: OpeningFrame) {
 export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame) {
     const { dusk, lighting } = frame;
     if (lighting <= 0) return;
-    ctx.beginLayer({ key: 'opening-dusk', blend: 'multiply', opacity: lighting * (.5 + dusk * .38) });
-    screenRect(ctx, mix('#f4b98c', '#2e3766', dusk));
+    const tint = officeTint(dusk);
+    ctx.beginLayer({ key: 'opening-dusk', blend: 'multiply', opacity: lighting * tint.strength });
+    screenRect(ctx, tint.color);
     ctx.endLayer();
 
     const p = ctx.p;
