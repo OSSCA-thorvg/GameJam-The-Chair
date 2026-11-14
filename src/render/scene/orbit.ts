@@ -17,6 +17,6 @@ export function drawOrbit(ctx: RenderCtx) {
         clock: REVEAL_DURATION + orbit.age - ending.still,
         // Parked, the spray dies away.
         spray: ending.parked ? .2 * (1 - ending.calm) : ctx.state.spray.burst / .24,
-        arrival: 0, departure: 1, basin: 1, entry: orbit.age / ENTRY_FRAMING, ending,
+        arrival: 0, departure: 1, basin: 1, entry: orbit.age / ENTRY_FRAMING, heading: orbit.heading, yaw: orbit.yaw, ending,
     });
 }

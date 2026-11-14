@@ -15,37 +15,55 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     }
     if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
     const controlled = next.phase !== 'entry';
+    // In the Earth's shadow the autopilot flies the chair in: the player's keys no longer steer it.
+    const auto = autopilot(next);
     // Steering grows from nothing to full over the entry, so the chair is under control right after the glide.
-    const steer = controlled ? 1 : Math.min(1, next.age / C.entryTime);
-    p.vx = steerAxis(p.vx, p.x, (held('right') - held('left')) * steer, C.bounds.x, dt);
-    p.vy = steerAxis(p.vy, p.y, (held('forward') - held('back')) * steer, C.bounds.y, dt);
-    p.x = clamp(p.x + p.vx * dt, C.bounds.x + C.steer.overshoot);
-    p.y = clamp(p.y + p.vy * dt, C.bounds.y + C.steer.overshoot);
-    p.a += (-p.vx / C.bankSpeed - p.a) * Math.min(1, dt * C.bankResponse);
-    // Deep in the approach the Earth's shadow draws the chair in; before that only spraying moves it forward.
+    const steer = auto ? 0 : controlled ? 1 : Math.min(1, next.age / C.entryTime);
+    const turning = (held('right') - held('left')) * steer;
+    if (auto) next.yaw = -next.heading * C.autopilot.turn;
+    else next.yaw += (turning * C.steer.turn - next.yaw) * (1 - Det.exp(-(turning !== 0 ? C.steer.response : C.steer.release) * dt));
+    next.heading += next.yaw * dt;
+    // At the widest turn the chair stops turning further: it never faces away from the Earth's shadow.
+    if (Math.abs(next.heading) >= C.steer.heading) {
+        next.heading = Math.sign(next.heading) * C.steer.heading;
+        if (next.yaw * next.heading > 0) next.yaw = 0;
+    }
+    // Across, the chair only drifts on its own when something shoves it or the geofence pushes it back in.
+    p.vx = steerAxis(p.vx, p.x, 0, -C.bounds.x, C.bounds.x, dt);
+    p.vy = steerAxis(p.vy, p.y, (held('forward') - held('back')) * steer, -C.bounds.y, C.bounds.top, dt);
+    p.a += (-next.yaw * C.bankTurn - p.a) * Math.min(1, dt * C.bankResponse);
+    // Until the autopilot takes over only spraying moves the chair forward.
     // During the entry the glide from stage four still carries it at the speed it arrived with.
-    const arriving = next.phase === 'door' && next.z > C.door.z - C.arrivalDistance;
-    const thrust = controlled && held('spray') && !arriving;
-    if (arriving) next.speed += (C.arrivalSpeed - next.speed) * C.cruiseRecovery * dt;
+    const thrust = controlled && !auto && held('spray');
+    const landing = auto ? Math.max(C.autopilot.landing, Math.min(C.cruise, (C.checkpoint.z - next.z) * C.autopilot.brake)) : 0;
+    if (auto) next.speed += (landing - next.speed) * (1 - Det.exp(-C.autopilot.response * dt));
     else if (thrust) next.speed = Math.min(C.maxSpeed, next.speed + C.thrust * dt);
     else if (controlled) next.speed *= Det.exp(-C.coast * dt);
     const beam = controlled ? praiseBeamOn(next.age, p, next.z) : null;
     if (beam) praiseShove(next, p, beam, dt);
     const praised = beam !== null;
-    next.z += next.speed * dt;
+    p.x = clamp(p.x + (next.speed * Det.sin(next.heading) + p.vx) * dt, C.bounds.x + C.steer.overshoot);
+    p.y = Math.max(-C.bounds.y - C.steer.overshoot, Math.min(C.bounds.top + C.steer.overshoot, p.y + p.vy * dt));
+    next.z += next.speed * Det.cos(next.heading) * dt;
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
-    return { orbit: next, p, checkpoint, praised, spraying: thrust || !controlled };
+    // The autopilot fires the extinguisher itself whenever it is bringing the chair up to speed.
+    return { orbit: next, p, checkpoint, praised, spraying: thrust || !controlled || (auto && next.speed < landing - 1) };
+}
+
+/** Whether the company autopilot is flying the chair: from the edge of the Earth's shadow until it parks. */
+export function autopilot(orbit: Readonly<OrbitState>) {
+    return orbit.phase === 'door' && orbit.z >= C.autopilot.from;
 }
 
 type Beam = typeof C.praise.beams[number];
 
 /**
- * One steering axis: chase the held direction's velocity, settle quickly on release, and past `bound` let the
+ * One steering axis: chase the held direction's velocity, settle quickly on release, and past `low` or `high` let the
  * company geofence push back harder the further out the chair is.
  */
-function steerAxis(v: number, at: number, input: number, bound: number, dt: number) {
-    const over = Math.max(0, Math.abs(at) - bound) * Math.sign(at);
+function steerAxis(v: number, at: number, input: number, low: number, high: number, dt: number) {
+    const over = at > high ? at - high : at < low ? at - low : 0;
     const target = input * C.steer.speed - over * C.steer.edge;
     const rate = input !== 0 || over !== 0 ? C.steer.response : C.steer.release;
     return v + (target - v) * (1 - Det.exp(-rate * dt));
@@ -134,6 +152,6 @@ function arriveAtDoor(next: OrbitState, p: Player) {
     }
     next.phase = 'parked';
     next.settled = 1;
-    next.speed = p.vx = p.vy = 0;
+    next.speed = next.yaw = p.vx = p.vy = 0;
     return true;
 }

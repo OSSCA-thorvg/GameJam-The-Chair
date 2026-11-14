@@ -19,7 +19,7 @@ const { FOCUS_DAMAGE, ORBIT_ENDING, orbitEnding, createGame, orbitStep, praiseBe
 `);
 const fresh = () => { const game = createGame({ seed: 55 }); game.startStage(5); return game; };
 
-test('orbit steering is screen-relative, coasts after release and speeds up with thrust', () => {
+test('the chair flies where it faces: turning right carries it right, and thrust speeds it up', () => {
     const game = fresh();
     for (let i = 0; i < 360; i++) game.step();
     game.setInput('right', 'forward', 'spray');
@@ -78,7 +78,7 @@ test('no praise beam reaches into the Earth shadow, and every beam sweeps slower
     const { beams } = STAGE_FIVE.praise;
     // The light spreads out away from the satellite: check it at every height the chair can reach.
     const { bounds, steer: { overshoot } } = STAGE_FIVE;
-    const reaches = beam => beam.axis === 'y' ? [-1, 1].map(s => s * (bounds.x + overshoot)) : [-1, 1].map(s => s * (bounds.y + overshoot));
+    const reaches = beam => beam.axis === 'y' ? [-1, 1].map(s => s * (bounds.x + overshoot)) : [-bounds.y - overshoot, bounds.top + overshoot];
     const slices = beam => reaches(beam).map(reach => praiseSection(beam, 0, reach));
     assert.ok(beams.every(beam => slices(beam).every(slice => slice.scale > 0 && slice.to <= STAGE_FIVE.heights.shadow)));
     const steer = STAGE_FIVE.steer.speed;
@@ -316,7 +316,7 @@ test('the rider works on a laptop, not a monitor: a keyboard base under his hand
 
 test('steering fades in during the entry instead of being locked out', () => {
     const state = JSON.parse(fresh().serialize());
-    const at = age => orbitStep({ ...state.orbit, age }, state.p, ['right'], 1 / 120).p.vx;
+    const at = age => orbitStep({ ...state.orbit, age }, state.p, ['right'], 1 / 120).orbit.yaw;
     assert.ok(at(0) < at(STAGE_FIVE.entryTime * .3), 'the first tick barely steers');
     assert.ok(at(STAGE_FIVE.entryTime * .3) > 0, 'the chair already answers early in the entry');
     assert.ok(at(STAGE_FIVE.entryTime * .3) < at(STAGE_FIVE.entryTime * .9), 'and answers more as the entry goes on');
@@ -335,35 +335,63 @@ test('only the extinguisher moves the chair forward: it coasts to a crawl withou
     assert.ok(pushed.orbit.z > idle.orbit.z + 600, 'and carries it much further');
 });
 
-const cruisingAt = (z, extra = {}) => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, rings: 0, settled: 0, ...extra });
+const cruisingAt = (z, extra = {}) => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, heading: 0, yaw: 0, rings: 0, settled: 0, ...extra });
 const still = (x = 0, y = 0) => ({ x, y, vx: 0, vy: 0, a: 0, w: 0 });
 const hold = (orbit, p, keys, seconds) => {
     for (let i = 0; i < seconds * 120; i++) ({ orbit, p } = orbitStep(orbit, p, keys, 1 / 120));
     return { orbit, p };
 };
 
-test('steering answers at once and settles quickly when released', () => {
-    const { speed } = STAGE_FIVE.steer;
+test('turning answers at once, settles quickly when released, and nothing steers the chair on its own', () => {
+    const { turn } = STAGE_FIVE.steer;
     const quick = hold(cruisingAt(200), still(), ['right'], .35);
-    assert.ok(quick.p.vx > speed * .9, `near full sideways speed after 0.35 s (${quick.p.vx.toFixed(0)})`);
+    assert.ok(quick.orbit.yaw > turn * .9, `near full turning speed after 0.35 s (${quick.orbit.yaw.toFixed(2)})`);
     const settled = hold(quick.orbit, quick.p, [], .6);
-    assert.ok(Math.abs(settled.p.vx) < speed * .1, 'and nearly stopped 0.6 s after letting go');
-    assert.ok(settled.p.x > quick.p.x, 'drifting a little on before it stops');
+    assert.ok(Math.abs(settled.orbit.yaw) < turn * .1, 'and nearly done turning 0.6 s after letting go');
+    assert.ok(settled.orbit.heading > quick.orbit.heading, 'turning a little further before it stops');
+    // Let go, it keeps the heading it was given: it flies on that way, never pulled back toward the route.
+    const calm = hold(settled.orbit, settled.p, [], 1), on = hold(calm.orbit, calm.p, ['spray'], 1);
+    assert.ok(Math.abs(on.orbit.heading - calm.orbit.heading) < .01, 'no autopilot turns it back');
+    assert.ok(on.p.x > calm.p.x + 40 && on.orbit.z > calm.orbit.z, 'it carries on to the right and ahead');
+    // However long it turns, it never faces away from the shadow, so every heading still closes in on it.
+    const round = hold(cruisingAt(2000), still(), ['right'], 3);
+    assert.ok(Math.abs(round.orbit.heading - STAGE_FIVE.steer.heading) < 1e-9 && round.orbit.yaw === 0, 'it stops at the widest turn');
+    assert.ok(Math.cos(round.orbit.heading) > .3, 'still facing the shadow');
+    const on2 = hold(round.orbit, round.p, ['spray', 'left'], .2);
+    assert.ok(on2.orbit.z > round.orbit.z, 'and still flying toward it');
+    assert.ok(on2.orbit.heading < round.orbit.heading, 'turning back answers at once');
 });
 
-test('the company geofence pushes back past the edge instead of a hard wall', () => {
+test('in the Earth shadow the autopilot takes over and flies the chair in, whatever the keys say', () => {
+    const { autopilot, checkpoint } = STAGE_FIVE;
+    // Arriving turned hard aside, slow, with the player still holding left and climbing.
+    let state = { orbit: cruisingAt(autopilot.from - 1, { heading: -STAGE_FIVE.steer.heading, speed: 40 }), p: still(500, 300) };
+    let seconds = 0;
+    while (state.orbit.phase !== 'parked' && seconds < 20) {
+        state = orbitStep(state.orbit, state.p, ['left', 'forward'], 1 / 120);
+        seconds += 1 / 120;
+        if (seconds > 1) assert.ok(Math.abs(state.orbit.heading) < STAGE_FIVE.steer.heading * .5, 'it has turned the chair to face the goal');
+    }
+    assert.equal(state.orbit.phase, 'parked', 'it parks in the shadow');
+    assert.ok(seconds < 8, `and soon (${seconds.toFixed(1)} s)`);
+    assert.equal(state.orbit.z, checkpoint.z);
+    const before = orbitStep(cruisingAt(autopilot.from - 200), still(), ['left'], 1 / 120);
+    assert.ok(before.orbit.yaw < 0, 'before the shadow the keys still steer');
+});
+
+test('the company geofence is an invisible wall that pushes back past the edge', () => {
     const { bounds, steer } = STAGE_FIVE;
-    let state = { orbit: cruisingAt(200), p: still() }, furthest = 0;
+    // Turned as far across the route as it goes, at full speed, climbing all the while.
+    let state = { orbit: cruisingAt(200, { heading: steer.heading, speed: STAGE_FIVE.maxSpeed }), p: still() }, furthest = 0;
     for (let i = 0; i < 10 * 120; i++) {
-        state = orbitStep(state.orbit, state.p, ['right', 'forward'], 1 / 120);
+        state = orbitStep(state.orbit, state.p, ['forward', 'spray'], 1 / 120);
         furthest = Math.max(furthest, state.p.x);
     }
     assert.ok(furthest > bounds.x, 'the chair can lean past the line');
     assert.ok(furthest <= bounds.x + steer.overshoot, 'but never further than the overshoot');
-    assert.ok(state.p.vx >= 0 && state.p.vx < 1, 'held against the fence it comes to rest, not bounces');
-    assert.ok(state.p.y > bounds.y && state.p.y <= bounds.y + steer.overshoot, 'the same up and down');
-    const back = hold(state.orbit, state.p, [], 2);
-    assert.ok(back.p.x <= bounds.x + 1 && back.p.y <= bounds.y + 1, 'let go, the fence eases it back inside');
+    assert.ok(state.p.y > bounds.top && state.p.y <= bounds.top + steer.overshoot, 'the same at the ceiling');
+    const away = hold({ ...state.orbit, heading: 0 }, state.p, [], 2);
+    assert.ok(away.p.x <= bounds.x + 1 && away.p.y <= bounds.top + 1, 'turned away, the fence eases it back inside');
 });
 
 test('a side beam sweeps up and down: only climbing or diving gets out of it', () => {
@@ -404,8 +432,7 @@ test('the edge of the play area shows on the chair itself, and speed lines only 
     const pressing = flightFrame(state => { state.p.x = STAGE_FIVE.bounds.x + STAGE_FIVE.steer.overshoot; });
     assert.equal(tape(pressing).length, 0, 'nothing is hung in the sky to mark it');
     assert.ok(puffs(pressing) > puffs(inside) + 3, 'the extinguisher coughs outward to push back in');
-    assert.ok(casters(pressing) - casters(inside) > 40, 'the camera stops at the edge, so the chair slides toward the side');
-    assert.ok(Math.abs(casters(middle) - 500) < 30, 'centred in the middle of the route');
+    for (const frame of [middle, inside, pressing]) assert.ok(Math.abs(casters(frame) - 500) < 30, 'the camera rides behind the chair wherever it flies');
     const lines = commands => commands.filter(command => command.layer?.key === 'orbit-speed-lines');
     assert.equal(lines(middle).length, 0, 'no speed lines at cruise speed');
     assert.ok(lines(flightFrame(state => { state.orbit.speed = STAGE_FIVE.maxSpeed; })).length > 10, 'streaks flat out');
@@ -446,6 +473,16 @@ test('the Earth sits below the chair: its horizon dips under eye level and curve
     assert.ok(sag(low) > 0 && sag(high) > sag(low), 'curving down toward the sides, more so higher up');
     const [lon, lat] = groundTrack(STAGE_FIVE.checkpoint.z);
     assert.ok(lat < 37.5 && Math.abs(lon - 127) < 3, 'the flight ends south of Seoul, looking north at it');
+    // Turning the view to the right slides the ground left, the same way as the sky panorama and the scenery.
+    // Followed by the first city light on the night side below.
+    const ground = spin => {
+        const ctx = createRenderCtx({});
+        Object.assign(ctx, { W: 1000, H: 510, t: 0, commands: [] });
+        orbitEarth(ctx, STAGE_FIVE.checkpoint.z, { ...level, pitch: .4 }, 0, 1, 1, spin);
+        const light = ctx.commands.find(command => command.layer?.key === 'orbit-earth-lights');
+        return light.v.reduce((sum, [x]) => sum + x, 0) / light.v.length;
+    };
+    assert.ok(ground(.05) < ground(0) - 10, `the ground slides left as the view turns right (${ground(0).toFixed(0)} to ${ground(.05).toFixed(0)})`);
 });
 
 test('in the ending Seoul glows on the night side ahead', () => {
@@ -530,4 +567,15 @@ test('the ending close-up finds the chair wherever in the shadow it parked', () 
     const middle = laptop(() => {}), aside = laptop(state => Object.assign(state.p, { x: 520, y: -330, vx: 0, vy: 0 }));
     assert.ok(middle > 0 && middle < 1000, 'the message is on screen');
     assert.ok(Math.abs(aside - middle) < 5, `parked off to one side the message is still in the same place (${middle} vs ${aside})`);
+    // Parked turned aside and against the fence, as in a played run: the ending's shots are the same as ever.
+    const turned = state => { Object.assign(state.p, { x: -588, y: 419, vx: 0, vy: 0 }); state.orbit.heading = .52; };
+    assert.ok(Math.abs(laptop(turned) - middle) < 5, 'turned aside, the chair swings round to face the shadow');
+    const frame = setup => flightFrame(state => {
+        Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 + 22 });
+        setup(state);
+    });
+    // Only the far city's slight parallax and the beacon (off screen by now) move with the chair's place aside.
+    const shapes = commands => commands.filter(command => typeof command.c === 'string' && !/^#(7d9fbb|fffaf0)/.test(command.c)).map(command => command.c + command.v.map(([x, y]) => `${Math.round(x)},${Math.round(y)}`).join(' '));
+    assert.deepEqual(shapes(frame(turned)), shapes(frame(() => {})), 'the Earth below lies the same way round');
+    assert.equal(frame(turned).filter(command => command.c === '#f6e6df' || command.c?.startsWith?.('#f6e6df')).length, 0, 'and the fence no longer puffs at it');
 });
