@@ -27,7 +27,7 @@ export function drawSkyReveal(ctx: RenderCtx) {
         p: { x: 0, y: 0, vx: 0, vy: 0, a: 0 },
         // The glide's own speed, so the rush past the cameras widens the view and streaks like flight does.
         speed: revealSpeed(elapsed, settle, ORBIT_WATCH.glide),
-        push: 0, drunk: 0, sip: 0,
+        push: 0,
         turn: revealChairOrbit(elapsed, settle),
         clock: elapsed,
         spray: 1 + 1.5 * (1 - departure), arrival: 1 - departure, departure,

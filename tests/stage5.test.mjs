@@ -308,7 +308,7 @@ test('only the extinguisher moves the chair forward: it coasts to a crawl withou
     assert.ok(pushed.orbit.z > idle.orbit.z + 600, 'and carries it much further');
 });
 
-const cruisingAt = (z, extra = {}) => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, rings: 0, settled: 0, coffee: 0, sip: 0, ...extra });
+const cruisingAt = (z, extra = {}) => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, rings: 0, settled: 0, ...extra });
 const still = (x = 0, y = 0) => ({ x, y, vx: 0, vy: 0, a: 0, w: 0 });
 const hold = (orbit, p, keys, seconds) => {
     for (let i = 0; i < seconds * 120; i++) ({ orbit, p } = orbitStep(orbit, p, keys, 1 / 120));
@@ -356,26 +356,6 @@ test('a side beam sweeps up and down: only climbing or diving gets out of it', (
     assert.ok(Math.abs(lit.p.vy) > Math.abs(lit.p.vx), 'and it shoves the chair up or down');
 });
 
-test('flying through a coffee cup clears the head once; passing wide of it does nothing', () => {
-    const [cup] = STAGE_FIVE.coffee.cups;
-    const game = fresh();
-    const state = JSON.parse(game.serialize());
-    Object.assign(state.orbit, { phase: 'door', age: 10, z: cup.z - .5 });
-    Object.assign(state.p, { x: cup.x, y: cup.y });
-    state.focus = 50;
-    const { state: after, events } = stepGame(state);
-    assert.equal(after.orbit.coffee & 1, 1, 'the cup is drunk');
-    assert.equal(after.focus, 50 + STAGE_FIVE.coffee.focus);
-    assert.ok(after.orbit.sip > 0, 'the rider takes a sip');
-    assert.ok(events.some(event => event.type === 'cue' && event.id === 'coffee'));
-    const again = stepGame({ ...after, orbit: { ...after.orbit, z: cup.z - .5 } }).state;
-    assert.equal(again.focus, after.focus, 'a drunk cup is gone');
-    const wide = JSON.parse(game.serialize());
-    Object.assign(wide.orbit, { phase: 'door', age: 10, z: cup.z - .5 });
-    Object.assign(wide.p, { x: cup.x + STAGE_FIVE.coffee.reach + 40, y: cup.y });
-    assert.equal(stepGame(wide).state.orbit.coffee, 0, 'out of reach, the cup floats by');
-});
-
 function flightFrame(setup) {
     const state = JSON.parse(fresh().serialize());
     Object.assign(state.orbit, { phase: 'door', age: 20, z: 700 });
@@ -404,17 +384,6 @@ test('the edge of the play area shows on the chair itself, and speed lines only 
     assert.ok(lines(flightFrame(state => { state.orbit.speed = STAGE_FIVE.maxSpeed; })).length > 10, 'streaks flat out');
 });
 
-test('papers drift past on both sides of the chair and sort in depth with it', () => {
-    const commands = flightFrame();
-    // Near sheets keep their own colours (far ones are hazed); the casters mark where the chair is painted.
-    const sheets = commands.map((command, i) => ({ command, i })).filter(({ command }) => typeof command.c === 'string' && /^#(f4efe2|f7d85c|d9b26a)ff$/.test(command.c));
-    const chair = commands.findIndex(command => command.c === '#3f4650');
-    assert.ok(sheets.length > 5, 'plenty of papers in view');
-    const xs = sheets.map(({ command }) => command.v[0][0]);
-    assert.ok(xs.some(x => x < 400) && xs.some(x => x > 600), 'on both sides');
-    assert.ok(chair > 0 && sheets.some(({ i }) => i > chair), 'some pass nearer than the chair and are painted over it');
-});
-
 test('rushing forward pulls the camera back and streams air round the chair', () => {
     const casters = commands => {
         const points = commands.filter(command => command.c === '#3f4650').flatMap(command => command.v);
@@ -428,7 +397,8 @@ test('rushing forward pulls the camera back and streams air round the chair', ()
     assert.ok(Math.abs(casters(rushing).y - casters(cruise).y) < 20, 'but stays at the same height on screen');
     assert.equal(air(slow).length, 0, 'no air streaks at a crawl');
     assert.ok(air(rushing).length > 10, 'streaks flat out');
-    assert.ok(air(rushing)[0].layer.opacity > air(frame(STAGE_FIVE.maxSpeed, 0))[0].layer.opacity, 'stronger while the extinguisher pushes');
+    const strength = commands => air(commands).reduce((sum, command) => sum + parseInt(command.c.slice(7), 16), 0);
+    assert.ok(strength(rushing) > strength(frame(STAGE_FIVE.maxSpeed, 0)), 'stronger while the extinguisher pushes');
 });
 
 test('the Earth sits below the chair: its horizon dips under eye level and curves more the higher it climbs', async () => {

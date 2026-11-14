@@ -183,17 +183,19 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
     ctx.commands.push({ v: ground, c: { from: middle, to: [middle[0], middle[1] + ctx.H * .5],
         stops: [[0, ctx.rgba('#8cc0e6', strength)], [.18, ctx.rgba('#3f82c4', strength)], [1, ctx.rgba('#1b4f8f', strength)]] } });
     // Land, clouds and lights sit on the sphere and are clipped to the ground under the horizon (ThorVG clip).
-    const surface = { key: 'orbit-earth-surface', opacity: strength, clip };
+    // The fade-in is folded into each colour's alpha: a layer opacity would add a full-canvas offscreen pass.
+    const surface = { key: 'orbit-earth-surface', clip };
+    const faded = (color: string) => color.slice(0, 7) + alpha((color.length > 7 ? parseInt(color.slice(7, 9), 16) / 255 : 1) * strength);
     // Coasts get a pale surf line; inland patches (desert, snow, forest) sit on top without one.
     for (const land of [...LAND.filter(item => !item.inland), ...LAND.filter(item => item.inland)]) {
         const points = DENSE(land);
         // A coast wholly beyond the horizon would only squash onto it.
         if (!points.some(view.visible)) continue;
         const v = view.outline(points);
-        if (v.length) ctx.commands.push({ v, c: land.color, layer: surface,
-            ...(land.inland ? {} : { stroke: { width: Math.max(1, ctx.W / 700), color: '#d9efe0aa' } }) });
+        if (v.length) ctx.commands.push({ v, c: faded(land.color), layer: surface,
+            ...(land.inland ? {} : { stroke: { width: Math.max(1, ctx.W / 700), color: faded('#d9efe0aa') } }) });
     }
-    const drift = ctx.t * .015, cloud = '#ffffff' + alpha(.5 * (1 - night * .85));
+    const drift = ctx.t * .015, cloud = '#ffffff' + alpha(.5 * (1 - night * .85) * strength);
     CLOUDS.forEach(([lon, lat, r, stretch], k) => {
         if (!view.visible(globe(lon + drift, lat))) return;
         const v = view.outline(Array.from({ length: 9 }, (_, i) => {
@@ -203,14 +205,14 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
         if (v.length) ctx.commands.push({ v, c: cloud, layer: surface });
     });
     if (night > 0) {
-        ctx.commands.push({ v: ground, c: '#06101f' + alpha(.86 * night), layer: surface });
+        ctx.commands.push({ v: ground, c: '#06101f' + alpha(.86 * night * strength), layer: surface });
         // Coasts still faintly visible under the night sky.
         for (const land of LAND) {
             if (land.inland) continue;
             const points = DENSE(land);
             if (!points.some(view.visible)) continue;
             const v = view.outline(points);
-            if (v.length) ctx.commands.push({ v, c: null, stroke: { width: Math.max(1, ctx.W / 800), color: '#6f8fbf' + alpha(.45 * night) }, layer: surface });
+            if (v.length) ctx.commands.push({ v, c: null, stroke: { width: Math.max(1, ctx.W / 800), color: '#6f8fbf' + alpha(.45 * night * strength) }, layer: surface });
         }
         const glow = { key: 'orbit-earth-lights', blend: 'screen' as const, opacity: strength * night, clip };
         for (const [lon, lat, size] of CITIES) {
@@ -224,8 +226,9 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
     }
     // Haze along the horizon and the thin, bright line of the atmosphere over it.
     const above = horizon.map(([x, y]): Vector => [x, y - ctx.H * .07]);
-    ctx.commands.push({ v: [...horizon, ...above.reverse()], layer: { key: 'orbit-earth-air', blend: 'screen', opacity: strength },
-        c: { from: middle, to: [middle[0], middle[1] - ctx.H * .07], stops: [[0, ctx.rgba('#7fb8ff', .55)], [1, ctx.rgba('#7fb8ff', 0)]] } });
+    // Its fade sits in the gradient, so with no opacity of its own it shares the limb's screen-blended Scene.
+    ctx.commands.push({ v: [...horizon, ...above.reverse()], layer: { key: 'orbit-earth-air', blend: 'screen' },
+        c: { from: middle, to: [middle[0], middle[1] - ctx.H * .07], stops: [[0, ctx.rgba('#7fb8ff', .55 * strength)], [1, ctx.rgba('#7fb8ff', 0)]] } });
     const limb = { key: 'orbit-earth-limb', blend: 'screen' as const };
     for (const [width, color, opacity] of [[ctx.W * .012, '#4f8fe0', .45], [ctx.W * .004, '#d8f0ff', .85]] as const) {
         ctx.commands.push({ v: horizon, open: true, c: null, stroke: { width, color: color + alpha(opacity * strength) }, layer: limb });

@@ -1,7 +1,7 @@
 import type { RenderCtx } from '../context';
-import { createSkyProjection, placedProjection, type Point3, type SkyProjection } from './sky-projection';
+import { createSkyProjection, placedProjection, type Point3 } from './sky-projection';
 import { routeBend, routeHeading } from './orbit-route';
-import { orbitCoffee, orbitDebris, orbitEdgePuffs, orbitSlipstream, orbitSpeedLines } from './orbit-flight';
+import { orbitEdgePuffs, orbitSlipstream, orbitSpeedLines } from './orbit-flight';
 import { endingChair } from './sky-ending-art';
 import { skyDeparture } from './sky-departure';
 import { basinCloudSeeds, orbitCloudBank, orbitSky, type CloudBankOptions } from './orbit-atmosphere';
@@ -29,9 +29,6 @@ export type OrbitShot = {
     speed: number;
     /** How hard the extinguisher is pushing right now (0 to 1). */
     push: number;
-    /** Coffee cups already drunk (one bit each), and seconds left of the rider's sip. */
-    drunk: number;
-    sip: number;
     /** Camera orbit around the chair: 0 from its side, 1 from behind. */
     turn: number;
     /** Clock for the rider's bob and typing. */
@@ -65,10 +62,12 @@ function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: num
         ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H], stops: [[0, ctx.rgba('#678eae')], [1, ctx.rgba('#b7ced1')]] } });
         inOpacity(ctx, { key: 'orbit-basin-sky', opacity: shot.basin }, () => orbitSky(ctx, cam, yaw));
     } else orbitSky(ctx, cam, yaw);
-    // Low sunlight over the cloud basin, thinning out as the chair climbs out of the clouds.
-    if (clouds > 0) ctx.commands.push({ v: screen(ctx), layer: { key: 'orbit-sunlight', blend: 'screen' }, c: {
+    // Low sunlight over the cloud basin, thinning out as the chair climbs out of the clouds. Plain alpha instead of
+    // a screen-blended Scene: over the sky behind the sun, #fff2eb paints what #ffdfb5 screened would
+    // (c + d(1 - c) for d = #7499b9), without a full-canvas offscreen pass.
+    if (clouds > 0) ctx.commands.push({ v: screen(ctx), layer: { key: 'orbit-sunlight' }, c: {
         from: [ctx.W * .75, ctx.H * .15], to: [ctx.W, ctx.H], radius: ctx.W * .8,
-        stops: [[0, ctx.rgba('#ffdfb5', .16 * clouds)], [1, ctx.rgba('#ffdfb5', 0)]],
+        stops: [[0, ctx.rgba('#fff2eb', .16 * clouds)], [1, ctx.rgba('#fff2eb', 0)]],
     } });
     orbitHighSky(ctx, heights, yaw, spin);
     endingNebula(ctx, shot.ending.wide, spin);
@@ -147,24 +146,18 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
         : { anchor: cam, bend };
     // Clouds fading below 2% are too faint to see against the sky (under 5/255 per channel); skip their layer.
     const cloudsShown = clouds >= .02;
-    if (cloudsShown) inOpacity(ctx, { key: 'orbit-low-clouds', opacity: clouds }, () => orbitCloudBank(ctx, view, travel, false, options));
+    if (cloudsShown) orbitCloudBank(ctx, view, travel, false, { ...options, alpha: clouds });
     if (turn >= ORBIT_WATCH.glintsFrom) orbitCloudGlints(ctx, clouds);
     // The watchers stay out of the flat side view and turn up one by one as the view turns into 3D.
     if (turn >= ORBIT_WATCH.beacon.appear) orbitBeacon(ctx, view, point);
     const lamps = turn > 0 ? orbitWatchers(view, point, travel, ctx.t, turn) : [];
-    // Papers and cups belong to the flight: they drift in late in the glide, after the cameras have had the stage,
-    // and leave again as the ending widens onto the quiet horizon.
-    const flight = smooth((since + 2) / 1.5) * (1 - wide);
-    orbitDebris(view, point, travel, ctx.t, flight);
-    const coffeeGlow = orbitCoffee(ctx, view, point, travel, shot.drunk, ctx.t, flight);
     // Scenery beyond the chair first; the chair and whatever passes beside it are painted after the clouds.
     const split = { depth: chair.depth([0, pivot, 0]) + 90, part: 'far' as const };
     ctx.commands.push(...view.commands(split));
     orbitWatchGlow(ctx, view, lamps);
-    coffeeGlow();
     // The praise beams fade in with their satellites while the camera turns.
     orbitPraise(ctx, view, point, since, travel, smooth((turn - ORBIT_WATCH.satelliteAppear) / .3));
-    if (cloudsShown) inOpacity(ctx, { key: 'orbit-near-clouds', opacity: clouds }, () => orbitCloudBank(ctx, view, travel, true, options));
+    if (cloudsShown) orbitCloudBank(ctx, view, travel, true, { ...options, alpha: clouds });
     orbitShadow(ctx, { ...heights, shadow: heights.shadow * (1 - wide) }, earthHorizonAhead(travel, earth, heading));
     skyDeparture(ctx, shot.departure);
     orbitSpeedLines(ctx, view.project(point(0, 0, travel + 100000)), fast * (1 - wide));
@@ -174,13 +167,12 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     ctx.commands.push(...air.behind);
     endingChair(chair, shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest);
     endingLaptopScreen(chair, ending);
-    if (shot.sip > 0) sipCup(chair, shot.sip);
     orbitEdgePuffs(chair, edge, over, ctx.t);
     ctx.commands.push(...view.commands({ ...split, part: 'near' }));
     ctx.commands.push(...air.over);
     endingLaptopText(ctx, chair, ending);
     endingChairLights(ctx, chair, ending);
-    orbitPraiseOnChair(ctx, chair.project([0, 0, 0]), since, p, travel);
+    orbitPraiseOnChair(ctx, chair.project([0, 0, 0]), p, travel);
     const head = chair.project([4, 70, 0]);
     // The laptop answers the cameras just before stage five and the bubble stays up into its first moments;
     // deep in the Earth's shadow its signal drops away until it loses the network altogether.
@@ -188,12 +180,4 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     if (ending.parked) endingSignal(ctx, head, ending);
     else attendanceBubble(ctx, head, since + ATTENDANCE.lead);
     endingFade(ctx, ending);
-}
-
-/** A paper cup raised beside the laptop for a moment after flying through a coffee. */
-function sipCup(chair: SkyProjection, sip: number) {
-    const lift = Math.sin(Math.min(1, sip / C.coffee.sip) * Math.PI) * 14;
-    chair.rod([24, 4 + lift, 26], [24, 20 + lift, 26], 6, '#f5f1e8');
-    chair.oval([24, 20 + lift, 26], [6, 1.5, 6], '#5a3a26');
-    chair.rod([24, 8 + lift, 26], [24, 13 + lift, 26], 6.3, '#c94a3c');
 }

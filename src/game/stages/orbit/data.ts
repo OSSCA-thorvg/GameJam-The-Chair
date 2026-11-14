@@ -44,14 +44,6 @@ export const STAGE_FIVE = deepFreeze({
         shelters: [{ x: -380, y: -60, z: 1700 }, { x: 340, y: 40, z: 2350 }, { x: -260, y: -20, z: 3000 }],
         shelterSize: { x: 210, y: 170, z: 330 },
     },
-    // Cups of coffee floating off the straight line, above, below and to the sides. Flying through one clears the head.
-    coffee: {
-        cups: [
-            { x: -420, y: 260, z: 900 }, { x: 480, y: -300, z: 2700 }, { x: -560, y: -220, z: 3600 }, { x: 0, y: 360, z: 4500 },
-            { x: 560, y: 200, z: 5900 }, { x: -300, y: -340, z: 6600 }, { x: 450, y: 320, z: 7600 }, { x: -500, y: 100, z: 8400 },
-        ],
-        reach: 75, focus: 20, sip: 1.2,
-    },
     // Where the cloud layer thins into the upper atmosphere, where space begins, and where the Earth's shadow starts.
     heights: { air: 3300, space: 6800, shadow: 8800 },
     // The goal is deep inside the Earth's shadow. It keeps the name `door` so saved states stay readable.
@@ -67,8 +59,4 @@ export type OrbitState = {
     rings: number;
     /** 1 on arriving in the Earth's shadow, then counting up in seconds while the ending plays. */
     settled: number;
-    /** One bit per coffee cup already drunk. */
-    coffee: number;
-    /** Seconds left of the rider's sip after the last cup. */
-    sip: number;
 };

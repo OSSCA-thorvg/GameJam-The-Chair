@@ -13,7 +13,6 @@ export function drawOrbit(ctx: RenderCtx) {
     const ending = orbitEnding(orbit);
     drawOrbitShot(ctx, {
         since: orbit.age, travel: orbit.z, p, turn: 1, speed: orbit.speed, push: ctx.state.spray.burst / .24,
-        drunk: orbit.coffee, sip: orbit.sip,
         // The rider's clock carries on from the reveal; once the laptop is dark the rider stops moving altogether.
         clock: REVEAL_DURATION + orbit.age - ending.still,
         // Parked, the spray dies away.
