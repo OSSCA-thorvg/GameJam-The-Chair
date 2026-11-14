@@ -267,7 +267,8 @@ test('the lost connection comes up on the laptop screen, his hands stop, and for
     const { disconnect, handsStop, idle } = ORBIT_ENDING;
     const before = endingFrame(disconnect - .5), after = endingFrame(disconnect + 1);
     assert.ok(before.layer('orbit-laptop-screen').length === 0 || !before.labels.some(label => label.startsWith('Network')));
-    assert.ok(after.labels.includes('Network connection lost.'), 'the message is written on the laptop screen');
+    assert.equal(after.labels.join(' '), 'Network connection lost.', 'the message is written on the laptop screen');
+    assert.equal(after.labels.length, 2, 'in two lines, so it can be large enough to read');
     assert.deepEqual(after.layer('attendance-bubble'), [], 'not in a speech bubble over his head');
     const state = t => orbitEndingState(t);
     assert.equal(state(disconnect - .2).rest, 0, 'typing until the message');
@@ -286,6 +287,13 @@ test('the chair swivels and leans back to look out while he keeps his eyes on th
     assert.ok(mid.swivel > .3 && mid.swivel < .7 && mid.recline > .9, 'turning round and leaning back');
     assert.ok(mid.rest === 1 && mid.still > 0, 'his hands still off the keys');
     assert.equal(orbitEndingState(spinFrom - .5).swivel, 0);
+});
+
+test('the camera pushes in on the laptop so the message is large enough to read', () => {
+    const { disconnect } = ORBIT_ENDING;
+    const lineSize = t => Math.max(0, ...endingFrame(t).commands.filter(command => command.text).map(command => command.text.size));
+    assert.ok(orbitEndingState(disconnect - .5).read === 0 && orbitEndingState(disconnect + 1).read === 1);
+    assert.ok(lineSize(disconnect + 1.5) >= 18, `message lines are at least 18 px on a 510 px tall frame (${lineSize(disconnect + 1.5).toFixed(1)})`);
 });
 
 test('the rider works on a laptop, not a monitor: a keyboard base under his hands and a thin lid with the screen', () => {

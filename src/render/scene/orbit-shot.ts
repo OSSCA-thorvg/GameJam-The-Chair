@@ -50,6 +50,8 @@ export type OrbitShot = {
 
 /** How far round the chair (in quarter turns) the camera leans over the rider's shoulder at the start of the ending. */
 const SHOULDER = .38;
+/** The push-in on the laptop screen when the network is lost: extra zoom, and the shift that centres the screen. */
+const READ = { zoom: .7, offsetX: .3, centerY: .24 };
 
 const smooth = (value: number) => {
     const t = Math.max(0, Math.min(1, value));
@@ -108,10 +110,11 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     const focus = ending.focus;
     const near = mix(distance, 170, focus);
     const framing = {
-        centerY: mix(.5 - .13 * turn + Math.sin(ctx.t * 47) * .002 * push, .68, focus),
+        // When the message comes up, the camera pushes in until the laptop screen fills the middle of the frame.
+        centerY: mix(.5 - .13 * turn + Math.sin(ctx.t * 47) * .002 * push, .68, focus) + READ.centerY * ending.read,
         eyeY: 45 - 30 * turn + near * Math.tan(lookDown) + 35 * focus,
-        distance: near, zoom: mix(mix(mix(1 - .08 * fast, .72, wide), 1.15, ending.recline), 1.7, focus), roll: mix(p.a * .35, 0, wide),
-        offsetX: Math.sin(ctx.t * 53) * 1.2 * push,
+        distance: near, zoom: mix(mix(mix(1 - .08 * fast, .72, wide), 1.15, ending.recline), 1.7, focus) * (1 + READ.zoom * ending.read), roll: mix(p.a * .35, 0, wide),
+        offsetX: Math.sin(ctx.t * 53) * 1.2 * push + ctx.W * READ.offsetX * ending.read,
     };
     // In the ending, once the network is lost, the camera makes one slow full circle round the chair (four
     // quarter turns), and the sky, the nebula and the Earth below turn with it.
