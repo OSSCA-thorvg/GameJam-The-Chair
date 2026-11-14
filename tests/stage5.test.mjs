@@ -679,9 +679,10 @@ test('each gear locks on later and follows more tightly, and the third has every
     assert.equal(third.filter(beam => beam.shape === 'circle').length, 3, 'the big lens fires three times');
 });
 
-test('restart flags after the first and second gears put the chair back at cruise speed, clear of any beam', () => {
+test('one restart flag halfway, before third gear, puts the chair back at cruise speed, clear of any beam', () => {
+    assert.equal(STAGE_FIVE.restarts.length, 1);
     const game = fresh();
-    for (let i = 0; i < 120 * 60 && game.getSnapshot().checkpoint < 1; i++) {
+    for (let i = 0; i < 120 * 90 && game.getSnapshot().checkpoint < 1; i++) {
         game.setInput(...orbitKeys(game.getSnapshot()));
         game.step();
     }

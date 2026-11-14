@@ -25,8 +25,8 @@ export const STAGE_FIVE = deepFreeze({
         { from: 2800, maxSpeed: 330, lock: .9, track: 7 },
         { from: 5600, maxSpeed: 400, lock: .8, track: 9 },
     ],
-    // Restart flags in the quiet stretches after the first and second gears, at cruise speed.
-    restarts: [3200, 5650],
+    // One restart flag halfway, in the quiet stretch before third gear, restarting at cruise speed.
+    restarts: [5650],
     // The arrow keys move the chair straight across and up the plane (`speed`), chasing that rate: quick to answer
     // (`response`), quick to settle (`release`). Past `bounds` the company geofence (the viewfinder brackets)
     // pushes back (`edge` per unit over) and never lets it more than `overshoot` past.
