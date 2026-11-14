@@ -787,11 +787,13 @@ function orbitRoute(): PreviewScene {
 }
 
 // The ending, from the moment the chair parks in the Earth's shadow to THE END.
-function orbitEndingScene(): PreviewScene {
+function orbitEndingScene(aside = false): PreviewScene {
     const game = createGame();
     game.startStage(5);
     const parked = JSON.parse(game.serialize());
     Object.assign(parked.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1, age: 76 });
+    // The whole shadow is the goal, so in play the chair can park well off the middle of the route.
+    if (aside) Object.assign(parked.p, { x: 520, y: -330, vx: 0, vy: 0, a: 0 });
     // As in play, the chair arrives well into the stage, long after the stage title has gone.
     parked.checkpoint = 1;
     parked.time = 76;
@@ -807,7 +809,9 @@ function orbitEndingScene(): PreviewScene {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('orbit-ending', 'Orbit · Ending: network lost on screen, hands stop, the chair looks out, THE END', 0, markers, frames);
+    return aside
+        ? recordedScene('orbit-ending-aside', 'Orbit · Ending after parking off to one side', 0, markers, frames)
+        : recordedScene('orbit-ending', 'Orbit · Ending: network lost on screen, hands stop, the chair looks out, THE END', 0, markers, frames);
 }
 
 // 5-1: duck from shelter cloud to shelter cloud while the satellite's praise beam sweeps the cloud layer.
@@ -998,5 +1002,6 @@ export const previewScenes: readonly PreviewScene[] = [
     orbitPraiseScene(),
     orbitPraiseLitScene(),
     orbitEndingScene(),
+    orbitEndingScene(true),
     officeTyping(),
 ];

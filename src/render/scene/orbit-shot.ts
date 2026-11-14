@@ -87,7 +87,9 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // the edge of the play area, so a chair pressing past it slides out toward the side of the screen.
     const lag = .3, follow = .82;
     const within = (v: number, bound: number) => Math.max(-bound, Math.min(bound, v));
-    const cam = { x: follow * within(p.x - p.vx * lag, C.bounds.x), y: follow * within(p.y - p.vy * lag, C.bounds.y) };
+    // Once parked, it moves right onto the chair, so the close-ups find it wherever in the shadow it stopped.
+    const cam = { x: mix(follow * within(p.x - p.vx * lag, C.bounds.x), p.x, ending.centre),
+        y: mix(follow * within(p.y - p.vy * lag, C.bounds.y), p.y, ending.centre) };
     // How hard the chair is pressing out past the edge, and which way.
     const over = { x: Math.max(0, Math.abs(p.x) - C.bounds.x + 40) * Math.sign(p.x), y: Math.max(0, Math.abs(p.y) - C.bounds.y + 40) * Math.sign(p.y) };
     const edge = smooth(Math.hypot(over.x, over.y) / (C.steer.overshoot + 40)) * (1 - wide);

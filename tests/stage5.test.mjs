@@ -517,3 +517,17 @@ test('the chair catches the light: warming near a beam, glowing inside it, plain
         .filter(command => command.c?.radius && command.c.stops?.[0]?.[1]?.[0] === 255 && command.c.stops[0][1][1] === 224).length;
     assert.ok(glow(edge - 10) > 0, 'a warm glow round the chair inside the light');
 });
+
+test('the ending close-up finds the chair wherever in the shadow it parked', () => {
+    const laptop = setup => {
+        const commands = flightFrame(state => {
+            Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 + 10 });
+            setup(state);
+        });
+        const xs = commands.filter(command => command.text).map(command => command.v[0][0]);
+        return xs.length ? xs.reduce((sum, x) => sum + x, 0) / xs.length : NaN;
+    };
+    const middle = laptop(() => {}), aside = laptop(state => Object.assign(state.p, { x: 520, y: -330, vx: 0, vy: 0 }));
+    assert.ok(middle > 0 && middle < 1000, 'the message is on screen');
+    assert.ok(Math.abs(aside - middle) < 5, `parked off to one side the message is still in the same place (${middle} vs ${aside})`);
+});

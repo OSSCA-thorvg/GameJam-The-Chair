@@ -41,6 +41,8 @@ export function orbitEnding(orbit: Readonly<OrbitState>) {
     return {
         parked: orbit.phase === 'parked', t,
         calm: smooth(t / E.calm),
+        /** How far the camera has moved onto the parked chair, wherever it stopped, before leaning in over its shoulder. */
+        centre: orbit.phase === 'parked' ? smooth(t / E.focusFrom) : 0,
         /** How close the camera has leaned in over the rider's shoulder (it lets go as the shot widens). */
         focus: smooth((t - E.focusFrom) / (E.focus - E.focusFrom)) * (1 - wide),
         wide,
