@@ -68,7 +68,7 @@ test('the ending settles before turning and finishes on its timer regardless of 
     assert.equal(input.sky.age, 0);
 });
 
-test('the ending draws no slogans and only the attendance line at every camera phase', () => {
+test('the ending draws no slogans, only the departing promotion flag and the attendance line', () => {
     const game = createGame();
     game.startStage(4);
     const base = game.getSnapshot();
@@ -83,9 +83,11 @@ test('the ending draws no slogans and only the attendance line at every camera p
             const before = structuredClone(state);
             drawSky(ctx);
             assert.deepEqual(state, before, 'cinematic rendering leaves gameplay untouched');
-            // ThorVG Text: only the attendance bubble's line, during the last second of stage four.
-            assert.deepEqual(ctx.commands.filter(command => command.text).map(command => command.text.content),
-                phase === 'depth' && age > hold - 1.2 ? [locale === 'ko' ? '근태 확인됨.' : 'Attendance confirmed.'] : []);
+            // ThorVG Text: the promotion flag while the last ledge drifts away, then only the attendance bubble's line
+            // during the last second of stage four.
+            const expected = phase === 'reveal' && age < 2 ? [locale === 'ko' ? '승진' : 'PROMOTED']
+                : phase === 'depth' && age > hold - 1.2 ? [locale === 'ko' ? '근태 확인됨.' : 'Attendance confirmed.'] : [];
+            assert.deepEqual(ctx.commands.filter(command => command.text).map(command => command.text.content), expected);
             assert.deepEqual(transforms, []);
             assert.ok(ctx.commands.length > 100);
             for (const command of ctx.commands) {

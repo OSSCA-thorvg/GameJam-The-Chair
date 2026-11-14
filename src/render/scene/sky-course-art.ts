@@ -1,5 +1,6 @@
 import type { RenderCtx } from '../context';
 import type { SkyPlatform } from '../../game/stages/sky/data';
+import { promotionCake } from './sky-promotion-cake';
 
 function metalPanel(ctx: RenderCtx, x: number, y: number, width: number, height: number, light: string, base: string, dark: string) {
     ctx.gradientPolygon([[x, y], [x + width, y], [x + width, y + height], [x, y + height]],
@@ -138,7 +139,10 @@ export function skyCoursePlatform(ctx: RenderCtx, spec: SkyPlatform) {
         case 'sign': billboard(ctx, spec.width); break;
         case 'desk': desk(ctx, spec.width, false, spec.id === 'drawer-desk' ? ctx.state.sky.drawer : 0); break;
         case 'small-desk': desk(ctx, spec.width, true, 0); break;
-        case 'finish': desk(ctx, spec.width, false, 0); break;
+        case 'finish':
+            desk(ctx, spec.width, false, 0);
+            promotionCake(ctx, spec.width);
+            break;
     }
     ctx.ox = ctx.oy = ctx.rotation = 0;
 }
