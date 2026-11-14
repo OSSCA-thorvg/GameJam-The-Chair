@@ -781,6 +781,21 @@ function orbitRoute(): PreviewScene {
     return recordedScene('orbit-route', 'Orbit · 5-1 to 5-3 and the ending', 0, markers, frames);
 }
 
+// Coast without spraying until the Space keycap pops up by the extinguisher, then spray and watch it vanish.
+function orbitSprayHintScene(): PreviewScene {
+    const game = createGame();
+    game.startStage(5);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    const markers = [{ at: 0, label: 'Coasting' }, { at: STAGE_FIVE.entryTime + 3, label: 'Space hint' }, { at: STAGE_FIVE.entryTime + 6, label: 'Spray: hint gone' }];
+    for (let i = 0; i < 60 * (STAGE_FIVE.entryTime + 8); i++) {
+        game.setInput(...(i / 60 >= STAGE_FIVE.entryTime + 6 ? ['spray' as const] : []));
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene('orbit-spray-hint', 'Orbit · Space hint after 3 s without spraying', 0, markers, frames);
+}
+
 // The ending, from the moment the chair parks in the Earth's shadow to THE END.
 function orbitEndingScene(aside = false): PreviewScene {
     const game = createGame();
@@ -992,6 +1007,7 @@ export const previewScenes: readonly PreviewScene[] = [
     skyEnding(),
     skyToOrbit(),
     orbitRoute(),
+    orbitSprayHintScene(),
     orbitPraiseScene(),
     orbitPraiseLitScene(),
     orbitEndingScene(),
