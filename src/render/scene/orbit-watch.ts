@@ -201,17 +201,19 @@ export function orbitBeacon(ctx: RenderCtx, view: SkyProjection, point: RoutePoi
 /** White lens glints and red recording lamps blink out of the clouds. */
 export function orbitCloudGlints(ctx: RenderCtx, alpha = 1) {
     if (alpha <= 0) return;
-    const layer = { key: 'orbit-cloud-glint', blend: 'screen' as const };
+    // Plain alpha rather than a screen-blended Scene, which cost a full-canvas pass right where the Earth comes in.
+    // Each colour c is the one that paints over the bread clouds (d ≈ #e8b464) what c screened would: c + d(1 - c).
+    const layer = { key: 'orbit-cloud-glint' };
     for (const glint of ORBIT_WATCH.glints) {
         const wave = Math.sin(ctx.t * glint.rate + glint.phase);
         if (wave < .55) continue;
         const k = (wave - .55) / .45, x = glint.x * ctx.W, y = glint.y * ctx.H;
         const glow = 7 + 9 * k, core = 2 + 1.6 * k;
-        const color = glint.red ? '#ff6b57' : '#fff3cf';
+        const color = glint.red ? '#ffd399' : '#fffbe2';
         ctx.commands.push({ v: [[x - glow, y - glow], [x + glow, y - glow], [x + glow, y + glow], [x - glow, y + glow]], c: {
             from: [x, y], to: [x + glow, y], radius: glow, stops: [[0, ctx.rgba(color, .9 * k * alpha)], [1, ctx.rgba(color, 0)]],
         }, layer });
         const tint = Math.round(alpha * 255).toString(16).padStart(2, '0');
-        ctx.commands.push({ v: [[x - core, y], [x, y - core], [x + core, y], [x, y + core]], c: (glint.red ? '#ff5a4a' : '#ffffff') + tint, layer });
+        ctx.commands.push({ v: [[x - core, y], [x, y - core], [x + core, y], [x, y + core]], c: (glint.red ? '#ffce91' : '#ffffff') + tint, layer });
     }
 }

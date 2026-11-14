@@ -1,6 +1,6 @@
 import type { RenderCtx } from '../context';
 import type { SkyProjection } from './sky-projection';
-import { breadCloud, CLOUD_TONES, puffCloud, seeded } from './cloud-art';
+import { CLOUD_TONES, puffCloud, seeded } from './cloud-art';
 
 const CITY = (() => {
     const random = seeded(9102);
@@ -51,6 +51,11 @@ export type CloudBankOptions = {
     unwrapped?: boolean;
     /** Sideways swing of the drawn route at `dz` ahead of the chair. */
     bend?: (dz: number) => number;
+    /**
+     * Fades the whole bank. Folded into every cloud's own alpha rather than a layer opacity, which would cost a
+     * full-canvas offscreen pass; the clouds are translucent anyway, so their overlaps read the same.
+     */
+    alpha?: number;
 };
 
 type PlacedCloud = { seed: number; x: number; y: number; size: number; opacity: number };
@@ -88,16 +93,16 @@ export function orbitCloudBank(ctx: RenderCtx, view: SkyProjection, travel: numb
     const saved = { scale: ctx.scale, cam: ctx.cam, vertical: ctx.vertical, ox: ctx.ox, oy: ctx.oy,
         rotation: ctx.rotation, localScale: ctx.localScale, mirror: ctx.mirror };
     Object.assign(ctx, { scale: 1, cam: 0, vertical: 0, ox: 0, oy: 0, rotation: 0, localScale: 1, mirror: null });
-    for (const { seed, x, y, size, opacity } of placed) {
-        if (opacity >= 1) breadCloud(ctx, x, y, size, seed, foreground);
-        else puffCloud(ctx, x, y, size, seed, CLOUD_TONES.bread, { alpha: (foreground ? .95 : .72) * opacity, fade: true });
-    }
+    const fade = options.alpha ?? 1;
+    const bread = (x: number, y: number, size: number, seed: number, near: boolean, opacity = 1) =>
+        puffCloud(ctx, x, y, size, seed, CLOUD_TONES.bread, { alpha: (near ? .95 : .72) * opacity * fade, fade: true });
+    for (const { seed, x, y, size, opacity } of placed) bread(x, y, size, seed, foreground, opacity);
     if (!foreground) for (const [x,y,seed] of [[.15,.15,9201],[.83,.1,9202]]) {
-        breadCloud(ctx, ctx.W*x + Math.sin(travel*.0003)*8, ctx.H*y, ctx.W/2500, seed);
+        bread(ctx.W*x + Math.sin(travel*.0003)*8, ctx.H*y, ctx.W/2500, seed, false);
     }
     // A low continuous cloud floor leaves the city visible above its crests. It carries over from stage four.
     if (!foreground) for (let i = 0; i < 5; i++) {
-        breadCloud(ctx, ctx.W * (i / 4), ctx.H * (.98+Math.sin(i*4)*.065), ctx.W/1000*(.8+(i%2)*.2), 700+i*2);
+        bread(ctx.W * (i / 4), ctx.H * (.98+Math.sin(i*4)*.065), ctx.W/1000*(.8+(i%2)*.2), 700+i*2, false);
     }
     Object.assign(ctx, saved);
 }

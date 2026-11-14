@@ -146,7 +146,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
         : { anchor: cam, bend };
     // Clouds fading below 2% are too faint to see against the sky (under 5/255 per channel); skip their layer.
     const cloudsShown = clouds >= .02;
-    if (cloudsShown) inOpacity(ctx, { key: 'orbit-low-clouds', opacity: clouds }, () => orbitCloudBank(ctx, view, travel, false, options));
+    if (cloudsShown) orbitCloudBank(ctx, view, travel, false, { ...options, alpha: clouds });
     if (turn >= ORBIT_WATCH.glintsFrom) orbitCloudGlints(ctx, clouds);
     // The watchers stay out of the flat side view and turn up one by one as the view turns into 3D.
     if (turn >= ORBIT_WATCH.beacon.appear) orbitBeacon(ctx, view, point);
@@ -157,7 +157,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     orbitWatchGlow(ctx, view, lamps);
     // The praise beams fade in with their satellites while the camera turns.
     orbitPraise(ctx, view, point, since, travel, smooth((turn - ORBIT_WATCH.satelliteAppear) / .3));
-    if (cloudsShown) inOpacity(ctx, { key: 'orbit-near-clouds', opacity: clouds }, () => orbitCloudBank(ctx, view, travel, true, options));
+    if (cloudsShown) orbitCloudBank(ctx, view, travel, true, { ...options, alpha: clouds });
     orbitShadow(ctx, { ...heights, shadow: heights.shadow * (1 - wide) }, earthHorizonAhead(travel, earth, heading));
     skyDeparture(ctx, shot.departure);
     orbitSpeedLines(ctx, view.project(point(0, 0, travel + 100000)), fast * (1 - wide));
