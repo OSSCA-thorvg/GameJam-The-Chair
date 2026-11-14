@@ -788,7 +788,7 @@ function orbitEndingScene(aside = false): PreviewScene {
     const parked = JSON.parse(game.serialize());
     Object.assign(parked.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1, age: 76 });
     // The whole shadow is the goal, so in play the chair can park well off the middle of the route.
-    if (aside) Object.assign(parked.p, { x: 520, y: -330, vx: 0, vy: 0, a: 0 });
+    if (aside) { Object.assign(parked.p, { x: -588, y: 419, vx: 0, vy: 0, a: 0 }); parked.orbit.heading = .52; }
     // As in play, the chair arrives well into the stage, long after the stage title has gone.
     parked.checkpoint = 1;
     parked.time = 76;

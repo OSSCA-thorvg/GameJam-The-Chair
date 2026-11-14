@@ -89,11 +89,13 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // down it follows most of the chair's height, also a beat late; once parked it moves right onto the chair.
     const lag = .3, follow = .82;
     const within = (v: number, bound: number) => Math.max(-bound, Math.min(bound, v));
-    const heading = shot.heading ?? 0, look = heading - (shot.yaw ?? 0) * lag * .6;
+    // Parked, the chair and camera swing round to face the shadow, the way the ending's shots are framed.
+    const heading = (shot.heading ?? 0) * (1 - ending.centre), look = heading - (shot.yaw ?? 0) * lag * .6;
     const cam = { x: p.x, y: mix(follow * within(p.y - p.vy * lag, C.bounds.y), p.y, ending.centre) };
     // How hard the chair is pressing out past the edge, and which way.
     const over = { x: Math.max(0, Math.abs(p.x) - C.bounds.x + 40) * Math.sign(p.x), y: Math.max(0, Math.abs(p.y) - C.bounds.y + 40) * Math.sign(p.y) };
-    const edge = smooth(Math.hypot(over.x, over.y) / (C.steer.overshoot + 40)) * (1 - wide);
+    // Parked, nothing presses against the fence any more.
+    const edge = smooth(Math.hypot(over.x, over.y) / (C.steer.overshoot + 40)) * (1 - ending.centre);
     const fast = smooth((shot.speed - C.cruise) / (C.maxSpeed - C.cruise));
     const push = shot.push * blend;
     // How hard the chair is rushing forward. Speed only climbs while the extinguisher fires, so as the chair

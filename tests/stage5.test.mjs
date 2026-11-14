@@ -540,4 +540,15 @@ test('the ending close-up finds the chair wherever in the shadow it parked', () 
     const middle = laptop(() => {}), aside = laptop(state => Object.assign(state.p, { x: 520, y: -330, vx: 0, vy: 0 }));
     assert.ok(middle > 0 && middle < 1000, 'the message is on screen');
     assert.ok(Math.abs(aside - middle) < 5, `parked off to one side the message is still in the same place (${middle} vs ${aside})`);
+    // Parked turned aside and against the fence, as in a played run: the ending's shots are the same as ever.
+    const turned = state => { Object.assign(state.p, { x: -588, y: 419, vx: 0, vy: 0 }); state.orbit.heading = .52; };
+    assert.ok(Math.abs(laptop(turned) - middle) < 5, 'turned aside, the chair swings round to face the shadow');
+    const frame = setup => flightFrame(state => {
+        Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 + 22 });
+        setup(state);
+    });
+    // Only the far city's slight parallax and the beacon (off screen by now) move with the chair's place aside.
+    const shapes = commands => commands.filter(command => typeof command.c === 'string' && !/^#(7d9fbb|fffaf0)/.test(command.c)).map(command => command.c + command.v.map(([x, y]) => `${Math.round(x)},${Math.round(y)}`).join(' '));
+    assert.deepEqual(shapes(frame(turned)), shapes(frame(() => {})), 'the Earth below lies the same way round');
+    assert.equal(frame(turned).filter(command => command.c === '#f6e6df' || command.c?.startsWith?.('#f6e6df')).length, 0, 'and the fence no longer puffs at it');
 });
