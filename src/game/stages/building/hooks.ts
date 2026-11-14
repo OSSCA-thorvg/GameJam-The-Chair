@@ -1,5 +1,6 @@
 import type { StageHooks } from '../types';
 import { STAGE_TWO } from './data';
+import { inOrientation } from './corridor/decide';
 import { meetingReachable, applyConvoyLanding, applyCorridor, applyInteract, applyLeaveMeeting, applyLiftRide, applyMeeting } from './corridor/apply';
 
 export const buildingHooks: StageHooks = {
@@ -20,8 +21,10 @@ export const buildingHooks: StageHooks = {
     drive(s, inputDir) {
         const convoyJump = (s.building.corridor.convoy === 'airborne' || s.building.corridor.convoy === 'leading-airborne') && !s.ground;
         const joined = s.building.corridor.convoy === 'carried' || s.building.corridor.convoy === 'leading';
+        // During orientation a hop from the convoy is just a hop: it lands back among the chairs.
+        const hop = convoyJump && s.building.corridor.pace === 'casual' && inOrientation(s.p.x);
         return {
-            dir: joined ? 0 : inputDir,
+            dir: joined || hop ? 0 : inputDir,
             convoyJump,
             expressJump: convoyJump && s.building.corridor.pace === 'express',
         };

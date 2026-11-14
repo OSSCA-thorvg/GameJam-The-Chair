@@ -2,15 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 
-// Building fingerprints include the required player jump from the express ramp.
+// Building fingerprints include the orientation hops and the required player jump from the express ramp.
 // Update only for an intended gameplay change: run `npm run golden:update` and say why in the PR.
 const EXPECTED = {
-    'office route': 'dc1474e26415d233',
-    'office crash': '0652e26f05b10b96',
-    'building exit': 'a7267f88d6718857',
-    'building lift': 'b4afd30029ed6c11',
-    'rooftop to sky': 'fb2bca14e9ce5a4f',
-    'rooftop duct': '08d279f29312f7c7',
+    'office route': 'b27974219fbce37d',
+    'office crash': '06817621d12dbf01',
+    'building exit': 'af0e0e2344fdce1a',
+    'building lift': '9821efa48e5b6ac2',
+    'rooftop to sky': '028fcb4f54cca5db',
+    'rooftop duct': '50eab8b7e0d3c44f',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {

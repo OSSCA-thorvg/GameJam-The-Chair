@@ -1,7 +1,7 @@
 import type { Player, Point } from '../../../types';
 import { nextRandom } from '../../../rng';
 import { clonePlain } from '../../../data';
-import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine, overPit, type ChairDeparture, type Corridor, type Furniture } from '../data';
+import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, chairChatLine, overPit, type ChairChat, type ChairDeparture, type Corridor, type Furniture } from '../data';
 import type { Mode } from '../../../types';
 import * as Det from '../../../math';
 
@@ -16,6 +16,41 @@ function leadsConvoy(p: Readonly<Point>, furniture: readonly Readonly<Furniture>
 
 function isJoinedConvoy(convoy: Corridor['convoy']): convoy is 'carried' | 'leading' {
     return convoy === 'carried' || convoy === 'leading';
+}
+
+const ORIENTATION = STAGE_TWO.orientation;
+const RIDER_FOOT = 12;
+
+// The orientation obstacle a rider low enough to meet it is touching, or -1.
+export function touchedObstacle(p: Readonly<Point>) {
+    return ORIENTATION.obstacles.findIndex(obstacle => p.y + 28 > 422 - obstacle.height
+        && Math.abs(p.x - obstacle.x) < obstacle.width / 2 + RIDER_FOOT);
+}
+
+// One orientation line at a time: each waits (negative age) until the front chair reaches its `at`,
+// and a line whose moment has passed is skipped so the rules stay ahead of their obstacles.
+export function orientationStep(chat: Extract<ChairChat, { kind: 'orientation' }>, frontX: number, dt: number): Extract<ChairChat, { kind: 'orientation' }> {
+    const lines = ORIENTATION.lines;
+    let line = chat.line, age = chat.age;
+    if (age >= 0) age += dt;
+    if (age >= CHAIR_CHAT_INTERVAL.orientation && line + 1 < lines.length) {
+        line++;
+        age = -1;
+    }
+    if (age < 0) {
+        while (line + 1 < lines.length && lines[line + 1].at <= frontX) line++;
+        if (frontX >= lines[line].at) age = 0;
+    }
+    return { kind: 'orientation', age, line };
+}
+
+// The line to resume with when the rookie rejoins: the interrupted one, or the next if it was said.
+function resumeLesson(chat: Extract<ChairChat, { kind: 'orientation' }>) {
+    return chat.age >= CHAIR_CHAT_INTERVAL.orientation * .6 ? chat.line + 1 : chat.line;
+}
+
+export function inOrientation(x: number) {
+    return x >= STAGE_TWO.checkpoints[2].x && x < STAGE_TWO.express.start;
 }
 
 // Landing from a jump onto the moving chairs rides along; landing anywhere else frees the rider.
@@ -72,7 +107,7 @@ function meetingEntryStep(room: Exclude<Corridor['room'], { kind: 'corridor' }>,
 }
 
 export type CorridorInput = { corridor: Readonly<Corridor>; furniture: readonly Readonly<Furniture>[]; p: Readonly<Player>; ground: boolean; steering: boolean; rng: number; length: number };
-export type CorridorResult = { corridor: Corridor; furniture: Furniture[]; p: Player; rng: number; stopRider: boolean; kick: 'bump' | null };
+export type CorridorResult = { corridor: Corridor; furniture: Furniture[]; p: Player; rng: number; stopRider: boolean; kick: 'trip' | null; tripped: number };
 
 // The building corridor: typing bubbles, the chair convoy, its chatter and the lift ride.
 // Works on its own copies; the caller writes the result back.
@@ -84,6 +119,7 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     let seed = input.rng;
     let stopRider = false;
     let kick: CorridorResult['kick'] = null;
+    let tripped = -1;
     const random = () => {
         const draw = nextRandom(seed);
         seed = draw.state;
@@ -127,16 +163,18 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     const captiveBoarding = c.departure.kind === 'boarding' && c.departure.reason === 'abduction';
     if (c.departure.kind !== 'none' && !captiveBoarding) {
         if (c.convoy !== 'airborne') c.convoy = 'free';
-    } else if (allReleased && ground && !isJoinedConvoy(c.convoy) && c.convoy !== 'dropped') {
+    } else if (allReleased && ground && !isJoinedConvoy(c.convoy)) {
         c.convoy = insideConvoy(p, furniture) ? 'carried' : leading ? 'leading' : 'free';
     }
-    if (c.departure.kind === 'none' && isJoinedConvoy(c.convoy) && c.pace === 'casual' && p.x >= STAGE_TWO.checkpoints[2].x) {
+    if (c.departure.kind === 'none' && isJoinedConvoy(c.convoy) && c.pace === 'casual' && p.x >= STAGE_TWO.express.start) {
         c.pace = 'express';
         c.chat = { kind: 'rush', age: 0 };
         for (const chair of furniture) chair.vx = 360;
         p.vx = 360;
     }
     const minimumSpeed = 70;
+    // Once welcomed, the chairs slow down for a rookie who fell off.
+    const rookieAway = c.lesson >= 0 && c.convoy === 'free';
     for (const [index, chair] of furniture.entries()) {
         if (!chair.released) continue;
         chair.cheer = Math.max(0, chair.cheer - dt);
@@ -150,7 +188,7 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
             continue;
         }
         const target = front.x - index * 130;
-        const cruise = c.pace === 'express' ? 360 : 185;
+        const cruise = c.pace === 'express' ? 360 : !inOrientation(front.x) ? 185 : rookieAway ? ORIENTATION.wait : ORIENTATION.cruise;
         const speed = index === 0 ? cruise : Math.max(minimumSpeed, Math.min(cruise + 170, cruise + (target - chair.x) * 2));
         chair.vx += (speed - chair.vx) * (1 - Det.exp(-4 * dt));
         chair.x = Math.min(input.length + 450 + index * 130, chair.x + chair.vx * dt);
@@ -169,45 +207,60 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
             : Math.max(back.x + 29, Math.min(front.x - 29, nextX));
         p.vx = front.vx;
     }
-    if (isJoinedConvoy(c.convoy) && c.pace === 'express') {
-        const express = STAGE_TWO.express;
-        if (previousX < express.bump && p.x >= express.bump && ground) {
-            // Clunk: the bump throws the heavy chair out of the convoy, spun and slowed; the empty chairs
-            // roll on with no brakes and the rider, now on its own wheels, cannot catch them again.
-            kick = 'bump';
-            c.convoy = 'dropped';
-            p.vy = -express.kick;
-            p.y -= 4;  // off the floor now, so this tick's collisions do not set it back down
-            p.vx = front.vx * express.drag;
-            p.w += express.spin;
-        } else if (previousX < express.pit.left && p.x >= express.pit.left) {
-            c.convoy = 'free';
-        } else if (overPit(p.x)) {
-            c.convoy = 'free';
+    if (isJoinedConvoy(c.convoy) && c.pace === 'express' && (overPit(p.x) || (previousX < STAGE_TWO.express.pit.left && p.x >= STAGE_TWO.express.pit.left))) {
+        c.convoy = 'free';
+    }
+    const touched = touchedObstacle(p);
+    if (touched >= 0 && touched !== c.tripped) {
+        // Trip: a rider meeting an orientation obstacle low stumbles up and loses its speed.
+        const joined = isJoinedConvoy(c.convoy) || c.convoy === 'airborne' || c.convoy === 'leading-airborne';
+        kick = 'trip';
+        tripped = touched;
+        p.vy = -ORIENTATION.kick;
+        p.y -= 4;  // off the floor now, so this tick's collisions do not set it back down
+        p.vx = (joined ? front.vx : p.vx) * ORIENTATION.drag;
+        p.w += ORIENTATION.spin;
+        c.convoy = 'free';
+        if (c.chat.kind === 'orientation') {
+            c.lesson = resumeLesson(c.chat);
+            c.chat = { kind: 'trip', age: 0 };
         }
     }
-    // Once the whole convoy has rolled past the dropped rider, it is just a rider on foot again.
-    if (c.convoy === 'dropped' && p.x < back.x - 30) c.convoy = 'free';
+    // One obstacle trips a rider once: it counts again only after the rider has rolled clear of it.
+    if (c.tripped >= 0) {
+        const obstacle = ORIENTATION.obstacles[c.tripped];
+        if (Math.abs(p.x - obstacle.x) >= obstacle.width / 2 + RIDER_FOOT) c.tripped = -1;
+    }
+    if (tripped >= 0) c.tripped = tripped;
     if (c.departure.kind === 'none' && allReleased && c.chat.kind === 'waiting' && nearby) c.chat = { kind: 'gossip', age: 0 };
     if (c.departure.kind === 'none' && c.chat.kind !== 'waiting') {
         if (c.chat.kind === 'wary' && !isJoinedConvoy(c.convoy) && (p.x <= back.x + 28 || p.x >= front.x - 28)) {
             c.chat = { kind: 'dismissed', age: 0 };
+        } else if (c.chat.kind === 'orientation') {
+            c.chat = orientationStep(c.chat, front.x, dt);
+            c.lesson = c.chat.line;
         } else {
             const speaker = chairChatLine(c.chat, c.appearanceSeed).speaker;
-            if (Math.abs(furniture[speaker].x - p.x) < 240 || c.chat.kind === 'gossip' || c.chat.kind === 'companions' || c.chat.kind === 'dismissed' || c.chat.kind === 'rush' || c.chat.kind === 'ramp') c.chat.age += dt;
+            if (Math.abs(furniture[speaker].x - p.x) < 240 || c.chat.kind === 'gossip' || c.chat.kind === 'trip' || c.chat.kind === 'dismissed' || c.chat.kind === 'rush' || c.chat.kind === 'ramp') c.chat.age += dt;
         }
+        const lessonLeft = c.lesson >= 0 && c.lesson < ORIENTATION.lines.length;
         if ((c.chat.kind === 'gossip' || c.chat.kind === 'dismissed') && isJoinedConvoy(c.convoy)) {
-            c.chat = { kind: 'wary', age: 0 };
+            c.chat = c.lesson >= 0 ? (lessonLeft ? { kind: 'orientation', age: -1, line: c.lesson } : { kind: 'trip', age: 99 }) : { kind: 'wary', age: 0 };
+        } else if (c.chat.kind === 'trip' && lessonLeft && isJoinedConvoy(c.convoy) && c.chat.age >= CHAIR_CHAT_INTERVAL.trip * CHAIR_CHAT.trip.length) {
+            c.chat = { kind: 'orientation', age: -1, line: c.lesson };
         } else if (c.chat.kind === 'dismissed' && c.chat.age >= CHAIR_CHAT_INTERVAL.dismissed * CHAIR_CHAT.dismissed.length) c.chat = { kind: 'gossip', age: 0 };
         else if (c.chat.kind === 'wary' && c.chat.age >= 2.2) c.chat = { kind: 'realizing', age: 0 };
-        else if (c.chat.kind === 'realizing' && c.chat.age >= 2.8) c.chat = { kind: 'welcoming', age: 0 };
-        else if (c.chat.kind === 'welcoming' && c.chat.age >= 2.4) c.chat = { kind: 'companions', age: 0 };
+        else if (c.chat.kind === 'realizing' && c.chat.age >= 2.4) c.chat = { kind: 'welcoming', age: 0 };
+        else if (c.chat.kind === 'welcoming' && c.chat.age >= 2) {
+            c.lesson = Math.max(0, c.lesson);
+            c.chat = { kind: 'orientation', age: -1, line: c.lesson };
+        }
         else if (c.chat.kind === 'ramp' && c.chat.age >= CHAIR_CHAT_INTERVAL.ramp * CHAIR_CHAT.ramp.length) c.chat = { kind: 'rush', age: 0 };
         // The front chair nears the ramp: they shout back to the rookie.
         if (c.chat.kind === 'rush' && c.pace === 'express'
             && front.x >= STAGE_TWO.express.ramp.start - 300 && front.x < STAGE_TWO.express.pit.left) c.chat = { kind: 'ramp', age: 0 };
     }
-    const recognized = c.chat.kind === 'wary' || c.chat.kind === 'realizing' || c.chat.kind === 'welcoming' || c.chat.kind === 'companions' || c.chat.kind === 'rush' || c.chat.kind === 'ramp';
+    const recognized = c.lesson >= 0 || c.chat.kind === 'wary' || c.chat.kind === 'realizing' || c.chat.kind === 'welcoming' || c.chat.kind === 'rush' || c.chat.kind === 'ramp';
     if (c.departure.kind === 'boarding') {
         c.departure.age += dt;
         const aboard = furniture.every((chair, i) => Math.abs(chair.x - STAGE_TWO.lift - CHAIR_DEPARTURE.slots[i]) < 3 && Math.abs(chair.vx) < 8);
@@ -238,9 +291,9 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     }
     if (c.departure.kind === 'none' && allReleased && front.x >= STAGE_TWO.lift - 170
         && c.lift.kind === 'open' && c.lift.age >= 1 / 3) {
-        const abducting = c.pace === 'express' && c.convoy !== 'free' && c.convoy !== 'dropped' && p.x > back.x + 28 && p.x < front.x - 28;
+        const abducting = c.pace === 'express' && c.convoy !== 'free' && p.x > back.x + 28 && p.x < front.x - 28;
         c.departure = { kind: 'boarding', age: 0, reason: abducting ? 'abduction' : recognized ? 'companions' : 'clock-out' };
         if (!abducting) c.convoy = 'free';
     }
-    return { corridor: c, furniture, p, rng: seed, stopRider, kick };
+    return { corridor: c, furniture, p, rng: seed, stopRider, kick, tripped };
 }

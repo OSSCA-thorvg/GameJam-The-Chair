@@ -1,18 +1,15 @@
 import { STAGE_TWO } from '../../game/stages/building/data';
 import type { RenderCtx } from '../context';
 
-// The rush-hour corridor: one yellow-black speed bump, then a plank launch ramp in front of a construction
-// hole. The empty chairs bounce over the bump and, at express speed, fly off the ramp and over the hole
-// together; the rider only flies with them while it rides the convoy.
+// The rush-hour corridor: a plank launch ramp in front of a construction hole. At express speed the empty
+// chairs fly off the ramp and over the hole together; the rider only flies with them while it rides the convoy.
 const FLOOR = 420;
-const { bump, pit, ramp, launch } = STAGE_TWO.express;
+const { pit, ramp, launch } = STAGE_TWO.express;
 const EXPRESS_SPEED = 360, GRAVITY = 950;
 
-// How far above the floor an empty chair is drawn at `x`: a bounce over the bump, up the ramp, then the
-// same arc the launched rider flies over the hole.
+// How far above the floor an empty chair is drawn at `x`: up the ramp, then the same arc the launched
+// rider flies over the hole.
 export function chairLift(x: number) {
-    const d = x - bump + 20;
-    if (d > 0 && d < 70) return Math.sin(d / 70 * Math.PI) * 12;
     if (x >= ramp.start && x < pit.left) return (x - ramp.start) / (pit.left - ramp.start) * ramp.rise;
     if (x >= pit.left) {
         const t = (x - pit.left) / EXPRESS_SPEED;
@@ -23,10 +20,6 @@ export function chairLift(x: number) {
 
 export function expressFloor(ctx: RenderCtx) {
     const { cam, VW, t } = ctx;
-    if (bump > cam - 60 && bump < cam + VW + 60) {
-        ctx.polygon([[bump - 26, FLOOR], [bump - 14, FLOOR - 10], [bump + 14, FLOOR - 10], [bump + 26, FLOOR]], '#2c2f36');
-        for (let i = -2; i <= 2; i++) ctx.polygon([[bump + i * 9 - 3, FLOOR - 1], [bump + i * 9 + 1, FLOOR - 9], [bump + i * 9 + 5, FLOOR - 9], [bump + i * 9 + 1, FLOOR - 1]], '#f2c14e');
-    }
     if (ramp.start > cam + VW + 120 || pit.right < cam - 120) return;
 
     // The hole: an opening in the floor, darker with depth.
