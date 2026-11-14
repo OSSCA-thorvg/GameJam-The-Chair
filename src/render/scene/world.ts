@@ -61,7 +61,7 @@ export function drawWorld(ctx: RenderCtx) {
         ctx.rod(x + 24, 179, x + 207, 179, 3, '#69788c');
         ctx.rect(x + 43, 27, 145, 7, '#f1e9cf');
     }
-    ceilingCctvs(ctx, 470);
+    ceilingCctvs(ctx, 940);
     const rearFloor = F - 62;
     ctx.rect(cam, 287, VW, rearFloor - 287, '#a0a7b1');
     ctx.rect(cam, rearFloor - 5, VW, 6, '#848e9d');
