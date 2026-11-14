@@ -54,7 +54,7 @@ const keysWith = (...prefixes) => KEYS.filter(key => prefixes.some(prefix => key
 
 // Which copy each face draws in the scene; the ♪ is drawn as a vector note, never as a glyph.
 const ROLES = {
-    [SIGN_FONT]: keysWith('copier.', 'opening.'),
+    [SIGN_FONT]: keysWith('copier.', 'opening.', 'button.start'),
     [LABEL_FONT]: keysWith('world.', 'interact.', 'building.meeting', 'stageLabel.'),
     [SPEECH_FONT]: keysWith('opening.', 'building.', 'cheer.', 'chair.', 'typing.', 'player.', 'npc.', 'person.', 'orbit.'),
 };

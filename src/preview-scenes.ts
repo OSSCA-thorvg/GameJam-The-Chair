@@ -33,6 +33,8 @@ export type PreviewScene = {
     opening?(time: number): OpeningFrame;
     // Spoken lines shown over the scene at this time.
     talk?(time: number, locale: Locale): SceneTalk;
+    // The title screen draws its own looping scene at this time.
+    title?: boolean;
 };
 
 type PreviewFrame = { state: GameState; effects: EffectsState };
@@ -1029,6 +1031,18 @@ function opening(): PreviewScene {
     };
 }
 
+function titleScreen(): PreviewScene {
+    const game = createGame();
+    game.reset();
+    const state = game.getSnapshot();
+    const effects = createEffects().snapshot();
+    return {
+        id: 'title-screen', label: 'Intro · Title screen: dash for the exit', duration: 4, focusX: state.player.x, title: true,
+        markers: [{ at: 0, label: 'Loop' }, { at: 2, label: 'Sign glow' }],
+        sample: () => ({ state, effects }),
+    };
+}
+
 export const previewScenes: readonly PreviewScene[] = [
     {
         id: 'startup-splash', label: 'Intro · ThorVG splash', duration: SPLASH_DURATION,
@@ -1036,6 +1050,7 @@ export const previewScenes: readonly PreviewScene[] = [
         markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
     },
+    titleScreen(),
     opening(),
     sceneTalk(),
     bucketPour(),

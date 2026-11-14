@@ -73,6 +73,8 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         // The game-over panel waits until the end-of-run close-up has eased back to the usual framing.
         const closeUp = !!effects.deathShot && !effects.deathShot.done;
         hidden('[data-overlay]', cutscene || closeUp || (mode !== 'intro' && !panel));
+        // On the title screen the scene draws the title and the start sign; the DOM keeps them for input and readers.
+        q('[data-overlay]')?.classList.toggle('title-screen', mode === 'intro' && state.stage === 1 && !cutscene);
         if (mode === 'intro') {
             text('[data-title]', 'THE CHAIR');
             text('[data-desc]', t('intro.desc'));
