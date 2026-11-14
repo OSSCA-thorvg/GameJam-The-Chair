@@ -182,7 +182,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     ctx.commands.push(...air.over);
     endingLaptopText(ctx, chair, ending);
     endingChairLights(ctx, chair, ending);
-    orbitPraiseOnChair(ctx, chair.project([0, 0, 0]), since, p, travel);
+    orbitPraiseOnChair(ctx, chair.project([0, 0, 0]), p, travel);
     const head = chair.project([4, 70, 0]);
     // The laptop answers the cameras just before stage five and the bubble stays up into its first moments;
     // deep in the Earth's shadow its signal drops away until it loses the network altogether.

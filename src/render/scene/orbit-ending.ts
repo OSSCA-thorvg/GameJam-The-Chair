@@ -1,11 +1,10 @@
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
 import type { OrbitState } from '../../game/stages/orbit/data';
-import { PRAISE_KINDS, praiseItem } from './orbit-praise';
 import type { Point3, SkyProjection } from './sky-projection';
 import { LABEL_FONT, SPEECH_FONT } from '../fonts';
 import { translate } from '../../i18n';
-import { inOpacity, panoramaX } from './orbit-heights';
+import { panoramaX } from './orbit-heights';
 
 // The ending, played while the chair is parked in the Earth's shadow, starting from the frame 5-3 ended on:
 // the spray dies down and the extinguisher floats away while the camera leans in over the rider's shoulder to the
@@ -92,7 +91,7 @@ export function endingNebula(ctx: RenderCtx, strength: number, spin = 0) {
     }
 }
 
-/** The laptop's blue light on the rider while the screen is on, and the last praise drifting away behind. */
+/** The laptop's blue light on the rider while the screen is on. */
 export function endingChairLights(ctx: RenderCtx, chair: SkyProjection, e: OrbitEndingState) {
     if (!e.parked) return;
     const light = 1 - e.lightsOut;
@@ -102,18 +101,6 @@ export function endingChairLights(ctx: RenderCtx, chair: SkyProjection, e: Orbit
             c: { from: [x, y], to: [x + r, y], radius: r, stops: [[0, ctx.rgba('#9fd4ff', .55 * light)], [1, ctx.rgba('#9fd4ff', 0)]] },
             layer: { key: 'orbit-laptop-light', blend: 'screen' } });
     }
-    const drift = 1 - e.calm;
-    if (drift <= 0) return;
-    const [cx, cy] = chair.project([0, 0, 0]);
-    // All the praise fades as one layer, a single ThorVG Scene.
-    inOpacity(ctx, { key: 'orbit-ending-drift', opacity: drift }, () => {
-        for (let i = 0; i < 7; i++) {
-            const away = e.calm * (1 + i * .15);
-            const at: Vector = [cx - ctx.W * (.08 + .5 * away) + i * ctx.W * .03, cy - ctx.H * (.05 + .25 * away) + (i % 3) * ctx.H * .05];
-            const size = ctx.H / 45 * (1 - .7 * e.calm);
-            praiseItem(ctx, PRAISE_KINDS[i % PRAISE_KINDS.length], at, size, ctx.t * .8 + i);
-        }
-    });
 }
 
 /** Everything fades to black, then a small THE END. */
