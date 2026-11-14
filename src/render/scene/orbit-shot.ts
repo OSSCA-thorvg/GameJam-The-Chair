@@ -34,6 +34,8 @@ export type OrbitShot = {
     /** Clock for the rider's bob and typing. */
     clock: number;
     spray: number;
+    /** How far the extinguisher has ignited into stage five's rocket engine (0 to 1). */
+    rocket?: number;
     /** The landing shake at the start of the reveal. */
     arrival: number;
     /** How far the last stage four ledge has drifted away (1 once it is gone). */
@@ -187,7 +189,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // The light the chair is catching shows on the chair itself: warming as it nears a beam, glowing inside one.
     const light = since >= 0 && wide <= 0 ? praiseWarmth(since, p, travel) : { warmth: 0, side: 1, axis: 'x' as const };
     const pulse = Math.sin(ctx.t * 9) * .5 + .5;
-    endingChair(praiseLitChair(chair, light.warmth >= 1 ? .62 + .18 * pulse : light.warmth * .7), shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest);
+    endingChair(praiseLitChair(chair, light.warmth >= 1 ? .62 + .18 * pulse : light.warmth * .7), shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest, shot.rocket);
     endingLaptopScreen(chair, ending);
     orbitEdgePuffs(chair, edge, over, ctx.t);
     praiseChairGlow(ctx, chair, light, pulse);
