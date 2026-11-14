@@ -80,7 +80,7 @@ function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: num
         from: [ctx.W * .75, ctx.H * .15], to: [ctx.W, ctx.H], radius: ctx.W * .8,
         stops: [[0, ctx.rgba('#fff2eb', .16 * clouds)], [1, ctx.rgba('#fff2eb', 0)]],
     } });
-    const skyBottom = shot.ending.wide > 0 && heights.air >= 1 ? earthSkyBottom(shot.travel, earth, 0, ctx.W, ctx.H, spin) : ctx.H;
+    const skyBottom = shot.ending.parked && heights.air >= 1 ? earthSkyBottom(shot.travel, earth, 0, ctx.W, ctx.H, spin) : ctx.H;
     orbitHighSky(ctx, heights, 0, spin, skyBottom);
     endingNebula(ctx, shot.ending.wide, spin, skyBottom);
     // In the ending the sun comes up over the rim and day returns to the ground below.

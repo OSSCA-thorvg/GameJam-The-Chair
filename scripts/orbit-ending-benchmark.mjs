@@ -29,7 +29,7 @@ function draw(pool, current, at) {
 function pixels(current, at) {
     tvg.remove();
     const work = draw(createPaintPool(), current, at);
-    if (work < (at >= 37 ? 1 : 100)) throw new Error(`Missing work at ${at}: ${work}`);
+    if (work < (at >= 36.5 ? 1 : 100)) throw new Error(`Missing work at ${at}: ${work}`);
     captureContext.drawImage(canvas, 0, 0);
     return new Uint8ClampedArray(captureContext.getImageData(0, 0, capture.width, capture.height).data);
 }
@@ -54,13 +54,15 @@ async function run(current, at) {
         frames: times.length };
 }
 
+const params = new URLSearchParams(location.search);
 const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
 document.querySelector('#run').onclick = async event => {
     event.target.disabled = true;
     try {
-        const samples = tvg.renderer === 'sw' ? [15, 20, 25, 30, 38] : [5, 15, 20, 25, 30, 38];
+        const samples = params.get('at')?.split(',').map(Number) ?? (tvg.renderer === 'sw' ? [15, 20, 25, 30, 38] : [5, 15, 20, 25, 30, 38]);
         const differences = {};
-        for (const at of Array.from({ length: 49 }, (_, i) => 14 + i / 2)) {
+        const from = Number(params.get('from') ?? 14), to = Number(params.get('to') ?? 38), step = Number(params.get('step') ?? .5);
+        for (const at of Array.from({ length: Math.round((to - from) / step) + 1 }, (_, i) => from + i * step)) {
             const a = pixels(false, at), b = pixels(true, at);
             let count = 0, max = 0;
             for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) {
@@ -69,7 +71,7 @@ document.querySelector('#run').onclick = async event => {
             }
             differences[at] = { channels: count, max };
         }
-        if (new URLSearchParams(location.search).has('verify')) {
+        if (params.has('verify')) {
             result.textContent = JSON.stringify({ renderer: tvg.renderer, raster: [canvas.width, canvas.height], differences }, null, 2);
             event.target.disabled = false;
             return;

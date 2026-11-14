@@ -13,7 +13,8 @@ export function drawOrbit(ctx: RenderCtx) {
     const { orbit, player: p } = ctx.state;
     if (!orbit) return;
     const ending = orbitEnding(orbit);
-    if (ending.dark >= 1) {
+    // Once the black card rounds to full alpha it hides everything under it.
+    if (Math.round(ending.dark * 255) >= 255) {
         endingFade(ctx, ending);
         return;
     }
