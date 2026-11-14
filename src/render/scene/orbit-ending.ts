@@ -4,12 +4,19 @@ import type { OrbitState } from '../../game/stages/orbit/data';
 import { PRAISE_KINDS, praiseItem } from './orbit-praise';
 import type { SkyProjection } from './sky-projection';
 import { LABEL_FONT } from '../fonts';
+import { panoramaX } from './orbit-heights';
 
 // The ending, played while the chair is parked in the Earth's shadow, starting from the frame 5-3 ended on:
 // the spray dies down and the extinguisher comes off and floats away into space; the sun comes up over the rim
 // while the camera pulls back; the laptop's signal drops bar by bar until the network is lost; the laptop goes
-// dark, the hands stop, everything fades out, and a small THE END on black.
-export const ORBIT_ENDING = { calm: 5, release: 1.2, wideFrom: 3, signal: 5, signalStep: 1.5, disconnect: 9.8, wide: 11, lightsOut: 14, dark: 18, end: 20 };
+// dark, the hands stop, the camera slowly circles the chair once to take in the whole view, everything fades out,
+// and a small THE END on black.
+export const ORBIT_ENDING = {
+    calm: 5, release: 1.2, wideFrom: 3, signal: 5, signalStep: 1.5, disconnect: 9.8, wide: 11,
+    /** After the network is lost the camera makes one slow full circle (360 degrees) around the chair. */
+    spinFrom: 11, spin: 27,
+    lightsOut: 29, dark: 33, end: 35,
+};
 
 const smooth = (value: number) => {
     const t = Math.max(0, Math.min(1, value));
@@ -24,7 +31,9 @@ export function orbitEnding(orbit: Readonly<OrbitState>) {
         parked: orbit.phase === 'parked', t,
         calm: smooth(t / E.calm),
         wide: smooth((t - E.wideFrom) / (E.wide - E.wideFrom)),
-        lightsOut: smooth((t - E.wide) / (E.lightsOut - E.wide)),
+        /** How far the camera's full circle round the chair has gone (0 to 1). */
+        spin: smooth((t - E.spinFrom) / (E.spin - E.spinFrom)),
+        lightsOut: smooth((t - E.spin) / (E.lightsOut - E.spin)),
         dark: smooth((t - E.lightsOut) / (E.dark - E.lightsOut)),
         title: smooth((t - E.dark) / 1.2),
         /** Seconds since the extinguisher came off (negative while it is still on). */
@@ -39,21 +48,23 @@ export type OrbitEndingState = ReturnType<typeof orbitEnding>;
 
 const alpha = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0');
 
-/** A soft violet and rose nebula in the upper right, as in the storyboard. */
-export function endingNebula(ctx: RenderCtx, strength: number) {
+/** A soft violet and rose nebula in the upper right, as in the storyboard; it swings past as the camera circles. */
+export function endingNebula(ctx: RenderCtx, strength: number, spin = 0) {
     if (strength <= 0) return;
     const layer = { key: 'orbit-nebula', blend: 'screen' as const };
     const clouds: [number, number, number, string, number][] = [
         [.68, .2, .34, '#5b3fb0', .55], [.8, .14, .22, '#c25a86', .5], [.55, .3, .26, '#3d2f8a', .45],
         [.88, .26, .18, '#e07a8c', .35], [.73, .1, .14, '#f2a3b8', .3],
     ];
-    for (const [x, y, r, color, opacity] of clouds) {
+    for (const [px, y, r, color, opacity] of clouds) {
+        const x = panoramaX(px, spin);
+        if (x < -r - .2 || x > 1 + r + .2) continue;
         const cx = x * ctx.W, cy = y * ctx.H, radius = r * ctx.W;
         ctx.commands.push({ v: [[cx - radius, cy - radius], [cx + radius, cy - radius], [cx + radius, cy + radius], [cx - radius, cy + radius]],
             c: { from: [cx, cy], to: [cx + radius, cy], radius, stops: [[0, ctx.rgba(color, opacity * strength)], [1, ctx.rgba(color, 0)]] }, layer });
     }
-    for (const [x, y] of [[.82, .12], [.62, .08], [.9, .34], [.45, .18]]) {
-        const cx = x * ctx.W, cy = y * ctx.H, ray = ctx.W * .008;
+    for (const [px, y] of [[.82, .12], [.62, .08], [.9, .34], [.45, .18]]) {
+        const cx = panoramaX(px, spin) * ctx.W, cy = y * ctx.H, ray = ctx.W * .008;
         const c = '#ffffff' + alpha(.9 * strength);
         ctx.commands.push({ v: [[cx - ray, cy], [cx, cy - ray * .12], [cx + ray, cy], [cx, cy + ray * .12]], c, layer });
         ctx.commands.push({ v: [[cx, cy - ray], [cx + ray * .12, cy], [cx, cy + ray], [cx - ray * .12, cy]], c, layer });

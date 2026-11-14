@@ -56,7 +56,7 @@ const smooth = (value: number) => {
 const screen = (ctx: RenderCtx): [number, number][] => [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]];
 
 /** The sky: the reveal's plain sky under the basin sky, warm sunlight, and the climb toward space. */
-function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: number; y: number }, yaw: number, earth: EarthCamera) {
+function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: number; y: number }, yaw: number, earth: EarthCamera, spin: number) {
     const heights = orbitHeights(shot.travel);
     if (shot.basin < 1) {
         ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H], stops: [[0, ctx.rgba('#678eae')], [1, ctx.rgba('#b7ced1')]] } });
@@ -67,10 +67,10 @@ function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: num
         from: [ctx.W * .75, ctx.H * .15], to: [ctx.W, ctx.H], radius: ctx.W * .8,
         stops: [[0, ctx.rgba('#ffdfb5', .16 * clouds)], [1, ctx.rgba('#ffdfb5', 0)]],
     } });
-    orbitHighSky(ctx, heights, yaw);
-    endingNebula(ctx, shot.ending.wide);
+    orbitHighSky(ctx, heights, yaw, spin);
+    endingNebula(ctx, shot.ending.wide, spin);
     // In the ending the sun comes up over the rim and day returns to the ground below.
-    orbitEarth(ctx, shot.travel, earth, yaw, heights.air, heights.shadow * (1 - shot.ending.wide));
+    orbitEarth(ctx, shot.travel, earth, yaw, heights.air, heights.shadow * (1 - shot.ending.wide), spin);
     return heights;
 }
 
@@ -105,11 +105,14 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
         distance, zoom: mix(1 - .08 * fast, .72, wide), roll: mix(p.a * .35, 0, wide),
         offsetX: Math.sin(ctx.t * 53) * 1.2 * push,
     };
-    const view = createSkyProjection(ctx.W, ctx.H, turn, framing);
+    // In the ending, once the network is lost, the camera makes one slow full circle round the chair (four
+    // quarter turns), and the sky, the nebula and the Earth below turn with it.
+    const spin = ending.spin * 4;
+    const view = createSkyProjection(ctx.W, ctx.H, turn + spin, framing);
     // The Earth is seen through the same lens, so its horizon sits where the world's eye level puts it.
     const earth: EarthCamera = { cx: ctx.W / 2 + framing.offsetX, cy: ctx.H * framing.centerY,
         focal: Math.min(ctx.H * 1.65, ctx.W * .94) * framing.zoom, roll: framing.roll, pitch: lookDown };
-    const heights = backdrop(ctx, shot, clouds, cam, heading, earth);
+    const heights = backdrop(ctx, shot, clouds, cam, heading, earth, spin * Math.PI / 2);
     const point = (x: number, y: number, z: number): Point3 => [z - travel, 15 + y - cam.y, x - cam.x + routeBend(travel, heading, z - travel)];
     // The chair sits a little below the camera's line of sight, banking and pitching with its own motion. Its
     // drop scales with the camera distance, so a pulled-back camera shows it smaller at the same height.

@@ -37,8 +37,17 @@ export function inOpacity(ctx: RenderCtx, layer: LayerSpec, draw: () => void) {
 
 const screen = (ctx: RenderCtx): Vector[] => [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]];
 
-/** The sky darkens to indigo, then to the black of space, and the stars come out. */
-export function orbitHighSky(ctx: RenderCtx, h: Heights, yaw = 0) {
+/** Screen widths the backdrop slides by over one full turn of the camera: about one per 72 degree view. */
+export const PANORAMA = 5;
+
+/** How far a backdrop drawn at screen position `x` (0 to 1 at no spin) sits after the camera turns by `spin` radians. */
+export const panoramaX = (x: number, spin: number) => {
+    const u = x - spin / (Math.PI * 2) * PANORAMA;
+    return ((u + .5) % PANORAMA + PANORAMA) % PANORAMA - .5;
+};
+
+/** The sky darkens to indigo, then to the black of space, and the stars come out. `spin` turns the camera round the chair. */
+export function orbitHighSky(ctx: RenderCtx, h: Heights, yaw = 0, spin = 0) {
     if (h.air > 0) ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H],
         stops: [[0, ctx.rgba('#1b2550', h.air)], [.55, ctx.rgba('#43578a', h.air)], [1, ctx.rgba('#8090b4', h.air)]] } });
     if (h.space > 0) ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H],
@@ -47,7 +56,9 @@ export function orbitHighSky(ctx: RenderCtx, h: Heights, yaw = 0) {
     if (stars <= 0) return;
     for (const star of STARS) {
         const twinkle = .55 + .45 * Math.sin(ctx.t * 1.3 + star.phase);
-        const x = (((star.x - yaw * .35) % 1 + 1) % 1) * ctx.W, y = star.y * ctx.H, r = star.r * (ctx.W / 1000);
+        // A whole number of screens per full turn, so the stars line up again after the camera's circle.
+        const shift = yaw * .35 + spin / (Math.PI * 2) * PANORAMA;
+        const x = (((star.x - shift) % 1 + 1) % 1) * ctx.W, y = star.y * ctx.H, r = star.r * (ctx.W / 1000);
         ctx.commands.push({ v: [[x - r, y], [x, y - r], [x + r, y], [x, y + r]], c: '#ffffff' + alpha(stars * twinkle) });
     }
 }

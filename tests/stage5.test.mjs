@@ -236,12 +236,25 @@ test('the ending: the extinguisher floats off, the signal drops bar by bar, the 
     assert.equal(bars(at(signal + .1)), 3);
     assert.ok(bars(at(signal + signalStep * 1.2)) < 3 && bars(at(signal + signalStep * 2.2)) < bars(at(signal + signalStep * 1.2)), 'losing bars one by one');
     assert.ok(at(disconnect + .5).labels.some(label => label.startsWith('Network')), 'then the network is lost');
-    const wide = at(ORBIT_ENDING.wide - 1), out = at(15), end = at(20);
+    const wide = at(ORBIT_ENDING.wide - 1), out = at(ORBIT_ENDING.lightsOut + 1), end = at(ORBIT_ENDING.end);
     assert.ok(wide.layer('orbit-nebula').length > 0 && wide.layer('orbit-laptop-light').length > 0, 'the laptop still glows under the nebula');
     assert.deepEqual(out.layer('orbit-laptop-light'), [], 'the screen has gone dark');
     assert.ok(out.layer('orbit-ending-black').length === 1, 'fading out');
     assert.deepEqual(end.labels.filter(label => label === 'THE END'), ['THE END']);
     assert.deepEqual(wide.labels.filter(label => label === 'THE END'), []);
+});
+
+test('after the network is lost the camera circles the chair once, all the way round, with the sky turning too', () => {
+    const { disconnect, spinFrom, spin } = ORBIT_ENDING;
+    assert.ok(spinFrom > disconnect, 'the circle starts once the network is gone');
+    // The rider's blue glasses sit on the sides of the face: hidden from behind, seen once the camera comes round.
+    const glasses = t => endingFrame(t).commands.some(command => command.c === '#83c8e4');
+    assert.equal(glasses(spinFrom), false, 'it starts from behind');
+    const round = Array.from({ length: 9 }, (_, i) => spinFrom + (spin - spinFrom) * (i + 1) / 10).map(glasses);
+    assert.ok(round.filter(Boolean).length >= 2, `the rider's face comes into view on the way round (${round})`);
+    assert.equal(glasses(spin), false, 'and it ends behind the chair again');
+    const stars = t => endingFrame(t).commands.filter(command => typeof command.c === 'string' && command.c.startsWith('#ffffff') && command.v.length === 4 && !command.layer).map(command => command.v[0][0]);
+    assert.notDeepEqual(stars(spinFrom), stars((spinFrom + spin) / 2), 'the stars swing past');
 });
 
 test('steering fades in during the entry instead of being locked out', () => {
