@@ -29,8 +29,9 @@ export function rooftopSky(ctx: RenderCtx) {
         for (let i = first; i < first + Math.ceil(ctx.VW / spacing) + 3; i++) {
             const seed = Math.abs(Math.imul(i + 121, 1597) ^ layer * 157);
             const h = 65 + seed % (120 + layer * 42);
-            // Towers like the opening's: widths and roof shapes vary with the same seed as the height.
-            const x = i * spacing + offset, y = horizon - h, w = spacing * (.6 + seed % 7 * .04);
+            // Towers like the opening's: widths, spacing and roof shapes vary with the same seed as the height.
+            const nudge = ((seed >>> 4) % 9 - 4) / 4 * spacing * .2;
+            const x = i * spacing + offset + nudge, y = horizon - h, w = spacing * (.55 + seed % 7 * .06);
             const body = ['#bbafb5', '#9c9aa9', '#7c899d'][layer];
             ctx.rect(x, y, w, h + 200, body);
             roofShape((points, color) => ctx.polygon(points, color), x, y, w, roofFor(seed), body);

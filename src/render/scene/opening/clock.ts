@@ -46,7 +46,8 @@ function tower(ctx: RenderCtx, pane: Pane, t: Tower, body: string, dusk: number)
 /** The city through the window: a hazy back row, then a darker front row in front of it. */
 function windowSkyline(ctx: RenderCtx, pane: Pane, dusk: number) {
     const building = underOfficeTint(windowView(dusk).building, dusk);
-    for (const t of BACK_ROW) tower(ctx, pane, t, building, 0);
+    const far = underOfficeTint(windowView(dusk).buildingFar, dusk);
+    for (const t of BACK_ROW) tower(ctx, pane, t, far, 0);
     for (const t of FRONT_ROW) tower(ctx, pane, t, building, dusk);
 }
 
