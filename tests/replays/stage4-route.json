@@ -1,0 +1,65 @@
+[
+ {
+  "from": "arrival-roof",
+  "to": "window-one",
+  "wait": 0,
+  "launch": "spray",
+  "clean": true
+ },
+ {
+  "from": "window-one",
+  "to": "window-two",
+  "wait": 1,
+  "launch": "spray",
+  "clean": true
+ },
+ {
+  "from": "window-two",
+  "to": "wind-sign",
+  "wait": 0,
+  "launch": "spray",
+  "clean": true
+ },
+ {
+  "from": "wind-sign",
+  "to": "rest",
+  "wait": 0,
+  "launch": "spray",
+  "clean": false
+ },
+ {
+  "from": "rest",
+  "to": "drawer-desk",
+  "wait": 0,
+  "launch": "spray",
+  "clean": false
+ },
+ {
+  "from": "drawer-desk",
+  "to": "little-desk",
+  "wait": 4.400000000000001,
+  "launch": "spray",
+  "clean": false
+ },
+ {
+  "from": "little-desk",
+  "to": "upper-rest",
+  "wait": 1.4,
+  "launch": "spray",
+  "clean": true
+ },
+ {
+  "from": "upper-rest",
+  "to": "last-sign",
+  "wait": 1,
+  "launch": "spray",
+  "clean": false
+ },
+ {
+  "from": "last-sign",
+  "to": "finish",
+  "wait": 0,
+  "launch": "spray",
+  "clean": false
+ }
+]
