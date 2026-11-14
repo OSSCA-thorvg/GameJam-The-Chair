@@ -724,22 +724,34 @@ export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSn
     let target = { x: 0, y: 0 };
     if (shelter) target = shelter;
     else {
-        const slice = (b: typeof beams[number], age: number) => praiseSection(b, age, b.axis === 'y' ? p.x : p.y);
-        const ahead = beams.filter(b => orbit.z + 250 >= slice(b, orbit.age).from && orbit.z <= slice(b, orbit.age).to);
-        // Each axis on its own: the widest gap from the down beams across, and from the side beams up and down.
-        const gap = (axis: 'x' | 'y', at: number, range: number) => {
-            const facing = ahead.filter(b => b.axis === axis);
-            let best = -Infinity, pick = 0;
-            for (let v = -range; v <= range; v += 40) {
-                const room = Math.min(...facing.map(b => {
-                    const { centre, halfWidth } = slice(b, orbit.age + .6);
-                    return Math.abs(v - centre) - halfWidth;
-                }), 9999) - Math.abs(v - at) * .15;
-                if (room > best) { best = room; pick = v; }
+        // Look a second ahead: score spots across the play area by how far they stay from every beam's light
+        // (where the beam will have swept to by then, at that spot's height), and head for the best one nearby.
+        const horizon = [.3, .7, 1.1];
+        const reach = Math.max(STAGE_FIVE.bounds.x, STAGE_FIVE.bounds.y) + STAGE_FIVE.steer.overshoot;
+        const near = beams.filter(b => [-reach, reach].some(r => {
+            const slice = praiseSection(b, orbit.age, r);
+            return slice.to > orbit.z - 200 && slice.from < orbit.z + orbit.speed * 1.2 + 200;
+        }));
+        const clearance = (x: number, y: number) => {
+            let least = 160;
+            for (const dt of horizon) {
+                const z = orbit.z + orbit.speed * dt;
+                for (const b of near) {
+                    const slice = praiseSection(b, orbit.age + dt, b.axis === 'y' ? x : y);
+                    if (slice.scale <= 0) continue;
+                    const across = Math.abs((b.axis === 'y' ? y : x) - slice.centre) - slice.halfWidth;
+                    const ahead = Math.max(slice.from - z, z - slice.to);
+                    const gap = across < 0 && ahead < 0 ? Math.max(across, ahead) : Math.hypot(Math.max(0, across), Math.max(0, ahead));
+                    least = Math.min(least, gap);
+                }
             }
-            return facing.length ? pick : 0;
+            return least;
         };
-        target = { x: gap('x', p.x, 620), y: gap('y', p.y, 400) };
+        let best = -Infinity;
+        if (near.length) for (let x = -600; x <= 600; x += 60) for (let y = -390; y <= 390; y += 60) {
+            const score = clearance(x, y) - Math.hypot(x - p.x, y - p.y) * .3;
+            if (score > best) { best = score; target = { x, y }; }
+        }
     }
     const keys: Input[] = [];
     if (target.x - p.x > p.vx * .65 + 6) keys.push('right');
@@ -833,7 +845,7 @@ function orbitPraiseLitScene(): PreviewScene {
         if (!orbit || orbit.z > first.to) break;
         // Hold off to the side of the light, then drift in past its edge and back out every few seconds.
         const slice = praiseSection(first, orbit.age + .4, p.y);
-        const target = slice.centre + slice.halfWidth + 60 + 150 * Math.cos(orbit.age * .9);
+        const target = slice.centre + slice.halfWidth + 90 + 130 * Math.cos(orbit.age * .9);
         const keys: Input[] = [];
         if (target - p.x > p.vx * .65 + 6) keys.push('right');
         if (target - p.x < p.vx * .65 - 6) keys.push('left');

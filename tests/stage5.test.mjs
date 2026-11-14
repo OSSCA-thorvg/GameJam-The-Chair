@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { ORBIT_ENDING, orbitEnding, createGame, orbitStep, praiseBeamX, praiseBeamOn, praiseSection, orbitPraise, praiseWarmth, createSkyProjection, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
+const { FOCUS_DAMAGE, ORBIT_ENDING, orbitEnding, createGame, orbitStep, praiseBeamX, praiseBeamOn, praiseSection, orbitPraise, praiseWarmth, createSkyProjection, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
     export { createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } from './src/game/replay';
+    export { FOCUS_DAMAGE } from './src/game/level';
     export { actionForKey } from './src/ui/controls';
     export { createGame, stepGame } from './src/game/game';
     export { orbitStep, praiseBeamX, praiseBeamOn, praiseSection } from './src/game/stages/orbit/course/decide';
@@ -189,7 +190,7 @@ test('5-1: each second under the praise beam costs focus, and it does not come b
     const first = STAGE_FIVE.praise.beams[0], z = first.from + 30;
     const { state } = run(praiseState(z, praiseBeamX(first, 10)), 1.5);
     assert.ok(state.focus < 100, `focus ${state.focus}`);
-    assert.ok(state.focus >= 100 - 2 * 5, 'at most one hit per second');
+    assert.ok(state.focus >= 100 - 2 * FOCUS_DAMAGE.praise, 'at most one hit per second');
     assert.equal(state.focusNotice?.kind, 'praise');
     assert.equal(state.deaths, 0);
 });
