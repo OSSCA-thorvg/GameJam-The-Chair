@@ -176,7 +176,15 @@ test('the 3D glasses have lenses on the front of the face only: none on the side
     // Side on, the forward-facing lenses are edge-on and culled; only the frame's arm shows.
     const side = createSkyProjection(1000, 510, 0);
     endingGlasses(side, 0);
-    assert.deepEqual(lensPanes(side.commands()), [], 'no lens painted on the side of the face');
+    assert.deepEqual(lensPanes(side.commands()), [], 'no lens surface painted on the side of the face');
+    // ...but the lens edge still shows, as a thin blue line down the front of the face.
+    const blue = side.commands().filter(command => typeof command.c === 'string' && command.c.length >= 7
+        && [1, 3, 5].every((i, k) => Math.abs(parseInt(command.c.slice(i, i + 2), 16) - [0x83, 0xc8, 0xe4][k]) <= 12));
+    assert.ok(blue.length > 0, 'the lens shows side on as a line');
+    const spread = blue.flatMap(command => command.v);
+    const width = Math.max(...spread.map(([x]) => x)) - Math.min(...spread.map(([x]) => x));
+    const height = Math.max(...spread.map(([, y]) => y)) - Math.min(...spread.map(([, y]) => y));
+    assert.ok(height > width * 2.5, `a thin upright line, not a surface (${width.toFixed(1)} by ${height.toFixed(1)})`);
     assert.ok(side.commands().some(command => isArm(command.c)), 'the arm runs back along the side of the head');
     // Face on: exactly two lenses, side by side, each wider than tall, with reflection and eyes.
     const front = createSkyProjection(1000, 510, 3, { zoom: 3 });
@@ -184,7 +192,7 @@ test('the 3D glasses have lenses on the front of the face only: none on the side
     const panes = lensPanes(front.commands()).map(lensBounds).sort((a, b) => a.left - b.left);
     assert.equal(panes.length, 2, 'two lenses');
     assert.ok(panes[0].right < panes[1].left, 'side by side, not overlapping');
-    for (const pane of panes) assert.ok(pane.width > pane.height * 1.4 && pane.height > 8, 'each a readable, wider-than-tall lens');
+    for (const pane of panes) assert.ok(pane.width > pane.height * .9 && pane.height > 40, `each a large lens (${pane.width.toFixed(0)} by ${pane.height.toFixed(0)})`);
     assert.ok(front.commands().some(command => command.c === '#bfe6ef'), 'keeps the pale reflection');
     assert.equal(front.commands().filter(command => command.c === '#446d82').length, 2, 'an eye behind each lens');
 });
