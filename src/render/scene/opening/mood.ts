@@ -45,7 +45,6 @@ export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame) {
 
 /** The chair's moods around it: 6 pm joy, 7 pm creaks, 8 pm anger marks and the 9 pm rage. */
 export function drawChairMood(ctx: RenderCtx, frame: OpeningFrame) {
-    drawDeskClutter(ctx, frame);
     if (frame.hum > 0) drawJoy(ctx, frame);
     if (frame.creakPulse > 0) drawCreak(ctx, frame);
     if (frame.anger > 0) drawAngerMarks(ctx, frame.t, frame.anger);
@@ -122,40 +121,16 @@ function angerMark(ctx: RenderCtx, x: number, y: number, scale: number) {
     ctx.localScale = 1;
 }
 
-/** 9 pm: the chair trembles (its afterimages are drawn with it) under a throbbing anger mark by the backrest. */
+/**
+ * 9 pm: the chair trembles (its afterimages are drawn with it) under a throbbing anger mark by the backrest,
+ * and dust jumps off the floor round its wheels.
+ */
 function drawRage(ctx: RenderCtx, frame: OpeningFrame) {
     const p = ctx.p, t = frame.t;
     ctx.beginLayer({ key: 'opening-rage', opacity: frame.rage });
     angerMark(ctx, p.x - 50, p.y - 8, 1 + .22 * Math.max(0, Math.sin(t * 13)));
     ctx.endLayer();
-}
-
-/** The nearest desk, where a mug and a stack of papers sit; they rattle when the chair shakes. */
-const DESK = { left: 110, mug: 232, papers: 118 };
-
-/**
- * A coffee mug and papers on the desk beside the chair. Calm all evening; at 9 pm the chair's rage rattles them,
- * the coffee rings out in ripples and dust jumps off the floor, while the worker types on.
- */
-export function drawDeskClutter(ctx: RenderCtx, frame: OpeningFrame) {
-    if (frame.lighting <= 0) return;
-    const t = frame.t, shake = frame.rage, top = ctx.F - 105;
-    ctx.beginLayer({ key: 'opening-desk-clutter', opacity: frame.lighting });
-    for (let i = 0; i < 4; i++) {
-        const jiggle = Math.sin(t * 47 + i * 1.9) * 1.6 * shake, hop = Math.abs(Math.sin(t * 29 + i)) * 1.4 * shake;
-        ctx.rect(DESK.papers - i * .6 + jiggle, top - 3 - i * 2.2 - hop, 26, 2.2, i % 2 ? '#e9e4d4' : '#f4f0e4');
-    }
-    const dx = Math.sin(t * 58) * 1.8 * shake, dy = -Math.abs(Math.sin(t * 33)) * 2 * shake;
-    const x = DESK.mug + dx, y = top + dy;
-    ctx.rod(x + 9, y - 13, x + 13, y - 8, 2.2, '#c9614f');
-    ctx.rect(x - 8, y - 17, 16, 17, '#d8694f');
-    ctx.ellipse(x, y - 17, 8, 2.4, '#6b4330');
-    for (let k = 0; k < 2; k++) {
-        const ring = (t * 3 + k * .5) % 1;
-        ctx.ellipse(x, y - 17, 2 + 6 * ring, .6 + 1.8 * ring, ctx.tint('#e8c9a2', shake * (1 - ring)));
-    }
-    ctx.endLayer();
-    if (shake > 0) floorDust(ctx, t, shake);
+    floorDust(ctx, t, frame.rage);
 }
 
 /** Dust hopping off the floor round the trembling wheels. */
