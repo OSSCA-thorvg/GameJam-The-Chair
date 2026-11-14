@@ -103,8 +103,9 @@ export function drawWorld(ctx: RenderCtx) {
         desk(ctx, x);
         const plantX = x + (x === 110 ? 295 : 205);
         const potX = Math.abs(plantX - cleaning.x - 55) < 70 ? plantX + 90 : plantX;
-        // Nothing stands in front of the exit door.
-        if (potX + 25 <= EXIT.left || potX - 25 >= EXIT.right) plant(ctx, potX);
+        // Nothing stands in front of the exit door, and no pot peeks out from behind the first copier.
+        const clear = (left: number, right: number) => potX + 25 <= left || potX - 25 >= right;
+        if (clear(EXIT.left, EXIT.right) && clear(LEVEL.copier.x - 70, LEVEL.copier.x + 70)) plant(ctx, potX);
     }
     let cleaner: DeepReadonly<Person> | undefined;
     for (const n of people) {

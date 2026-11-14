@@ -76,7 +76,8 @@ export function desk(ctx: RenderCtx, x: number) {
     const flicker = .78 + .22 * Math.sin(ctx.t * 7 + x * .013);
     const glowColor = phase?.active ? '#fff4bb' : phase?.warning ? '#e9c98e' : '#9ec3d8';
     ctx.gradientPolygon(
-        [[x + 32, F - 158], [x + 111, F - 158], [x + 128, F - 108], [x + 15, F - 108]],
+        // The glow starts at the screen's own edges (x + 50 to x + 93) and spreads toward the desk.
+        [[x + 50, F - 158], [x + 93, F - 158], [x + 128, F - 108], [x + 15, F - 108]],
         ctx.gradientFill(x + 71, F - 160, x + 71, F - 108, [[0, glowColor], [1, glowColor + '00']], flicker * (phase?.active ? .55 : .3))
     );
     ctx.rect(x + 52, F - 158, 39, 2, ctx.tint('#ffffff', flicker * .35));
