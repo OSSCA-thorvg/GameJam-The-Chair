@@ -1,23 +1,13 @@
 import { translate, type Locale } from '../i18n';
 import { OPENING_DURATION, openingFrame, type OpeningFrame } from '../render/scene/opening/timeline';
 
-// Plays the opening cutscene once per browser, the first time the player presses Start. The cutscene is
-// presentation only: the game waits (it is not advanced) and the main loop draws `frame()` instead.
-
-export const OPENING_SEEN_KEY = 'the-chair-opening-seen';
-
-export function openingSeen() {
-    try {
-        return localStorage.getItem(OPENING_SEEN_KEY) === '1';
-    } catch {
-        return false;
-    }
-}
+// The cutscene is presentation only: the game waits while the main loop draws `frame()`.
 
 export function createOpening(root: HTMLElement, getLocale: () => Locale) {
     let time: number | null = null;
     let screen: HTMLElement | null = null;
     let onDone: (() => void) | null = null;
+    let seen = false;
     const controller = new AbortController();
 
     function finish() {
@@ -25,7 +15,7 @@ export function createOpening(root: HTMLElement, getLocale: () => Locale) {
         time = null;
         screen?.remove();
         screen = null;
-        try { localStorage.setItem(OPENING_SEEN_KEY, '1'); } catch {}
+        seen = true;
         const done = onDone;
         onDone = null;
         done?.();
@@ -61,6 +51,9 @@ export function createOpening(root: HTMLElement, getLocale: () => Locale) {
     return {
         start,
         skip: finish,
+        get seen() {
+            return seen;
+        },
         get active() {
             return time !== null;
         },
