@@ -11,6 +11,7 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     // Parked in the Earth's shadow, `settled` counts on from 1 so the ending knows how far it has played.
     if (next.phase === 'parked') {
         next.settled += dt;
+        next.idle = 0;
         return { orbit: next, p, checkpoint: false, praised: false, spraying: false };
     }
     if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
@@ -35,6 +36,7 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     // Until the autopilot takes over only spraying moves the chair forward.
     // During the entry the glide from stage four still carries it at the speed it arrived with.
     const thrust = controlled && !auto && held('spray');
+    next.idle = controlled && !auto && !thrust ? next.idle + dt : 0;
     const landing = auto ? Math.max(C.autopilot.landing, Math.min(C.cruise, (C.checkpoint.z - next.z) * C.autopilot.brake)) : 0;
     if (auto) next.speed += (landing - next.speed) * (1 - Det.exp(-C.autopilot.response * dt));
     else if (thrust) next.speed = Math.min(C.maxSpeed, next.speed + C.thrust * dt);
