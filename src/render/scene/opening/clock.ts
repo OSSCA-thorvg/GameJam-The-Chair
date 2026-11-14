@@ -3,6 +3,7 @@ import type { DrawCommand, Vector } from '../../types';
 import type { OpeningFrame } from './timeline';
 import { circle, dialCircle, linear, mix, PathBuilder, polygon, push, radial, rotate, screenRect } from './shapes';
 import { underOfficeTint, windowView } from '../window-view';
+import { roofShape, type Roof } from '../skyline';
 
 // The office wall clock that marks the hours. It is drawn as a full-screen cover: during the iris
 // transitions an inverted alpha mask punches a growing hole through it so the office shows through.
@@ -17,7 +18,6 @@ function handShape(length: number, width: number, tail: number): Vector[] {
 }
 
 type Pane = { x: number; y: number; w: number; h: number };
-type Roof = 'flat' | 'antenna' | 'setback';
 /** A building in the window: left edge and width as fractions of the pane, height as a fraction of its height. */
 type Tower = { x: number; w: number; h: number; roof: Roof };
 
@@ -35,8 +35,7 @@ const FRONT_ROW: Tower[] = [
 function tower(ctx: RenderCtx, pane: Pane, t: Tower, body: string, dusk: number) {
     const left = pane.x + t.x * pane.w, width = t.w * pane.w, base = pane.y + pane.h, top = base - t.h * pane.h;
     polygon(ctx, [[left, top], [left + width, top], [left + width, base], [left, base]], body);
-    if (t.roof === 'setback') polygon(ctx, [[left + width * .25, top - width * .3], [left + width * .75, top - width * .3], [left + width * .75, top], [left + width * .25, top]], body);
-    if (t.roof === 'antenna') polygon(ctx, [[left + width * .47, top - width * .6], [left + width * .53, top - width * .6], [left + width * .53, top], [left + width * .47, top]], body);
+    roofShape((points, color) => polygon(ctx, points, color), left, top, width, t.roof, body);
     if (dusk <= .3) return;
     const size = width * .14, lit = underOfficeTint(windowView(dusk).lit, dusk);
     for (let y = top + size * 1.5; y + size < base - size; y += size * 3) {

@@ -14,6 +14,7 @@ import { URGENT_VOLLEY_ID } from '../../game/stages/office/copier/decide';
 import { urgentCopierDraw, urgentPapersDraw } from './urgent-copier';
 import { ceilingCctvs } from './ceiling-cctv';
 import { windowView } from './window-view';
+import { roofFor, roofShape } from './skyline';
 import { officeControlHints } from './control-hints';
 
 /** The exit door's span on the back wall, around the goal; no window is drawn behind it. */
@@ -66,7 +67,11 @@ export function drawWorld(ctx: RenderCtx) {
                 const bx = x + 30 + j * 42;
                 const mixed = Math.imul(state.skylineSeed ^ i, 0x45d9f3b) ^ Math.imul(j + 1, 0x119de1f3);
                 const h = 55 + ((mixed ^ (mixed >>> 16)) >>> 0) % 101;
-                ctx.rect(bx, 260 - h, 32, h, view.building);
+                // Towers like the opening's: widths and roof shapes vary with the same seed as the height.
+                const width = 26 + ((mixed >>> 7) >>> 0) % 11;
+                ctx.rect(bx, 260 - h, width, h, view.building);
+                // The tallest keep a flat roof so nothing pokes into the window frame.
+                if (h <= 125) roofShape((points, color) => ctx.polygon(points, color), bx, 260 - h, width, roofFor(mixed >>> 3), view.building);
                 for (let k = 0; k < 3; k++) {
                     const flickers = j === ((i % 4) + 4) % 4 && k === 1;
                     const period = 3.4 + ((i % 3 + 3) % 3) * .7;
