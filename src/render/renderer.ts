@@ -16,6 +16,7 @@ import { drawStageTitle, drawTalk } from './scene/talk';
 import type { SceneTalk } from './types';
 import { createPaintPool, paint, thorvgTextWidth } from './paint';
 import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
+import { drawTitle } from './scene/title';
 import { deathShotBurst, deathShotCloseness, DEATH_SHOT, type DeathShot } from './death-shot';
 import { deathBurst } from './scene/death-burst';
 import { resetRenderStats, type LayerOverrides, type RenderStats } from './perf';
@@ -82,7 +83,7 @@ function setup(
     size();
 
     let lastWaterLife = 0;
-    function draw(next: GameState, effects: EffectsState, camera?: number, opening?: OpeningFrame, talk?: SceneTalk) {
+    function draw(next: GameState, effects: EffectsState, camera?: number, opening?: OpeningFrame, talk?: SceneTalk, titleTime?: number) {
         ctx.locale = getLocale();
         ctx.state = next;
         ctx.LEN = next.level.length;
@@ -155,8 +156,12 @@ function setup(
         lastStage = next.stage;
         lastTime = t;
         const buildStart = stats ? performance.now() : 0;
+        const title = !opening && (titleTime !== undefined || (next.mode === 'intro' && next.stage === 1));
         if (opening) {
             drawOpening(ctx, opening);
+        } else if (title) {
+            // The title loops on the page clock; the motion preview passes its own time.
+            drawTitle(ctx, titleTime ?? performance.now() / 1000);
         } else if (next.stage === 5) {
             drawOrbit(ctx);
         } else if (next.stage === 4) {
@@ -168,7 +173,7 @@ function setup(
         } else {
             drawWorld(ctx);
         }
-        if (!opening) {
+        if (!opening && !title) {
             const burst = effects.deathShot ? deathShotBurst(effects.deathShot) : null;
             if (burst !== null) deathBurst(ctx, ctx.screenPoint(...riderPoint(HEAD)), burst);
             focusVignette(ctx);

@@ -59,7 +59,7 @@ const messages = {
     'button.retry':              { en: 'Retry',                                                          ko: '다시' },
     'button.retryStage':         { en: 'Retry stage',                                                    ko: 'Retry · 다시' },
     'button.next':               { en: 'Next',                                                           ko: '다음' },
-    'button.start':              { en: 'Start',                                                          ko: '시작' },
+    'button.start':              { en: 'Start',                                                          ko: '시작하기' },
     'button.records':            { en: 'Records',                                                        ko: '기록' },
     'button.resume':             { en: 'Resume',                                                         ko: '계속' },
 
