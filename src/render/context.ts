@@ -51,6 +51,8 @@ export type RenderCtx = {
     papers: GameState['papers'];
     inBin: boolean;
     soaked: boolean;
+    /** How many times the dirty bucket water has splashed the rider this attempt; each adds a layer of stains. */
+    soaks: number;
     dirty: boolean;
     t: number;
     LEN: number;
@@ -140,6 +142,7 @@ export function createRenderCtx(bg: CanvasRenderingContext2D): RenderCtx {
         papers: [] as unknown as GameState['papers'],
         inBin: false,
         soaked: false,
+        soaks: 0,
         dirty: false,
         t: 0,
         LEN: LEVEL.length,

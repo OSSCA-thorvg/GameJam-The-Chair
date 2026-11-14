@@ -72,6 +72,7 @@ function setup(
     observer.observe(base);
     size();
 
+    let lastWaterLife = 0;
     function draw(next: GameState, effects: EffectsState, camera?: number, opening?: OpeningFrame, talk?: SceneTalk) {
         ctx.locale = getLocale();
         ctx.state = next;
@@ -85,6 +86,12 @@ function setup(
         ctx.papers = next.papers;
         ctx.inBin = next.inBin;
         ctx.soaked = next.soaked;
+        // Count splashes from the 'water' focus notice: each new spill that hits the rider starts a fresh one.
+        // The count clears once the rider is dry again (a retry), so it stays a render-only detail.
+        const water = next.focusNotice?.kind === 'water' ? next.focusNotice.life : 0;
+        if (!next.soaked) ctx.soaks = 0;
+        else if (water > lastWaterLife) ctx.soaks++;
+        lastWaterLife = water;
         ctx.dirty = next.dirty;
         ctx.t = next.time;
         ctx.monitors = next.monitors.map((monitor, index) => ({ ...monitor, ...ART.monitors[index] }));
