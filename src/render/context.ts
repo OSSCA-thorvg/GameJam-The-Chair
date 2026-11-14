@@ -73,6 +73,8 @@ export type RenderCtx = {
     chairPose: { backrest: number; riderPop: number; shiver: number };
     /** True while the opening cutscene draws the office, so in-game hints stay out of the film. */
     cutscene: boolean;
+    /** How far into the evening the office windows show (0 sunset, 1 night); only the opening moves it off 1. */
+    windowDusk: number;
     /** Which hinted keys the player has tried this stage; their keycap hints are gone. */
     keysTried: KeysTried;
     /** How many times the player has entered the stage two meeting room (1 on the first visit). */
@@ -168,6 +170,7 @@ export function createRenderCtx(bg: CanvasRenderingContext2D): RenderCtx {
         personalBox: { kind: 'idle' },
         chairPose: { backrest: 0, riderPop: 0, shiver: 0 },
         cutscene: false,
+        windowDusk: 1,
         keysTried: { left: false, right: false, jump: false, spray: false },
         meetingVisit: 0,
     } as unknown as RenderCtx;

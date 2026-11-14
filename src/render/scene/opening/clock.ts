@@ -2,6 +2,7 @@ import type { RenderCtx } from '../../context';
 import type { DrawCommand, Vector } from '../../types';
 import type { OpeningFrame } from './timeline';
 import { circle, dialCircle, linear, mix, PathBuilder, polygon, push, radial, rotate, screenRect } from './shapes';
+import { underOfficeTint, windowView } from '../window-view';
 
 // The office wall clock that marks the hours. It is drawn as a full-screen cover: during the iris
 // transitions an inverted alpha mask punches a growing hole through it so the office shows through.
@@ -37,7 +38,7 @@ function tower(ctx: RenderCtx, pane: Pane, t: Tower, body: string, dusk: number)
     if (t.roof === 'setback') polygon(ctx, [[left + width * .25, top - width * .3], [left + width * .75, top - width * .3], [left + width * .75, top], [left + width * .25, top]], body);
     if (t.roof === 'antenna') polygon(ctx, [[left + width * .47, top - width * .6], [left + width * .53, top - width * .6], [left + width * .53, top], [left + width * .47, top]], body);
     if (dusk <= .3) return;
-    const size = width * .14, lit = ctx.tint('#f6d48b', (dusk - .3) / .7);
+    const size = width * .14, lit = underOfficeTint(windowView(dusk).lit, dusk);
     for (let y = top + size * 1.5; y + size < base - size; y += size * 3) {
         for (const x of [left + width * .28, left + width * .58]) polygon(ctx, [[x, y], [x + size, y], [x + size, y + size], [x, y + size]], lit);
     }
@@ -45,8 +46,9 @@ function tower(ctx: RenderCtx, pane: Pane, t: Tower, body: string, dusk: number)
 
 /** The city through the window: a hazy back row, then a darker front row in front of it. */
 function windowSkyline(ctx: RenderCtx, pane: Pane, dusk: number) {
-    for (const t of BACK_ROW) tower(ctx, pane, t, mix('#c99b7e', '#262d4a', dusk), 0);
-    for (const t of FRONT_ROW) tower(ctx, pane, t, mix('#9a6853', '#131a2b', dusk), dusk);
+    const building = underOfficeTint(windowView(dusk).building, dusk);
+    for (const t of BACK_ROW) tower(ctx, pane, t, building, 0);
+    for (const t of FRONT_ROW) tower(ctx, pane, t, building, dusk);
 }
 
 export function drawClock(ctx: RenderCtx, frame: OpeningFrame) {
@@ -71,19 +73,20 @@ export function drawClock(ctx: RenderCtx, frame: OpeningFrame) {
     layer('wall');
     screenRect(ctx, linear(ctx, [0, 0], [0, ctx.H], [[0, mix('#e9c39a', '#343b58', dusk)], [1, mix('#c58f6c', '#1f2438', dusk)]]));
     const wx = cx - R * 2.75, wy = cy - R * .95, ww = R * 1.15, wh = R * 1.7;
-    polygon(ctx, [[wx - 8, wy - 8], [wx + ww + 8, wy - 8], [wx + ww + 8, wy + wh + 8], [wx - 8, wy + wh + 8]], mix('#8a6a58', '#232a3d', dusk));
+    const view = windowView(dusk), tinted = (color: string) => underOfficeTint(color, dusk);
+    polygon(ctx, [[wx - 8, wy - 8], [wx + ww + 8, wy - 8], [wx + ww + 8, wy + wh + 8], [wx - 8, wy + wh + 8]], tinted(view.frame));
     ctx.endLayer();
     // The view through the window is clipped to the frame, so the setting sun sinks out of sight.
     const pane = { v: [[wx, wy], [wx + ww, wy], [wx + ww, wy + wh], [wx, wy + wh]] as Vector[], c: '#ffffff' };
     layer('sky', { clip: pane });
     polygon(ctx, [[wx, wy], [wx + ww, wy], [wx + ww, wy + wh], [wx, wy + wh]],
-        linear(ctx, [0, wy], [0, wy + wh], [[0, mix('#f3a467', '#0f1530', dusk)], [.7, mix('#f8d48c', '#26305a', dusk)], [1, mix('#fbe3a7', '#33406b', dusk)]]));
+        linear(ctx, [0, wy], [0, wy + wh], [[0, tinted(view.skyTop)], [1, tinted(view.skyBottom)]]));
     const sunY = wy + wh * (.55 + dusk * .7);
     push(ctx, circle(wx + ww * .55, sunY, R * .2).command(radial(ctx, wx + ww * .55, sunY, R * .2, [[0, '#fff2c9'], [1, '#f39a5a']], 1 - dusk)));
     windowSkyline(ctx, { x: wx, y: wy, w: ww, h: wh }, dusk);
     ctx.endLayer();
     layer('mullion');
-    polygon(ctx, [[wx + ww / 2 - 2, wy], [wx + ww / 2 + 2, wy], [wx + ww / 2 + 2, wy + wh], [wx + ww / 2 - 2, wy + wh]], mix('#8a6a58', '#232a3d', dusk));
+    polygon(ctx, [[wx + ww / 2 - 2, wy], [wx + ww / 2 + 2, wy], [wx + ww / 2 + 2, wy + wh], [wx + ww / 2 - 2, wy + wh]], tinted(view.frame));
     ctx.endLayer();
 
     // Low sun through the window: a warm patch on the wall that fades with the evening.

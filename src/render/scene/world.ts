@@ -13,6 +13,7 @@ import { geyserPhase } from '../../game/stages/office/geyser/decide';
 import { URGENT_VOLLEY_ID } from '../../game/stages/office/copier/decide';
 import { urgentCopierDraw, urgentPapersDraw } from './urgent-copier';
 import { ceilingCctvs } from './ceiling-cctv';
+import { windowView } from './window-view';
 import { officeControlHints } from './control-hints';
 
 export function drawWorld(ctx: RenderCtx) {
@@ -41,25 +42,27 @@ export function drawWorld(ctx: RenderCtx) {
     ctx.rect(cam, -vertical, VW, H / scale, '#a9afbc');
     ctx.rect(cam, -vertical, VW, 57 + vertical, '#747d91');
     ctx.rod(cam, 57, cam + VW, 57, 4, '#d1d1c6');
+    const view = windowView(ctx.windowDusk);
     for (let i = Math.floor(cam / 235) - 1; i < (cam + VW) / 235 + 1; i++) {
         const x = i * 235;
-        ctx.rect(x + 17, 80, 197, 193, '#69788c');
-        ctx.rect(x + 24, 87, 183, 179, '#202940');
+        ctx.rect(x + 17, 80, 197, 193, view.frame);
+        if (view.skyTop === view.skyBottom) ctx.rect(x + 24, 87, 183, 179, view.skyTop);
+        else ctx.gradientPolygon([[x + 24, 87], [x + 207, 87], [x + 207, 266], [x + 24, 266]], ctx.gradientFill(0, 87, 0, 266, [[0, view.skyTop], [1, view.skyBottom]]));
         for (let j = 0; j < 4; j++) {
             const bx = x + 30 + j * 42;
             const mixed = Math.imul(state.skylineSeed ^ i, 0x45d9f3b) ^ Math.imul(j + 1, 0x119de1f3);
             const h = 55 + ((mixed ^ (mixed >>> 16)) >>> 0) % 101;
-            ctx.rect(bx, 260 - h, 32, h, '#425069');
+            ctx.rect(bx, 260 - h, 32, h, view.building);
             for (let k = 0; k < 3; k++) {
                 const flickers = j === ((i % 4) + 4) % 4 && k === 1;
                 const period = 3.4 + ((i % 3 + 3) % 3) * .7;
                 const phase = (t + (i * 1.37 % period) + period) % period;
-                const color = flickers && phase < .38 ? '#334056' : '#e2cea1';
+                const color = flickers && phase < .38 ? view.unlit : view.lit;
                 ctx.rect(bx + 6, 269 - h + k * 20, 6, 8, color);
             }
         }
-        ctx.rod(x + 113, 87, x + 113, 267, 4, '#69788c');
-        ctx.rod(x + 24, 179, x + 207, 179, 3, '#69788c');
+        ctx.rod(x + 113, 87, x + 113, 267, 4, view.frame);
+        ctx.rod(x + 24, 179, x + 207, 179, 3, view.frame);
         ctx.rect(x + 43, 27, 145, 7, '#f1e9cf');
     }
     ceilingCctvs(ctx, 940);
