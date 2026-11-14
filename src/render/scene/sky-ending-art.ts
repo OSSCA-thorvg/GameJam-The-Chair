@@ -15,10 +15,11 @@ export function endingChair(view: SkyProjection, elapsed: number, spray = 1, arr
     chairFrame(draw);
     riderBody(draw);
     riderHead(view, draw);
-    riderArms(draw, rest);
+    riderArms(view, draw, rest);
     if (loose < 0) extinguisher(draw, spray, rocket);
     // Its last puffs set it tumbling as it drifts away.
     else extinguisher(looseDrawing(view, draw, loose), spray * Math.exp(-loose * .6), rocket);
+    return draw.bob;
 }
 
 /**
@@ -57,6 +58,10 @@ function chairDrawing(view: SkyProjection, elapsed: number, arrival: number) {
 }
 
 type ChairDrawing = ReturnType<typeof chairDrawing>;
+
+export function laptopScreenPoint(u: number, v: number, bob: number, lift = 0): Point3 {
+    return [47 + 6.6 * v - .96 * lift, 1 + 24 * v + bob + .26 * lift, -20 + 40 * u];
+}
 
 function chairFrame({ C, rod, oval, profile }: ChairDrawing) {
     rod([0, -4, 0], [0, 16, 0], 3, C.steel);
@@ -100,21 +105,45 @@ function riderHead(view: SkyProjection, { C, bob, oval }: ChairDrawing) {
 
 /**
  * The laptop in 3D: a thin base under the hands with its keyboard and trackpad, and a thin lid hinged at the base's
- * back edge, tipped a little back, its screen towards the rider. (The side view's outline is a single slab; extruded
- * as it was, it read as a desktop monitor.) Coordinates as the side-view outlines; the screen face is LAPTOP_SCREEN.
+ * back edge, tipped a little back, its screen towards the rider. Coordinates follow the side-view outlines.
  */
-function laptop(profile: ChairDrawing['profile']) {
-    // Base: 34 deep, 3 thick, 44 wide, resting just under the fingertips.
-    profile([[16, -31], [50, -31], [50, -34], [16, -34]], 22, '#555f70');
-    profile([[20, -34], [45, -34], [45, -34.6], [20, -34.6]], 18, '#3c4350');
-    profile([[24, -34], [33, -34], [33, -34.8], [24, -34.8]], 6, '#6b7486');
-    // Lid: hinged at the base's back edge and tipped back past upright.
-    profile([[48, -33], [51, -33], [58, -62], [55, -62]], 22, '#555f70');
-    profile([[47, -36], [48, -36], [54.6, -60], [53.6, -60]], 20, '#a8b9c3');
+function laptop(view: SkyProjection, { profile, point, bob }: ChairDrawing) {
+    const top = (x0: number, z0: number, x1: number, z1: number, y: number, color: string) =>
+        view.polygon([point(x0, y, z0), point(x1, y, z0), point(x1, y, z1), point(x0, y, z1)], color + 'ff');
+    // The thin chassis has a separate keyboard deck, inset keys and a trackpad.
+    profile([[16, -31], [50, -31], [50, -34], [16, -34]], 22, '#667284');
+    top(18, -20, 48, 20, -34.2, '#343e4c');
+    top(19, -18, 31, 18, -34.35, '#758396');
+    top(19.5, -17.5, 30.5, 17.5, -34.4, '#465362');
+    top(32, -19, 46, 19, -34.35, '#222c39');
+    const keyStart = view.project(point(35, -34.45, -19));
+    const keyEnd = view.project(point(35, -34.45, -14));
+    const keyWidth = Math.hypot(keyEnd[0] - keyStart[0], keyEnd[1] - keyStart[1]);
+    if (keyWidth >= 2) {
+        for (let row = 0; row < 3; row++) for (let key = 0; key < 8; key++) {
+            const z = -17.5 + key * 4.45;
+            top(33 + row * 4.1, z, 36.1 + row * 4.1, z + 3.5, -34.48, row === 0 ? '#78899a' : '#647586');
+        }
+    }
+    const corner = (u: number, v: number, back = 0) => laptopScreenPoint(u, v, bob, -back);
+    const face = (u0: number, v0: number, u1: number, v1: number, color: string, lift = 0) =>
+        view.polygon([laptopScreenPoint(u0, v0, bob, lift), laptopScreenPoint(u1, v0, bob, lift),
+            laptopScreenPoint(u1, v1, bob, lift), laptopScreenPoint(u0, v1, bob, lift)], color);
+    face(0, 0, 1, 1, '#243140');
+    view.polygon([corner(0, 1, 1.2), corner(1, 1, 1.2), corner(1, 0, 1.2), corner(0, 0, 1.2)], '#566275');
+    for (const [a, b] of [[[0, 0], [1, 0]], [[1, 0], [1, 1]], [[1, 1], [0, 1]], [[0, 1], [0, 0]]]) {
+        view.polygon([corner(a[0], a[1]), corner(b[0], b[1]), corner(b[0], b[1], 1.2), corner(a[0], a[1], 1.2)], '#657184ff');
+    }
+    face(.02, .02, .98, .045, '#9caaba', .1);
+    face(.02, .955, .98, .98, '#9caaba', .1);
+    face(.02, .045, .045, .955, '#9caaba', .1);
+    face(.955, .045, .98, .955, '#9caaba', .1);
+    face(.49, .965, .51, .975, '#283644', .15);
 }
 
-function riderArms({ C, elapsed, profile }: ChairDrawing, rest = 0) {
-    laptop(profile);
+function riderArms(view: SkyProjection, draw: ChairDrawing, rest = 0) {
+    const { C, elapsed, profile } = draw;
+    laptop(view, draw);
     for (const z of [-19, 19]) {
         profile([[-17, -58], [-13, -60], [-9, -57], [-8, -35], [-18, -34]], 4, '#e6e0cc', z);
         profile([[-19, -39], [-8, -39], [-8, -34], [-19, -33]], 4.5, '#fff6de', z);
