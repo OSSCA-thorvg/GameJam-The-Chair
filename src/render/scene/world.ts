@@ -57,7 +57,7 @@ export function drawWorld(ctx: RenderCtx) {
                 const flickers = j === ((i % 4) + 4) % 4 && k === 1;
                 const period = 3.4 + ((i % 3 + 3) % 3) * .7;
                 const phase = (t + (i * 1.37 % period) + period) % period;
-                const color = flickers && phase < .38 ? '#334056' : view.lit;
+                const color = flickers && phase < .38 ? view.unlit : view.lit;
                 ctx.rect(bx + 6, 269 - h + k * 20, 6, 8, color);
             }
         }
