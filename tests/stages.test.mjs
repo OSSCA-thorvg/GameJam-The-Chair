@@ -285,7 +285,7 @@ test('the office flag restores focus when first reached after a distraction', ()
     assert.ok(game.getSnapshot().focus < 100, 'crossing the saved flag again must not refill focus');
 });
 
-test('airborne Q/E correction works while holding the opposite movement key', () => {
+test('airborne balance input corrects tilt while holding the opposite movement input', () => {
     for (const [input, sign] of [[['right', 'q'], -1], [['left', 'e'], 1]]) {
         const game = createGame();
         game.startStage(2);

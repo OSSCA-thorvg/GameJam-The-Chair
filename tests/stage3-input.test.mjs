@@ -4,16 +4,20 @@ import { driveStageThree } from './support/stage3-route.mjs';
 import { bundled } from './support/load.mjs';
 const { createGame, bindInput } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { bindInput } from './src/ui/input';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
-test('Space holds spray in stage three, releases on keyup/blur, and touch capture releases', async () => {
+test('Space holds spray in stage three, releases on keyup/blur, and touch controls release', async () => {
     const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];
     const saved = names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
     const window = new EventTarget(), document = new EventTarget();
     class Element {}
     const spray = new EventTarget(); spray.setPointerCapture = () => {};
+    const leanLeft = new EventTarget(), leanRight = new EventTarget();
+    leanLeft.dataset = { lean: 'left' };
+    leanRight.dataset = { lean: 'right' };
     Object.assign(globalThis, { window, document, Element, HTMLElement: Element, MutationObserver: class { observe() {} disconnect() {} } });
     const game = createGame(); game.startStage(3);
     driveStageThree(game, state => state.hasExtinguisher);
-    const root = { isConnected: true, querySelector: selector => selector === '[data-spray]' ? spray : null, querySelectorAll: () => [] };
+    const root = { isConnected: true, querySelector: selector => selector === '[data-spray]' ? spray : null,
+        querySelectorAll: selector => selector === '[data-lean]' ? [leanLeft, leanRight] : [] };
     const unbind = bindInput(root, game);
     function key(type, name, code = name) {
         const event = new Event(type, { cancelable: true });
@@ -26,7 +30,9 @@ test('Space holds spray in stage three, releases on keyup/blur, and touch captur
         assert.equal(game.drainEvents().filter(e => e.id === 'spray').length, 3);
         key('keyup', ' ', 'Space'); advance();
         assert.equal(game.getSnapshot().spray.burst, 0);
-        settle(); key('keydown', 'f'); window.dispatchEvent(new Event('blur')); advance();
+        settle(); key('keydown', 'f'); advance();
+        assert.equal(game.drainEvents().filter(e => e.id === 'spray').length, 0, 'F no longer sprays');
+        key('keydown', ' '); window.dispatchEvent(new Event('blur')); advance();
         assert.equal(game.drainEvents().filter(e => e.id === 'spray').length, 0);
         settle(); spray.dispatchEvent(new Event('pointerdown', { cancelable: true })); advance();
         assert.equal(game.drainEvents().filter(e => e.id === 'spray').length, 3);
@@ -40,6 +46,12 @@ test('Space holds spray in stage three, releases on keyup/blur, and touch captur
         for (let i = 0; i < 20; i++) game.step(1 / 120);
         key('keydown', 'ArrowUp'); game.step(1 / 120);
         assert.ok(game.getSnapshot().player.vy < -300, 'Up jumps in the office');
+        for (const [button, input] of [[leanLeft, 'q'], [leanRight, 'e']]) {
+            button.dispatchEvent(new Event('pointerdown', { cancelable: true }));
+            assert.ok(JSON.parse(game.serialize()).keys.includes(input), `touch ${input} presses balance`);
+            button.dispatchEvent(new Event('pointerup'));
+            assert.ok(!JSON.parse(game.serialize()).keys.includes(input), `touch ${input} releases balance`);
+        }
         await Promise.resolve();
     } finally {
         unbind();
