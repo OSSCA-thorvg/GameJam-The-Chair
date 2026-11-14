@@ -14,6 +14,8 @@ export function player(ctx: RenderCtx) {
     ctx.localScale = ART.player.scale;
     playerChair(ctx);
     chairStains(ctx, ctx.soaks);
+    // Bucked by the backrest in the opening, the worker leaves the seat for a moment (and keeps typing).
+    if (ctx.chairPose.riderPop) shiftLocal(ctx, ctx.chairPose.riderPop / 8, -ctx.chairPose.riderPop);
     riderBody(ctx);
     const lift = focusTension(ctx).lift;
     const base = { ox: ctx.ox, oy: ctx.oy };

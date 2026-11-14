@@ -80,6 +80,27 @@ test('the worker talks first, the chair hopes, then the chair snaps while the wo
     assert.ok(openingFrame(B.rage + 1).rage > .9);
 });
 
+test('7 pm the chair creaks harder and faster; 8 pm the backrest bucks the worker under anger marks', () => {
+    const at = t => openingFrame(t);
+    for (const t of [B.creak + 1, B.kick + .5]) assert.equal(at(t).shot, 'office');
+    assert.equal(at(B.spinToEight + .5).shot, 'clock');
+    assert.equal(at(B.creak + 1).zoom, at(B.rage).zoom, 'both are close-ups on the chair');
+    // The loudest creak late in the hour is harder than the loudest early on.
+    const loudest = (from, to) => Math.max(...Array.from({ length: 120 }, (_, i) => at(from + (to - from) * i / 120).creakPulse));
+    assert.ok(loudest(B.creakClose - 1.2, B.creakClose - .2) > loudest(B.creak, B.creak + 1) + .2);
+    assert.equal(at(B.kick - .1).chair.backrest, 0);
+    assert.ok(at(B.kick + .17).chair.backrest < -.4, 'the backrest leans back');
+    assert.ok(Math.max(...Array.from({ length: 60 }, (_, i) => at(B.kick + .3 + i / 100).chair.riderPop)) > 20, 'the worker is thrown up');
+    assert.ok(at(B.kick + 1).anger > .9);
+    assert.equal(at(B.creak + 1).anger, 0);
+    assert.ok(at(B.kick + 2).bubbles.some(b => b.message === 'opening.riderTyping'), 'and he types on');
+    const kick = render(B.kick + .5);
+    assert.ok(kick.commands.some(c => c.layer?.key === 'opening-anger'));
+    for (const t of [B.riderOvertime + 1, B.chairHope + 1, B.creak + 1, B.kick + .5]) {
+        assert.ok(!render(t).commands.some(c => typeof c.c === 'string' && c.c.startsWith('#f4f1ea')), `no keycap hints in the film at ${t}`);
+    }
+});
+
 test('the cutscene state only poses the chair; the core snapshot is untouched', () => {
     const game = createGame();
     game.reset();

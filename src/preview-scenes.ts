@@ -947,7 +947,8 @@ function opening(): PreviewScene {
         markers: [
             { at: B.sixPm, label: '6 pm' }, { at: B.irisOpen, label: 'Into the office' }, { at: B.riderOvertime, label: 'Worker: overtime' },
             { at: B.riderSales, label: 'Worker: sales' }, { at: B.pushIn, label: 'Push in' }, { at: B.chairHope, label: 'Chair hopes' },
-            { at: B.irisClose, label: 'Back to clock' }, { at: B.spinToEight, label: '7 → 8 pm' }, { at: B.spinToNine, label: '8 → 9 pm' },
+            { at: B.irisClose, label: 'Back to clock' }, { at: B.creak, label: '7 pm: creaking' }, { at: B.spinToEight, label: '7 → 8 pm' },
+            { at: B.kick, label: '8 pm: backrest kick' }, { at: B.spinToNine, label: '8 → 9 pm' },
             { at: B.darkChair, label: 'Dark chair' }, { at: B.rage, label: 'Rage' }, { at: B.handoff, label: 'Handoff' },
         ],
         sample: time => ({ state: openingState(base, openingFrame(time)), effects }),
