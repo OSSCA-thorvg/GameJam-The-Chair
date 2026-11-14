@@ -73,41 +73,69 @@ function along(ctx: RenderCtx, shape: BeamShape, stops: [number, string, number]
         ...kept.map(([at, c, a]) => [k(at), ctx.rgba(c, a * strength)] as [number, Color])] };
 }
 
+const WARM = '#fff3c4', PALE = '#ffe9a8';
+
 /**
- * A recording-red laser: a hot white-red blade down its middle inside a red haze that covers exactly what the
- * course checks, outlined in red. It flickers like a ray that is about to burn something.
+ * A blinding beam of light: a warm haze over exactly what the course checks and a white-hot blade down its middle,
+ * both screened so they brighten whatever lies behind. It shimmers slowly, like light too strong to look at.
  */
-function laser(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, age: number, travel: number, strength: number) {
+function beamOfLight(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, age: number, travel: number, strength: number) {
     const haze = beamShape(view, point, b, age, travel, 1);
     if (!haze) return null;
-    const flicker = strength * (.86 + .14 * Math.sin(ctx.t * 47 + b.phase * 5));
-    // Fading out toward its far end, so the ray never reads as a sheet laid over the Earth below.
-    const hazeFill = along(ctx, haze, [[0, '#ff3a2e', .26], [.6, '#ff2418', .12], [1, '#ff2418', 0]], flicker);
-    const edge = along(ctx, haze, [[0, '#ff5a4a', .95], [.6, '#ff2a1c', .6], [1, '#ff2a1c', 0]], flicker);
-    const core = beamShape(view, point, b, age, travel, .07);
+    const shimmer = strength * (.9 + .1 * Math.sin(ctx.t * 6 + b.phase * 5));
+    // Fading out toward its far end, so the light never reads as a sheet laid over the Earth below.
+    const hazeFill = along(ctx, haze, [[0, WARM, .62], [.6, PALE, .28], [1, PALE, 0]], shimmer);
+    const core = beamShape(view, point, b, age, travel, .2);
     return {
-        haze: { v: haze.hull, c: hazeFill, stroke: { width: 2, color: edge }, layer: { key: 'orbit-laser-haze' } } as DrawCommand,
-        core: core ? { v: core.hull, c: along(ctx, core, [[0, '#ff7a68', 1], [.08, '#ff3020', .95], [.75, '#ff2418', .6], [1, '#ff2418', 0]], flicker),
-            layer: { key: 'orbit-laser-core' } } as DrawCommand : null,
+        haze: { v: haze.hull, c: hazeFill, layer: { key: 'orbit-satellite-light-beam', blend: 'screen' } } as DrawCommand,
+        core: core ? { v: core.hull, c: along(ctx, core, [[0, '#ffffff', .9], [.5, '#fff8e2', .45], [1, WARM, 0]], shimmer),
+            layer: { key: 'orbit-satellite-light-core', blend: 'screen' } } as DrawCommand : null,
         lens: core ? core.from : haze.from, apexShown: haze.start === 0,
     };
 }
 
-/** The satellite's lens glowing red where the laser leaves it. */
-function lensFlare(ctx: RenderCtx, at: Vector, strength: number) {
-    const radius = 26 + 6 * Math.sin(ctx.t * 13);
-    ctx.commands.push({ v: [[at[0] - radius, at[1] - radius], [at[0] + radius, at[1] - radius], [at[0] + radius, at[1] + radius], [at[0] - radius, at[1] + radius]],
-        c: { from: at, to: [at[0] + radius, at[1]], radius, stops: [[0, ctx.rgba('#ffffff', strength)], [.25, ctx.rgba('#ff4a3a', .9 * strength)], [1, ctx.rgba('#ff2418', 0)]] },
-        layer: { key: 'orbit-laser-lens', blend: 'screen' } });
+/** A thin bright spike through `at` at `angle`, `length` long either way: one ray of a lens flare's star. */
+function spike(ctx: RenderCtx, at: Vector, angle: number, length: number, width: number, alpha: number): DrawCommand {
+    const c = Math.cos(angle), s = Math.sin(angle);
+    const tip = (k: number): Vector => [at[0] + c * length * k, at[1] + s * length * k];
+    const side = (k: number): Vector => [at[0] - s * width * k, at[1] + c * width * k];
+    return { v: [tip(-1), side(1), tip(1), side(-1)], c: { from: at, to: tip(1), radius: length,
+        stops: [[0, ctx.rgba('#ffffff', alpha)], [.35, ctx.rgba(WARM, alpha * .45)], [1, ctx.rgba(WARM, 0)]] },
+        layer: { key: 'orbit-satellite-light-flare', blend: 'screen' } };
 }
 
-/** Every laser ahead of the chair: the hazes first, then the hot cores, so each look is one layer. `strength` fades them in. */
+/** The satellite's lens blazing where the light leaves it: a wide glow and a four-pointed star. */
+function lensFlare(ctx: RenderCtx, at: Vector, strength: number) {
+    const breathe = 1 + .12 * Math.sin(ctx.t * 5), radius = 90 * breathe;
+    ctx.commands.push({ v: [[at[0] - radius, at[1] - radius], [at[0] + radius, at[1] - radius], [at[0] + radius, at[1] + radius], [at[0] - radius, at[1] + radius]],
+        c: { from: at, to: [at[0] + radius, at[1]], radius, stops: [[0, ctx.rgba('#ffffff', strength)], [.18, ctx.rgba(WARM, .8 * strength)], [1, ctx.rgba(PALE, 0)]] },
+        layer: { key: 'orbit-satellite-light-flare', blend: 'screen' } });
+    for (const [angle, length] of [[0, 230], [Math.PI / 2, 170], [Math.PI / 4, 80], [-Math.PI / 4, 80]]) {
+        ctx.commands.push(spike(ctx, at, angle + ctx.t * .15, length * breathe, 4, .85 * strength));
+    }
+}
+
+/** Every beam ahead of the chair: the hazes first, then the white-hot cores and flares, so each look is one layer. */
 export function orbitSatelliteLight(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, age: number, travel: number, strength = 1) {
     if (strength <= 0) return;
-    const lasers = P.beams.map(b => laser(ctx, view, point, b, age, travel, strength)).filter(l => l !== null);
-    for (const l of lasers) ctx.commands.push(l.haze);
-    for (const l of lasers) if (l.core) ctx.commands.push(l.core);
-    for (const l of lasers) if (l.apexShown) lensFlare(ctx, l.lens, strength);
+    const beams = P.beams.map(b => beamOfLight(ctx, view, point, b, age, travel, strength)).filter(l => l !== null);
+    for (const l of beams) ctx.commands.push(l.haze);
+    for (const l of beams) if (l.core) ctx.commands.push(l.core);
+    for (const l of beams) if (l.apexShown) lensFlare(ctx, l.lens, strength);
+}
+
+/**
+ * Over the whole picture while the chair is in the light: the screen washes out toward white round the chair, as if
+ * the light were shining straight into the camera. It starts as the chair nears a beam and is strongest inside one.
+ */
+export function satelliteGlare(ctx: RenderCtx, chairAt: Vector, warmth: number, pulse: number) {
+    if (warmth <= 0) return;
+    const inside = warmth >= 1, alpha = inside ? .42 + .1 * pulse : .26 * warmth / .4;
+    const radius = Math.hypot(ctx.W, ctx.H) * .75;
+    const screen: Vector[] = [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]];
+    ctx.commands.push({ v: screen, c: { from: chairAt, to: [chairAt[0] + radius, chairAt[1]], radius,
+        stops: [[0, ctx.rgba('#ffffff', alpha)], [.35, ctx.rgba(WARM, alpha * .55)], [1, ctx.rgba(PALE, alpha * .25)]] },
+        layer: { key: 'orbit-satellite-light-glare', blend: 'screen' } });
 }
 
 /** Outside a beam, the chair starts to catch its light this far from the edge. */
@@ -134,15 +162,14 @@ export function satelliteLightWarmth(age: number, p: Readonly<Pick<Player, 'x' |
     return best;
 }
 
-// Recording red: the chair glows like something the laser is burning.
-const RED = [1, .2, .14];
+const GOLD = [1, .86, .5];
 
-/** The chair as `chair` draws it, lit by the laser: each colour screened with red at `amount` (0 to 1). */
+/** The chair as `chair` draws it, lit by warm light: each colour screened with gold at `amount` (0 to 1). */
 export function satelliteLitChair(chair: SkyProjection, amount: number): SkyProjection {
     if (amount <= 0) return chair;
-    const tint = (color: string) => '#' + RED.map((red, i) => {
+    const tint = (color: string) => '#' + GOLD.map((gold, i) => {
         const value = parseInt(color.slice(1 + i * 2, 3 + i * 2), 16);
-        return Math.round(value + (255 - value) * red * amount).toString(16).padStart(2, '0');
+        return Math.round(value + (255 - value) * gold * amount).toString(16).padStart(2, '0');
     }).join('') + color.slice(7);
     return {
         ...chair,
@@ -163,5 +190,5 @@ export function satelliteChairGlow(ctx: RenderCtx, chair: SkyProjection, light: 
     const at: Vector = [x + lean[0], y + lean[1]];
     const alpha = light.warmth >= 1 ? .55 + .15 * pulse : .35 * light.warmth / .4;
     ctx.commands.push({ v: [[at[0] - radius, at[1] - radius], [at[0] + radius, at[1] - radius], [at[0] + radius, at[1] + radius], [at[0] - radius, at[1] + radius]],
-        c: { from: at, to: [at[0] + radius, at[1]], radius, stops: [[0, ctx.rgba('#ff5040', alpha)], [.55, ctx.rgba('#ff2a1c', alpha * .4)], [1, ctx.rgba('#ff2a1c', 0)]] } });
+        c: { from: at, to: [at[0] + radius, at[1]], radius, stops: [[0, ctx.rgba('#ffe08a', alpha)], [.55, ctx.rgba('#ffd66e', alpha * .4)], [1, ctx.rgba('#ffd66e', 0)]] } });
 }
