@@ -79,7 +79,7 @@ function flag2d(ctx: RenderCtx, place: Place, s: number) {
 
 /** The shortcake slice and its promotion flag standing on the right half of the finish desk. */
 export function promotionCake(ctx: RenderCtx, width: number) {
-    const s = .78, cx = width / 2 - 122;
+    const s = .52, cx = width / 2 - 92;
     const place: Place = (x, y) => [cx + x * s, -9 + (y - BODY.base) * s];
     const quad = (x0: number, x1: number, t0: number, t1: number): Vector[] =>
         [place(x0, bandY(x0, t0)), place(x1, bandY(x1, t0)), place(x1, bandY(x1, t1)), place(x0, bandY(x0, t1))];
