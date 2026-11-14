@@ -13,16 +13,6 @@ function atmosphere(ctx: RenderCtx) {
     const top = -ctx.vertical, height = ctx.H / ctx.scale, bottom = top + height;
     ctx.gradientPolygon([[ctx.cam, top], [ctx.cam + ctx.VW, top], [ctx.cam + ctx.VW, bottom], [ctx.cam, bottom]],
         ctx.gradientFill(0, top, 0, bottom, [[0, '#658eaf'], [.48, '#93bdcd'], [1, '#c6d5d6']]));
-    // Small, low-contrast buildings are seen through gaps far BELOW the furniture.
-    ctx.beginLayer({ key: 'sky-distant-city', opacity: .25 });
-    const cityY = bottom - height * .035;
-    for (let i = -10; i < 11; i++) {
-        const x = ctx.cam + ctx.VW * .52 + i * 12 - (ctx.cam * .04 % 12);
-        const h = 6 + (Math.sin(i * 7.2) * .5 + .5) * 24;
-        ctx.rect(x, cityY - h, 8, h, '#7c9eae');
-        ctx.polygon([[x, cityY - h], [x + 3, cityY - h - 2], [x + 10, cityY - h - 2], [x + 8, cityY - h]], '#b1c4ca');
-    }
-    ctx.endLayer();
     for (let i = -2; i < 7; i++) {
         const drift = ctx.cam * .18 + ctx.t * 4;
         const x = ctx.cam + i * 290 - drift % 290;

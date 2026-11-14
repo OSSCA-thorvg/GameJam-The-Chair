@@ -2,10 +2,6 @@ import type { RenderCtx } from '../context';
 import type { SkyProjection } from './sky-projection';
 import { CLOUD_TONES, puffCloud, seeded } from './cloud-art';
 
-const CITY = (() => {
-    const random = seeded(9102);
-    return Array.from({ length: 70 }, (_, i) => ({ x: i/69, w: .004+random()*.014, h: .01+random()*.05 }));
-})();
 const CLOUDS = (() => {
     const random = seeded(817);
     return Array.from({ length: 10 }, (_, i) => ({
@@ -17,22 +13,10 @@ const CLOUDS = (() => {
 /** Where the chair sits in the stage-five cloud basin; the stage-four ending passes the origin. */
 export type BasinAnchor = { x: number; y: number };
 
-/** `turn`: how far round the camera faces (radians), sliding the far city sideways; one full turn wraps it six times. */
-export function orbitSky(ctx: RenderCtx, anchor: BasinAnchor = ctx.state.player, turn = 0) {
+export function orbitSky(ctx: RenderCtx) {
     ctx.commands.push({ v: [[0,0],[ctx.W,0],[ctx.W,ctx.H],[0,ctx.H]], c: {
         from: [0,0], to: [0,ctx.H], stops: [[0,ctx.rgba('#7499b9')],[.55,ctx.rgba('#a7bdd0')],[1,ctx.rgba('#efd0bc')]],
     } });
-    const horizon = ctx.H * .6;
-    const offset = (anchor.x / 680) * ctx.W * .025 + turn / (Math.PI * 2) * ctx.W * 6;
-    for (const building of CITY) {
-        const x = ((building.x * ctx.W - offset) % ctx.W + ctx.W) % ctx.W;
-        const w = building.w * ctx.W, h = building.h * ctx.H;
-        ctx.commands.push({ v: [[x,horizon],[x,horizon-h],[x+w,horizon-h],[x+w,horizon]], c: '#7d9fbb48' });
-    }
-    for (let i = 0; i < 18; i++) {
-        const y = horizon + 10 + i * 5, spread = i * i * .48;
-        ctx.commands.push({ v: [[ctx.W*.5-spread,y],[ctx.W*.5+spread,y],[ctx.W*.5+spread+15,y+1],[ctx.W*.5-spread-15,y+1]], c: '#d6dfdf40' });
-    }
 }
 
 export type CloudBankOptions = {
