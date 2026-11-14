@@ -1,6 +1,7 @@
 import { STAGE_THREE } from '../../game/stages/rooftop/data';
 import type { RenderCtx } from '../context';
 import { CLOUD_TONES, puffCloud } from './cloud-art';
+import { roofFor, roofShape } from './skyline';
 
 // The dusk over the roof, and the day sky of stage four it turns into on the climb.
 const DUSK: [number, string][] = [[0, '#8798b5'], [.45, '#ccb0b9'], [.8, '#f3c8a6'], [1, '#ffddac']];
@@ -28,12 +29,12 @@ export function rooftopSky(ctx: RenderCtx) {
         for (let i = first; i < first + Math.ceil(ctx.VW / spacing) + 3; i++) {
             const seed = Math.abs(Math.imul(i + 121, 1597) ^ layer * 157);
             const h = 65 + seed % (120 + layer * 42);
-            const x = i * spacing + offset, y = horizon - h, w = spacing * .72;
-            ctx.rect(x, y, w, h + 200, ['#bbafb5', '#9c9aa9', '#7c899d'][layer]);
-            if (seed % 5 === 0) {
-                ctx.rect(x + w * .42, y - 15, w * .2, 16, '#9192a4');
-                ctx.rod(x + w * .52, y - 15, x + w * .52, y - 39, 2, '#9192a4');
-            }
+            // Towers like the opening's: widths, spacing and roof shapes vary with the same seed as the height.
+            const nudge = ((seed >>> 4) % 9 - 4) / 4 * spacing * .2;
+            const x = i * spacing + offset + nudge, y = horizon - h, w = spacing * (.55 + seed % 7 * .06);
+            const body = ['#bbafb5', '#9c9aa9', '#7c899d'][layer];
+            ctx.rect(x, y, w, h + 200, body);
+            roofShape((points, color) => ctx.polygon(points, color), x, y, w, roofFor(seed), body);
             if (layer > 0) for (let row = 0; row < 6; row++) for (let col = 0; col < 3; col++) {
                 if ((seed + row * 3 + col * 7) % 4 === 0) ctx.rect(x + 10 + col * 16, y + 17 + row * 23, 5, 8, '#efcda0');
             }

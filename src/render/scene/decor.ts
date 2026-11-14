@@ -76,7 +76,8 @@ export function desk(ctx: RenderCtx, x: number) {
     const flicker = .78 + .22 * Math.sin(ctx.t * 7 + x * .013);
     const glowColor = phase?.active ? '#fff4bb' : phase?.warning ? '#e9c98e' : '#9ec3d8';
     ctx.gradientPolygon(
-        [[x + 32, F - 158], [x + 111, F - 158], [x + 128, F - 108], [x + 15, F - 108]],
+        // The glow starts at the screen's own edges (x + 50 to x + 93) and spreads toward the desk.
+        [[x + 50, F - 158], [x + 93, F - 158], [x + 128, F - 108], [x + 15, F - 108]],
         ctx.gradientFill(x + 71, F - 160, x + 71, F - 108, [[0, glowColor], [1, glowColor + '00']], flicker * (phase?.active ? .55 : .3))
     );
     ctx.rect(x + 52, F - 158, 39, 2, ctx.tint('#ffffff', flicker * .35));
@@ -139,5 +140,29 @@ export function checkpointFlag(ctx: RenderCtx, x: number, y: number, active: boo
     }
     if (ctx.state.lossReason && active) {
         ctx.ellipse(x, y + 4, 27, 5, '#d7cf9b');
+    }
+}
+
+/**
+ * The chair-only sign over a doorway: a chair beside an arrow (`exit`) or up and down arrows (`lift`). `top` is
+ * the sign's upper edge; the corridors hang it at 120.
+ */
+export function chairPictogram(ctx: RenderCtx, x: number, kind: 'exit' | 'lift', top = 120) {
+    const y = top;
+    ctx.rect(x - 36, y, 72, 43, '#557f78');
+    ctx.rect(x - 23, y + 7, 19, 29, '#d5e6da');
+    ctx.rect(x - 19, y + 12, 11, 24, '#557f78');
+    ctx.rect(x - 18, y + 14, 3, 11, '#e2eee0');
+    ctx.rect(x - 18, y + 23, 10, 3, '#e2eee0');
+    ctx.rod(x - 13, y + 26, x - 13, y + 30, 2, '#e2eee0');
+    ctx.rod(x - 17, y + 30, x - 9, y + 30, 2, '#e2eee0');
+    ctx.ellipse(x - 16, y + 33, 1.5, 1.5, '#e2eee0');
+    ctx.ellipse(x - 10, y + 33, 1.5, 1.5, '#e2eee0');
+    if (kind === 'exit') {
+        ctx.rod(x + 3, y + 21, x + 26, y + 21, 4, '#e2eee0');
+        ctx.polygon([[x + 18, y + 12], [x + 29, y + 21], [x + 18, y + 30]], '#e2eee0');
+    } else {
+        ctx.polygon([[x + 5, y + 17], [x + 13, y + 7], [x + 21, y + 17]], '#e2eee0');
+        ctx.polygon([[x + 5, y + 26], [x + 13, y + 36], [x + 21, y + 26]], '#e2eee0');
     }
 }

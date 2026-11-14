@@ -2,7 +2,7 @@ import { translate } from '../../i18n';
 import type { DeepReadonly, Person } from '../../game/types';
 import type { RenderCtx } from '../context';
 import { SIGN_FONT } from '../fonts';
-import { plant, desk, binBack, binFront, practiceFloor, checkpointFlag } from './decor';
+import { plant, desk, binBack, binFront, practiceFloor, checkpointFlag, chairPictogram } from './decor';
 import { cleaningDraw, person } from './cleaning';
 import { monitorDraw } from './monitor';
 import { player, debugCollisions } from './player';
@@ -13,8 +13,81 @@ import { geyserPhase } from '../../game/stages/office/geyser/decide';
 import { URGENT_VOLLEY_ID } from '../../game/stages/office/copier/decide';
 import { urgentCopierDraw, urgentPapersDraw } from './urgent-copier';
 import { ceilingCctvs } from './ceiling-cctv';
-import { windowView } from './window-view';
+import { windowView, type WindowView } from './window-view';
+import { roofFor, roofShape } from './skyline';
 import { officeControlHints } from './control-hints';
+
+/** The exit door's span on the back wall, around the goal; no window is drawn behind it. */
+const EXIT = { left: LEVEL.goal - 45, right: LEVEL.goal + 81 };
+
+/** The exit: a door standing against the back wall (its foot on the wall line) under the chair-only exit sign. */
+function exitDoor(ctx: RenderCtx, goal: number, wallFoot: number) {
+    const top = wallFoot - 205;
+    ctx.rect(goal - 35, top, 106, 205, '#677d7e');
+    ctx.rect(goal - 27, top + 8, 90, 190, '#b5c4bf');
+    ctx.rod(goal + 40, top + 85, goal + 40, top + 124, 4, '#677d7e');
+    chairPictogram(ctx, goal + 18, 'exit', top - 70);
+}
+
+/** The glass of one office window: its left edge is given per window; all share this height and width. */
+const PANE = { top: 87, bottom: 266, width: 183 };
+
+/** Repeatable 0..1 values for window `index` of this run's skyline (`seed`), so each window shows its own city. */
+function cityRandom(seed: number, index: number) {
+    let s = Math.imul(seed ^ index, 0x45d9f3b) >>> 0;
+    return () => {
+        s = (Math.imul(s ^ (s >>> 15), 0x2c1b3c6d) + 0x9e3779b9) >>> 0;
+        return ((s ^ (s >>> 13)) >>> 0) / 4294967296;
+    };
+}
+
+type CityRow = { width: [number, number]; gap: [number, number]; height: [number, number]; body: string };
+
+/**
+ * One row of towers standing on the pane's sill, with random widths, gaps and heights, trimmed to the glass.
+ * Returns each tower's box so the front row can light its windows.
+ */
+function cityRow(ctx: RenderCtx, left: number, rand: () => number, row: CityRow) {
+    const towers: { left: number; top: number; width: number }[] = [];
+    const span = (range: [number, number]) => range[0] + rand() * (range[1] - range[0]);
+    for (let at = left - rand() * 14; at < left + PANE.width;) {
+        const width = span(row.width), top = PANE.bottom - span(row.height) * (PANE.bottom - PANE.top);
+        const from = Math.max(at, left), to = Math.min(at + width, left + PANE.width);
+        if (to - from > 4) {
+            ctx.rect(from, top, to - from, PANE.bottom - top, row.body);
+            const roof = roofFor(Math.floor(rand() * 1000));
+            // A roof shape only where it stays on the glass, clear of the frame above.
+            if (from === at && to === at + width && top - width * .6 > PANE.top + 4) roofShape((points, color) => ctx.polygon(points, color), at, top, width, roof, row.body);
+            towers.push({ left: at, top, width });
+        }
+        at += width + span(row.gap);
+    }
+    return towers;
+}
+
+/**
+ * The city through one office window: a far row of taller towers and a near row of lower ones in front, each tower
+ * its own width, height and spacing. The near towers' windows are lit, and one of them flickers now and then.
+ */
+function windowCity(ctx: RenderCtx, left: number, index: number, view: WindowView) {
+    const rand = cityRandom(ctx.state.skylineSeed, index);
+    cityRow(ctx, left, rand, { width: [34, 58], gap: [-8, 8], height: [.48, .8], body: view.buildingFar });
+    const near = cityRow(ctx, left, rand, { width: [32, 56], gap: [4, 22], height: [.24, .52], body: view.building });
+    const period = 3.4 + ((index % 3 + 3) % 3) * .7;
+    const phase = (ctx.t + (index * 1.37 % period) + period) % period;
+    near.forEach((tower, n) => {
+        const size = Math.max(5, tower.width * .14);
+        let k = 0;
+        for (let y = tower.top + size * 1.5; y + size * 1.2 < PANE.bottom - size; y += size * 3, k++) {
+            for (const [c, at] of [.26, .58].entries()) {
+                const wx = tower.left + tower.width * at;
+                if (wx < left + 2 || wx + size > left + PANE.width - 2) continue;
+                const flickers = n === ((index % near.length) + near.length) % near.length && k === 1 && c === 0;
+                ctx.rect(wx, y, size, size * 1.2, flickers && phase < .38 ? view.unlit : view.lit);
+            }
+        }
+    });
+}
 
 export function drawWorld(ctx: RenderCtx) {
     const F = ctx.F;
@@ -45,24 +118,15 @@ export function drawWorld(ctx: RenderCtx) {
     const view = windowView(ctx.windowDusk);
     for (let i = Math.floor(cam / 235) - 1; i < (cam + VW) / 235 + 1; i++) {
         const x = i * 235;
-        ctx.rect(x + 17, 80, 197, 193, view.frame);
-        if (view.skyTop === view.skyBottom) ctx.rect(x + 24, 87, 183, 179, view.skyTop);
-        else ctx.gradientPolygon([[x + 24, 87], [x + 207, 87], [x + 207, 266], [x + 24, 266]], ctx.gradientFill(0, 87, 0, 266, [[0, view.skyTop], [1, view.skyBottom]]));
-        for (let j = 0; j < 4; j++) {
-            const bx = x + 30 + j * 42;
-            const mixed = Math.imul(state.skylineSeed ^ i, 0x45d9f3b) ^ Math.imul(j + 1, 0x119de1f3);
-            const h = 55 + ((mixed ^ (mixed >>> 16)) >>> 0) % 101;
-            ctx.rect(bx, 260 - h, 32, h, view.building);
-            for (let k = 0; k < 3; k++) {
-                const flickers = j === ((i % 4) + 4) % 4 && k === 1;
-                const period = 3.4 + ((i % 3 + 3) % 3) * .7;
-                const phase = (t + (i * 1.37 % period) + period) % period;
-                const color = flickers && phase < .38 ? view.unlit : view.lit;
-                ctx.rect(bx + 6, 269 - h + k * 20, 6, 8, color);
-            }
+        // No window behind the exit door: the wall stays solid where the door stands against it.
+        if (x + 214 <= EXIT.left || x + 17 >= EXIT.right) {
+            ctx.rect(x + 17, 80, 197, 193, view.frame);
+            if (view.skyTop === view.skyBottom) ctx.rect(x + 24, 87, 183, 179, view.skyTop);
+            else ctx.gradientPolygon([[x + 24, 87], [x + 207, 87], [x + 207, 266], [x + 24, 266]], ctx.gradientFill(0, 87, 0, 266, [[0, view.skyTop], [1, view.skyBottom]]));
+            windowCity(ctx, x + 24, i, view);
+            ctx.rod(x + 113, 87, x + 113, 267, 4, view.frame);
+            ctx.rod(x + 24, 179, x + 207, 179, 3, view.frame);
         }
-        ctx.rod(x + 113, 87, x + 113, 267, 4, view.frame);
-        ctx.rod(x + 24, 179, x + 207, 179, 3, view.frame);
         ctx.rect(x + 43, 27, 145, 7, '#f1e9cf');
     }
     ceilingCctvs(ctx, 940);
@@ -70,6 +134,7 @@ export function drawWorld(ctx: RenderCtx) {
     ctx.rect(cam, 287, VW, rearFloor - 287, '#a0a7b1');
     ctx.rect(cam, rearFloor - 5, VW, 6, '#848e9d');
     ctx.rect(cam, rearFloor + 1, VW, F - rearFloor - 1, '#aeb3bb');
+    exitDoor(ctx, GOAL, rearFloor);
     for (const ob of solids) {
         ctx.polygon(ob.p.map(v => [v.x, v.y]), C.floor);
         const [topLeft, topRight] = ob.p;
@@ -86,7 +151,10 @@ export function drawWorld(ctx: RenderCtx) {
         if (x < left - 200 || x > right) continue;
         desk(ctx, x);
         const plantX = x + (x === 110 ? 295 : 205);
-        plant(ctx, Math.abs(plantX - cleaning.x - 55) < 70 ? plantX + 90 : plantX);
+        const potX = Math.abs(plantX - cleaning.x - 55) < 70 ? plantX + 90 : plantX;
+        // Nothing stands in front of the exit door, and no pot peeks out from behind the first copier.
+        const clear = (left: number, right: number) => potX + 25 <= left || potX - 25 >= right;
+        if (clear(EXIT.left, EXIT.right) && clear(LEVEL.copier.x - 70, LEVEL.copier.x + 70)) plant(ctx, potX);
     }
     let cleaner: DeepReadonly<Person> | undefined;
     for (const n of people) {
@@ -187,11 +255,6 @@ export function drawWorld(ctx: RenderCtx) {
         ctx.rect(-3, -2, 7, 4, z.color);
         ctx.ox = ctx.oy = ctx.rotation = 0;
     }
-    ctx.rect(GOAL - 35, F - 205, 106, 205, '#677d7e');
-    ctx.rect(GOAL - 27, F - 197, 90, 190, '#b5c4bf');
-    ctx.rod(GOAL + 40, F - 120, GOAL + 40, F - 81, 4, '#677d7e');
-    ctx.rect(GOAL - 31, F - 236, 98, 23, '#718e7b');
-    ctx.label(translate('world.exit', ctx.locale), GOAL + 18, F - 218, 12, '#f0eddc');
     if (ctx.glare > 0) {
         ctx.rect(cam, -vertical, VW, H / scale, '#fff7d5' + Math.round(Math.min(.22, ctx.glare * .16) * 255).toString(16).padStart(2, '0'));
     }
