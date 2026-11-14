@@ -104,15 +104,16 @@ const LINES = (() => {
 export function orbitSpeedLines(ctx: RenderCtx, center: Vector, fast: number) {
     if (fast <= .02) return;
     const reach = Math.hypot(ctx.W, ctx.H) * .55;
-    // One shared layer: every streak is the same screen-blended fade, so they composite as a single ThorVG Scene.
-    const layer = { key: 'orbit-speed-lines', blend: 'screen' as const, opacity: fast };
+    // White screen-blended over anything is plain alpha blending, so the streaks need no ThorVG Scene: the layer
+    // only names them, and the fade is folded into each streak's alpha.
+    const layer = { key: 'orbit-speed-lines' };
     for (const line of LINES) {
         const k = (line.phase + ctx.t * line.rate * (.6 + fast)) % 1;
         const r0 = reach * (.25 + .75 * k), r1 = r0 + reach * (.05 + .22 * k) * fast;
         const dx = Math.cos(line.angle), dy = Math.sin(line.angle), nx = -dy * line.width, ny = dx * line.width;
         const [cx, cy] = center;
         ctx.commands.push({ v: [[cx + dx * r0, cy + dy * r0], [cx + dx * r1 + nx, cy + dy * r1 + ny], [cx + dx * r1 - nx, cy + dy * r1 - ny]],
-            c: '#ffffff' + alpha(.55 * k), layer });
+            c: '#ffffff' + alpha(.55 * k * fast), layer });
     }
 }
 
@@ -133,9 +134,9 @@ const SLIPSTREAM = (() => {
 export function orbitSlipstream(ctx: RenderCtx, chair: SkyProjection, strength: number) {
     const behind: DrawCommand[] = [], over: DrawCommand[] = [];
     if (strength <= .01) return { behind, over };
-    // Stage five keeps clear of blur effects (they cost too much on the software renderer); thin screen-blended
-    // streaks that taper to a point read as soft enough.
-    const layer = { key: 'orbit-slipstream', blend: 'screen' as const, opacity: Math.min(1, strength) };
+    // Stage five keeps clear of blur effects (they cost too much on the software renderer); thin white streaks that
+    // taper to a point read as soft enough. Like the speed lines they are plain alpha, without a layer Scene.
+    const layer = { key: 'orbit-slipstream' }, strong = Math.min(1, strength);
     const centreDepth = chair.depth([0, 8, 0]);
     for (const streak of SLIPSTREAM) {
         const k = (streak.phase + ctx.t * streak.rate * (.7 + strength)) % 1;
@@ -148,7 +149,7 @@ export function orbitSlipstream(ctx: RenderCtx, chair: SkyProjection, strength: 
         const nx = -(ay - by) / len * width, ny = (ax - bx) / len * width;
         // Faint as it forms ahead, brightest alongside the chair, gone as it passes the camera.
         const fade = Math.min(1, k / .2) * Math.min(1, (1 - k) / .25);
-        const command: DrawCommand = { v: [[bx, by], [ax + nx, ay + ny], [ax - nx, ay - ny]], c: '#ffffff' + alpha(.6 * fade), layer };
+        const command: DrawCommand = { v: [[bx, by], [ax + nx, ay + ny], [ax - nx, ay - ny]], c: '#ffffff' + alpha(.6 * fade * strong), layer };
         (chair.depth(a) > centreDepth ? behind : over).push(command);
     }
     return { behind, over };

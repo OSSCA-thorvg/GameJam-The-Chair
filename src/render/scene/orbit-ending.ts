@@ -5,7 +5,7 @@ import { PRAISE_KINDS, praiseItem } from './orbit-praise';
 import type { Point3, SkyProjection } from './sky-projection';
 import { LABEL_FONT, SPEECH_FONT } from '../fonts';
 import { translate } from '../../i18n';
-import { panoramaX } from './orbit-heights';
+import { inOpacity, panoramaX } from './orbit-heights';
 
 // The ending, played while the chair is parked in the Earth's shadow, starting from the frame 5-3 ended on:
 // the spray dies down and the extinguisher floats away while the camera leans in over the rider's shoulder to the
@@ -105,18 +105,15 @@ export function endingChairLights(ctx: RenderCtx, chair: SkyProjection, e: Orbit
     const drift = 1 - e.calm;
     if (drift <= 0) return;
     const [cx, cy] = chair.project([0, 0, 0]);
-    for (let i = 0; i < 7; i++) {
-        const away = e.calm * (1 + i * .15);
-        const at: Vector = [cx - ctx.W * (.08 + .5 * away) + i * ctx.W * .03, cy - ctx.H * (.05 + .25 * away) + (i % 3) * ctx.H * .05];
-        const size = ctx.H / 45 * (1 - .7 * e.calm);
-        inFade(ctx, drift, () => praiseItem(ctx, PRAISE_KINDS[i % PRAISE_KINDS.length], at, size, ctx.t * .8 + i));
-    }
-}
-
-function inFade(ctx: RenderCtx, opacity: number, draw: () => void) {
-    const from = ctx.commands.length;
-    draw();
-    for (let i = from; i < ctx.commands.length; i++) if (!ctx.commands[i].layer) ctx.commands[i] = { ...ctx.commands[i], layer: { key: 'orbit-ending-drift', opacity } };
+    // All the praise fades as one layer, a single ThorVG Scene.
+    inOpacity(ctx, { key: 'orbit-ending-drift', opacity: drift }, () => {
+        for (let i = 0; i < 7; i++) {
+            const away = e.calm * (1 + i * .15);
+            const at: Vector = [cx - ctx.W * (.08 + .5 * away) + i * ctx.W * .03, cy - ctx.H * (.05 + .25 * away) + (i % 3) * ctx.H * .05];
+            const size = ctx.H / 45 * (1 - .7 * e.calm);
+            praiseItem(ctx, PRAISE_KINDS[i % PRAISE_KINDS.length], at, size, ctx.t * .8 + i);
+        }
+    });
 }
 
 /** Everything fades to black, then a small THE END. */

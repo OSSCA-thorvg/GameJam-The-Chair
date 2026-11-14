@@ -87,7 +87,21 @@ function effective(spec: LayerSpec) {
         || (!!spec.motionBlur && spec.motionBlur.distance > .5) || !!spec.clip || !!spec.mask || !!spec.retained;
 }
 
-/** Group consecutive commands that share a layer into one item. */
+/** Blends whose result does not depend on paint order (up to overlaps between children). */
+const ORDERLESS: ReadonlySet<Blend> = new Set(['screen', 'add', 'multiply']);
+
+/**
+ * Whether a layer's only effect is an order-independent blend. Consecutive such layers with the same blend paint
+ * (nearly) the same in one Scene, and each Scene costs a full offscreen pass on the GL renderer whatever its size.
+ */
+function blendOnly(spec: LayerSpec) {
+    return !!spec.blend && ORDERLESS.has(spec.blend) && (spec.opacity === undefined || spec.opacity >= 1) && !spec.blur
+        && !(spec.motionBlur && spec.motionBlur.distance > .5) && !spec.clip && !spec.mask && !spec.retained && !spec.effectBudget;
+}
+
+const sharesScene = (a: LayerSpec, b: LayerSpec) => a === b || (a.blend === b.blend && blendOnly(a) && blendOnly(b));
+
+/** Group consecutive commands that share a layer (or blend the same way and nothing else) into one item. */
 function collect(commands: DrawCommand[]): Item[] {
     const items: Item[] = [];
     const seen = new Map<string, number>();
@@ -106,7 +120,7 @@ function collect(commands: DrawCommand[]): Item[] {
             items.push({ cmd: cmd.layer ? { ...cmd, layer: undefined } : cmd });
             continue;
         }
-        if (!open || open.layer !== cmd.layer) {
+        if (!open || !sharesScene(open.layer, cmd.layer)) {
             const uses: number = seen.get(cmd.layer.key) ?? 0;
             seen.set(cmd.layer.key, uses + 1);
             open = { layer: cmd.layer, key: uses ? `${cmd.layer.key}#${uses}` : cmd.layer.key, cmds: [] };

@@ -292,3 +292,15 @@ test('a layer that changes nothing is painted as plain shapes, and one faded to 
     assert.equal(stats.layers, 1, 'only the half-faded layer needs a Scene');
     assert.deepEqual(stats.layerList.map(layer => layer.key), ['fading']);
 });
+
+test('back-to-back layers that only screen-blend share one Scene; any other effect or a plain shape between keeps them apart', () => {
+    const { TVG, canvas } = fakeThorvg();
+    const ctx = createRenderCtx({});
+    Object.assign(ctx, { W: 400, H: 300 });
+    const stats = createRenderStats();
+    const rec = { key: 'rec', blend: 'screen' }, beam = { key: 'beam', blend: 'screen' }, beam2 = { key: 'beam', blend: 'screen' };
+    const faded = { key: 'faded', blend: 'screen', opacity: .5 }, lit = { key: 'lit', blend: 'add' };
+    ctx.commands = [square(20, rec), square(40, beam), square(60, beam2), square(80, faded), square(100, lit), square(120), square(140, rec)];
+    paint(ctx, TVG, canvas, createPaintPool(), stats);
+    assert.deepEqual(stats.layerList.map(layer => [layer.key, layer.shapes]), [['rec', 3], ['faded', 1], ['lit', 1], ['rec', 1]]);
+});

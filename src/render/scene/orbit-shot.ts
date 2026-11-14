@@ -65,10 +65,12 @@ function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: num
         ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H], stops: [[0, ctx.rgba('#678eae')], [1, ctx.rgba('#b7ced1')]] } });
         inOpacity(ctx, { key: 'orbit-basin-sky', opacity: shot.basin }, () => orbitSky(ctx, cam, yaw));
     } else orbitSky(ctx, cam, yaw);
-    // Low sunlight over the cloud basin, thinning out as the chair climbs out of the clouds.
-    if (clouds > 0) ctx.commands.push({ v: screen(ctx), layer: { key: 'orbit-sunlight', blend: 'screen' }, c: {
+    // Low sunlight over the cloud basin, thinning out as the chair climbs out of the clouds. Plain alpha instead of
+    // a screen-blended Scene: over the sky behind the sun, #fff2eb paints what #ffdfb5 screened would
+    // (c + d(1 - c) for d = #7499b9), without a full-canvas offscreen pass.
+    if (clouds > 0) ctx.commands.push({ v: screen(ctx), layer: { key: 'orbit-sunlight' }, c: {
         from: [ctx.W * .75, ctx.H * .15], to: [ctx.W, ctx.H], radius: ctx.W * .8,
-        stops: [[0, ctx.rgba('#ffdfb5', .16 * clouds)], [1, ctx.rgba('#ffdfb5', 0)]],
+        stops: [[0, ctx.rgba('#fff2eb', .16 * clouds)], [1, ctx.rgba('#fff2eb', 0)]],
     } });
     orbitHighSky(ctx, heights, yaw, spin);
     endingNebula(ctx, shot.ending.wide, spin);

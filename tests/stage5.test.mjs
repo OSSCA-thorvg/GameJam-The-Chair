@@ -428,7 +428,8 @@ test('rushing forward pulls the camera back and streams air round the chair', ()
     assert.ok(Math.abs(casters(rushing).y - casters(cruise).y) < 20, 'but stays at the same height on screen');
     assert.equal(air(slow).length, 0, 'no air streaks at a crawl');
     assert.ok(air(rushing).length > 10, 'streaks flat out');
-    assert.ok(air(rushing)[0].layer.opacity > air(frame(STAGE_FIVE.maxSpeed, 0))[0].layer.opacity, 'stronger while the extinguisher pushes');
+    const strength = commands => air(commands).reduce((sum, command) => sum + parseInt(command.c.slice(7), 16), 0);
+    assert.ok(strength(rushing) > strength(frame(STAGE_FIVE.maxSpeed, 0)), 'stronger while the extinguisher pushes');
 });
 
 test('the Earth sits below the chair: its horizon dips under eye level and curves more the higher it climbs', async () => {

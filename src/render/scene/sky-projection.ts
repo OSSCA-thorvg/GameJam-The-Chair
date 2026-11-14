@@ -1,6 +1,8 @@
 import type { DrawCommand, Vector } from '../types';
 
 export type Point3 = [number, number, number];
+/** Below this on-screen size, profiles drop their bevel and rods halve their sides. */
+const LOD_PIXELS = 4;
 const add = (a: Point3, b: Point3): Point3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const sub = (a: Point3, b: Point3): Point3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const mul = (a: Point3, s: number): Point3 => [a[0] * s, a[1] * s, a[2] * s];
@@ -30,6 +32,11 @@ export function createSkyProjection(width: number, height: number, orbit: number
         return [width / 2 + (framing.offsetX ?? 0) + x * Math.cos(roll) - y * Math.sin(roll),
             height * (framing.centerY ?? .5) + x * Math.sin(roll) + y * Math.cos(roll)];
     };
+    /** Roughly how many screen pixels the segment a–b spans, whichever way it points. */
+    const pixels = (a: Point3, b: Point3) => {
+        const near = Math.max(30, Math.min(depth(a), depth(b)));
+        return Math.hypot(...sub(a, b)) * focal / near;
+    };
     const faces: { points: Point3[]; color: string; depth: number }[] = [];
     const curves: { command: DrawCommand; depth: number }[] = [];
     const polygon = (points: Point3[], color: string) => {
@@ -55,12 +62,15 @@ export function createSkyProjection(width: number, height: number, orbit: number
         const ring = (offset: number, scale: number): Point3[] => points.map(([x, y]) => place([
             cx + (x - cx) * scale, cy + (y - cy) * scale, z + offset * (widthAt ? widthAt(x, y) / halfWidth : 1),
         ]));
-        const rings = [ring(-halfWidth, bevel), ring(-halfWidth * .65, 1), ring(halfWidth * .65, 1), ring(halfWidth, bevel)];
+        // A slab only a few pixels thick on screen shows no bevel: front, back and one band of sides.
+        const thin = pixels(place([cx, cy, z - halfWidth]), place([cx, cy, z + halfWidth])) < LOD_PIXELS;
+        const rings = thin ? [ring(-halfWidth, 1), ring(halfWidth, 1)]
+            : [ring(-halfWidth, bevel), ring(-halfWidth * .65, 1), ring(halfWidth * .65, 1), ring(halfWidth, bevel)];
         polygon([...rings[0]].reverse(), shade(color, .94));
-        polygon(rings[3], color);
+        polygon(rings[rings.length - 1], color);
         for (let r = 0; r < rings.length - 1; r++) for (let i = 0; i < points.length; i++) {
             const next = (i + 1) % points.length;
-            polygon([rings[r][i], rings[r][next], rings[r + 1][next], rings[r + 1][i]], shade(color, r === 1 ? .96 : 1.02));
+            polygon([rings[r][i], rings[r][next], rings[r + 1][next], rings[r + 1][i]], shade(color, r === 1 || thin ? .96 : 1.02));
         }
     };
     // A smooth projected silhouette keeps heads, casters and clouds free of mesh facets.
@@ -95,9 +105,12 @@ export function createSkyProjection(width: number, height: number, orbit: number
         const axis = norm(sub(b, a));
         const axis2 = norm(cross(axis, Math.abs(axis[1]) > .9 ? [1, 0, 0] : [0, 1, 0]));
         const axis3 = cross(axis, axis2);
-        for (let i = 0; i < 12; i++) {
+        // A rod a few pixels across looks as round with six sides as with twelve.
+        const sides = pixels(add(a, mul(axis2, r)), sub(a, mul(axis2, r))) < LOD_PIXELS
+            && pixels(add(b, mul(axis2, r)), sub(b, mul(axis2, r))) < LOD_PIXELS ? 6 : 12;
+        for (let i = 0; i < sides; i++) {
             const ring = (angle: number) => add(mul(axis2, Math.cos(angle) * r), mul(axis3, Math.sin(angle) * r));
-            const u = ring(i * Math.PI / 6), v = ring((i + 1) * Math.PI / 6);
+            const u = ring(i * 2 * Math.PI / sides), v = ring((i + 1) * 2 * Math.PI / sides);
             polygon([add(a, u), add(a, v), add(b, v), add(b, u)], shade(color, .96));
         }
     };
