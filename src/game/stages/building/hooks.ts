@@ -1,4 +1,5 @@
 import type { StageHooks } from '../types';
+import { STAGE_TWO } from './data';
 import { meetingReachable, applyConvoyLanding, applyCorridor, applyInteract, applyLeaveMeeting, applyLiftRide, applyMeeting } from './corridor/apply';
 
 export const buildingHooks: StageHooks = {
@@ -7,6 +8,12 @@ export const buildingHooks: StageHooks = {
     },
     // Jumping from anywhere in the convoy keeps its speed for a long leap.
     onJump(s) {
+        const corridor = s.building.corridor;
+        const lip = STAGE_TWO.express.pit.left;
+        if (corridor.pace === 'express' && s.p.x >= STAGE_TWO.express.ramp.start && s.p.x < lip
+            && (corridor.convoy === 'carried' || corridor.convoy === 'leading')) {
+            s.p.vy = -STAGE_TWO.express.launch;
+        }
         if (s.building.corridor.convoy === 'carried') s.building.corridor.convoy = 'airborne';
         else if (s.building.corridor.convoy === 'leading') s.building.corridor.convoy = 'leading-airborne';
     },

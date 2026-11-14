@@ -7,9 +7,9 @@ export type { StageId } from '../../types';
 export type Furniture = { kind: 'chair'; x: number; y: number; width: number; height: number; vx: number; released: boolean; cheer: number };
 // The rush-hour corridor past the second flag. Early on one speed bump (`bump`): at express speed it kicks
 // a carried rider out of the convoy, up by `kick` with a `spin` and slowed to `drag` of the convoy's speed
-// (hop it: jump without pushing on). Then a launch ramp (`ramp.start` rising `ramp.rise` to
-// its lip at `pit.left`) before a construction hole: riding the convoy up it at express speed, the whole
-// convoy takes off (`launch`) and clears the hole; rolling up it on foot falls short.
+// (hop it: jump without pushing on). Then a ramp (`ramp.start` rising `ramp.rise` to
+// its lip at `pit.left`) before a construction hole: a well-timed jump from the express convoy
+// gets the `launch` impulse and clears the hole; rolling up it on foot falls short.
 // The lift stays far enough past the hole that the convoy can still sweep a rookie back aboard.
 const EXPRESS = {
     bump: 2480, kick: 300, spin: .5, drag: .1,

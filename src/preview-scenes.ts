@@ -441,7 +441,7 @@ function shaftHazards(id: string, label: string, at: { x: number; y: number }, s
     return recordedScene(id, label, at.x, markers, frames);
 }
 
-function expressRun(id: string, label: string, hop: boolean, markers: PreviewScene['markers']): PreviewScene {
+function expressRun(id: string, label: string, hop: boolean, markers: PreviewScene['markers'], rampJump = hop): PreviewScene {
     const game = createGame();
     game.startStage(2);
     const saved = JSON.parse(game.serialize());
@@ -458,6 +458,7 @@ function expressRun(id: string, label: string, hop: boolean, markers: PreviewSce
         if (off || c.convoy === 'free') keys = ['right'];
         else if (c.convoy === 'carried' && state.ground) {
             if (hop && bump - p.x > 0 && bump - p.x < 70) game.jump();
+            if (rampJump && pit.left - p.x > 0 && pit.left - p.x < 35) game.jump();
             if (p.x > pit.right + 120) { game.jump(); off = true; keys = ['right']; }
         }
         game.setInput(...keys);
@@ -990,8 +991,10 @@ export const previewScenes: readonly PreviewScene[] = [
         [{ at: 1.6, label: 'Vent hiss' }, { at: 2.4, label: 'Vent blast' }, { at: 3.45, label: 'Duct inhale' }, { at: 4.05, label: 'Duct gust' }]),
     shaftHazards('rooftop-shaft-high', 'Rooftop · Shaft vent & ceiling downdraft', { x: 1400, y: -262 }, 1.2,
         [{ at: .3, label: 'Downdraft' }, { at: 1.5, label: 'Wall vent hiss' }, { at: 2.25, label: 'Wall vent blast' }, { at: 2.65, label: 'Ceiling hiss' }, { at: 3.4, label: 'Downdraft' }]),
-    expressRun('express-ramp', 'Building · Express: hop the bump, fly off the ramp', true,
-        [{ at: .7, label: 'Front chair bounces' }, { at: .8, label: 'Hop' }, { at: 1.8, label: 'Ramp shout' }, { at: 2.5, label: 'Convoy takes off' }]),
+    expressRun('express-ramp', 'Building · Express: jump from the ramp', true,
+        [{ at: .7, label: 'Front chair bounces' }, { at: .8, label: 'Hop' }, { at: 1.8, label: 'Ramp shout' }, { at: 2.3, label: 'Jump at the lip' }]),
+    expressRun('express-ramp-miss', 'Building · Express: miss the ramp jump', true,
+        [{ at: .8, label: 'Hop the bump' }, { at: 1.8, label: 'Ramp shout' }, { at: 2.5, label: 'Missed jump' }], false),
     expressRun('express-bump', 'Building · Express: thrown off by the speed bump', false,
         [{ at: .8, label: 'Clunk' }, { at: 1.5, label: 'Chairs roll on' }, { at: 2.6, label: 'Short on foot' }]),
     urgentCopier(1, 'urgent-copier-low', 'Office · Urgent reports: skimming sheets'),

@@ -82,7 +82,7 @@ export function balancePolicy(state, game) {
 
 const EXPRESS = { bump: 2480, pit: { left: 3080, right: 3420 } };
 // Rides the express convoy through the rush-hour corridor: hops the speed bump (a jump without pushing on
-// lands back on the chairs), flies off the launch ramp with the convoy, then jumps off it again with a push
+// lands back on the chairs), jumps from the launch ramp, then jumps off the convoy again with a push
 // before the lift. With `stayAboard` it stays on the chairs and gets swept into the lift.
 // Returns the keys to hold this tick, or null when the convoy is not involved.
 export function createExpressRider(stayAboard = false) {
@@ -94,6 +94,8 @@ export function createExpressRider(stayAboard = false) {
         if (convoy !== 'carried' || !state.ground) return [];
         const toBump = EXPRESS.bump - p.x;
         if (toBump > 0 && toBump < 70) game.jump();
+        const toLip = EXPRESS.pit.left - p.x;
+        if (toLip > 0 && toLip < 35) game.jump();
         if (!stayAboard && p.x > EXPRESS.pit.right + 120) { game.jump(); off = true; return ['right']; }
         return [];
     };

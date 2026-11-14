@@ -56,6 +56,11 @@ test('a rider leading the nearby convoy joins its express run and clears the con
             game.jump();
             game.clearInput();
         }
+        const toLip = STAGE_TWO.express.pit.left - state.player.x;
+        if (state.corridor.convoy === 'leading' && state.ground && toLip > 0 && toLip < 35) {
+            game.jump();
+            game.clearInput();
+        }
         game.step();
     }
 
