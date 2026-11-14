@@ -72,8 +72,7 @@ function meetingEntryStep(room: Exclude<Corridor['room'], { kind: 'corridor' }>,
 }
 
 export type CorridorInput = { corridor: Readonly<Corridor>; furniture: readonly Readonly<Furniture>[]; p: Readonly<Player>; ground: boolean; steering: boolean; rng: number; length: number };
-// `kick` says the speed bump just knocked a carried rider up ('bump') or the ramp launched it ('launch').
-export type CorridorResult = { corridor: Corridor; furniture: Furniture[]; p: Player; rng: number; stopRider: boolean; kick: 'bump' | 'launch' | null };
+export type CorridorResult = { corridor: Corridor; furniture: Furniture[]; p: Player; rng: number; stopRider: boolean; kick: 'bump' | null };
 
 // The building corridor: typing bubbles, the chair convoy, its chatter and the lift ride.
 // Works on its own copies; the caller writes the result back.
@@ -182,12 +181,7 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
             p.vx = front.vx * express.drag;
             p.w += express.spin;
         } else if (previousX < express.pit.left && p.x >= express.pit.left) {
-            // Off the ramp's lip at full express speed: the whole convoy takes off over the hole.
-            kick = 'launch';
-            c.convoy = c.convoy === 'leading' ? 'leading-airborne' : 'airborne';
-            p.vy = Math.min(p.vy, -express.launch);
-            p.y -= 4;
-            p.vx = front.vx;
+            c.convoy = 'free';
         } else if (overPit(p.x)) {
             c.convoy = 'free';
         }

@@ -78,6 +78,37 @@ test('hopping the bump and flying off the ramp with the convoy reaches the exit 
     assert.ok(state.player.x >= state.level.goal);
 });
 
+test('the express convoy does not carry a rider across the pit without a ramp jump', () => {
+    const game = createGame(); game.startStage(2);
+    drive(game, state => state.corridor.pace === 'express' && state.corridor.convoy === 'carried'
+        && state.player.x >= 3000);
+    game.clearInput();
+    let crossed = false;
+    for (let i = 0; i < 120 * 4 && game.getSnapshot().deaths === 0; i++) {
+        game.step(dt);
+        const state = game.getSnapshot();
+        crossed ||= state.player.x > 3420;
+    }
+    const state = game.getSnapshot();
+    assert.equal(crossed, false, 'rolling with the chairs cannot clear the construction hole');
+    assert.equal(state.deaths, 1, 'the player falls when the jump is missed');
+});
+
+test('jumping at the start of the ramp falls short of the far side', () => {
+    const game = createGame(); game.startStage(2);
+    drive(game, state => state.corridor.pace === 'express' && state.corridor.convoy === 'carried'
+        && state.player.x >= 2930);
+    game.jump();
+    game.clearInput();
+    let crossed = false;
+    for (let i = 0; i < 120 * 4 && game.getSnapshot().deaths === 0; i++) {
+        game.step(dt);
+        crossed ||= game.getSnapshot().player.x > 3420;
+    }
+    assert.equal(crossed, false);
+    assert.equal(game.getSnapshot().deaths, 1);
+});
+
 test('riding the express without hopping: the bump throws the rookie off and on foot the ramp falls short', () => {
     const game = createGame(); game.startStage(2);
     drive(game, state => state.corridor.pace === 'express' && state.corridor.convoy === 'carried');
