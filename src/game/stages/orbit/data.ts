@@ -28,7 +28,8 @@ export const STAGE_FIVE = deepFreeze({
     steer: { speed: 210, turn: 2, heading: 70 * Math.PI / 180, response: 7, release: 4.5, edge: 5, overshoot: 80 },
     bankTurn: .28, bankResponse: 5, cruiseRecovery: .6,
     ringClearance: 40, approachSpeed: 55, arrivalSpeed: 45, arrivalDistance: 600,
-    bounds: { x: 680, y: 430 },
+    // Across either way up to `x`, down to `-y`, and up to a higher ceiling `top`.
+    bounds: { x: 680, y: 430, top: 750 },
     // No hoops: after the entry the chair heads straight for the Earth's shadow.
     rings: [] as { x: number; y: number; z: number; radius: number }[],
     // Company satellites sweep beams of praise across the route. Inside one, trophies and certificates shove the
@@ -40,14 +41,14 @@ export const STAGE_FIVE = deepFreeze({
         slowSpeed: 45, slowResponse: 2.4, shove: 380, lens: 40,
         beams: [
             // 5-1: one wide beam over the cloud layer.
-            { satellite: { x: 0, y: 1100, z: 2300 }, axis: 'x', from: 1300, to: 3300, halfWidth: 210, amplitude: 430, rate: .28, phase: 0 },
+            { satellite: { x: 0, y: 1450, z: 2300 }, axis: 'x', from: 1300, to: 3300, halfWidth: 210, amplitude: 430, rate: .28, phase: 0 },
             // 5-2: three narrow beams in the upper atmosphere, overlapping in depth and crossing. The middle one shines
             // in from the right and sweeps up and down, so dodging it takes climbing or diving.
-            { satellite: { x: -420, y: 1100, z: 4700 }, axis: 'x', from: 3800, to: 5600, halfWidth: 140, amplitude: 480, rate: .22, phase: 0 },
+            { satellite: { x: -420, y: 1450, z: 4700 }, axis: 'x', from: 3800, to: 5600, halfWidth: 140, amplitude: 480, rate: .22, phase: 0 },
             { satellite: { x: 1700, y: 0, z: 5300 }, axis: 'y', from: 4400, to: 6200, halfWidth: 120, amplitude: 300, rate: .27, phase: 2.2 },
-            { satellite: { x: 0, y: 1250, z: 5900 }, axis: 'x', from: 5000, to: 6800, halfWidth: 140, amplitude: 480, rate: .18, phase: 4.1 },
+            { satellite: { x: 0, y: 1600, z: 5900 }, axis: 'x', from: 5000, to: 6800, halfWidth: 140, amplitude: 480, rate: .18, phase: 4.1 },
             // 5-3: the last beam in space, cut off by the Earth's shadow.
-            { satellite: { x: 300, y: 1100, z: 8600 }, axis: 'x', from: 7200, to: 8700, halfWidth: 250, amplitude: 380, rate: .3, phase: 1 },
+            { satellite: { x: 300, y: 1450, z: 8600 }, axis: 'x', from: 7200, to: 8700, halfWidth: 250, amplitude: 380, rate: .3, phase: 1 },
         ] as PraiseBeam[],
         shelters: [{ x: -380, y: -60, z: 1700 }, { x: 340, y: 40, z: 2350 }, { x: -260, y: -20, z: 3000 }],
         shelterSize: { x: 210, y: 170, z: 330 },

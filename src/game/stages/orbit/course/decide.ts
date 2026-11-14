@@ -26,8 +26,8 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
         if (next.yaw * next.heading > 0) next.yaw = 0;
     }
     // Across, the chair only drifts on its own when something shoves it or the geofence pushes it back in.
-    p.vx = steerAxis(p.vx, p.x, 0, C.bounds.x, dt);
-    p.vy = steerAxis(p.vy, p.y, (held('forward') - held('back')) * steer, C.bounds.y, dt);
+    p.vx = steerAxis(p.vx, p.x, 0, -C.bounds.x, C.bounds.x, dt);
+    p.vy = steerAxis(p.vy, p.y, (held('forward') - held('back')) * steer, -C.bounds.y, C.bounds.top, dt);
     p.a += (-next.yaw * C.bankTurn - p.a) * Math.min(1, dt * C.bankResponse);
     // Deep in the approach the Earth's shadow draws the chair in; before that only spraying moves it forward.
     // During the entry the glide from stage four still carries it at the speed it arrived with.
@@ -40,7 +40,7 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     if (beam) praiseShove(next, p, beam, dt);
     const praised = beam !== null;
     p.x = clamp(p.x + (next.speed * Det.sin(next.heading) + p.vx) * dt, C.bounds.x + C.steer.overshoot);
-    p.y = clamp(p.y + p.vy * dt, C.bounds.y + C.steer.overshoot);
+    p.y = Math.max(-C.bounds.y - C.steer.overshoot, Math.min(C.bounds.top + C.steer.overshoot, p.y + p.vy * dt));
     next.z += next.speed * Det.cos(next.heading) * dt;
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
@@ -50,11 +50,11 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
 type Beam = typeof C.praise.beams[number];
 
 /**
- * One steering axis: chase the held direction's velocity, settle quickly on release, and past `bound` let the
+ * One steering axis: chase the held direction's velocity, settle quickly on release, and past `low` or `high` let the
  * company geofence push back harder the further out the chair is.
  */
-function steerAxis(v: number, at: number, input: number, bound: number, dt: number) {
-    const over = Math.max(0, Math.abs(at) - bound) * Math.sign(at);
+function steerAxis(v: number, at: number, input: number, low: number, high: number, dt: number) {
+    const over = at > high ? at - high : at < low ? at - low : 0;
     const target = input * C.steer.speed - over * C.steer.edge;
     const rate = input !== 0 || over !== 0 ? C.steer.response : C.steer.release;
     return v + (target - v) * (1 - Det.exp(-rate * dt));

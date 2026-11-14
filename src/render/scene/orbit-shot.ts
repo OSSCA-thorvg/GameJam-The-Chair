@@ -87,13 +87,12 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     const mix = (a: number, b: number, k: number) => a + (b - a) * k;
     // The camera rides behind the chair and turns with it a beat late, so the chair leads into every turn. Up and
     // down it follows most of the chair's height, also a beat late; once parked it moves right onto the chair.
-    const lag = .3, follow = .82;
-    const within = (v: number, bound: number) => Math.max(-bound, Math.min(bound, v));
+    const lag = .3, follow = .9;
     // Parked, the chair and camera swing round to face the shadow, the way the ending's shots are framed.
     const heading = (shot.heading ?? 0) * (1 - ending.centre), look = heading - (shot.yaw ?? 0) * lag * .6;
-    const cam = { x: p.x, y: mix(follow * within(p.y - p.vy * lag, C.bounds.y), p.y, ending.centre) };
+    const cam = { x: p.x, y: mix(follow * Math.max(-C.bounds.y, Math.min(C.bounds.top, p.y - p.vy * lag)), p.y, ending.centre) };
     // How hard the chair is pressing out past the edge, and which way.
-    const over = { x: Math.max(0, Math.abs(p.x) - C.bounds.x + 40) * Math.sign(p.x), y: Math.max(0, Math.abs(p.y) - C.bounds.y + 40) * Math.sign(p.y) };
+    const over = { x: Math.max(0, Math.abs(p.x) - C.bounds.x + 40) * Math.sign(p.x), y: p.y > 0 ? Math.max(0, p.y - C.bounds.top + 40) : Math.min(0, p.y + C.bounds.y - 40) };
     // Parked, nothing presses against the fence any more.
     const edge = smooth(Math.hypot(over.x, over.y) / (C.steer.overshoot + 40)) * (1 - ending.centre);
     const fast = smooth((shot.speed - C.cruise) / (C.maxSpeed - C.cruise));

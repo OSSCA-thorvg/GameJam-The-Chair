@@ -78,7 +78,7 @@ test('no praise beam reaches into the Earth shadow, and every beam sweeps slower
     const { beams } = STAGE_FIVE.praise;
     // The light spreads out away from the satellite: check it at every height the chair can reach.
     const { bounds, steer: { overshoot } } = STAGE_FIVE;
-    const reaches = beam => beam.axis === 'y' ? [-1, 1].map(s => s * (bounds.x + overshoot)) : [-1, 1].map(s => s * (bounds.y + overshoot));
+    const reaches = beam => beam.axis === 'y' ? [-1, 1].map(s => s * (bounds.x + overshoot)) : [-bounds.y - overshoot, bounds.top + overshoot];
     const slices = beam => reaches(beam).map(reach => praiseSection(beam, 0, reach));
     assert.ok(beams.every(beam => slices(beam).every(slice => slice.scale > 0 && slice.to <= STAGE_FIVE.heights.shadow)));
     const steer = STAGE_FIVE.steer.speed;
@@ -372,9 +372,9 @@ test('the company geofence is an invisible wall that pushes back past the edge',
     }
     assert.ok(furthest > bounds.x, 'the chair can lean past the line');
     assert.ok(furthest <= bounds.x + steer.overshoot, 'but never further than the overshoot');
-    assert.ok(state.p.y > bounds.y && state.p.y <= bounds.y + steer.overshoot, 'the same up and down');
+    assert.ok(state.p.y > bounds.top && state.p.y <= bounds.top + steer.overshoot, 'the same at the ceiling');
     const away = hold({ ...state.orbit, heading: 0 }, state.p, [], 2);
-    assert.ok(away.p.x <= bounds.x + 1 && away.p.y <= bounds.y + 1, 'turned away, the fence eases it back inside');
+    assert.ok(away.p.x <= bounds.x + 1 && away.p.y <= bounds.top + 1, 'turned away, the fence eases it back inside');
 });
 
 test('a side beam sweeps up and down: only climbing or diving gets out of it', () => {
