@@ -46,11 +46,10 @@ function applyLocale() {
     }
 }
 applyLocale();
-// `?debug=1&stage=<1-5>` skips the splash and starts that stage directly.
+// `?stage=<1-5>` skips the splash and starts that stage directly.
 const launchParams = new URLSearchParams(location.search);
 const requestedStage = Number(launchParams.get('stage'));
-const directStage: StageId | null = [1, 2, 3, 4, 5].includes(requestedStage)
-    && launchParams.get('debug') === '1' ? requestedStage as StageId : null;
+const directStage: StageId | null = [1, 2, 3, 4, 5].includes(requestedStage) ? requestedStage as StageId : null;
 let startupSplashVisible = directStage === null;
 if (startupSplashVisible) {
     showStartupSplash(root, () => locale, () => { startupSplashVisible = false; });
