@@ -229,6 +229,8 @@ function frame(ms: number) {
     if (player.active) player.advance(dt);
     else if (opening.active) opening.advance(dt);
     else advanced = game.advance(dt);
+    // The end-of-run close-up keeps going after the game has stopped ticking.
+    if (!player.active && !opening.active) effects.advance(dt);
     const simMs = profiling ? performance.now() - simStart : 0;
     hudMs = 0;
     draw();

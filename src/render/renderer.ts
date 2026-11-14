@@ -16,6 +16,8 @@ import { drawStageTitle, drawTalk } from './scene/talk';
 import type { SceneTalk } from './types';
 import { createPaintPool, paint, thorvgTextWidth } from './paint';
 import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
+import { deathShotBurst, deathShotCloseness, DEATH_SHOT, type DeathShot } from './death-shot';
+import { deathBurst } from './scene/death-burst';
 import { resetRenderStats, type LayerOverrides, type RenderStats } from './perf';
 
 /**
@@ -24,6 +26,10 @@ import { resetRenderStats, type LayerOverrides, type RenderStats } from './perf'
  */
 export const VIEW_WIDTH = 1000;
 export const VIEW_HEIGHT = 510;
+
+/** The worker's face and eyes, chair-local as the player is drawn. */
+const HEAD: [number, number] = [4, -74];
+const EYES: [number, number] = [9, -83];
 
 export function createRenderer(root: HTMLElement, getLocale: () => Locale = () => 'en') {
     const base = root.querySelector<HTMLCanvasElement>('[data-base]');
@@ -141,6 +147,7 @@ function setup(
             : flight.kind === 'ride' ? 440 - 175 * Math.min(1, flight.age / 1.2) : signLook;
         ctx.vertical = next.stage >= 3 ? baseVertical + Math.max(0, focusY - ctx.p.y) : baseVertical;
         if (opening) openingCamera(opening, baseWidth, baseVertical);
+        else if (effects.deathShot) deathCamera(effects.deathShot);
         lastStage = next.stage;
         lastTime = t;
         const buildStart = stats ? performance.now() : 0;
@@ -158,6 +165,8 @@ function setup(
             drawWorld(ctx);
         }
         if (!opening) {
+            const burst = effects.deathShot ? deathShotBurst(effects.deathShot) : null;
+            if (burst !== null) deathBurst(ctx, ctx.screenPoint(...riderPoint(HEAD)), burst);
             focusVignette(ctx);
             if (talk) drawTalk(ctx, talk);
             drawStageTitle(ctx);
@@ -193,6 +202,30 @@ function setup(
         ctx.cam = cam + (playCam - cam) * u + frame.shake[0] / ctx.scale;
         ctx.vertical = vertical + (baseVertical - vertical) * u + frame.shake[1] / ctx.scale;
         ctx.wheel = 0;
+    }
+
+    /** A point on the worker (chair-local, as the player is drawn) in world space, turning with the chair. */
+    function riderPoint([lx, ly]: [number, number]): [number, number] {
+        const c = Math.cos(ctx.p.a), s = Math.sin(ctx.p.a);
+        return [ctx.p.x + lx * c - ly * s, ctx.p.y + lx * s + ly * c];
+    }
+
+    /**
+     * End-of-run close-up: from the usual framing the view narrows onto the worker's face (his eyes for a focus
+     * loss), then eases back. The screen centre and the visible width blend between the two framings.
+     */
+    function deathCamera(shot: DeathShot) {
+        const u = deathShotCloseness(shot);
+        if (u <= 0) return;
+        const [fx, fy] = riderPoint(shot.kind === 'focus' ? EYES : HEAD);
+        const width0 = ctx.VW, scale0 = ctx.scale;
+        const cx = ctx.cam + width0 / 2 + (fx - ctx.cam - width0 / 2) * u;
+        const cy0 = ctx.H / (2 * scale0) - ctx.vertical;
+        const cy = cy0 + (fy - cy0) * u;
+        ctx.VW = width0 / (1 + (DEATH_SHOT[shot.kind].zoom - 1) * u);
+        ctx.scale = ctx.W / ctx.VW;
+        ctx.cam = cx - ctx.VW / 2;
+        ctx.vertical = ctx.H / (2 * ctx.scale) - cy;
     }
 
     /** The GPU timer, created on first use once the WebGL2 canvas exists. */

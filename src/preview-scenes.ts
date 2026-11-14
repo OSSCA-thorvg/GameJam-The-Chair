@@ -9,6 +9,8 @@ import { ATTENDANCE } from './render/scene/attendance-bubble';
 import { ORBIT_ENDING } from './render/scene/orbit-ending';
 import { STAGE_TWO } from './game/stages/building/data';
 import { ductTimings, STAGE_THREE, GRAPH_CORNERS } from './game/stages/rooftop/data';
+import { deathShotLength } from './render/death-shot';
+import { FOCUS_LOSS_DURATION } from './game/systems/focus/decide';
 import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/stages/office/monitor/decide';
@@ -56,6 +58,7 @@ function stepGame(game: Game, effects: ReturnType<typeof createEffects>) {
         game.step(FIXED_STEP);
         effects.observe(game.getSnapshot());
         for (const event of game.drainEvents()) effects.receive(event);
+        effects.advance(FIXED_STEP);
     }
 }
 
@@ -217,13 +220,17 @@ function headImpact(): PreviewScene {
     if (game.getSnapshot().mode !== 'impact') throw new Error('Impact preview could not trigger a head collision.');
     const focusX = game.getSnapshot().player.x;
     const effects = createEffects();
+    effects.observe(game.getSnapshot());
     const frames = [capture(game, effects)];
-    for (let i = 0; i < 108; i++) {
+    // Long enough for the slow-motion replay, the BONK and the close-up easing back.
+    for (let i = 0; i < Math.ceil(deathShotLength('head') / FRAME_TIME) + 12; i++) {
         if (game.getSnapshot().mode === 'impact') game.advanceImpact(FRAME_TIME);
+        effects.observe(game.getSnapshot());
+        effects.advance(FRAME_TIME);
         frames.push(capture(game, effects));
     }
     return recordedScene('head-impact', 'Chair · Head impact replay', focusX,
-        [{ at: 0, label: 'Impact' }, { at: .5, label: 'Rewind' }, { at: 1.4, label: 'Collision' }, { at: 1.8, label: 'End' }], frames);
+        [{ at: 0, label: 'Impact' }, { at: .5, label: 'Rewind' }, { at: 1.4, label: 'Collision: BONK, close-up' }, { at: 2.25, label: 'Easing back' }, { at: deathShotLength('head'), label: 'Panel' }], frames);
 }
 
 function rooftopEntrance(): PreviewScene {
@@ -271,27 +278,28 @@ function focusLoss(): PreviewScene {
     game.reset();
     const base = game.getSnapshot();
     const effects = createEffects().snapshot();
-    const duration = 1.7;
+    // The focus-loss glance (1.7 s), then the close-up on the eyes easing back before the game-over panel.
+    const duration = deathShotLength('focus');
     const focusX = 500;
     return {
         id: 'focus-loss',
         label: 'Chair · Focus loss',
         duration,
         focusX,
-        markers: [{ at: 0, label: 'Focus depleted' }, { at: .8, label: 'Glance' }, { at: duration, label: 'Game over' }],
+        markers: [{ at: 0, label: 'Focus depleted' }, { at: .8, label: 'Glance' }, { at: FOCUS_LOSS_DURATION, label: 'Game over' }, { at: duration, label: 'Panel' }],
         sample(time) {
             const at = Math.max(0, Math.min(duration, time));
             return {
                 state: {
                     ...base,
-                    mode: at < duration ? 'focuslost' : 'dead',
+                    mode: at < FOCUS_LOSS_DURATION ? 'focuslost' : 'dead',
                     lossReason: 'focus',
                     focus: 0,
                     focusLossTime: at,
                     time: at,
                     player: { ...base.player, x: focusX },
                 },
-                effects,
+                effects: { ...effects, deathShot: { kind: 'focus', age: at, done: at >= duration } },
             };
         },
     };

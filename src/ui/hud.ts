@@ -21,7 +21,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
     let focusIntroduced = false;
     let introduceUntil = 0;
     // `cutscene`: the opening is playing over a fresh game, so every game HUD element stays out of the way.
-    function draw(state: GameState, feedback: FeedbackState, _effects: EffectsState, cutscene = false) {
+    function draw(state: GameState, feedback: FeedbackState, effects: EffectsState, cutscene = false) {
         const t = (message: Message) => translate(message, getLocale());
         const { mode, focus } = state;
         const active = mode === 'play' && !cutscene;
@@ -70,7 +70,9 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
             hidden(`[data-stage="${stage}"]`, stage >= 4 ? state.completedStage < stage - 1 : stage > state.completedStage);
         }
         const panel = feedback.panel;
-        hidden('[data-overlay]', cutscene || (mode !== 'intro' && !panel));
+        // The game-over panel waits until the end-of-run close-up has eased back to the usual framing.
+        const closeUp = !!effects.deathShot && !effects.deathShot.done;
+        hidden('[data-overlay]', cutscene || closeUp || (mode !== 'intro' && !panel));
         if (mode === 'intro') {
             text('[data-title]', 'THE CHAIR');
             text('[data-desc]', t('intro.desc'));
