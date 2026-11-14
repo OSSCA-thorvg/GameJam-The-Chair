@@ -29,7 +29,7 @@ function draw(pool, current, at) {
 function pixels(current, at) {
     tvg.remove();
     const work = draw(createPaintPool(), current, at);
-    if (work < (current && at >= 37 ? 2 : 100)) throw new Error(`Missing work at ${at}: ${work}`);
+    if (work < (current && at >= 37 ? 1 : 100)) throw new Error(`Missing work at ${at}: ${work}`);
     captureContext.drawImage(canvas, 0, 0);
     return new Uint8ClampedArray(captureContext.getImageData(0, 0, capture.width, capture.height).data);
 }
@@ -58,9 +58,9 @@ const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.len
 document.querySelector('#run').onclick = async event => {
     event.target.disabled = true;
     try {
-        const samples = tvg.renderer === 'sw' ? [20, 38] : [5, 20, 38];
+        const samples = tvg.renderer === 'sw' ? [15, 20, 25, 30, 38] : [5, 15, 20, 25, 30, 38];
         const differences = {};
-        for (const at of samples) {
+        for (const at of Array.from({ length: 49 }, (_, i) => 14 + i / 2)) {
             const a = pixels(false, at), b = pixels(true, at);
             let count = 0, max = 0;
             for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) {
@@ -68,6 +68,11 @@ document.querySelector('#run').onclick = async event => {
                 max = Math.max(max, Math.abs(a[i] - b[i]));
             }
             differences[at] = { channels: count, max };
+        }
+        if (new URLSearchParams(location.search).has('verify')) {
+            result.textContent = JSON.stringify({ renderer: tvg.renderer, raster: [canvas.width, canvas.height], differences }, null, 2);
+            event.target.disabled = false;
+            return;
         }
         const runs = {};
         for (const at of samples) {

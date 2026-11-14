@@ -242,3 +242,8 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
 export function earthHorizonAhead(travel: number, camera: EarthCamera, yaw: number, spin = 0) {
     return earthView(travel, yaw, camera, spin).middle;
 }
+
+/** The whole projected horizon, used to bound sky artwork hidden by the opaque ground. */
+export function earthHorizonLine(travel: number, camera: EarthCamera, yaw: number, spin = 0) {
+    return earthView(travel, yaw, camera, spin).horizon;
+}

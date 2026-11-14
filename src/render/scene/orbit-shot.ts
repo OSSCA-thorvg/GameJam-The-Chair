@@ -8,7 +8,7 @@ import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGl
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
 import { orbitSatelliteLight, orbitSatelliteLightOnChair, satelliteChairGlow, satelliteLitChair, satelliteLightWarmth } from './orbit-satellite-light';
 import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
-import { orbitEarth, type EarthCamera } from './orbit-earth';
+import { earthHorizonLine, orbitEarth, type EarthCamera } from './orbit-earth';
 import { endingChairLights, endingFade, endingLaptopScreen, endingLaptopText, endingNebula, endingSignal, type OrbitEndingState } from './orbit-ending';
 import { orbitSprayHint } from './orbit-spray-hint';
 import { STAGE_FIVE as C } from '../../game/stages/orbit/data';
@@ -81,7 +81,8 @@ function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: num
         stops: [[0, ctx.rgba('#fff2eb', .16 * clouds)], [1, ctx.rgba('#fff2eb', 0)]],
     } });
     orbitHighSky(ctx, heights, 0, spin);
-    endingNebula(ctx, shot.ending.wide, spin);
+    const opaqueHorizon = shot.ending.wide > 0 && heights.air >= 1 ? earthHorizonLine(shot.travel, earth, 0, spin) : undefined;
+    endingNebula(ctx, shot.ending.wide, spin, opaqueHorizon);
     // In the ending the sun comes up over the rim and day returns to the ground below.
     const horizon = orbitEarth(ctx, shot.travel, earth, 0, heights.air, heights.shadow * (1 - shot.ending.wide), spin);
     return { heights, horizon };
