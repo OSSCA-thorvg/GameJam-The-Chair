@@ -2,7 +2,8 @@ import type { Input, Player } from '../../../types';
 import * as Det from '../../../math';
 import { STAGE_FIVE as C, type OrbitState } from '../data';
 
-const clamp = (n: number, max: number) => Math.max(-max, Math.min(max, n));
+type Beam = typeof C.satelliteLight.beams[number];
+type Aim = { x: number; y: number };
 
 export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>, keys: readonly Input[], dt: number) {
     const next = { ...orbit, age: orbit.age + dt };
@@ -11,52 +12,55 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     // Parked in the Earth's shadow, `settled` counts on from 1 so the ending knows how far it has played.
     if (next.phase === 'parked') {
         next.settled += dt;
-        next.idle = 0;
-        return { orbit: next, p, checkpoint: false, satelliteLit: false, spraying: false };
+        return { orbit: next, p, checkpoint: false, flag: 0, satelliteLit: false, spraying: false };
+    }
+    // The stop after a beam catches the chair: the whole flight holds still for a moment.
+    if (next.freeze > 0) {
+        next.freeze = Math.max(0, next.freeze - dt);
+        return { orbit: next, p, checkpoint: false, flag: 0, satelliteLit: false, spraying: true };
     }
     if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
     const controlled = next.phase !== 'entry';
     const auto = autopilot(next);
     // Steering grows from nothing to full over the entry, so the chair is under control right after the glide.
     const steer = auto ? 0 : controlled ? 1 : Math.min(1, next.age / C.entryTime);
-    const turning = (held('right') - held('left')) * steer;
-    if (auto) next.yaw = -next.heading * C.autopilot.turn;
-    else next.yaw += (turning * C.steer.turn - next.yaw) * (1 - Det.exp(-(turning !== 0 ? C.steer.response : C.steer.release) * dt));
-    next.heading += next.yaw * dt;
-    if (Math.abs(next.heading) >= C.steer.heading) {
-        next.heading = Math.sign(next.heading) * C.steer.heading;
-        if (next.yaw * next.heading > 0) next.yaw = 0;
-    }
-    // Across, the chair only drifts on its own when something shoves it or the geofence pushes it back in.
-    p.vx = steerAxis(p.vx, p.x, 0, -C.bounds.x, C.bounds.x, dt);
-    p.vy = steerAxis(p.vy, p.y, (held('forward') - held('back')) * steer, -C.bounds.y, C.bounds.top, dt);
-    p.a += (-next.yaw * C.bankTurn - p.a) * Math.min(1, dt * C.bankResponse);
-    // Until the autopilot takes over only spraying moves the chair forward.
+    p.vx = steerAxis(p.vx, p.x, (held('right') - held('left')) * steer, -C.bounds.x, C.bounds.x, dt);
+    p.vy = steerAxis(p.vy, p.y, (held('forward') - held('back')) * steer, -C.bounds.y, C.bounds.y, dt);
+    // Sliding across, the chair banks into the slide.
+    p.a += (-p.vx * C.bankSlide - p.a) * Math.min(1, dt * C.bankResponse);
+    // The extinguisher fires on its own, up to the gear's top speed; the autopilot brakes in the shadow.
     // During the entry the glide from stage four still carries it at the speed it arrived with.
-    const thrust = controlled && !auto && held('spray');
-    next.idle = controlled && !auto && !thrust ? next.idle + dt : 0;
+    const top = gearAt(next.z).maxSpeed;
     const landing = auto ? Math.max(C.autopilot.landing, Math.min(C.cruise, (C.checkpoint.z - next.z) * C.autopilot.brake)) : 0;
     if (auto) next.speed += (landing - next.speed) * (1 - Det.exp(-C.autopilot.response * dt));
-    else if (thrust) next.speed = Math.min(C.maxSpeed, next.speed + C.thrust * dt);
-    else if (controlled) next.speed *= Det.exp(-C.coast * dt);
-    const beam = controlled ? satelliteLightOn(next.age, p, next.z) : null;
+    else if (controlled) next.speed = next.speed < top ? Math.min(top, next.speed + C.thrust * dt) : next.speed;
+    next.aims = aimAt(next, p, dt);
+    const beam = controlled ? satelliteLightOn(next, p, next.z) : null;
     if (beam) satelliteLightShove(next, p, beam, dt);
     const satelliteLit = beam !== null;
-    p.x = clamp(p.x + (next.speed * Det.sin(next.heading) + p.vx) * dt, C.bounds.x + C.steer.overshoot);
-    p.y = Math.max(-C.bounds.y - C.steer.overshoot, Math.min(C.bounds.top + C.steer.overshoot, p.y + p.vy * dt));
-    next.z += next.speed * Det.cos(next.heading) * dt;
+    p.x = Math.max(-C.bounds.x - C.steer.overshoot, Math.min(C.bounds.x + C.steer.overshoot, p.x + p.vx * dt));
+    p.y = Math.max(-C.bounds.y - C.steer.overshoot, Math.min(C.bounds.y + C.steer.overshoot, p.y + p.vy * dt));
+    next.z += next.speed * dt;
+    // Caught by a beam, the flight stops for a moment, like a photo being taken, so the hit cannot be missed.
+    if (controlled && !beam && satelliteLightOn(next, p, next.z)) next.freeze = C.satelliteLight.freeze;
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
-    // The autopilot fires the extinguisher itself whenever it is bringing the chair up to speed.
-    return { orbit: next, p, checkpoint, satelliteLit, spraying: thrust || !controlled || (auto && next.speed < landing - 1) };
+    // Restart flags along the way: the index of the one just passed, if any (the shadow's flag comes after them).
+    const flag = controlled ? C.restarts.findIndex(z => orbit.z < z && next.z >= z) + 1 : 0;
+    return { orbit: next, p, checkpoint, flag, satelliteLit, spraying: !auto || next.speed < landing - 1 };
+}
+
+/** The gear the route is in at depth `z`: its top speed rises from one stretch to the next. */
+export function gearAt(z: number) {
+    let index = 0;
+    for (let i = 0; i < C.gears.length; i++) if (z >= C.gears[i].from) index = i;
+    return { index, ...C.gears[index] };
 }
 
 /** Whether the company autopilot is flying the chair: from the edge of the Earth's shadow until it parks. */
-export function autopilot(orbit: Readonly<OrbitState>) {
+export function autopilot(orbit: Readonly<Pick<OrbitState, 'phase' | 'z'>>) {
     return orbit.phase === 'door' && orbit.z >= C.autopilot.from;
 }
-
-type Beam = typeof C.satelliteLight.beams[number];
 
 /**
  * One steering axis: chase the held direction's velocity, settle quickly on release, and past `low` or `high` let the
@@ -69,56 +73,70 @@ function steerAxis(v: number, at: number, input: number, low: number, high: numb
     return v + (target - v) * (1 - Det.exp(-rate * dt));
 }
 
-export function satelliteLightSweep(beam: Beam, age: number) {
-    return beam.amplitude * Det.sin(age * beam.rate + beam.phase);
-}
-
-const along = (beam: Beam, p: Readonly<Pick<Player, 'x' | 'y'>>) => beam.axis === 'y' ? p.y : p.x;
-/** How far out from the satellite: y for a down beam, x for a side beam. */
-const reachOf = (beam: Beam, p: Readonly<Pick<Player, 'x' | 'y'>>) => beam.axis === 'y' ? p.x : p.y;
-
-/** The point the light spreads from, the satellite's lens: across the sweep, out from the satellite, and route depth. */
-export function satelliteLightApex(beam: Beam) {
-    const { x, y, z } = beam.satellite;
-    return beam.axis === 'y'
-        ? { across: y, reach: x - Math.sign(x) * C.satelliteLight.lens, z }
-        : { across: x, reach: y - C.satelliteLight.lens, z };
+/** Seconds until the chair at depth `z` and `speed` reaches the beam: negative once inside it. */
+export function satelliteLightArrival(beam: Beam, z: number, speed: number) {
+    return (beam.from - z) / Math.max(C.cruise * .4, speed);
 }
 
 /**
- * The beam's slice at `reach` (0 is the middle of the play area): its centre across the sweep, half width, and the
- * route depths it covers. The light is a tent from the lens, so the slice scales with the distance from it.
+ * Each satellite's aim: on the chair until its warning starts, then chasing the chair a beat late, then held still
+ * from `lock` seconds before the beam arrives until it has passed.
  */
-export function satelliteLightSection(beam: Beam, age: number, reach: number) {
-    const apex = satelliteLightApex(beam), scale = (apex.reach - reach) / apex.reach;
-    return {
-        scale,
-        centre: apex.across + (satelliteLightSweep(beam, age) - apex.across) * scale,
-        halfWidth: beam.halfWidth * scale,
-        from: apex.z + (beam.from - apex.z) * scale,
-        to: apex.z + (beam.to - apex.z) * scale,
-    };
+function aimAt(orbit: Readonly<OrbitState>, p: Readonly<Pick<Player, 'x' | 'y' | 'vx' | 'vy'>>, dt: number): Aim[] {
+    const { warn } = C.satelliteLight;
+    return C.satelliteLight.beams.map((beam, i) => {
+        const { lock, track } = gearAt(beam.from), chase = 1 - Det.exp(-track * dt);
+        const aim = orbit.aims[i] ?? { x: p.x, y: p.y };
+        const arrival = satelliteLightArrival(beam, orbit.z, orbit.speed);
+        // A leading satellite aims where the chair is heading, never past the edge of the play area.
+        const lead = beam.lead ?? 0, edge = (v: number, b: number) => Math.max(-b, Math.min(b, v));
+        const target = { x: edge(p.x + p.vx * lead, C.bounds.x), y: edge(p.y + p.vy * lead, C.bounds.y) };
+        if (arrival > warn) return target;
+        if (arrival > lock) return { x: aim.x + (target.x - aim.x) * chase, y: aim.y + (target.y - aim.y) * chase };
+        return aim;
+    });
 }
 
-/** The beam falling on the chair at route depth `z`, if any. */
-export function satelliteLightOn(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number): Beam | null {
-    for (const beam of C.satelliteLight.beams) {
-        const slice = satelliteLightSection(beam, age, reachOf(beam, p));
-        if (slice.scale > 0 && z >= slice.from && z <= slice.to && Math.abs(along(beam, p) - slice.centre) < slice.halfWidth) return beam;
+/** Whether a beam's satellite has stopped following the chair and holds its aim. */
+export function satelliteLightLocked(beam: Beam, z: number, speed: number) {
+    return satelliteLightArrival(beam, z, speed) <= gearAt(beam.from).lock;
+}
+
+/**
+ * How far the chair at `p` is inside a beam's shape (grown by the chair's size) along each axis; > 0 on both is
+ * inside. A circle counts its depth along the way out from its middle on both.
+ */
+function overlap(aim: Aim, beam: Beam, p: Readonly<Pick<Player, 'x' | 'y'>>) {
+    const r = C.satelliteLight.chairRadius;
+    if (beam.shape === 'circle') {
+        const depth = beam.half.x + r - Det.hypot(p.x - aim.x, p.y - aim.y);
+        return Math.abs(p.x - aim.x) >= Math.abs(p.y - aim.y) ? { x: depth, y: Infinity } : { x: Infinity, y: depth };
+    }
+    return { x: beam.half.x + r - Math.abs(p.x - aim.x), y: beam.half.y + r - Math.abs(p.y - aim.y) };
+}
+
+/** The beam falling on the chair at route depth `z`, if any: its rectangle overlaps the chair. */
+export function satelliteLightOn(orbit: Readonly<Pick<OrbitState, 'aims'>>, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number): Beam | null {
+    for (let i = 0; i < C.satelliteLight.beams.length; i++) {
+        const beam = C.satelliteLight.beams[i], aim = orbit.aims[i];
+        if (!aim || z < beam.from || z > beam.to) continue;
+        const inside = overlap(aim, beam, p);
+        if (inside.x > 0 && inside.y > 0) return beam;
     }
     return null;
 }
 
-export function inSatelliteLight(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
-    return satelliteLightOn(age, p, z) !== null;
+export function inSatelliteLight(orbit: Readonly<Pick<OrbitState, 'aims'>>, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
+    return satelliteLightOn(orbit, p, z) !== null;
 }
 
+/** Slows the chair and shoves it out of the shape the shortest way. */
 function satelliteLightShove(next: OrbitState, p: Player, beam: Beam, dt: number) {
     const { slowSpeed, slowResponse, shove } = C.satelliteLight;
     next.speed += (slowSpeed - next.speed) * Math.min(1, slowResponse * dt);
-    const push = (along(beam, p) >= satelliteLightSection(beam, next.age, reachOf(beam, p)).centre ? 1 : -1) * shove * dt;
-    if (beam.axis === 'y') p.vy += push;
-    else p.vx += push;
+    const aim = next.aims[C.satelliteLight.beams.indexOf(beam)], inside = overlap(aim, beam, p);
+    if (inside.x < inside.y) p.vx += (p.x >= aim.x ? 1 : -1) * shove * dt;
+    else p.vy += (p.y >= aim.y ? 1 : -1) * shove * dt;
 }
 
 function advanceRings(next: OrbitState, p: Player) {
@@ -142,6 +160,6 @@ function arriveAtDoor(next: OrbitState, p: Player) {
     }
     next.phase = 'parked';
     next.settled = 1;
-    next.speed = next.yaw = p.vx = p.vy = 0;
+    next.speed = p.vx = p.vy = 0;
     return true;
 }

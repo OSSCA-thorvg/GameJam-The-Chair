@@ -62,8 +62,9 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         hidden('[data-jump]', state.stage === 5);
         hidden('.balance-controls', state.stage === 5);
         hidden('[data-meeting-help]', state.stage !== 2);
-        hidden('[data-spray-help]', !state.hasExtinguisher);
-        hidden('[data-spray]', !state.hasExtinguisher);
+        // In stage five the extinguisher fires on its own.
+        hidden('[data-spray-help]', !state.hasExtinguisher || state.stage === 5);
+        hidden('[data-spray]', !state.hasExtinguisher || state.stage === 5);
         hidden('[data-stage-menu]', state.completedStage === 0);
         for (const stage of [1, 2, 3, 4, 5]) {
             hidden(`[data-stage="${stage}"]`, stage >= 4 ? state.completedStage < stage - 1 : stage > state.completedStage);

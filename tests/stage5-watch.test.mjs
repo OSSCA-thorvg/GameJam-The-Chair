@@ -117,48 +117,48 @@ test('there are no billboards, and lenses and lamps glint out of the clouds in s
     assert.ok(ORBIT_WATCH.glints.some(glint => glint.red) && ORBIT_WATCH.glints.some(glint => !glint.red), 'both white and red');
 });
 
-const { orbitStep, inSatelliteLight, satelliteLightSweep, STAGE_FIVE } = await loadSource(`
-    export { orbitStep, inSatelliteLight, satelliteLightSweep } from './src/game/stages/orbit/course/decide';
+const { orbitStep, inSatelliteLight, STAGE_FIVE } = await loadSource(`
+    export { orbitStep, inSatelliteLight } from './src/game/stages/orbit/course/decide';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
 `);
 
 const chairAt = (x, y = 0) => ({ x, y, vx: 0, vy: 0, a: 0, w: 0 });
-const cruising = z => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, heading: 0, yaw: 0, rings: 0, idle: 0, settled: 0 });
+const centred = () => STAGE_FIVE.satelliteLight.beams.map(() => ({ x: 0, y: 0 }));
+const cruising = z => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, rings: 0, aims: centred(), freeze: 0, settled: 0 });
 
-test('5-1: the satellite light slows the chair and shoves it out of the beam', () => {
+test('5-1: the satellite light slows the chair and shoves it out of its rectangle', () => {
     const first = STAGE_FIVE.satelliteLight.beams[0];
-    const age = Array.from({ length: 400 }, (_, i) => i / 10).find(t => Math.abs(satelliteLightSweep(first, t) + 150) < 30);
-    const x = satelliteLightSweep(first, age) + 40, z = (first.from + first.to) / 2;
-    assert.ok(inSatelliteLight(age, chairAt(x), z));
-    let orbit = { ...cruising(z), age }, p = chairAt(x);
-    for (let i = 0; i < 120; i++) ({ orbit, p } = orbitStep(orbit, p, [], 1 / 120));
-    assert.ok(orbit.speed < STAGE_FIVE.cruise * .7, `slowed to ${orbit.speed}`);
-    assert.ok(p.x > x, 'pushed away from the beam centre');
+    const x = 40, z = (first.from + first.to) / 2;
+    assert.ok(inSatelliteLight({ aims: centred() }, chairAt(x), z));
+    let orbit = cruising(z), p = chairAt(x), slowest = orbit.speed;
+    for (let i = 0; i < 120; i++) {
+        ({ orbit, p } = orbitStep(orbit, p, [], 1 / 120));
+        slowest = Math.min(slowest, orbit.speed);
+    }
+    assert.ok(slowest < STAGE_FIVE.cruise * .85, `slowed to ${slowest.toFixed(0)}`);
+    assert.ok(p.x > x, 'pushed away from the middle of the rectangle');
 });
 
-test('5-1: no cloud hides the chair from a beam, and outside the beam nothing happens', () => {
-    const first = STAGE_FIVE.satelliteLight.beams[0];
+test('5-1: inside a beam\'s rectangle the chair is caught, and outside it nothing happens', () => {
+    const first = STAGE_FIVE.satelliteLight.beams[0], r = STAGE_FIVE.satelliteLight.chairRadius;
     assert.equal(STAGE_FIVE.satelliteLight.shelters, undefined, 'there are no shelter clouds');
-    // Wherever the beam is across the 5-1 stretch, a chair under its middle is caught.
-    for (const t of [0, 3, 7, 11]) {
-        const x = satelliteLightSweep(first, t);
-        for (const z of [first.from + 400, (first.from + first.to) / 2, first.to - 400]) {
-            assert.equal(inSatelliteLight(t, chairAt(x * .8, -60), z), true, `caught at x ${x.toFixed(0)}, z ${z}`);
-        }
+    const aims = { aims: centred() };
+    for (const z of [first.from + 10, (first.from + first.to) / 2, first.to - 10]) {
+        for (const [x, y] of [[0, 0], [first.half.x + r - 5, 0], [0, -first.half.y - r + 5]]) assert.ok(inSatelliteLight(aims, chairAt(x, y), z), `caught at ${x}, ${y}, z ${z}`);
+        for (const [x, y] of [[first.half.x + r + 5, 0], [0, first.half.y + r + 5]]) assert.ok(!inSatelliteLight(aims, chairAt(x, y), z), `clear at ${x}, ${y}, z ${z}`);
     }
-    assert.equal(inSatelliteLight(0, chairAt(satelliteLightSweep(first, 0)), first.from - 300), false, 'no beam before the 5-1 stretch');
+    assert.equal(inSatelliteLight(aims, chairAt(0), first.from - 300), false, 'no beam before its depths');
+    // Outside a beam the extinguisher speeds the chair up on its own; the keys never change that.
     const before = cruising(first.from - 400);
-    // Outside a beam only the extinguisher and the coast change the speed.
-    const pushed = orbitStep(before, chairAt(0), ['spray'], 1 / 120).orbit.speed;
-    const coasting = orbitStep(before, chairAt(0), [], 1 / 120).orbit.speed;
-    assert.ok(Math.abs(pushed - (STAGE_FIVE.cruise + STAGE_FIVE.thrust / 120)) < 1e-9);
-    assert.ok(Math.abs(coasting - STAGE_FIVE.cruise * Math.exp(-STAGE_FIVE.coast / 120)) < 1e-6);
+    for (const keys of [[], ['spray']]) {
+        assert.ok(Math.abs(orbitStep(before, chairAt(0), keys, 1 / 120).orbit.speed - (STAGE_FIVE.cruise + STAGE_FIVE.thrust / 120)) < 1e-9);
+    }
 });
 
 test('nothing the chair has flown past is drawn between it and the camera', () => {
     const view = createSkyProjection(1000, 510, 1, { distance: 690 });
-    const watchers = travel => orbitWatchers(view, (x, y, z) => [z - travel, 15 + y, x], travel, 0, 1);
-    const satellite = FIVE.satelliteLight.beams[4].satellite;
+    const satellite = { x: 0, y: 560, z: 3000 };
+    const watchers = travel => orbitWatchers(view, (x, y, z) => [z - travel, 15 + y, x], travel, 0, 1, undefined, [satellite]);
     assert.equal(watchers(satellite.z - 5).length - watchers(satellite.z + 5).length, 1, 'a satellite is gone once the chair passes under it');
     const route = ORBIT_WATCH.route[3];
     const lensAt = travel => watchers(travel).filter(lamp => Math.abs(lamp.at[0] - (route.z - travel)) < 60)

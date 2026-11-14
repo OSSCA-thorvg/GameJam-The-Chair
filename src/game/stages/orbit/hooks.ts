@@ -6,5 +6,5 @@ export const orbitHooks: StageHooks = {
     takeover(s, out, dt) { applyOrbit(s, out, dt); return true; },
     canJump: () => false,
     canSpray: () => false,
-    focusBlocked: s => inSatelliteLight(s.orbit.age, s.p, s.orbit.z),
+    focusBlocked: s => inSatelliteLight(s.orbit, s.p, s.orbit.z),
 };

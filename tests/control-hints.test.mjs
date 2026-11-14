@@ -2,11 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, createRenderCtx, officeControlHints, rooftopSprayHint, orbitSprayHint } = await loadSource(`
+const { createGame, createRenderCtx, officeControlHints, rooftopSprayHint } = await loadSource(`
     export { createGame } from './src/game/game';
     export { createRenderCtx } from './src/render/context';
     export { officeControlHints, rooftopSprayHint } from './src/render/scene/control-hints';
-    export { orbitSprayHint } from './src/render/scene/orbit-spray-hint';
 `);
 
 /** Keycap tops are the light face colour, with the hint's opacity appended. */
@@ -70,14 +69,10 @@ test('the effects remember the keys tried until the stage changes', async () => 
     assert.equal(effects.snapshot().keysTried.left, false, 'a new stage brings the hints back');
 });
 
-test('stage three shows a Space keycap over the extinguisher, drawn like the stage five hint', () => {
+test('stage three shows a Space keycap over the extinguisher', () => {
     const rooftop = frame(3);
     rooftopSprayHint(rooftop);
     assert.equal(keyTops(rooftop.commands).length, 1);
     assert.ok(rooftop.commands.some(command => command.text?.content === 'Space'));
 
-    const orbit = frame(5);
-    orbitSprayHint(orbit, [500, 300], 4);
-    const look = commands => commands.map(command => [typeof command.c === 'string' ? command.c.slice(0, 7) : null, command.stroke?.width ?? 0]);
-    assert.deepEqual(look(rooftop.commands), look(orbit.commands), 'the same key: base, top with outline, label');
 });
