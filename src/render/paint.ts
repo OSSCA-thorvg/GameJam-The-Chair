@@ -77,6 +77,16 @@ function staleSlot(slot: LayerSlot, spec: LayerSpec) {
     return false;
 }
 
+/**
+ * Whether a layer changes how its commands look. One without opacity, blend, blur, clip, mask or a retained
+ * transform paints exactly like its commands drawn on their own, so it is drawn without a ThorVG Scene, whose
+ * offscreen pass is what a layer costs (most of all on the GL renderer).
+ */
+function effective(spec: LayerSpec) {
+    return (spec.opacity !== undefined && spec.opacity < 1) || (!!spec.blend && spec.blend !== 'normal') || !!spec.blur
+        || (!!spec.motionBlur && spec.motionBlur.distance > .5) || !!spec.clip || !!spec.mask || !!spec.retained;
+}
+
 /** Group consecutive commands that share a layer into one item. */
 function collect(commands: DrawCommand[]): Item[] {
     const items: Item[] = [];
@@ -89,9 +99,11 @@ function collect(commands: DrawCommand[]): Item[] {
             items.push({ text: cmd.text });
             continue;
         }
-        if (!cmd.layer) {
+        // A layer faded below one step of 8-bit alpha leaves no pixel; a layer with no effect paints as plain shapes.
+        if (cmd.layer && cmd.layer.opacity !== undefined && cmd.layer.opacity < 1 / 255) continue;
+        if (!cmd.layer || !effective(cmd.layer)) {
             open = null;
-            items.push({ cmd });
+            items.push({ cmd: cmd.layer ? { ...cmd, layer: undefined } : cmd });
             continue;
         }
         if (!open || open.layer !== cmd.layer) {
