@@ -1,7 +1,7 @@
 import type { RenderCtx } from '../context';
-import { createSkyProjection, placedProjection, type Point3, type SkyProjection } from './sky-projection';
+import { createSkyProjection, placedProjection, type Point3 } from './sky-projection';
 import { routeBend, routeHeading } from './orbit-route';
-import { orbitCoffee, orbitDebris, orbitEdgePuffs, orbitSlipstream, orbitSpeedLines } from './orbit-flight';
+import { orbitEdgePuffs, orbitSlipstream, orbitSpeedLines } from './orbit-flight';
 import { endingChair } from './sky-ending-art';
 import { skyDeparture } from './sky-departure';
 import { basinCloudSeeds, orbitCloudBank, orbitSky, type CloudBankOptions } from './orbit-atmosphere';
@@ -29,9 +29,6 @@ export type OrbitShot = {
     speed: number;
     /** How hard the extinguisher is pushing right now (0 to 1). */
     push: number;
-    /** Coffee cups already drunk (one bit each), and seconds left of the rider's sip. */
-    drunk: number;
-    sip: number;
     /** Camera orbit around the chair: 0 from its side, 1 from behind. */
     turn: number;
     /** Clock for the rider's bob and typing. */
@@ -154,16 +151,10 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // The watchers stay out of the flat side view and turn up one by one as the view turns into 3D.
     if (turn >= ORBIT_WATCH.beacon.appear) orbitBeacon(ctx, view, point);
     const lamps = turn > 0 ? orbitWatchers(view, point, travel, ctx.t, turn) : [];
-    // Papers and cups belong to the flight: they drift in late in the glide, after the cameras have had the stage,
-    // and leave again as the ending widens onto the quiet horizon.
-    const flight = smooth((since + 2) / 1.5) * (1 - wide);
-    orbitDebris(view, point, travel, ctx.t, flight);
-    const coffeeGlow = orbitCoffee(ctx, view, point, travel, shot.drunk, ctx.t, flight);
     // Scenery beyond the chair first; the chair and whatever passes beside it are painted after the clouds.
     const split = { depth: chair.depth([0, pivot, 0]) + 90, part: 'far' as const };
     ctx.commands.push(...view.commands(split));
     orbitWatchGlow(ctx, view, lamps);
-    coffeeGlow();
     // The praise beams fade in with their satellites while the camera turns.
     orbitPraise(ctx, view, point, since, travel, smooth((turn - ORBIT_WATCH.satelliteAppear) / .3));
     if (cloudsShown) inOpacity(ctx, { key: 'orbit-near-clouds', opacity: clouds }, () => orbitCloudBank(ctx, view, travel, true, options));
@@ -176,7 +167,6 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     ctx.commands.push(...air.behind);
     endingChair(chair, shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest);
     endingLaptopScreen(chair, ending);
-    if (shot.sip > 0) sipCup(chair, shot.sip);
     orbitEdgePuffs(chair, edge, over, ctx.t);
     ctx.commands.push(...view.commands({ ...split, part: 'near' }));
     ctx.commands.push(...air.over);
@@ -190,12 +180,4 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     if (ending.parked) endingSignal(ctx, head, ending);
     else attendanceBubble(ctx, head, since + ATTENDANCE.lead);
     endingFade(ctx, ending);
-}
-
-/** A paper cup raised beside the laptop for a moment after flying through a coffee. */
-function sipCup(chair: SkyProjection, sip: number) {
-    const lift = Math.sin(Math.min(1, sip / C.coffee.sip) * Math.PI) * 14;
-    chair.rod([24, 4 + lift, 26], [24, 20 + lift, 26], 6, '#f5f1e8');
-    chair.oval([24, 20 + lift, 26], [6, 1.5, 6], '#5a3a26');
-    chair.rod([24, 8 + lift, 26], [24, 13 + lift, 26], 6.3, '#c94a3c');
 }

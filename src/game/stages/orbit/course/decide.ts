@@ -11,7 +11,7 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     // Parked in the Earth's shadow, `settled` counts on from 1 so the ending knows how far it has played.
     if (next.phase === 'parked') {
         next.settled += dt;
-        return { orbit: next, p, checkpoint: false, praised: false, spraying: false, sipped: false };
+        return { orbit: next, p, checkpoint: false, praised: false, spraying: false };
     }
     if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
     const controlled = next.phase !== 'entry';
@@ -32,13 +32,10 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     const beam = controlled ? praiseBeamOn(next.age, p, next.z) : null;
     if (beam) praiseShove(next, p, beam, dt);
     const praised = beam !== null;
-    const before = next.z;
     next.z += next.speed * dt;
-    next.sip = Math.max(0, next.sip - dt);
-    const sipped = drinkCoffee(next, p, before);
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
-    return { orbit: next, p, checkpoint, praised, spraying: thrust || !controlled, sipped };
+    return { orbit: next, p, checkpoint, praised, spraying: thrust || !controlled };
 }
 
 type Beam = typeof C.praise.beams[number];
@@ -88,20 +85,6 @@ function praiseShove(next: OrbitState, p: Player, beam: Beam, dt: number) {
     const push = (along(beam, p) >= praiseBeamX(beam, next.age) ? 1 : -1) * shove * dt;
     if (beam.axis === 'y') p.vy += push;
     else p.vx += push;
-}
-
-/** Flying through a cup's depth close enough to it drinks it: a bit per cup, and the rider takes a sip. */
-function drinkCoffee(next: OrbitState, p: Player, before: number) {
-    const { cups, reach, sip } = C.coffee;
-    let sipped = false;
-    cups.forEach((cup, i) => {
-        if (next.coffee & (1 << i) || before >= cup.z || next.z < cup.z) return;
-        if (Math.abs(p.x - cup.x) > reach || Math.abs(p.y - cup.y) > reach) return;
-        next.coffee |= 1 << i;
-        next.sip = sip;
-        sipped = true;
-    });
-    return sipped;
 }
 
 function advanceRings(next: OrbitState, p: Player) {
