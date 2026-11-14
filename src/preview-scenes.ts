@@ -2,7 +2,7 @@ import { createGame, type Game, type GameState } from './game/game';
 import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
-import { praiseSection } from './game/stages/orbit/course/decide';
+import { orbitStep, praiseBeamOn, praiseSection } from './game/stages/orbit/course/decide';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { revealGlideStart, SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
 import { ATTENDANCE } from './render/scene/attendance-bubble';
@@ -715,50 +715,45 @@ function skyToOrbit(): PreviewScene {
     return recordedScene('sky-to-orbit', 'Sky → Orbit · Hand-off, steering fade-in, spray to fly', 0, markers, frames);
 }
 
-/** Steering for the stage five previews: duck into 5-1's shelter clouds, then keep to the widest gap between beams. */
+/** Turns the chair to head for `x` across the route a little way ahead, still flying on toward the shadow. */
+function turnToward(orbit: { heading: number; yaw: number; speed: number }, p: { x: number }, x: number): Input[] {
+    const want = Math.max(-1.3, Math.min(1.3, Math.atan2(x - p.x, Math.max(120, orbit.speed * .8))));
+    const error = want - (orbit.heading + orbit.yaw * .35);
+    return error > .04 ? ['right'] : error < -.04 ? ['left'] : [];
+}
+
+const PLAN = { seconds: 1.2, step: .1 };
+const TURNS: Input[][] = [['left'], [], ['right']];
+const CLIMBS: Input[][] = [['forward'], [], ['back']];
+
+/**
+ * Steering for the stage five previews: duck into 5-1's shelter clouds, then try every turn and climb for a
+ * moment with the real flight rules and take the one that stays out of the light and gets furthest on.
+ */
 export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSnapshot']>): Input[] {
     const orbit = state.orbit, p = state.player;
     if (!orbit) return [];
-    const { shelters, beams } = STAGE_FIVE.praise;
-    const shelter = orbit.z < STAGE_FIVE.heights.air ? shelters.find(s => s.z > orbit.z - 120) : undefined;
-    let target = { x: 0, y: 0 };
-    if (shelter) target = shelter;
-    else {
-        // Look a second ahead: score spots across the play area by how far they stay from every beam's light
-        // (where the beam will have swept to by then, at that spot's height), and head for the best one nearby.
-        const horizon = [.3, .7, 1.1];
-        const reach = Math.max(STAGE_FIVE.bounds.x, STAGE_FIVE.bounds.y) + STAGE_FIVE.steer.overshoot;
-        const near = beams.filter(b => [-reach, reach].some(r => {
-            const slice = praiseSection(b, orbit.age, r);
-            return slice.to > orbit.z - 200 && slice.from < orbit.z + orbit.speed * 1.2 + 200;
-        }));
-        const clearance = (x: number, y: number) => {
-            let least = 160;
-            for (const dt of horizon) {
-                const z = orbit.z + orbit.speed * dt;
-                for (const b of near) {
-                    const slice = praiseSection(b, orbit.age + dt, b.axis === 'y' ? x : y);
-                    if (slice.scale <= 0) continue;
-                    const across = Math.abs((b.axis === 'y' ? y : x) - slice.centre) - slice.halfWidth;
-                    const ahead = Math.max(slice.from - z, z - slice.to);
-                    const gap = across < 0 && ahead < 0 ? Math.max(across, ahead) : Math.hypot(Math.max(0, across), Math.max(0, ahead));
-                    least = Math.min(least, gap);
-                }
-            }
-            return least;
-        };
+    const shelter = orbit.z < STAGE_FIVE.heights.air ? STAGE_FIVE.praise.shelters.find(s => s.z > orbit.z - 120) : undefined;
+    let keys: Input[];
+    if (shelter) {
+        keys = turnToward(orbit, p, shelter.x);
+        if (shelter.y - p.y > p.vy * .65 + 6) keys.push('forward');
+        if (shelter.y - p.y < p.vy * .65 - 6) keys.push('back');
+    } else {
         let best = -Infinity;
-        if (near.length) for (let x = -600; x <= 600; x += 60) for (let y = -390; y <= 390; y += 60) {
-            const score = clearance(x, y) - Math.hypot(x - p.x, y - p.y) * .3;
-            if (score > best) { best = score; target = { x, y }; }
+        keys = [];
+        for (const turn of TURNS) for (const climb of CLIMBS) {
+            const held = [...turn, ...climb, ...(orbit.speed < STAGE_FIVE.cruise ? ['spray' as const] : [])];
+            let o = orbit, q = p, lit = 0;
+            for (let t = 0; t < PLAN.seconds; t += PLAN.step) {
+                ({ orbit: o, p: q } = orbitStep(o, q, held, PLAN.step));
+                // Nearer moments count more: those are the ones still certain.
+                if (praiseBeamOn(o.age, q, o.z)) lit += 1.5 - t;
+            }
+            const score = (o.z - orbit.z) * .05 - lit * 40 - Math.abs(o.heading) * 30 - Math.max(0, Math.abs(q.x) - STAGE_FIVE.bounds.x + 120) * .5;
+            if (score > best) { best = score; keys = turn.concat(climb); }
         }
     }
-    const keys: Input[] = [];
-    if (target.x - p.x > p.vx * .65 + 6) keys.push('right');
-    if (target.x - p.x < p.vx * .65 - 6) keys.push('left');
-    if (target.y - p.y > p.vy * .65 + 6) keys.push('forward');
-    if (target.y - p.y < p.vy * .65 - 6) keys.push('back');
-    // Only the extinguisher moves the chair forward: keep it near cruise speed.
     if (orbit.speed < STAGE_FIVE.cruise) keys.push('spray');
     return keys;
 }
@@ -850,9 +845,7 @@ function orbitPraiseLitScene(): PreviewScene {
         // Hold off to the side of the light, then drift in past its edge and back out every few seconds.
         const slice = praiseSection(first, orbit.age + .4, p.y);
         const target = slice.centre + slice.halfWidth + 90 + 130 * Math.cos(orbit.age * .9);
-        const keys: Input[] = [];
-        if (target - p.x > p.vx * .65 + 6) keys.push('right');
-        if (target - p.x < p.vx * .65 - 6) keys.push('left');
+        const keys: Input[] = turnToward(orbit, p, target);
         if (orbit.speed < STAGE_FIVE.cruise) keys.push('spray');
         game.setInput(...keys);
         stepGame(game, effects);

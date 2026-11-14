@@ -17,13 +17,13 @@ const CLOUDS = (() => {
 /** Where the chair sits in the stage-five cloud basin; the stage-four ending passes the origin. */
 export type BasinAnchor = { x: number; y: number };
 
-/** `yaw`: how far the camera has turned to follow the bending route, sliding the far city sideways. */
-export function orbitSky(ctx: RenderCtx, anchor: BasinAnchor = ctx.state.player, yaw = 0) {
+/** `turn`: how far round the camera faces (radians), sliding the far city sideways; one full turn wraps it six times. */
+export function orbitSky(ctx: RenderCtx, anchor: BasinAnchor = ctx.state.player, turn = 0) {
     ctx.commands.push({ v: [[0,0],[ctx.W,0],[ctx.W,ctx.H],[0,ctx.H]], c: {
         from: [0,0], to: [0,ctx.H], stops: [[0,ctx.rgba('#7499b9')],[.55,ctx.rgba('#a7bdd0')],[1,ctx.rgba('#efd0bc')]],
     } });
     const horizon = ctx.H * .6;
-    const offset = (anchor.x / 680) * ctx.W * .025 + yaw * ctx.W * .35;
+    const offset = (anchor.x / 680) * ctx.W * .025 + turn / (Math.PI * 2) * ctx.W * 6;
     for (const building of CITY) {
         const x = ((building.x * ctx.W - offset) % ctx.W + ctx.W) % ctx.W;
         const w = building.w * ctx.W, h = building.h * ctx.H;
@@ -49,8 +49,8 @@ export type CloudBankOptions = {
      * gliding in before stage five (negative travel) stay continuous with its first frame.
      */
     unwrapped?: boolean;
-    /** Sideways swing of the drawn route at `dz` ahead of the chair. */
-    bend?: (dz: number) => number;
+    /** Which way the camera faces (radians, 0 along the route): the cloud field turns round the chair by it. */
+    turn?: number;
     /**
      * Fades the whole bank. Folded into every cloud's own alpha rather than a layer opacity, which would cost a
      * full-canvas offscreen pass; the clouds are translucent anyway, so their overlaps read the same.
@@ -70,8 +70,10 @@ function placeClouds(ctx: RenderCtx, view: SkyProjection, travel: number, foregr
         if (options.only && !options.only.has(cloud.seed)) continue;
         const z = options.unwrapped ? ((cloud.z + 12000) % 10000) - 500 - travel : ((cloud.z - travel + 12000) % 10000) - 500;
         // Nothing the chair has passed is drawn: a cloud thins out as the chair reaches it.
-        if (z <= 0 || (z < 900) !== foreground) continue;
-        const center: [number,number,number] = [z, cloud.y - anchor.y * .45, cloud.x - anchor.x * .55 + (options.bend?.(z) ?? 0)];
+        const across = cloud.x - anchor.x * .55, turn = options.turn ?? 0;
+        const ahead = z * Math.cos(turn) + across * Math.sin(turn);
+        if (ahead <= 0 || (ahead < 900) !== foreground) continue;
+        const center: [number,number,number] = [ahead, cloud.y - anchor.y * .45, across * Math.cos(turn) - z * Math.sin(turn)];
         const depth = view.depth(center);
         if (depth < (options.nearDepth ?? 200)) continue;
         const [x,y] = view.project(center);
@@ -80,7 +82,7 @@ function placeClouds(ctx: RenderCtx, view: SkyProjection, travel: number, foregr
         if (!options.only && !foreground && z < 4500 && Math.abs(x-ctx.W/2) < ctx.W*.34+size*90) continue;
         if (x < -size*300 || x > ctx.W+size*300 || y-size*180 > ctx.H || y+size*40 < 0) continue;
         // With a custom cutoff, clouds swinging in past the camera fade in rather than popping at it.
-        const reach = ctx.clamp(z / PASS_FADE, 0, 1);
+        const reach = ctx.clamp(ahead / PASS_FADE, 0, 1);
         const opacity = reach * (options.nearDepth === undefined ? 1 : ctx.clamp((depth - options.nearDepth) / 600, 0, 1));
         placed.push({ seed: cloud.seed, x, y, size, opacity });
     }

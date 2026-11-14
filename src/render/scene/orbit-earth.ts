@@ -237,6 +237,6 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
 }
 
 /** Where the Earth's horizon sits straight ahead, for the sunrise glow in its shadow. */
-export function earthHorizonAhead(travel: number, camera: EarthCamera, yaw: number) {
-    return earthView(travel, yaw, camera).middle;
+export function earthHorizonAhead(travel: number, camera: EarthCamera, yaw: number, spin = 0) {
+    return earthView(travel, yaw, camera, spin).middle;
 }

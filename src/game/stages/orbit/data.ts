@@ -20,10 +20,12 @@ export const STAGE_FIVE = deepFreeze({
     // The stage four glide hands over at cruise speed; steering fades in over the entry instead of waiting for it.
     // Only the extinguisher drives the chair forward: `thrust` while spraying, otherwise it coasts and `coast` slows it.
     entryTime: 1, cruise: 145, thrust: 140, coast: .45, maxSpeed: 270,
-    // Steering chases a target velocity: quick to answer (`response`), quick to settle (`release`). Past `bounds`
-    // the company geofence pushes back (`edge` per unit over) and never lets the chair more than `overshoot` past it.
-    steer: { speed: 210, response: 7, release: 4.5, edge: 5, overshoot: 80 },
-    bankSpeed: 650, bankResponse: 5, cruiseRecovery: .6,
+    // The chair flies where it faces: left and right turn it (`turn`, radians per second), up and down climb and dive
+    // (`speed`). Both chase their target rate: quick to answer (`response`), quick to settle (`release`).
+    // The company geofence is an invisible wall: past `bounds` across and up, or behind `back`, it pushes the chair
+    // back (`edge` per unit over) and never lets it more than `overshoot` past.
+    steer: { speed: 210, turn: 2, response: 7, release: 4.5, edge: 5, overshoot: 80, back: -300 },
+    bankTurn: .28, bankResponse: 5, cruiseRecovery: .6,
     ringClearance: 40, approachSpeed: 55, arrivalSpeed: 45, arrivalDistance: 600,
     bounds: { x: 680, y: 430 },
     // No hoops: after the entry the chair heads straight for the Earth's shadow.
@@ -61,6 +63,10 @@ export type OrbitState = {
     age: number;
     z: number;
     speed: number;
+    /** Which way the chair faces, in radians: 0 toward the Earth's shadow, positive turning right. */
+    heading: number;
+    /** How fast it is turning, radians per second. */
+    yaw: number;
     rings: number;
     /** 1 on arriving in the Earth's shadow, then counting up in seconds while the ending plays. */
     settled: number;

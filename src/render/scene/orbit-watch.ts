@@ -107,7 +107,8 @@ function swerve(p: Point3, ahead: number): Point3 {
 }
 
 function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: number, t: number): Lamp[] {
-    const anchor = swerve(point(spot.x, spot.y + Math.sin(t * .9 + spot.seed) * 8, spot.z), spot.z - travel);
+    const placed = point(spot.x, spot.y + Math.sin(t * .9 + spot.seed) * 8, spot.z);
+    const anchor = swerve(placed, placed[0]);
     // The lens keeps turning toward the chair at the projection's origin.
     const yaw = aim(-anchor[0], -anchor[2]) + Math.sin(t * .6 + spot.seed) * .05;
     const state = cctvLamp(spot.z - travel, t);
@@ -151,11 +152,11 @@ function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: n
  * `praisePoint`, the frame their beams are drawn in. Nothing the chair has passed is drawn.
  */
 export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, shown = 1, praisePoint = point) {
-    const lamps = [...ORBIT_WATCH.reveal, ...ORBIT_WATCH.route].filter(spot => spot.appear <= shown && spot.z > travel)
+    const lamps = [...ORBIT_WATCH.reveal, ...ORBIT_WATCH.route].filter(spot => spot.appear <= shown && point(spot.x, spot.y, spot.z)[0] > 0)
         .flatMap(spot => floating(view, point, spot, travel, t));
     // Far satellites are left out until the chair is within sight of them.
     if (ORBIT_WATCH.satelliteAppear <= shown) for (const at of ORBIT_WATCH.satellites) {
-        const ahead = at.z - travel;
+        const ahead = praisePoint(at.x, at.y, at.z)[0];
         if (ahead > 0 && ahead < 6000) lamps.push(satellite(view, praisePoint, at, travel, t));
     }
     return lamps;
