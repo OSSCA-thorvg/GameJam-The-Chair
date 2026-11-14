@@ -100,15 +100,8 @@ export function satelliteLightSection(beam: Beam, age: number, reach: number) {
     };
 }
 
-/** Whether the chair is tucked into one of the 5-1 shelter clouds, out of the satellites' sight. */
-export function satelliteLightSheltered(p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
-    const { shelters, shelterSize: size } = C.satelliteLight;
-    return shelters.some(s => Math.abs(p.x - s.x) < size.x && Math.abs(p.y - s.y) < size.y && Math.abs(z - s.z) < size.z);
-}
-
 /** The beam falling on the chair at route depth `z`, if any. */
 export function satelliteLightOn(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number): Beam | null {
-    if (satelliteLightSheltered(p, z)) return null;
     for (const beam of C.satelliteLight.beams) {
         const slice = satelliteLightSection(beam, age, reachOf(beam, p));
         if (slice.scale > 0 && z >= slice.from && z <= slice.to && Math.abs(along(beam, p) - slice.centre) < slice.halfWidth) return beam;

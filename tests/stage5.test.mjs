@@ -522,7 +522,7 @@ test('a satellite light is drawn where it pushes, at every height, and nothing o
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 1000, H: 510, t: 0 });
     orbitSatelliteLight(ctx, view, point, age, travel);
-    const lights = ctx.commands.filter(command => command.layer?.key === 'orbit-satellite-light-beam');
+    const lights = ctx.commands.filter(command => command.layer?.key === 'orbit-laser-haze');
     const inside = (polygon, [x, y]) => polygon.every((a, i) => {
         const b = polygon[(i + 1) % polygon.length];
         return (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]) >= 0;
@@ -545,7 +545,7 @@ test('a satellite light is drawn where it pushes, at every height, and nothing o
     assert.ok(!inside(light.v, view.project(point(beam.satellite.x, beam.satellite.y - STAGE_FIVE.satelliteLight.lens, beam.satellite.z))));
 });
 
-test('the chair catches the light: warming near a beam, glowing inside it, plain far from it', () => {
+test('the chair catches the laser: reddening near a beam, burning red inside it, plain far from it', () => {
     const beam = STAGE_FIVE.satelliteLight.beams[1], age = 20, z = beam.satellite.z;
     const slice = satelliteLightSection(beam, age, 0), edge = slice.centre + slice.halfWidth;
     const warmth = x => satelliteLightWarmth(age, { x, y: 0 }, z).warmth;
@@ -556,8 +556,8 @@ test('the chair catches the light: warming near a beam, glowing inside it, plain
     const far = edge + 400;
     if (satelliteLightOn(age, { x: far, y: 0 }, z) === null) assert.ok(warmth(far) < warmth(edge + 40));
     const glow = x => flightFrame(state => { Object.assign(state.orbit, { z, age }); Object.assign(state.p, { x, vx: 0 }); })
-        .filter(command => command.c?.radius && command.c.stops?.[0]?.[1]?.[0] === 255 && command.c.stops[0][1][1] === 224).length;
-    assert.ok(glow(edge - 10) > 0, 'a warm glow round the chair inside the light');
+        .filter(command => command.c?.radius && command.c.stops?.[0]?.[1]?.[0] === 255 && command.c.stops[0][1][1] === 80).length;
+    assert.ok(glow(edge - 10) > 0, 'a red glow round the chair inside the laser');
 });
 
 test('the ending close-up finds the chair wherever in the shadow it parked', () => {

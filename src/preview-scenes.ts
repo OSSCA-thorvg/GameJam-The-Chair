@@ -711,32 +711,23 @@ const TURNS: Input[][] = [['left'], [], ['right']];
 const CLIMBS: Input[][] = [['forward'], [], ['back']];
 
 /**
- * Steering for the stage five previews: duck into 5-1's shelter clouds, then try every turn and climb for a
- * moment with the real flight rules and take the one that stays out of the light and gets furthest on.
+ * Steering for the stage five previews: try every turn and climb for a moment with the real flight rules and take
+ * the one that stays out of the beams and gets furthest on.
  */
 export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSnapshot']>): Input[] {
     const orbit = state.orbit, p = state.player;
     if (!orbit) return [];
-    const shelter = orbit.z < STAGE_FIVE.heights.air ? STAGE_FIVE.satelliteLight.shelters.find(s => s.z > orbit.z - 120) : undefined;
-    let keys: Input[];
-    if (shelter) {
-        keys = turnToward(orbit, p, shelter.x);
-        if (shelter.y - p.y > p.vy * .65 + 6) keys.push('forward');
-        if (shelter.y - p.y < p.vy * .65 - 6) keys.push('back');
-    } else {
-        let best = -Infinity;
-        keys = [];
-        for (const turn of TURNS) for (const climb of CLIMBS) {
-            const held = [...turn, ...climb, ...(orbit.speed < STAGE_FIVE.cruise ? ['spray' as const] : [])];
-            let o = orbit, q = p, lit = 0;
-            for (let t = 0; t < PLAN.seconds; t += PLAN.step) {
-                ({ orbit: o, p: q } = orbitStep(o, q, held, PLAN.step));
-                // Nearer moments count more: those are the ones still certain.
-                if (satelliteLightOn(o.age, q, o.z)) lit += 1.5 - t;
-            }
-            const score = (o.z - orbit.z) * .05 - lit * 40 - Math.abs(o.heading) * 30 - Math.max(0, Math.abs(q.x) - STAGE_FIVE.bounds.x + 120) * .5;
-            if (score > best) { best = score; keys = turn.concat(climb); }
+    let best = -Infinity, keys: Input[] = [];
+    for (const turn of TURNS) for (const climb of CLIMBS) {
+        const held = [...turn, ...climb, ...(orbit.speed < STAGE_FIVE.cruise ? ['spray' as const] : [])];
+        let o = orbit, q = p, lit = 0;
+        for (let t = 0; t < PLAN.seconds; t += PLAN.step) {
+            ({ orbit: o, p: q } = orbitStep(o, q, held, PLAN.step));
+            // Nearer moments count more: those are the ones still certain.
+            if (satelliteLightOn(o.age, q, o.z)) lit += 1.5 - t;
         }
+        const score = (o.z - orbit.z) * .05 - lit * 40 - Math.abs(o.heading) * 30 - Math.max(0, Math.abs(q.x) - STAGE_FIVE.bounds.x + 120) * .5;
+        if (score > best) { best = score; keys = turn.concat(climb); }
     }
     if (orbit.speed < STAGE_FIVE.cruise) keys.push('spray');
     return keys;

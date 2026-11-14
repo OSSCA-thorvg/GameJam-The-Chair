@@ -117,8 +117,8 @@ test('there are no billboards, and lenses and lamps glint out of the clouds in s
     assert.ok(ORBIT_WATCH.glints.some(glint => glint.red) && ORBIT_WATCH.glints.some(glint => !glint.red), 'both white and red');
 });
 
-const { orbitStep, inSatelliteLight, satelliteLightSweep, satelliteLightSheltered, STAGE_FIVE } = await loadSource(`
-    export { orbitStep, inSatelliteLight, satelliteLightSweep, satelliteLightSheltered } from './src/game/stages/orbit/course/decide';
+const { orbitStep, inSatelliteLight, satelliteLightSweep, STAGE_FIVE } = await loadSource(`
+    export { orbitStep, inSatelliteLight, satelliteLightSweep } from './src/game/stages/orbit/course/decide';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
 `);
 
@@ -127,10 +127,8 @@ const cruising = z => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, he
 
 test('5-1: the satellite light slows the chair and shoves it out of the beam', () => {
     const first = STAGE_FIVE.satelliteLight.beams[0];
-    // A moment when the beam is well clear of the shelter cloud at this depth.
     const age = Array.from({ length: 400 }, (_, i) => i / 10).find(t => Math.abs(satelliteLightSweep(first, t) + 150) < 30);
     const x = satelliteLightSweep(first, age) + 40, z = (first.from + first.to) / 2;
-    assert.ok(STAGE_FIVE.satelliteLight.shelters.every(s => Math.abs(s.z - z) > STAGE_FIVE.satelliteLight.shelterSize.z || Math.abs(s.x - x) > STAGE_FIVE.satelliteLight.shelterSize.x));
     assert.ok(inSatelliteLight(age, chairAt(x), z));
     let orbit = { ...cruising(z), age }, p = chairAt(x);
     for (let i = 0; i < 120; i++) ({ orbit, p } = orbitStep(orbit, p, [], 1 / 120));
@@ -138,14 +136,17 @@ test('5-1: the satellite light slows the chair and shoves it out of the beam', (
     assert.ok(p.x > x, 'pushed away from the beam centre');
 });
 
-test('5-1: a shelter cloud hides the chair, and outside the beam nothing happens', () => {
-    const shelter = STAGE_FIVE.satelliteLight.shelters[1];
+test('5-1: no cloud hides the chair from a beam, and outside the beam nothing happens', () => {
     const first = STAGE_FIVE.satelliteLight.beams[0];
-    const age = Array.from({ length: 400 }, (_, i) => i / 10).find(t => Math.abs(satelliteLightSweep(first, t) - shelter.x) < 20);
-    assert.ok(age !== undefined);
-    assert.ok(satelliteLightSheltered(chairAt(shelter.x, shelter.y), shelter.z));
-    assert.equal(inSatelliteLight(age, chairAt(shelter.x, shelter.y), shelter.z), false, 'hidden while the beam is right on it');
-    assert.equal(inSatelliteLight(age, chairAt(shelter.x), first.from - 10), false, 'no beam before the 5-1 stretch');
+    assert.equal(STAGE_FIVE.satelliteLight.shelters, undefined, 'there are no shelter clouds');
+    // Wherever the beam is across the 5-1 stretch, a chair under its middle is caught.
+    for (const t of [0, 3, 7, 11]) {
+        const x = satelliteLightSweep(first, t);
+        for (const z of [first.from + 400, (first.from + first.to) / 2, first.to - 400]) {
+            assert.equal(inSatelliteLight(t, chairAt(x * .8, -60), z), true, `caught at x ${x.toFixed(0)}, z ${z}`);
+        }
+    }
+    assert.equal(inSatelliteLight(0, chairAt(satelliteLightSweep(first, 0)), first.from - 300), false, 'no beam before the 5-1 stretch');
     const before = cruising(first.from - 400);
     // Outside a beam only the extinguisher and the coast change the speed.
     const pushed = orbitStep(before, chairAt(0), ['spray'], 1 / 120).orbit.speed;

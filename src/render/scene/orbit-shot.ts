@@ -6,7 +6,7 @@ import { skyDeparture } from './sky-departure';
 import { basinCloudSeeds, orbitCloudBank, orbitSky, type CloudBankOptions } from './orbit-atmosphere';
 import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGlow } from './orbit-watch';
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
-import { orbitSatelliteLight, orbitSatelliteLightOnChair, satelliteChairGlow, satelliteLitChair, satelliteLightWarmth } from './orbit-satellite-light';
+import { orbitSatelliteLight, satelliteChairGlow, satelliteLitChair, satelliteLightWarmth } from './orbit-satellite-light';
 import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
 import { earthSkyBottom, orbitEarth, type EarthCamera } from './orbit-earth';
 import { endingChairLights, endingFade, endingLaptopScreen, endingLaptopText, endingNebula, endingSignal, type OrbitEndingState } from './orbit-ending';
@@ -146,7 +146,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // drop scales with the camera distance, so a pulled-back camera shows it smaller at the same height.
     const sink = (38 * turn + 72 * blend) * distance / (480 + 210 * blend) / (1 - .08 * fast * (1 - wide)) * (1 - focus);
     // The chair is drawn `sink` below its place on the route (its body centre sits 15 above its origin, like the
-    // route's eye line). The satellites, their beams and the shelter clouds are placed in the chair's drawn frame,
+    // route's eye line). The satellites and their lasers are placed in the chair's drawn frame,
     // so what the light touches on screen is what the course says it touches.
     const satelliteLightPoint = (x: number, y: number, z: number) => point(x, y - sink, z);
     // In the ending the chair itself swivels round and leans back, as if to take in space; its rider turns with it,
@@ -187,7 +187,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // and the plume stretches out behind it.
     const air = orbitSlipstream(ctx, chair, rush * (.35 + .65 * push) * (1 - wide));
     ctx.commands.push(...air.behind);
-    // The light the chair is catching shows on the chair itself: warming as it nears a beam, glowing inside one.
+    // The laser the chair is catching shows on the chair itself: reddening as it nears a beam, burning red inside one.
     const light = since >= 0 && wide <= 0 ? satelliteLightWarmth(since, p, travel) : { warmth: 0, side: 1, axis: 'x' as const };
     const pulse = Math.sin(ctx.t * 9) * .5 + .5;
     endingChair(satelliteLitChair(chair, light.warmth >= 1 ? .62 + .18 * pulse : light.warmth * .7), shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest, shot.rocket);
@@ -198,7 +198,6 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     ctx.commands.push(...air.over);
     endingLaptopText(ctx, chair, ending);
     endingChairLights(ctx, chair, ending);
-    orbitSatelliteLightOnChair(ctx, chair.project([0, 0, 0]), p, travel);
     const head = chair.project([4, 70, 0]);
     if (shot.idle) orbitSprayHint(ctx, chair.project([-46, -30, 0]), shot.idle);
     // The laptop answers the cameras just before stage five and the bubble stays up into its first moments;
