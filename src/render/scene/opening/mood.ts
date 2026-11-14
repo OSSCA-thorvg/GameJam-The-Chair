@@ -43,11 +43,10 @@ export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame) {
     }
 }
 
-/** The chair's moods around it: 6 pm joy, 7 pm creaks, 8 pm anger marks and the 9 pm rage. */
+/** The chair's moods around it: 6 pm joy, 7 pm creaks and the 9 pm rage. */
 export function drawChairMood(ctx: RenderCtx, frame: OpeningFrame) {
     if (frame.hum > 0) drawJoy(ctx, frame);
     if (frame.creakPulse > 0) drawCreak(ctx, frame);
-    if (frame.anger > 0) drawAngerMarks(ctx, frame.t, frame.anger);
     if (frame.rage > 0) drawRage(ctx, frame);
 }
 
@@ -96,16 +95,6 @@ function drawCreak(ctx: RenderCtx, frame: OpeningFrame) {
             ctx.rod(p.x + x + Math.cos(a) * from, p.y + y + Math.sin(a) * from,
                 p.x + x + Math.cos(a) * (from + reach), p.y + y + Math.sin(a) * (from + reach), 2, '#fff3d6');
         }
-    }
-    ctx.endLayer();
-}
-
-/** 8 pm: throbbing red anger marks round the chair, the cartoon vein that needs no words. */
-function drawAngerMarks(ctx: RenderCtx, t: number, anger: number) {
-    const p = ctx.p;
-    ctx.beginLayer({ key: 'opening-anger', opacity: anger });
-    for (const [i, [x, y, size]] of [[-52, -60, 1.5], [62, -84, 1.1], [-58, 0, 1]].entries()) {
-        angerMark(ctx, p.x + x, p.y + y, size * (1 + .25 * Math.max(0, Math.sin(t * 11 + i * 1.7))));
     }
     ctx.endLayer();
 }

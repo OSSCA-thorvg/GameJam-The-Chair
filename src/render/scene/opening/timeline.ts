@@ -20,7 +20,7 @@ export const OPENING_BEATS = {
     creakClose: 15.9,
     spinToEight: 16.6,
     eightPm: 17.8,
-    // 8 pm: the backrest bucks the worker up twice, anger marks throb, and he types on.
+    // 8 pm: the backrest bucks the worker up twice, and he types on.
     kickOpen: 18.3,
     kick: 18.9,
     kickClose: 21.6,
@@ -84,8 +84,6 @@ export type OpeningFrame = {
     /** 7 pm creaking: how strained the chair is (0..1, growing) and the current creak (0..1, pulsing). */
     creak: number;
     creakPulse: number;
-    /** 8 pm anger marks (0..1). */
-    anger: number;
     bubbles: OpeningBubble[];
     done: boolean;
 };
@@ -204,7 +202,6 @@ export function openingFrame(time: number): OpeningFrame {
     const rage = t >= B.rage ? rageRise * (1 - progress(t, B.handoff - .2, B.handoff + .5)) : 0;
     const { strain: creak, pulse: creakPulse } = creaking(t);
     const kick = [buck(t, B.kick), buck(t, B.kick + 1.15)].reduce((a, b) => Math.abs(b.backrest) + b.riderPop > Math.abs(a.backrest) + a.riderPop ? b : a);
-    const anger = t >= B.kick + .3 && t < B.kickClose ? Math.min(1, (t - B.kick - .3) / .25, (B.kickClose - t) / .3) : 0;
     // 6 pm: bouncy hops and a side-to-side dance, with a jump for joy as the hope begins.
     const joy = -Math.abs(Math.sin(t * 6)) * 13 * hum - pop(t, B.chairHope, .6) * 10;
     const lift = joy - Math.abs(Math.sin(t * 41)) * 3 * rage - creakPulse * 2 - Math.abs(kick.jolt) * 6;
@@ -243,7 +240,6 @@ export function openingFrame(time: number): OpeningFrame {
         rage,
         creak,
         creakPulse,
-        anger,
         bubbles,
         done: time >= B.end,
     };
