@@ -48,7 +48,7 @@ export const panoramaX = (x: number, spin: number) => {
 
 /** The sky darkens to indigo, then to the black of space, and the stars come out. `spin` turns the camera round the chair. */
 export function orbitHighSky(ctx: RenderCtx, h: Heights, yaw = 0, spin = 0) {
-    if (h.air > 0) ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H],
+    if (h.air > 0 && h.space < 1) ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H],
         stops: [[0, ctx.rgba('#1b2550', h.air)], [.55, ctx.rgba('#43578a', h.air)], [1, ctx.rgba('#8090b4', h.air)]] } });
     if (h.space > 0) ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H],
         stops: [[0, ctx.rgba('#060a1a', h.space)], [1, ctx.rgba('#121c3e', h.space)]] } });
