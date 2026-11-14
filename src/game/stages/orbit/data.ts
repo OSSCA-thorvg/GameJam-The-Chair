@@ -1,54 +1,57 @@
 import { deepFreeze } from '../../data';
 
 type SatelliteLightBeam = {
-    satellite: { x: number; y: number; z: number };
     /**
-     * `x`: shines down from above and sweeps from side to side, dodged by steering left and right.
-     * `y`: shines in from the side and sweeps up and down, dodged by climbing or diving.
+     * `x`: a curtain of light from a satellite overhead, sweeping from side to side; dodged by steering left and right.
+     * `y`: a curtain from a satellite to one side (`side`), sweeping up and down; dodged by climbing or diving.
      */
     axis: 'x' | 'y';
-    /**
-     * The light spreads from the satellite's lens like a tent. These give its slice through the middle of the play
-     * area (y = 0 for a down beam, x = 0 for a side beam): the route depths it covers there, how wide it is, and how
-     * it sweeps along its axis. Nearer the satellite the slice is smaller, further away larger.
-     */
-    from: number; to: number; halfWidth: number; amplitude: number; rate: number; phase: number;
+    side?: 1 | -1;
+    /** The route depths it covers. */
+    from: number; to: number;
+    /** Its half width on the play plane and its sweep: `amplitude * sin(age * rate + phase)`. */
+    halfWidth: number; amplitude: number; rate: number; phase: number;
 };
 
+// Stage five is played on one plane facing the camera, at the chair's depth: what overlaps on screen is what hits.
+// Depth only says when a beam arrives; the chair always flies straight on toward the Earth's shadow.
 export const STAGE_FIVE = deepFreeze({
     length: 10000, goal: 9600,
     // The stage four glide hands over at cruise speed; steering fades in over the entry instead of waiting for it.
     // Only the extinguisher drives the chair forward: `thrust` while spraying, otherwise it coasts and `coast` slows it.
-    entryTime: 1, cruise: 145, thrust: 140, coast: .45, maxSpeed: 270,
-    // The chair flies where it faces: left and right turn it (`turn`, radians per second) up to `heading` either
-    // side of the Earth's shadow, so every way it can face still closes in on it; up and down climb and dive
-    // (`speed`). Both chase their target rate: quick to answer (`response`), quick to settle (`release`).
-    // The company geofence is an invisible wall: past `bounds` across and up it pushes the chair back (`edge` per
-    // unit over) and never lets it more than `overshoot` past.
-    steer: { speed: 210, turn: 2, heading: 70 * Math.PI / 180, response: 7, release: 4.5, edge: 5, overshoot: 80 },
-    bankTurn: .28, bankResponse: 5,
+    entryTime: 1, cruise: 145, thrust: 160, coast: .45,
+    // Three gears: from each depth on the top speed rises, and the beams come closer together.
+    gears: [{ from: 0, maxSpeed: 260 }, { from: 2800, maxSpeed: 330 }, { from: 5600, maxSpeed: 400 }],
+    // The arrow keys move the chair straight across and up the plane (`speed`), chasing that rate: quick to answer
+    // (`response`), quick to settle (`release`). Past `bounds` the company geofence (the viewfinder brackets)
+    // pushes back (`edge` per unit over) and never lets it more than `overshoot` past.
+    steer: { speed: 170, response: 7, release: 4.5, edge: 5, overshoot: 30 },
+    bankSlide: .0013, bankResponse: 5,
     ringClearance: 40, approachSpeed: 55,
-    // Once in the Earth's shadow the company autopilot takes over: it turns the chair to face the goal (`turn`
-    // per second of heading), levels it off, and flies it in, slowing from cruise to `landing` speed as it nears.
-    autopilot: { from: 8800, turn: 1.8, response: 1.5, landing: 70, brake: .45 },
-    // Across either way up to `x`, down to `-y`, and up to a higher ceiling `top`.
-    bounds: { x: 680, y: 430, top: 750 },
+    // Once in the Earth's shadow the company autopilot takes over: it levels the chair off and flies it in, slowing
+    // from cruise to `landing` speed as it nears.
+    autopilot: { from: 8800, response: 1.5, landing: 70, brake: .45 },
+    bounds: { x: 330, y: 150 },
     rings: [] as { x: number; y: number; z: number; radius: number }[],
-    // 5-1 has one slow beam; 5-2 has gaps between three beams; the last beam ends at the Earth's shadow.
-    // Every beam sweeps slower than the chair can steer (210 per second) at every height, so it can always be dodged.
-    // The satellites hang well above (or beside) the play area, so the slices stay close in size across it.
+    // Each beam is announced `warn` seconds before it arrives. A beam touches the chair once it overlaps the chair's
+    // `chairRadius`. Every edge sweeps slower than the chair can steer (170 per second), so it can always be dodged.
     satelliteLight: {
-        slowSpeed: 45, slowResponse: 2.4, shove: 380, lens: 40,
+        slowSpeed: 45, slowResponse: 2.4, shove: 260, chairRadius: 34, warn: 2.2,
         beams: [
-            // 5-1: one wide beam over the cloud layer.
-            { satellite: { x: 0, y: 1450, z: 2300 }, axis: 'x', from: 1300, to: 3300, halfWidth: 210, amplitude: 430, rate: .28, phase: 0 },
-            // 5-2: three narrow beams in the upper atmosphere, overlapping in depth and crossing. The middle one shines
-            // in from the right and sweeps up and down, so dodging it takes climbing or diving.
-            { satellite: { x: -420, y: 1450, z: 4700 }, axis: 'x', from: 3800, to: 5600, halfWidth: 140, amplitude: 480, rate: .22, phase: 0 },
-            { satellite: { x: 1700, y: 0, z: 5300 }, axis: 'y', from: 4400, to: 6200, halfWidth: 120, amplitude: 300, rate: .27, phase: 2.2 },
-            { satellite: { x: 0, y: 1600, z: 5900 }, axis: 'x', from: 5000, to: 6800, halfWidth: 140, amplitude: 480, rate: .18, phase: 4.1 },
-            // 5-3: the last beam in space, cut off by the Earth's shadow.
-            { satellite: { x: 300, y: 1450, z: 8600 }, axis: 'x', from: 7200, to: 8700, halfWidth: 250, amplitude: 380, rate: .3, phase: 1 },
+            // 5-1, first gear: one beam at a time, with room to breathe between them.
+            { axis: 'x', from: 600, to: 1200, halfWidth: 80, amplitude: 190, rate: .45, phase: 0 },
+            { axis: 'x', from: 1750, to: 2350, halfWidth: 80, amplitude: 200, rate: .5, phase: 2.4 },
+            { axis: 'y', side: 1, from: 2650, to: 3150, halfWidth: 48, amplitude: 100, rate: .55, phase: 0 },
+            // 5-2, second gear: beams follow closer and start to cross.
+            { axis: 'x', from: 3550, to: 4150, halfWidth: 75, amplitude: 210, rate: .5, phase: 1.2 },
+            { axis: 'y', side: -1, from: 4050, to: 4650, halfWidth: 48, amplitude: 100, rate: .6, phase: 3.1 },
+            { axis: 'x', from: 4750, to: 5350, halfWidth: 75, amplitude: 220, rate: .5, phase: 4.4 },
+            { axis: 'y', side: 1, from: 5250, to: 5850, halfWidth: 48, amplitude: 100, rate: .6, phase: .7 },
+            // 5-3, third gear: quick and close, then a quiet stretch before the shadow.
+            { axis: 'x', from: 6150, to: 6700, halfWidth: 70, amplitude: 220, rate: .55, phase: 2 },
+            { axis: 'x', from: 6950, to: 7500, halfWidth: 70, amplitude: 220, rate: .55, phase: 5.1 },
+            { axis: 'y', side: -1, from: 7350, to: 7900, halfWidth: 46, amplitude: 100, rate: .65, phase: 1.6 },
+            { axis: 'x', from: 8000, to: 8450, halfWidth: 75, amplitude: 210, rate: .55, phase: 3.3 },
         ] as SatelliteLightBeam[],
     },
     heights: { air: 3300, space: 6800, shadow: 8800 },
@@ -62,10 +65,6 @@ export type OrbitState = {
     age: number;
     z: number;
     speed: number;
-    /** Which way the chair faces, in radians: 0 toward the Earth's shadow, positive turning right. */
-    heading: number;
-    /** How fast it is turning, radians per second. */
-    yaw: number;
     rings: number;
     /** Seconds the player has been flying without spraying; the Space hint shows once this runs long. */
     idle: number;

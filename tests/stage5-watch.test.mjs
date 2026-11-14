@@ -123,7 +123,7 @@ const { orbitStep, inSatelliteLight, satelliteLightSweep, STAGE_FIVE } = await l
 `);
 
 const chairAt = (x, y = 0) => ({ x, y, vx: 0, vy: 0, a: 0, w: 0 });
-const cruising = z => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, heading: 0, yaw: 0, rings: 0, idle: 0, settled: 0 });
+const cruising = z => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, rings: 0, idle: 0, settled: 0 });
 
 test('5-1: the satellite light slows the chair and shoves it out of the beam', () => {
     const first = STAGE_FIVE.satelliteLight.beams[0];
@@ -157,8 +157,8 @@ test('5-1: no cloud hides the chair from a beam, and outside the beam nothing ha
 
 test('nothing the chair has flown past is drawn between it and the camera', () => {
     const view = createSkyProjection(1000, 510, 1, { distance: 690 });
-    const watchers = travel => orbitWatchers(view, (x, y, z) => [z - travel, 15 + y, x], travel, 0, 1);
-    const satellite = FIVE.satelliteLight.beams[4].satellite;
+    const satellite = { x: 0, y: 560, z: 3000 };
+    const watchers = travel => orbitWatchers(view, (x, y, z) => [z - travel, 15 + y, x], travel, 0, 1, undefined, [satellite]);
     assert.equal(watchers(satellite.z - 5).length - watchers(satellite.z + 5).length, 1, 'a satellite is gone once the chair passes under it');
     const route = ORBIT_WATCH.route[3];
     const lensAt = travel => watchers(travel).filter(lamp => Math.abs(lamp.at[0] - (route.z - travel)) < 60)

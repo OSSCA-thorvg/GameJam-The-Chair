@@ -1,7 +1,6 @@
 import type { RenderCtx } from '../context';
 import type { DrawCommand, LayerSpec } from '../types';
 import { seeded } from './cloud-art';
-import { STAGE_FIVE } from '../../game/stages/orbit/data';
 import { aim, CCTV_KINDS, cctvModel, placer, rect, type CctvKind } from './cctv-models';
 import type { Point3, SkyProjection } from './sky-projection';
 import type { SkyRobot } from '../../game/stages/sky/data';
@@ -66,7 +65,6 @@ export const ORBIT_WATCH = {
     glide: GLIDE,
     reveal: revealCctvs(4100, GLIDE),
     route: routeCctvs(5200, 10, 600, 4700),
-    satellites: STAGE_FIVE.satelliteLight.beams.map(beam => beam.satellite),
     satelliteAppear: .35,
     // A far speck in the sky above the office door, the last landing of the route.
     beacon: { x: 90, y: 760, z: 7400, appear: .55 },
@@ -150,10 +148,11 @@ function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: n
  * `shown` is how far the reveal has turned into 3D; watchers that come later stay hidden. Satellites are placed with
  * `satelliteLightPoint`, the frame their beams are drawn in. Nothing the chair has passed is drawn.
  */
-export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, shown = 1, satelliteLightPoint = point) {
+export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, shown = 1, satelliteLightPoint = point,
+    satellites: readonly { x: number; y: number; z: number }[] = []) {
     const lamps = [...ORBIT_WATCH.reveal, ...ORBIT_WATCH.route].filter(spot => spot.appear <= shown && point(spot.x, spot.y, spot.z)[0] > 0)
         .flatMap(spot => floating(view, point, spot, travel, t));
-    if (ORBIT_WATCH.satelliteAppear <= shown) for (const at of ORBIT_WATCH.satellites) {
+    if (ORBIT_WATCH.satelliteAppear <= shown) for (const at of satellites) {
         const ahead = satelliteLightPoint(at.x, at.y, at.z)[0];
         if (ahead > 0 && ahead < 6000) lamps.push(satellite(view, satelliteLightPoint, at, travel, t));
     }

@@ -6,12 +6,14 @@ import { skyDeparture } from './sky-departure';
 import { basinCloudSeeds, orbitCloudBank, orbitSky, type CloudBankOptions } from './orbit-atmosphere';
 import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGlow } from './orbit-watch';
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
-import { orbitSatelliteLight, satelliteChairGlow, satelliteGlare, satelliteLitChair, satelliteLightWarmth } from './orbit-satellite-light';
+import { orbitSatelliteLight, satelliteChairGlow, satelliteGlare, satelliteLitChair, satelliteLightWarmth, satelliteSpots } from './orbit-satellite-light';
+import { orbitViewfinder } from './orbit-viewfinder';
 import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
 import { earthSkyBottom, orbitEarth, type EarthCamera } from './orbit-earth';
 import { endingChairLights, endingFade, endingLaptopScreen, endingLaptopText, endingNebula, endingSignal, type OrbitEndingState } from './orbit-ending';
 import { orbitSprayHint } from './orbit-spray-hint';
 import { STAGE_FIVE as C } from '../../game/stages/orbit/data';
+import { gearAt } from '../../game/stages/orbit/course/decide';
 
 /**
  * One frame of the flight from the stage four reveal through stage five. Both stages describe their moment with
@@ -44,9 +46,6 @@ export type OrbitShot = {
     basin: number;
     /** The stage five chair framing pulling back from the reveal's close-up. */
     entry: number;
-    /** Which way the chair faces (radians, 0 toward the Earth's shadow) and how fast it is turning; 0 in the reveal. */
-    heading?: number;
-    yaw?: number;
     /** Seconds the player has coasted without spraying, for the Space hint; 0 or absent hides it. */
     idle?: number;
     ending: OrbitEndingState;
@@ -61,6 +60,21 @@ const smooth = (value: number) => {
     const t = Math.max(0, Math.min(1, value));
     return t * t * (3 - 2 * t);
 };
+
+/**
+ * Stage five's camera: how much of the chair's movement it follows (a beat late), how far it pulls back in each gear
+ * as the chair rushes (plus a kick when a new gear starts) and how strong the air streaks get. The play plane always
+ * stays inside the frame, so the viewfinder brackets never leave the screen.
+ */
+const CAMERA = { follow: .15, lag: .3, distance: 960, pull: [.04, .13, .24], kick: .1, kickTime: .6, air: [.5, .78, 1], shake: [0, 0, 1.6] };
+
+/** How far into its gear the route is at `travel`, eased between gears, and the kick as a new gear starts. */
+function gearFeel(travel: number, speed: number) {
+    const gear = gearAt(travel), at = (list: readonly number[]) => list[gear.index];
+    const since = gear.index > 0 ? (travel - gear.from) / Math.max(60, speed) : Infinity;
+    const kick = since < CAMERA.kickTime ? Math.sin(Math.PI * since / CAMERA.kickTime) : 0;
+    return { top: gear.maxSpeed, pull: at(CAMERA.pull), air: at(CAMERA.air), shake: at(CAMERA.shake), kick };
+}
 
 const screen = (ctx: RenderCtx): [number, number][] => [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]];
 
@@ -93,22 +107,25 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     const clouds = 1 - orbitHeights(travel).air;
     const wide = ending.wide, blend = smooth(shot.entry);
     const mix = (a: number, b: number, k: number) => a + (b - a) * k;
-    // The camera rides behind the chair and turns with it a beat late, so the chair leads into every turn. Up and
-    // down it follows most of the chair's height, also a beat late; once parked it moves right onto the chair.
-    const lag = .3, follow = .9;
-    // Parked, the chair and camera swing round to face the shadow, the way the ending's shots are framed.
-    const heading = (shot.heading ?? 0) * (1 - ending.centre), look = heading - (shot.yaw ?? 0) * lag * .6;
-    const cam = { x: p.x, y: mix(follow * Math.max(-C.bounds.y, Math.min(C.bounds.top, p.y - p.vy * lag)), p.y, ending.centre) };
+    // The camera always faces the Earth's shadow and follows the chair only a little, a beat late, so the chair
+    // moves across a steady frame. Once parked it moves right onto the chair.
+    const look = 0;
+    const follow = (v: number, dv: number) => CAMERA.follow * (v - dv * CAMERA.lag);
+    const cam = { x: mix(follow(p.x, p.vx), p.x, ending.centre), y: mix(follow(p.y, p.vy), p.y, ending.centre) };
     // How hard the chair is pressing out past the edge, and which way.
-    const over = { x: Math.max(0, Math.abs(p.x) - C.bounds.x + 40) * Math.sign(p.x), y: p.y > 0 ? Math.max(0, p.y - C.bounds.top + 40) : Math.min(0, p.y + C.bounds.y - 40) };
+    const over = { x: Math.max(0, Math.abs(p.x) - C.bounds.x + 20) * Math.sign(p.x), y: Math.max(0, Math.abs(p.y) - C.bounds.y + 20) * Math.sign(p.y) };
     // Parked, nothing presses against the fence any more.
-    const edge = smooth(Math.hypot(over.x, over.y) / (C.steer.overshoot + 40)) * (1 - ending.centre);
-    const fast = smooth((shot.speed - C.cruise) / (C.maxSpeed - C.cruise));
+    const edge = smooth(Math.hypot(over.x, over.y) / (C.steer.overshoot + 20)) * (1 - ending.centre);
+    // Each gear rushes harder: the top speed rises, and so do the pull-back and the streaks of air.
+    const feel = gearFeel(travel, shot.speed);
+    const fast = smooth((shot.speed - C.cruise) / (feel.top - C.cruise)) * feel.air * (1 - ending.centre);
     const push = shot.push * blend;
     // How hard the chair is rushing forward. Speed only climbs while the extinguisher fires, so as the chair
     // accelerates the camera falls back behind it, and eases in again as it coasts.
-    const rush = smooth((shot.speed - .4 * C.cruise) / (C.maxSpeed - .4 * C.cruise));
-    const distance = 480 + 210 * blend + 150 * rush * (1 - wide);
+    const rush = smooth((shot.speed - .4 * C.cruise) / (feel.top - .4 * C.cruise)) * (1 - ending.centre);
+    const pull = (feel.pull * rush + CAMERA.kick * feel.kick) * blend;
+    const distance = (480 + (CAMERA.distance - 480) * blend) * (1 + pull) * (1 - wide) + (480 + 210 + 150 * rush) * wide;
+    const shake = feel.shake * rush * blend;
     // One camera for the world and the chair. It swings from the reveal's raised side view to behind the chair,
     // dollies back once stage five is under way, widens with speed, rolls a little with the bank and shakes
     // while the extinguisher fires; the ending pulls it back onto the wide horizon.
@@ -121,10 +138,10 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     const near = mix(distance, 170, focus);
     const framing = {
         // When the message comes up, the camera pushes in until the laptop screen fills the middle of the frame.
-        centerY: mix(.5 - .13 * turn + Math.sin(ctx.t * 47) * .002 * push, .68, focus) + READ.centerY * ending.read,
+        centerY: mix(.5 - .13 * turn + Math.sin(ctx.t * 47) * (.002 * push + .003 * shake), .68, focus) + READ.centerY * ending.read,
         eyeY: 45 - 30 * turn + near * Math.tan(lookDown) + 35 * focus,
         distance: near, zoom: mix(mix(mix(1 - .08 * fast, .72, wide), 1.15, ending.recline), 1.7, focus) * (1 + READ.zoom * ending.read), roll: mix(p.a * .35, 0, wide),
-        offsetX: Math.sin(ctx.t * 53) * 1.2 * push + ctx.W * READ.offsetX * ending.read,
+        offsetX: Math.sin(ctx.t * 53) * (1.2 * push + shake) + ctx.W * READ.offsetX * ending.read,
     };
     // In the ending, once the network is lost, the camera makes one slow full circle round the chair (four
     // quarter turns), and the sky, the nebula and the Earth below turn with it.
@@ -139,12 +156,13 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // The world as the camera sees it: ahead of the chair along the way the camera faces, up, and to its right.
     const facing = { cos: Math.cos(look), sin: Math.sin(look) };
     const point = (x: number, y: number, z: number): Point3 => {
-        const across = x - p.x, ahead = z - travel;
+        const across = x - cam.x, ahead = z - travel;
         return [ahead * facing.cos + across * facing.sin, 15 + y - cam.y, across * facing.cos - ahead * facing.sin];
     };
     // The chair sits a little below the camera's line of sight, banking and pitching with its own motion. Its
     // drop scales with the camera distance, so a pulled-back camera shows it smaller at the same height.
-    const sink = (38 * turn + 72 * blend) * distance / (480 + 210 * blend) / (1 - .08 * fast * (1 - wide)) * (1 - focus);
+    // In play it sits just below the middle, so the whole play plane and its brackets fit on screen.
+    const sink = (38 * turn * (1 - blend) + 72 * blend) * distance / (480 + (CAMERA.distance - 480) * blend) / (1 - .08 * fast * (1 - wide)) * (1 - focus);
     // The chair is drawn `sink` below its place on the route (its body centre sits 15 above its origin, like the
     // route's eye line). The satellites and their beams are placed in the chair's drawn frame,
     // so what the light touches on screen is what the course says it touches.
@@ -152,10 +170,9 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // In the ending the chair itself swivels round and leans back, as if to take in space; its rider turns with it,
     // eyes still on the laptop.
     const bank = mix(p.a * .65, 0, wide), pitch = mix(Math.max(-.2, Math.min(.2, p.vy / 900)), 0, wide) + .32 * ending.recline;
-    // The chair turns ahead of the camera, so it can be seen leaning into a turn.
-    const swivel = ending.swivel * Math.PI + (heading - look);
+    const swivel = ending.swivel * Math.PI;
     const shudder = edge * 2.6;
-    const pivot = -25, offset: Point3 = [0, -sink + p.y - cam.y + Math.sin(ctx.t * 61) * shudder, Math.cos(ctx.t * 53) * shudder];
+    const pivot = -25, offset: Point3 = [0, -sink + p.y - cam.y + Math.sin(ctx.t * 61) * shudder, p.x - cam.x + Math.cos(ctx.t * 53) * shudder];
     const chair = placedProjection(view, ([x0, y, z0]) => {
         const x = x0 * Math.cos(swivel) - z0 * Math.sin(swivel), z = x0 * Math.sin(swivel) + z0 * Math.cos(swivel);
         const ly = y - pivot;
@@ -173,19 +190,22 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     if (turn >= ORBIT_WATCH.glintsFrom) orbitCloudGlints(ctx, clouds);
     // The watchers stay out of the flat side view and turn up one by one as the view turns into 3D.
     if (turn >= ORBIT_WATCH.beacon.appear) orbitBeacon(ctx, view, point);
-    const lamps = turn > 0 ? orbitWatchers(view, point, travel, ctx.t, turn, satelliteLightPoint) : [];
+    const lamps = turn > 0 ? orbitWatchers(view, point, travel, ctx.t, turn, satelliteLightPoint, satelliteSpots(since, travel, shot.speed)) : [];
     // Scenery beyond the chair first; the chair and whatever passes beside it are painted after the clouds.
     const split = { depth: chair.depth([0, pivot, 0]) + 90, part: 'far' as const };
     ctx.commands.push(...view.commands(split));
     orbitWatchGlow(ctx, view, lamps);
-    orbitSatelliteLight(ctx, view, satelliteLightPoint, since, travel, smooth((turn - ORBIT_WATCH.satelliteAppear) / .3));
+    // The play plane at the chair's depth, in the frame the chair is drawn in: the bands and the viewfinder sit on it.
+    const plane = (x: number, y: number) => view.project(satelliteLightPoint(x, y, travel));
+    const lightShown = smooth((turn - ORBIT_WATCH.satelliteAppear) / .3) * (1 - smooth(ending.centre * 4));
+    orbitSatelliteLight(ctx, view, satelliteLightPoint, plane, since, travel, shot.speed, lightShown);
     if (cloudsShown) orbitCloudBank(ctx, view, travel, true, { ...options, alpha: clouds });
     if (heights.shadow > 0 && horizon) orbitShadow(ctx, { ...heights, shadow: heights.shadow * (1 - wide) }, horizon);
     skyDeparture(ctx, shot.departure);
-    orbitSpeedLines(ctx, view.project(point(p.x + Math.sin(heading) * 100000, p.y, travel + Math.cos(heading) * 100000)), fast * (1 - wide));
+    orbitSpeedLines(ctx, view.project(point(cam.x, cam.y, travel + 100000)), fast * (1 - wide));
     // The air resistance shows as streaks wrapping round the chair, strongest while the extinguisher pushes,
     // and the plume stretches out behind it.
-    const air = orbitSlipstream(ctx, chair, rush * (.35 + .65 * push) * (1 - wide));
+    const air = orbitSlipstream(ctx, chair, rush * feel.air * (.35 + .65 * push) * (1 - wide));
     ctx.commands.push(...air.behind);
     // The light the chair is catching shows on the chair itself: warming as it nears a beam, glowing inside one.
     const light = since >= 0 && wide <= 0 ? satelliteLightWarmth(since, p, travel) : { warmth: 0, side: 1, axis: 'x' as const };
@@ -196,8 +216,9 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     satelliteChairGlow(ctx, chair, light, pulse);
     ctx.commands.push(...view.commands({ ...split, part: 'near' }));
     ctx.commands.push(...air.over);
-    // Caught in a beam, the light dazzles the whole picture.
+    // Caught in a beam, the light washes over the picture a little, and the viewfinder starts recording.
     satelliteGlare(ctx, chair.project([0, 15, 0]), light.warmth, pulse);
+    orbitViewfinder(ctx, plane, light.warmth >= 1 ? 1 : 0, lightShown * blend * (1 - heights.shadow));
     endingLaptopText(ctx, chair, ending);
     endingChairLights(ctx, chair, ending);
     const head = chair.project([4, 70, 0]);

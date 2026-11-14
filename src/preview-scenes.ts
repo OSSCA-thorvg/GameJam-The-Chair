@@ -2,7 +2,7 @@ import { createGame, type Game, type GameState } from './game/game';
 import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
-import { orbitStep, satelliteLightOn, satelliteLightSection } from './game/stages/orbit/course/decide';
+import { orbitStep, satelliteLightOn, satelliteLightSweep } from './game/stages/orbit/course/decide';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { revealGlideStart, SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
 import { ATTENDANCE } from './render/scene/attendance-bubble';
@@ -699,11 +699,10 @@ function skyToOrbit(): PreviewScene {
     return recordedScene('sky-to-orbit', 'Sky → Orbit · Hand-off, steering fade-in, spray to fly', 0, markers, frames);
 }
 
-/** Turns the chair to head for `x` across the route a little way ahead, still flying on toward the shadow. */
-function turnToward(orbit: { heading: number; yaw: number; speed: number }, p: { x: number }, x: number): Input[] {
-    const want = Math.max(-1.3, Math.min(1.3, Math.atan2(x - p.x, Math.max(120, orbit.speed * .8))));
-    const error = want - (orbit.heading + orbit.yaw * .35);
-    return error > .04 ? ['right'] : error < -.04 ? ['left'] : [];
+/** Moves the chair across toward `x`. */
+function moveToward(p: { x: number; vx: number }, x: number): Input[] {
+    const error = x - (p.x + p.vx * .25);
+    return error > 12 ? ['right'] : error < -12 ? ['left'] : [];
 }
 
 const PLAN = { seconds: 1.2, step: .1 };
@@ -711,25 +710,25 @@ const TURNS: Input[][] = [['left'], [], ['right']];
 const CLIMBS: Input[][] = [['forward'], [], ['back']];
 
 /**
- * Steering for the stage five previews: try every turn and climb for a moment with the real flight rules and take
- * the one that stays out of the beams and gets furthest on.
+ * Steering for the stage five previews: try every way across and up for a moment with the real flight rules and take
+ * the one that stays out of the beams and gets furthest on, spraying all the way.
  */
 export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSnapshot']>): Input[] {
     const orbit = state.orbit, p = state.player;
     if (!orbit) return [];
     let best = -Infinity, keys: Input[] = [];
     for (const turn of TURNS) for (const climb of CLIMBS) {
-        const held = [...turn, ...climb, ...(orbit.speed < STAGE_FIVE.cruise ? ['spray' as const] : [])];
+        const held = [...turn, ...climb, 'spray' as const];
         let o = orbit, q = p, lit = 0;
         for (let t = 0; t < PLAN.seconds; t += PLAN.step) {
             ({ orbit: o, p: q } = orbitStep(o, q, held, PLAN.step));
             // Nearer moments count more: those are the ones still certain.
             if (satelliteLightOn(o.age, q, o.z)) lit += 1.5 - t;
         }
-        const score = (o.z - orbit.z) * .05 - lit * 40 - Math.abs(o.heading) * 30 - Math.max(0, Math.abs(q.x) - STAGE_FIVE.bounds.x + 120) * .5;
+        const score = (o.z - orbit.z) * .05 - lit * 40 - (Math.abs(q.x) + Math.abs(q.y)) * .01;
         if (score > best) { best = score; keys = turn.concat(climb); }
     }
-    if (orbit.speed < STAGE_FIVE.cruise) keys.push('spray');
+    keys.push('spray');
     return keys;
 }
 
@@ -776,7 +775,7 @@ function orbitEndingScene(aside = false): PreviewScene {
     const parked = JSON.parse(game.serialize());
     Object.assign(parked.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1, age: 76 });
     // The whole shadow is the goal, so in play the chair can park well off the middle of the route.
-    if (aside) { Object.assign(parked.p, { x: -588, y: 419, vx: 0, vy: 0, a: 0 }); parked.orbit.heading = .52; }
+    if (aside) Object.assign(parked.p, { x: -STAGE_FIVE.bounds.x, y: STAGE_FIVE.bounds.y, vx: 0, vy: 0, a: 0 });
     // As in play, the chair arrives well into the stage, long after the stage title has gone.
     parked.checkpoint = 1;
     parked.time = 76;
@@ -814,7 +813,7 @@ function orbitSatelliteLightScene(): PreviewScene {
         const stage = orbit.z < first.from ? 'clouds' : orbit.z < first.to ? 'satellite light' : 'past the beam';
         if (stage !== previous) { markers.push({ at: i / 60, label: stage }); previous = stage; }
     }
-    return recordedScene('orbit-satellite-light', 'Orbit · 5-1: hide from the satellite light', 0, markers, frames);
+    return recordedScene('orbit-satellite-light', 'Orbit · 5-1: the first beam, announced then dodged', 0, markers, frames);
 }
 
 function orbitSatelliteLightLitScene(): PreviewScene {
@@ -828,10 +827,8 @@ function orbitSatelliteLightLitScene(): PreviewScene {
     for (let i = 0; i < 2400; i++) {
         const state = game.getSnapshot(), orbit = state.orbit, p = state.player;
         if (!orbit || orbit.z > first.to) break;
-        const slice = satelliteLightSection(first, orbit.age + .4, p.y);
-        const target = slice.centre + slice.halfWidth + 90 + 130 * Math.cos(orbit.age * .9);
-        const keys: Input[] = turnToward(orbit, p, target);
-        if (orbit.speed < STAGE_FIVE.cruise) keys.push('spray');
+        const target = satelliteLightSweep(first, orbit.age + .4) + first.halfWidth + 40 + 90 * Math.cos(orbit.age * .9);
+        const keys: Input[] = [...moveToward(p, target), 'spray'];
         game.setInput(...keys);
         stepGame(game, effects);
         frames.push(capture(game, effects));
