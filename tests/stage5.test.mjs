@@ -353,17 +353,19 @@ test('turning answers at once, settles quickly when released, and nothing steers
     const calm = hold(settled.orbit, settled.p, [], 1), on = hold(calm.orbit, calm.p, ['spray'], 1);
     assert.ok(Math.abs(on.orbit.heading - calm.orbit.heading) < .01, 'no autopilot turns it back');
     assert.ok(on.p.x > calm.p.x + 40 && on.orbit.z > calm.orbit.z, 'it carries on to the right and ahead');
-    // It can even turn round and fly back the way it came.
-    const round = hold(cruisingAt(2000), still(), ['right'], 1.8);
-    assert.ok(Math.cos(round.orbit.heading) < 0, 'facing back the way it came');
-    const back = hold(round.orbit, round.p, ['spray'], 1);
-    assert.ok(back.orbit.z < round.orbit.z, 'and flying back');
+    // However long it turns, it never faces away from the shadow, so every heading still closes in on it.
+    const round = hold(cruisingAt(2000), still(), ['right'], 3);
+    assert.ok(Math.abs(round.orbit.heading - STAGE_FIVE.steer.heading) < 1e-9 && round.orbit.yaw === 0, 'it stops at the widest turn');
+    assert.ok(Math.cos(round.orbit.heading) > .3, 'still facing the shadow');
+    const on2 = hold(round.orbit, round.p, ['spray', 'left'], .2);
+    assert.ok(on2.orbit.z > round.orbit.z, 'and still flying toward it');
+    assert.ok(on2.orbit.heading < round.orbit.heading, 'turning back answers at once');
 });
 
 test('the company geofence is an invisible wall that pushes back past the edge', () => {
     const { bounds, steer } = STAGE_FIVE;
-    // Facing straight across the route at full speed, climbing all the while.
-    let state = { orbit: cruisingAt(200, { heading: Math.PI / 2, speed: STAGE_FIVE.maxSpeed }), p: still() }, furthest = 0;
+    // Turned as far across the route as it goes, at full speed, climbing all the while.
+    let state = { orbit: cruisingAt(200, { heading: steer.heading, speed: STAGE_FIVE.maxSpeed }), p: still() }, furthest = 0;
     for (let i = 0; i < 10 * 120; i++) {
         state = orbitStep(state.orbit, state.p, ['forward', 'spray'], 1 / 120);
         furthest = Math.max(furthest, state.p.x);
@@ -373,9 +375,6 @@ test('the company geofence is an invisible wall that pushes back past the edge',
     assert.ok(state.p.y > bounds.y && state.p.y <= bounds.y + steer.overshoot, 'the same up and down');
     const away = hold({ ...state.orbit, heading: 0 }, state.p, [], 2);
     assert.ok(away.p.x <= bounds.x + 1 && away.p.y <= bounds.y + 1, 'turned away, the fence eases it back inside');
-    // Behind the start there is a wall too.
-    const backward = hold(cruisingAt(0, { heading: Math.PI, speed: STAGE_FIVE.maxSpeed }), still(), ['spray'], 8);
-    assert.ok(backward.orbit.z >= steer.back - steer.overshoot, `never far behind the start (${backward.orbit.z.toFixed(0)})`);
 });
 
 test('a side beam sweeps up and down: only climbing or diving gets out of it', () => {

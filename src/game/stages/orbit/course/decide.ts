@@ -20,6 +20,11 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     const turning = (held('right') - held('left')) * steer;
     next.yaw += (turning * C.steer.turn - next.yaw) * (1 - Det.exp(-(turning !== 0 ? C.steer.response : C.steer.release) * dt));
     next.heading += next.yaw * dt;
+    // At the widest turn the chair stops turning further: it never faces away from the Earth's shadow.
+    if (Math.abs(next.heading) >= C.steer.heading) {
+        next.heading = Math.sign(next.heading) * C.steer.heading;
+        if (next.yaw * next.heading > 0) next.yaw = 0;
+    }
     // Across, the chair only drifts on its own when something shoves it or the geofence pushes it back in.
     p.vx = steerAxis(p.vx, p.x, 0, C.bounds.x, dt);
     p.vy = steerAxis(p.vy, p.y, (held('forward') - held('back')) * steer, C.bounds.y, dt);
@@ -36,9 +41,7 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     const praised = beam !== null;
     p.x = clamp(p.x + (next.speed * Det.sin(next.heading) + p.vx) * dt, C.bounds.x + C.steer.overshoot);
     p.y = clamp(p.y + p.vy * dt, C.bounds.y + C.steer.overshoot);
-    next.z = Math.max(C.steer.back - C.steer.overshoot, next.z + next.speed * Det.cos(next.heading) * dt);
-    // Behind the start the geofence turns the chair's own motion back toward the shadow.
-    if (next.z < C.steer.back) next.z += (C.steer.back - next.z) * C.steer.edge * dt;
+    next.z += next.speed * Det.cos(next.heading) * dt;
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
     return { orbit: next, p, checkpoint, praised, spraying: thrust || !controlled };

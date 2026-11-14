@@ -20,11 +20,12 @@ export const STAGE_FIVE = deepFreeze({
     // The stage four glide hands over at cruise speed; steering fades in over the entry instead of waiting for it.
     // Only the extinguisher drives the chair forward: `thrust` while spraying, otherwise it coasts and `coast` slows it.
     entryTime: 1, cruise: 145, thrust: 140, coast: .45, maxSpeed: 270,
-    // The chair flies where it faces: left and right turn it (`turn`, radians per second), up and down climb and dive
+    // The chair flies where it faces: left and right turn it (`turn`, radians per second) up to `heading` either
+    // side of the Earth's shadow, so every way it can face still closes in on it; up and down climb and dive
     // (`speed`). Both chase their target rate: quick to answer (`response`), quick to settle (`release`).
-    // The company geofence is an invisible wall: past `bounds` across and up, or behind `back`, it pushes the chair
-    // back (`edge` per unit over) and never lets it more than `overshoot` past.
-    steer: { speed: 210, turn: 2, response: 7, release: 4.5, edge: 5, overshoot: 80, back: -300 },
+    // The company geofence is an invisible wall: past `bounds` across and up it pushes the chair back (`edge` per
+    // unit over) and never lets it more than `overshoot` past.
+    steer: { speed: 210, turn: 2, heading: 70 * Math.PI / 180, response: 7, release: 4.5, edge: 5, overshoot: 80 },
     bankTurn: .28, bankResponse: 5, cruiseRecovery: .6,
     ringClearance: 40, approachSpeed: 55, arrivalSpeed: 45, arrivalDistance: 600,
     bounds: { x: 680, y: 430 },
