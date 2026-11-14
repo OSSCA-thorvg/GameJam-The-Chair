@@ -57,6 +57,31 @@ export function praiseBeamX(beam: Beam, age: number) {
 }
 
 const along = (beam: Beam, p: Readonly<Pick<Player, 'x' | 'y'>>) => beam.axis === 'y' ? p.y : p.x;
+/** How far out from the satellite: y for a down beam, x for a side beam. */
+const reachOf = (beam: Beam, p: Readonly<Pick<Player, 'x' | 'y'>>) => beam.axis === 'y' ? p.x : p.y;
+
+/** The point the light spreads from, the satellite's lens: across the sweep, out from the satellite, and route depth. */
+export function praiseApex(beam: Beam) {
+    const { x, y, z } = beam.satellite;
+    return beam.axis === 'y'
+        ? { across: y, reach: x - Math.sign(x) * C.praise.lens, z }
+        : { across: x, reach: y - C.praise.lens, z };
+}
+
+/**
+ * The beam's slice at `reach` (0 is the middle of the play area): its centre across the sweep, half width, and the
+ * route depths it covers. The light is a tent from the lens, so the slice scales with the distance from it.
+ */
+export function praiseSection(beam: Beam, age: number, reach: number) {
+    const apex = praiseApex(beam), scale = (apex.reach - reach) / apex.reach;
+    return {
+        scale,
+        centre: apex.across + (praiseBeamX(beam, age) - apex.across) * scale,
+        halfWidth: beam.halfWidth * scale,
+        from: apex.z + (beam.from - apex.z) * scale,
+        to: apex.z + (beam.to - apex.z) * scale,
+    };
+}
 
 /** Whether the chair is tucked into one of the 5-1 shelter clouds, out of the satellites' sight. */
 export function praiseSheltered(p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
@@ -68,7 +93,8 @@ export function praiseSheltered(p: Readonly<Pick<Player, 'x' | 'y'>>, z: number)
 export function praiseBeamOn(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number): Beam | null {
     if (praiseSheltered(p, z)) return null;
     for (const beam of C.praise.beams) {
-        if (z >= beam.from && z <= beam.to && Math.abs(along(beam, p) - praiseBeamX(beam, age)) < beam.halfWidth) return beam;
+        const slice = praiseSection(beam, age, reachOf(beam, p));
+        if (slice.scale > 0 && z >= slice.from && z <= slice.to && Math.abs(along(beam, p) - slice.centre) < slice.halfWidth) return beam;
     }
     return null;
 }
@@ -82,7 +108,7 @@ export function inPraise(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: n
 function praiseShove(next: OrbitState, p: Player, beam: Beam, dt: number) {
     const { slowSpeed, slowResponse, shove } = C.praise;
     next.speed += (slowSpeed - next.speed) * Math.min(1, slowResponse * dt);
-    const push = (along(beam, p) >= praiseBeamX(beam, next.age) ? 1 : -1) * shove * dt;
+    const push = (along(beam, p) >= praiseSection(beam, next.age, reachOf(beam, p)).centre ? 1 : -1) * shove * dt;
     if (beam.axis === 'y') p.vy += push;
     else p.vx += push;
 }

@@ -2,7 +2,7 @@ import { createGame, type Game, type GameState } from './game/game';
 import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
-import { praiseBeamX } from './game/stages/orbit/course/decide';
+import { praiseSection } from './game/stages/orbit/course/decide';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { revealGlideStart, SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
 import { ATTENDANCE } from './render/scene/attendance-bubble';
@@ -724,13 +724,17 @@ export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSn
     let target = { x: 0, y: 0 };
     if (shelter) target = shelter;
     else {
-        const ahead = beams.filter(b => orbit.z + 250 >= b.from && orbit.z <= b.to);
+        const slice = (b: typeof beams[number], age: number) => praiseSection(b, age, b.axis === 'y' ? p.x : p.y);
+        const ahead = beams.filter(b => orbit.z + 250 >= slice(b, orbit.age).from && orbit.z <= slice(b, orbit.age).to);
         // Each axis on its own: the widest gap from the down beams across, and from the side beams up and down.
         const gap = (axis: 'x' | 'y', at: number, range: number) => {
             const facing = ahead.filter(b => b.axis === axis);
             let best = -Infinity, pick = 0;
             for (let v = -range; v <= range; v += 40) {
-                const room = Math.min(...facing.map(b => Math.abs(v - praiseBeamX(b, orbit.age + .6)) - b.halfWidth), 9999) - Math.abs(v - at) * .15;
+                const room = Math.min(...facing.map(b => {
+                    const { centre, halfWidth } = slice(b, orbit.age + .6);
+                    return Math.abs(v - centre) - halfWidth;
+                }), 9999) - Math.abs(v - at) * .15;
                 if (room > best) { best = room; pick = v; }
             }
             return facing.length ? pick : 0;

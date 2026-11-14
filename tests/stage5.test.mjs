@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { ORBIT_ENDING, orbitEnding, createGame, orbitStep, praiseBeamX, praiseBeamOn, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
+const { ORBIT_ENDING, orbitEnding, createGame, orbitStep, praiseBeamX, praiseBeamOn, praiseSection, orbitPraise, createSkyProjection, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
     export { createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } from './src/game/replay';
     export { actionForKey } from './src/ui/controls';
     export { createGame, stepGame } from './src/game/game';
-    export { orbitStep, praiseBeamX, praiseBeamOn } from './src/game/stages/orbit/course/decide';
+    export { orbitStep, praiseBeamX, praiseBeamOn, praiseSection } from './src/game/stages/orbit/course/decide';
+    export { orbitPraise } from './src/render/scene/orbit-praise';
+    export { createSkyProjection } from './src/render/scene/sky-projection';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
     export { parseCommand } from './src/game/commands';
     export { previewScenes, orbitKeys } from './src/preview-scenes';
@@ -73,9 +75,13 @@ test('stage five climbs through 5-1 to 5-3 and stops in the Earth shadow, withou
 
 test('no praise beam reaches into the Earth shadow, and every beam sweeps slower than the chair steers', () => {
     const { beams } = STAGE_FIVE.praise;
-    assert.ok(beams.every(beam => beam.to <= STAGE_FIVE.heights.shadow));
+    // The light spreads out away from the satellite: check it at every height the chair can reach.
+    const { bounds, steer: { overshoot } } = STAGE_FIVE;
+    const reaches = beam => beam.axis === 'y' ? [-1, 1].map(s => s * (bounds.x + overshoot)) : [-1, 1].map(s => s * (bounds.y + overshoot));
+    const slices = beam => reaches(beam).map(reach => praiseSection(beam, 0, reach));
+    assert.ok(beams.every(beam => slices(beam).every(slice => slice.scale > 0 && slice.to <= STAGE_FIVE.heights.shadow)));
     const steer = STAGE_FIVE.steer.speed;
-    assert.ok(beams.every(beam => beam.amplitude * beam.rate < steer), 'the chair can always outrun a sweep');
+    assert.ok(beams.every(beam => slices(beam).every(slice => beam.amplitude * beam.rate * slice.scale < steer)), 'the chair can always outrun a sweep');
     assert.equal(beams.filter(beam => beam.from >= STAGE_FIVE.heights.air && beam.to <= STAGE_FIVE.heights.space).length, 3, '5-2 has three satellites');
 });
 
@@ -461,4 +467,37 @@ test('glows and streaks of a kind share one layer, so each is a single ThorVG Sc
     };
     assert.ok(frame.some(command => command.layer?.key === 'orbit-speed-lines'), 'streaks are drawn flat out');
     for (const key of ['orbit-speed-lines', 'orbit-cctv-rec', 'orbit-cctv-light', 'orbit-robot-eye']) assert.ok(runs(key) <= 1, `${key} is one layer run`);
+});
+
+test('a praise beam is drawn where it pushes, at every height, and nothing of it nearer than the chair', () => {
+    const beam = STAGE_FIVE.praise.beams[1];
+    // A moment when the beam lies off to the right, so its right edge is an outline of the drawn light.
+    const age = Array.from({ length: 600 }, (_, i) => i / 10).find(t => Math.abs(praiseBeamX(beam, t) - 300) < 20);
+    const travel = beam.satellite.z + 200;
+    const view = createSkyProjection(1000, 510, 1, { distance: 690 });
+    const point = (x, y, z) => [z - travel, 15 + y, x];
+    const ctx = createRenderCtx({});
+    Object.assign(ctx, { W: 1000, H: 510, t: 0 });
+    orbitPraise(ctx, view, point, age, travel);
+    const lights = ctx.commands.filter(command => command.layer?.key === 'orbit-praise-beam');
+    const inside = (polygon, [x, y]) => polygon.every((a, i) => {
+        const b = polygon[(i + 1) % polygon.length];
+        return (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]) >= 0;
+    }) || polygon.every((a, i) => {
+        const b = polygon[(i + 1) % polygon.length];
+        return (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]) <= 0;
+    });
+    const at = (x, y) => view.project(point(x, y, travel + 1));
+    const light = lights.find(command => inside(command.v, at(praiseSection(beam, age, 0).centre, 0)));
+    assert.ok(light, 'the beam is drawn');
+    for (const y of [-400, 0, 400]) {
+        const slice = praiseSection(beam, age, y), edge = slice.centre + slice.halfWidth;
+        assert.equal(praiseBeamOn(age, { x: edge - 30, y }, travel + 1), beam);
+        assert.notEqual(praiseBeamOn(age, { x: edge + 30, y }, travel + 1), beam);
+        assert.ok(inside(light.v, at(edge - 30, y)), `lit just inside its edge at height ${y}`);
+        assert.ok(!inside(light.v, at(edge + 30, y)), `dark just outside it at height ${y}`);
+    }
+    assert.ok(praiseSection(beam, age, 400).halfWidth < praiseSection(beam, age, -400).halfWidth, 'it spreads out below the satellite');
+    // Cut at the chair: the satellite's lens is behind the chair now, so the light no longer reaches up to it.
+    assert.ok(!inside(light.v, view.project(point(beam.satellite.x, beam.satellite.y - STAGE_FIVE.praise.lens, beam.satellite.z))));
 });
