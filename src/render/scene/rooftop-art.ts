@@ -1,7 +1,6 @@
 import { STAGE_THREE } from '../../game/stages/rooftop/data';
 import type { RenderCtx } from '../context';
 import { CLOUD_TONES, puffCloud } from './cloud-art';
-import { sunGlow } from './sun';
 
 // The dusk over the roof, and the day sky of stage four it turns into on the climb.
 const DUSK: [number, string][] = [[0, '#8798b5'], [.45, '#ccb0b9'], [.8, '#f3c8a6'], [1, '#ffddac']];
@@ -20,10 +19,6 @@ export function rooftopSky(ctx: RenderCtx) {
     const eased = day * day * (3 - 2 * day);
     ctx.gradientPolygon([[ctx.cam, top], [ctx.cam + ctx.VW, top], [ctx.cam + ctx.VW, bottom], [ctx.cam, bottom]],
         ctx.gradientFill(0, top, 0, bottom, DUSK.map(([at, color], i) => [at, mixHex(color, DAY[i][1], eased)] as [number, string])));
-    if (eased > 0) {
-        // The sky stage's sun glow fades in as the chair nears it.
-        sunGlow(ctx, top, bottom, eased);
-    }
     // The skyline recedes in three layers as the chair climbs out of the city.
     for (let layer = 0; layer < 3; layer++) {
         const spacing = 88 + layer * 23, parallax = .12 + layer * .11;
