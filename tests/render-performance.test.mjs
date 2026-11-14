@@ -31,16 +31,13 @@ function stageContext(stage, camera = 0) {
     return ctx;
 }
 
-test('stage four keeps ThorVG screen blending local to the visible sun halo', () => {
-    const ctx = stageContext(4);
-    drawSky(ctx);
-
-    assert.ok(!ctx.commands.some(command => command.layer?.key === 'sky-sun'), 'the sun does not allocate a full-canvas Scene');
-    const sun = ctx.commands.find(command => command.blend === 'screen' && command.c && typeof command.c !== 'string' && command.c.radius);
-    assert.ok(sun, 'the sun still uses a ThorVG radial gradient with Screen blending');
-    const xs = sun.v.map(([x]) => x), ys = sun.v.map(([, y]) => y);
-    assert.ok(Math.max(...xs) - Math.min(...xs) < ctx.W * .8, 'the glow is bounded around the sun');
-    assert.ok(Math.max(...ys) - Math.min(...ys) < ctx.H * .9, 'the glow is not a full-height intermediate');
+test('the stage three takeoff and the stage four sky draw no white sun disc', () => {
+    // The old sun glow rendered as a hard white disc, like a moon hanging over the climb and the whole of stage four.
+    const disc = commands => commands.find(command => command.blend === 'screen' && command.c && typeof command.c !== 'string' && command.c.radius);
+    const sky = stageContext(4);
+    drawSky(sky);
+    assert.equal(disc(sky.commands), undefined, 'no sun in the stage four sky');
+    assert.ok(!sky.commands.some(command => command.layer?.key === 'sky-sun'));
 });
 
 test('effect budgets reduce sampling smoothly without deleting the ThorVG effect', () => {

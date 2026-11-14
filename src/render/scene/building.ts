@@ -89,10 +89,14 @@ function head(ctx: RenderCtx, x: number, y: number, facing: number, hair: string
     shape(HAIR_SHAPES[hairstyle], hair);
     shape([[7, -2], [11, -2], [11, 0], [7, 0]], '#4c4951');
     if (glasses) {
-        shape([[3,-6],[14,-5],[14,3],[3,3]], '#bfd9da70');
-        for (const [ax, ay, bx, by] of [[-8,-5,3,-4],[3,-6,14,-5],[14,-5,14,3],[14,3,3,3],[3,3,3,-6]]) {
-            ctx.rod(x + facing * ax, y + ay, x + facing * bx, y + by, 1.7, '#374958');
-        }
+        // Side on the lens is edge-on: a thin line just in front of the face, frame tips at its ends, and the arm
+        // running back to the ear (as the 3D rider's glasses look from the side).
+        const rod = (ax: number, ay: number, bx: number, by: number, width: number, color: string) =>
+            ctx.rod(x + facing * ax, y + ay, x + facing * bx, y + by, width, color);
+        rod(-8, -4, 14.6, -3, 1.6, '#374958');
+        rod(15.2, -6.5, 15.2, 3.5, 1.6, '#9cc4d4');
+        rod(15.2, -6.8, 15.2, -5.6, 2, '#374958');
+        rod(15.2, 2.6, 15.2, 3.8, 2, '#374958');
     }
 }
 

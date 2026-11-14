@@ -94,11 +94,13 @@ function riderHead(ctx: RenderCtx) {
     const tension = focusTension(ctx);
     const glance = Math.max(notice, tension.drift, tension.lift);
     ctx.ellipse(-7, -81, 2.7, 3.4, C.skin);
-    ctx.rod(-5, -83, 4, -84, 1.35, '#3a414b');
-    ctx.rect(3, -86, 11, 6, '#50606a');
-    ctx.rect(4, -85, 9, 4, '#83c8e4');
-    ctx.rect(5, -85, 2, 4, '#bfe6ef');
-    ctx.rect(11.5 - glance * 6, -84, 1.2, 2, '#446d82');
+    // Side on, as in the 3D view, the glasses' lens is edge-on: a thin blue line just in front of the face, with the
+    // frame at its ends and the arm running back to the ear. The eye is on the face behind it.
+    ctx.rect(10.4 - glance * 5, -84, 1.3, 2.2, '#446d82');
+    ctx.rod(-5, -83.4, 14.8, -84.6, 1.2, '#3a414b');
+    ctx.rod(15.2, -87.6, 15.2, -79, 1.4, '#83c8e4');
+    ctx.rod(15.2, -87.8, 15.2, -86.9, 1.7, '#50606a');
+    ctx.rod(15.2, -79.7, 15.2, -78.8, 1.7, '#50606a');
     ctx.rod(9, -71, 12, -71, 1, '#9c775f');
 }
 
