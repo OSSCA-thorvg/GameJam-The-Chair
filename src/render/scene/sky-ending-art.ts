@@ -8,16 +8,17 @@ import { endingGlasses } from './sky-player-glasses';
 /**
  * `loose`: seconds since the extinguisher came off the chair at the end of the flight (negative while attached).
  * `rest`: how far the rider's hands have lifted off the keys (0 typing, 1 stopped above them).
+ * `rocket`: how far the extinguisher has ignited into stage five's rocket engine (0 the reveal's soft puffs, 1 full).
  */
-export function endingChair(view: SkyProjection, elapsed: number, spray = 1, arrival = 0, loose = -1, rest = 0) {
+export function endingChair(view: SkyProjection, elapsed: number, spray = 1, arrival = 0, loose = -1, rest = 0, rocket = 0) {
     const draw = chairDrawing(view, elapsed, arrival);
     chairFrame(draw);
     riderBody(draw);
     riderHead(view, draw);
     riderArms(draw, rest);
-    if (loose < 0) extinguisher(draw, spray);
+    if (loose < 0) extinguisher(draw, spray, rocket);
     // Its last puffs set it tumbling as it drifts away.
-    else extinguisher(looseDrawing(view, draw, loose), spray * Math.exp(-loose * .6));
+    else extinguisher(looseDrawing(view, draw, loose), spray * Math.exp(-loose * .6), rocket);
 }
 
 /**
@@ -125,7 +126,7 @@ function riderArms({ C, elapsed, profile }: ChairDrawing, rest = 0) {
     }
 }
 
-function extinguisher({ elapsed, rod, oval }: ChairDrawing, spray: number) {
+function extinguisher({ elapsed, rod, oval }: ChairDrawing, spray: number, rocket: number) {
     rod([-39, -49, 0], [-45, -13, 0], 2, '#394657');
     rod([-46, -48, 0], [-46, -9, 0], 8, '#b75f4a');
     oval(-46, -48, 0, 8, 5, 8, '#c7765c');
@@ -133,9 +134,48 @@ function extinguisher({ elapsed, rod, oval }: ChairDrawing, spray: number) {
     rod([-46, -37, 0], [-46, -26, 0], 8.2, '#eee5cd');
     rod([-46, -52, 0], [-46, -59, 0], 2, '#394657');
     rod([-49, -59, 0], [-35, -59, 0], 1.5, '#394657');
-    for (let i = 0; spray > 0 && i < 5; i++) {
+    for (let i = 0; rocket < 1 && spray > 0 && i < 5; i++) {
         const age = (elapsed * 1.5 + i * .19) % 1;
-        const alpha = Math.round(100 * (1 - age)).toString(16).padStart(2, '0');
-        oval(-46 - age * 4, -7 + age * 50 * spray, 0, 3 + age * 7, 4 + age * 9, 3 + age * 6, '#f6e6df' + alpha);
+        oval(-46 - age * 4, -7 + age * 50 * spray, 0, 3 + age * 7, 4 + age * 9, 3 + age * 6, '#f6e6df' + hex(100 / 255 * (1 - age) * (1 - rocket)));
+    }
+    if (rocket <= 0) return;
+    // Flared nozzle bell.
+    rod([-46, -9, 0], [-46, -4, 0], 5.5, '#2f3540');
+    if (spray > 0) rocketExhaust(oval, elapsed, spray * rocket);
+}
+
+const hex = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0');
+
+/**
+ * The extinguisher fires like a rocket engine: a white-hot core with shock diamonds straight out of the nozzle,
+ * then a long billowing column of foam that swells and tumbles away behind the chair.
+ */
+function rocketExhaust(oval: ChairDrawing['oval'], elapsed: number, spray: number) {
+    const power = Math.min(1.8, spray);
+    const flicker = 1 + Math.sin(elapsed * 47) * .08 + Math.sin(elapsed * 83) * .05;
+    const reach = (120 + 230 * power) * flicker;
+    oval(-46, -3.5, 0, 6.5, 1.2, 6.5, '#ffe9b0' + hex(Math.min(1, power * 2)));
+    // Billowing foam: puffs flow down the column, swelling and drifting apart as they go.
+    const puffs = Math.round(14 + 18 * Math.min(1, power));
+    for (let i = 0; i < puffs; i++) {
+        const age = (elapsed * 2.6 + i / puffs) % 1;
+        const swirl = i * 2.39 + elapsed * 3;
+        const spread = age * age * 50 * power;
+        const size = 7 + age * 55 * (.6 + .4 * power);
+        const tone = age < .25 ? '#fff4d6' : age < .6 ? '#f6efe4' : '#dcdcd8';
+        // The column trails back behind the chair as well as down, like a launch seen from the chase plane.
+        oval(-46 - age * reach * .55 + Math.cos(swirl) * spread, -2 + age * reach, Math.sin(swirl) * spread,
+            size, size * (1.1 + .5 * (1 - age)), size, tone + hex(Math.min(1, age / .18) * (1 - age) * (1 - age) * .9 * Math.min(1, power + .3)));
+    }
+    // The white-hot core and its shock diamonds, along the same tilted thrust line as the foam.
+    const core = (40 + 50 * power) * flicker;
+    oval(-46 - 8, 6, 0, 16 * power, 18 * power, 16 * power, '#fff1c4' + hex(.35 * Math.min(1, power)));
+    for (let k = 0; k < 6; k++) {
+        const along = (k + .5) / 6 * core, r = 8 * (1 - k / 8);
+        oval(-46 - along * .55, -2 + along, 0, r, r * 1.5, r, (k < 2 ? '#ffe28a' : '#ffb347') + hex(.85 * (1 - k / 7)));
+    }
+    for (let k = 1; k <= 3; k++) {
+        const along = core * k * .26, r = 5.5 - k * .9;
+        oval(-46 - along * .55, -2 + along, 0, r, r * 1.6, r, '#ffffff' + hex(.95 - k * .2));
     }
 }
