@@ -51,6 +51,23 @@ function desk(ctx: RenderCtx, width: number, small: boolean, drawer: number) {
     rivet(ctx, dx + 6, 34); rivet(ctx, dx + 59, 34);
 }
 
+function promotionFlag(ctx: RenderCtx, width: number) {
+    const pole = width / 2 - 48;
+    const left = pole - 158;
+    const flap = Math.sin(ctx.t * 5.5) * 5;
+    ctx.ellipse(pole, 2, 18, 5, '#485873');
+    ctx.rod(pole, 0, pole, -174, 5, '#f8e4ae');
+    ctx.rod(pole + 2, -3, pole + 2, -172, 1.5, '#fff4d2');
+    ctx.ellipse(pole, -177, 7, 7, '#ffe4a0');
+    ctx.polygon([[pole, -161], [left, -156 + flap], [left + 17, -124 + flap], [left, -92 + flap], [pole, -97]], '#f6d18d');
+    ctx.polygon([[pole - 5, -155], [left + 8, -150 + flap], [left + 27, -124 + flap], [left + 8, -98 + flap], [pole - 5, -103]], '#b74451');
+    ctx.polygon([[pole - 9, -151], [left + 22, -146 + flap], [left + 40, -124 + flap], [left + 22, -102 + flap], [pole - 9, -107]], '#d95e5c');
+    ctx.polygon([[left + 16, -132], [left + 26, -142], [left + 36, -132], [left + 36, -127], [left + 26, -136], [left + 16, -127]], '#ffe5a6');
+    ctx.polygon([[left + 16, -120], [left + 26, -130], [left + 36, -120], [left + 36, -115], [left + 26, -124], [left + 16, -115]], '#ffe5a6');
+    ctx.text(ctx.locale === 'ko' ? '승진' : 'PROMOTED', pole - 62, -122, ctx.locale === 'ko' ? 27 : 17, '#fff5d8',
+        { outline: { width: 2, color: '#833642' } });
+}
+
 function billboard(ctx: RenderCtx, width: number) {
     const left = -width / 2, right = width / 2;
     for (const x of [left + 30, right - 34]) {
@@ -138,7 +155,10 @@ export function skyCoursePlatform(ctx: RenderCtx, spec: SkyPlatform) {
         case 'sign': billboard(ctx, spec.width); break;
         case 'desk': desk(ctx, spec.width, false, spec.id === 'drawer-desk' ? ctx.state.sky.drawer : 0); break;
         case 'small-desk': desk(ctx, spec.width, true, 0); break;
-        case 'finish': desk(ctx, spec.width, false, 0); break;
+        case 'finish':
+            desk(ctx, spec.width, false, 0);
+            promotionFlag(ctx, spec.width);
+            break;
     }
     ctx.ox = ctx.oy = ctx.rotation = 0;
 }
