@@ -26,8 +26,11 @@ export const STAGE_FIVE = deepFreeze({
     // The company geofence is an invisible wall: past `bounds` across and up it pushes the chair back (`edge` per
     // unit over) and never lets it more than `overshoot` past.
     steer: { speed: 210, turn: 2, heading: 70 * Math.PI / 180, response: 7, release: 4.5, edge: 5, overshoot: 80 },
-    bankTurn: .28, bankResponse: 5, cruiseRecovery: .6,
-    ringClearance: 40, approachSpeed: 55, arrivalSpeed: 45, arrivalDistance: 600,
+    bankTurn: .28, bankResponse: 5,
+    ringClearance: 40, approachSpeed: 55,
+    // Once in the Earth's shadow the company autopilot takes over: it turns the chair to face the goal (`turn`
+    // per second of heading), levels it off, and flies it in, slowing from cruise to `landing` speed as it nears.
+    autopilot: { from: 8800, turn: 1.8, response: 1.5, landing: 70, brake: .45 },
     // Across either way up to `x`, down to `-y`, and up to a higher ceiling `top`.
     bounds: { x: 680, y: 430, top: 750 },
     // No hoops: after the entry the chair heads straight for the Earth's shadow.

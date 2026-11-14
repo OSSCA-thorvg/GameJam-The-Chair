@@ -362,6 +362,23 @@ test('turning answers at once, settles quickly when released, and nothing steers
     assert.ok(on2.orbit.heading < round.orbit.heading, 'turning back answers at once');
 });
 
+test('in the Earth shadow the autopilot takes over and flies the chair in, whatever the keys say', () => {
+    const { autopilot, checkpoint } = STAGE_FIVE;
+    // Arriving turned hard aside, slow, with the player still holding left and climbing.
+    let state = { orbit: cruisingAt(autopilot.from - 1, { heading: -STAGE_FIVE.steer.heading, speed: 40 }), p: still(500, 300) };
+    let seconds = 0;
+    while (state.orbit.phase !== 'parked' && seconds < 20) {
+        state = orbitStep(state.orbit, state.p, ['left', 'forward'], 1 / 120);
+        seconds += 1 / 120;
+        if (seconds > 1) assert.ok(Math.abs(state.orbit.heading) < STAGE_FIVE.steer.heading * .5, 'it has turned the chair to face the goal');
+    }
+    assert.equal(state.orbit.phase, 'parked', 'it parks in the shadow');
+    assert.ok(seconds < 8, `and soon (${seconds.toFixed(1)} s)`);
+    assert.equal(state.orbit.z, checkpoint.z);
+    const before = orbitStep(cruisingAt(autopilot.from - 200), still(), ['left'], 1 / 120);
+    assert.ok(before.orbit.yaw < 0, 'before the shadow the keys still steer');
+});
+
 test('the company geofence is an invisible wall that pushes back past the edge', () => {
     const { bounds, steer } = STAGE_FIVE;
     // Turned as far across the route as it goes, at full speed, climbing all the while.
