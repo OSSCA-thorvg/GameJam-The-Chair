@@ -9,6 +9,8 @@ import { ATTENDANCE } from './render/scene/attendance-bubble';
 import { ORBIT_ENDING } from './render/scene/orbit-ending';
 import { STAGE_TWO } from './game/stages/building/data';
 import { ductTimings, STAGE_THREE, GRAPH_CORNERS } from './game/stages/rooftop/data';
+import { deathShotLength } from './render/death-shot';
+import { FOCUS_LOSS_DURATION } from './game/systems/focus/decide';
 import { createEffects, type EffectsState } from './render/effects';
 import { CLEANER_RECOVERY_END, CLEANER_RECOVERY_START } from './render/scene/cleaning';
 import { monitorPhase } from './game/stages/office/monitor/decide';
@@ -56,6 +58,7 @@ function stepGame(game: Game, effects: ReturnType<typeof createEffects>) {
         game.step(FIXED_STEP);
         effects.observe(game.getSnapshot());
         for (const event of game.drainEvents()) effects.receive(event);
+        effects.advance(FIXED_STEP);
     }
 }
 
@@ -217,13 +220,17 @@ function headImpact(): PreviewScene {
     if (game.getSnapshot().mode !== 'impact') throw new Error('Impact preview could not trigger a head collision.');
     const focusX = game.getSnapshot().player.x;
     const effects = createEffects();
+    effects.observe(game.getSnapshot());
     const frames = [capture(game, effects)];
-    for (let i = 0; i < 108; i++) {
+    // Long enough for the slow-motion replay, the BONK and the close-up easing back.
+    for (let i = 0; i < Math.ceil(deathShotLength('head') / FRAME_TIME) + 12; i++) {
         if (game.getSnapshot().mode === 'impact') game.advanceImpact(FRAME_TIME);
+        effects.observe(game.getSnapshot());
+        effects.advance(FRAME_TIME);
         frames.push(capture(game, effects));
     }
     return recordedScene('head-impact', 'Chair · Head impact replay', focusX,
-        [{ at: 0, label: 'Impact' }, { at: .5, label: 'Rewind' }, { at: 1.4, label: 'Collision' }, { at: 1.8, label: 'End' }], frames);
+        [{ at: 0, label: 'Impact' }, { at: .5, label: 'Rewind' }, { at: 1.4, label: 'Collision: BONK, close-up' }, { at: 2.25, label: 'Easing back' }, { at: deathShotLength('head'), label: 'Panel' }], frames);
 }
 
 function rooftopEntrance(): PreviewScene {
@@ -271,27 +278,28 @@ function focusLoss(): PreviewScene {
     game.reset();
     const base = game.getSnapshot();
     const effects = createEffects().snapshot();
-    const duration = 1.7;
+    // The focus-loss glance (1.7 s), then the close-up on the eyes easing back before the game-over panel.
+    const duration = deathShotLength('focus');
     const focusX = 500;
     return {
         id: 'focus-loss',
         label: 'Chair · Focus loss',
         duration,
         focusX,
-        markers: [{ at: 0, label: 'Focus depleted' }, { at: .8, label: 'Glance' }, { at: duration, label: 'Game over' }],
+        markers: [{ at: 0, label: 'Focus depleted' }, { at: .8, label: 'Glance' }, { at: FOCUS_LOSS_DURATION, label: 'Game over' }, { at: duration, label: 'Panel' }],
         sample(time) {
             const at = Math.max(0, Math.min(duration, time));
             return {
                 state: {
                     ...base,
-                    mode: at < duration ? 'focuslost' : 'dead',
+                    mode: at < FOCUS_LOSS_DURATION ? 'focuslost' : 'dead',
                     lossReason: 'focus',
                     focus: 0,
                     focusLossTime: at,
                     time: at,
                     player: { ...base.player, x: focusX },
                 },
-                effects,
+                effects: { ...effects, deathShot: { kind: 'focus', age: at, done: at >= duration } },
             };
         },
     };
@@ -441,7 +449,7 @@ function shaftHazards(id: string, label: string, at: { x: number; y: number }, s
     return recordedScene(id, label, at.x, markers, frames);
 }
 
-function expressRun(id: string, label: string, hop: boolean, markers: PreviewScene['markers']): PreviewScene {
+function expressRun(id: string, label: string, hop: boolean, markers: PreviewScene['markers'], rampJump = hop): PreviewScene {
     const game = createGame();
     game.startStage(2);
     const saved = JSON.parse(game.serialize());
@@ -458,6 +466,7 @@ function expressRun(id: string, label: string, hop: boolean, markers: PreviewSce
         if (off || c.convoy === 'free') keys = ['right'];
         else if (c.convoy === 'carried' && state.ground) {
             if (hop && bump - p.x > 0 && bump - p.x < 70) game.jump();
+            if (rampJump && pit.left - p.x > 0 && pit.left - p.x < 35) game.jump();
             if (p.x > pit.right + 120) { game.jump(); off = true; keys = ['right']; }
         }
         game.setInput(...keys);
@@ -1008,8 +1017,10 @@ export const previewScenes: readonly PreviewScene[] = [
         [{ at: 1.6, label: 'Vent hiss' }, { at: 2.4, label: 'Vent blast' }, { at: 3.45, label: 'Duct inhale' }, { at: 4.05, label: 'Duct gust' }]),
     shaftHazards('rooftop-shaft-high', 'Rooftop · Shaft vent & ceiling downdraft', { x: 1400, y: -262 }, 1.2,
         [{ at: .3, label: 'Downdraft' }, { at: 1.5, label: 'Wall vent hiss' }, { at: 2.25, label: 'Wall vent blast' }, { at: 2.65, label: 'Ceiling hiss' }, { at: 3.4, label: 'Downdraft' }]),
-    expressRun('express-ramp', 'Building · Express: hop the bump, fly off the ramp', true,
-        [{ at: .7, label: 'Front chair bounces' }, { at: .8, label: 'Hop' }, { at: 1.8, label: 'Ramp shout' }, { at: 2.5, label: 'Convoy takes off' }]),
+    expressRun('express-ramp', 'Building · Express: jump from the ramp', true,
+        [{ at: .7, label: 'Front chair bounces' }, { at: .8, label: 'Hop' }, { at: 1.8, label: 'Ramp shout' }, { at: 2.3, label: 'Jump at the lip' }]),
+    expressRun('express-ramp-miss', 'Building · Express: miss the ramp jump', true,
+        [{ at: .8, label: 'Hop the bump' }, { at: 1.8, label: 'Ramp shout' }, { at: 2.5, label: 'Missed jump' }], false),
     expressRun('express-bump', 'Building · Express: thrown off by the speed bump', false,
         [{ at: .8, label: 'Clunk' }, { at: 1.5, label: 'Chairs roll on' }, { at: 2.6, label: 'Short on foot' }]),
     urgentCopier(1, 'urgent-copier-low', 'Office · Urgent reports: skimming sheets'),

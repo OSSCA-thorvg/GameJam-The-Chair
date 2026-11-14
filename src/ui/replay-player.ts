@@ -40,7 +40,7 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
     function receive(events: readonly GameEvent[]) {
         if (!cursor) return;
         const state = cursor.state;
-        effects.observe({ stage: state.stage, deaths: state.deaths, time: state.time, player: state.p });
+        effects.observe({ stage: state.stage, deaths: state.deaths, time: state.time, player: state.p, mode: state.mode });
         if (!events.length) return;
         const view = viewState(cursor.state);
         for (const event of events) {
@@ -216,6 +216,7 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
         setPlaying,
         advance(dt: number) {
             if (!timeline || !playing || !Number.isFinite(dt) || dt < 0) return;
+            effects.advance(Math.min(dt, .25) * speed);
             acc += Math.min(dt, .25) * speed;
             while (acc >= FIXED_STEP) {
                 acc -= FIXED_STEP;

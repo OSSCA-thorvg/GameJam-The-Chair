@@ -88,6 +88,7 @@ const messages = {
     'opening.riderTyping':       { en: '(tap tap tap)',                                                  ko: '(타닥타닥)' },
     'orbit.disconnected':        { en: 'Network connection lost.',                                       ko: '네트워크 연결이 끊어졌습니다.' },
     'orbit.attendance':          { en: 'Attendance confirmed.',                                          ko: '근태 확인됨.' },
+    'impact.bonk':               { en: 'BONK!',                                                          ko: '쿵!' },
     'opening.skip':              { en: 'Skip opening',                                                   ko: '오프닝 건너뛰기' },
 
     'menu.paused':               { en: 'Paused',                                                         ko: '잠깐' },
@@ -208,8 +209,8 @@ const messages = {
     'chair.rush.1':             { en: 'Late! Hold on to your humans!', ko: '늦겠다! 사람 꽉 잡아!' },
     'chair.rush.2':             { en: 'The rookie is coming too!', ko: '신입도 같이 탄다!' },
     'chair.rush.3':             { en: 'No brakes till clock-out!', ko: '퇴근 전엔 브레이크 없다!' },
-    'chair.ramp.1':             { en: 'Ramp ahead! Everybody fly!', ko: '앞에 발판이다! 다 같이 날자!' },
-    'chair.ramp.2':             { en: 'Rookie, you won\'t make it on foot!', ko: '신입! 떨어지면 혼자선 못 건넌다!' },
+    'chair.ramp.1':             { en: 'Ramp ahead! Jump at the lip!', ko: '발판 끝에서 점프해!' },
+    'chair.ramp.2':             { en: 'Rookie, jump with us!', ko: '신입! 같이 뛰어!' },
 
     'chair.abduction.1':        { en: 'Rookie! Your human clocks out too!', ko: '신입! 사람도 같이 퇴근이야!' },
     'chair.abduction.2':        { en: 'Load the human. Sort it out downstairs!', ko: '사람도 일단 싣고 내려!' },
