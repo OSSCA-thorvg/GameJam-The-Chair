@@ -93,7 +93,7 @@ export function rooftopWalls(ctx: RenderCtx) {
         ctx.rect(x, -50, 66, 5, '#f8d8a2');
     }
     // Closed equipment cabinets and conduits keep the room visibly unoccupied.
-    for (const x of [-110, 218, 341]) {
+    for (const x of [-110, 218]) {
         ctx.rect(x, 258, 61, 145, '#233a53');
         ctx.rect(x + 4, 262, 53, 137, '#506984');
         ctx.rod(x + 10, 271, x + 10, 386, 2, '#7f92a2');
@@ -101,10 +101,6 @@ export function rooftopWalls(ctx: RenderCtx) {
         for (let i = 0; i < 4; i++) ctx.rect(x + 17, 276 + i * 7, 26, 2, '#2d455d');
     }
     column(ctx, 423, -72, 420);
-    ctx.rect(365, 202, 85, 218, '#253b52');
-    ctx.gradientPolygon([[441, 205], [450, 205], [450, 420], [309, 420]],
-        ctx.gradientFill(450, 300, 309, 300, [[0, '#ffe1a6a0'], [1, '#ffe1a600']]));
-    ctx.rect(442, 205, 8, 215, '#f7d8a1');
 
     // The shaft walls run up to a concrete ceiling; the chair's head just fits under it.
     wallPanels(ctx, 1240, -556, 540, 952);
