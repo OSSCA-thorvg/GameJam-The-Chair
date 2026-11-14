@@ -74,9 +74,10 @@ export type OpeningFrame = {
     shake: [number, number];
     /**
      * Chair pose relative to the gameplay pose. `backrest`: the backrest's own swing in radians (negative leans it
-     * back); `riderPop`: how far the worker is bucked up off the seat.
+     * back); `riderPop`: how far the worker is bucked up off the seat; `shiver`: how hard the chair shakes with
+     * rage (0..1), drawn as afterimages beside it.
      */
-    chair: { lift: number; tilt: number; backrest: number; riderPop: number };
+    chair: { lift: number; tilt: number; backrest: number; riderPop: number; shiver: number };
     /** Chair humming (0..1) and rage (0..1) intensities for the decorations around it. */
     hum: number;
     rage: number;
@@ -237,7 +238,7 @@ export function openingFrame(time: number): OpeningFrame {
         dusk,
         lighting: 1 - handoff,
         shake,
-        chair: { lift, tilt, backrest: kick.backrest, riderPop: kick.riderPop },
+        chair: { lift, tilt, backrest: kick.backrest, riderPop: kick.riderPop, shiver: rage },
         hum,
         rage,
         creak,

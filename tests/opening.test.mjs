@@ -139,7 +139,10 @@ test('office frames light the scene and draw the bubbles with their words', () =
 
     const rage = render(B.riderTyping + 1);
     assert.ok(rage.commands.some(c => c.layer?.key === 'opening-laptop' && c.layer.blend === 'add'));
-    assert.ok(rage.commands.some(c => c.layer?.key === 'opening-rage' && c.stroke?.dash));
+    assert.ok(!rage.commands.some(c => c.layer?.key === 'opening-rage' && c.stroke?.dash), 'no dashed lines round the chair');
+    assert.ok(rage.commands.some(c => c.layer?.key === 'opening-chair-afterimage'), 'the chair trembles in afterimages');
+    assert.ok(rage.commands.some(c => c.layer?.key === 'opening-floor-dust'), 'dust jumps off the floor');
+    assert.ok(!render(B.chairHope + 1).commands.some(c => c.layer?.key === 'opening-chair-afterimage'), 'calm before 9 pm');
     const words = rage.labels.map(l => l.text).join(' ');
     assert.ok(words.includes(translate('opening.riderTyping', 'ko')));
     assert.ok(words.includes('극악무도'), 'the rage line has typed out');
