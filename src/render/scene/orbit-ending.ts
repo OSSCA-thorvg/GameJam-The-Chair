@@ -51,6 +51,8 @@ export function orbitEnding(orbit: Readonly<OrbitState>) {
         recline: smooth((t - E.spinFrom) / 4) * (1 - smooth((t - E.spin) / 2)),
         /** The connection-lost window on the laptop screen. */
         message: smooth((t - E.disconnect) / .3),
+        /** The camera pushing in on the laptop so the message can be read (it lets go as the shot widens). */
+        read: smooth((t - E.disconnect + .3) / 1.2) * (1 - wide),
         /** How far the rider's hands have lifted off the keys. */
         rest: smooth((t - E.disconnect - .2) / .6),
         lightsOut: smooth((t - E.spin) / (E.lightsOut - E.spin)),
@@ -96,7 +98,8 @@ export function endingChairLights(ctx: RenderCtx, chair: SkyProjection, e: Orbit
     if (!e.parked) return;
     const light = 1 - e.lightsOut;
     if (light > 0) {
-        const [x, y] = chair.project([36, 20, 0]), r = ctx.H * .09;
+        // Between the screen and the rider's face.
+        const [x, y] = chair.project([42, 14, 0]), r = ctx.H * .09;
         ctx.commands.push({ v: [[x - r, y - r], [x + r, y - r], [x + r, y + r], [x - r, y + r]],
             c: { from: [x, y], to: [x + r, y], radius: r, stops: [[0, ctx.rgba('#9fd4ff', .55 * light)], [1, ctx.rgba('#9fd4ff', 0)]] },
             layer: { key: 'orbit-laptop-light', blend: 'screen' } });
@@ -132,10 +135,10 @@ export function endingSignal(ctx: RenderCtx, head: Vector, e: OrbitEndingState) 
 }
 
 /** A point on the laptop screen: `u` across (0 left to 1 right), `v` up, lifted just off the lid towards the rider. */
-function screenPoint(u: number, v: number): Point3 {
-    // The lid's face towards the rider runs from the hinge (21, -4) up to its top edge (33, 24), 42 wide.
-    const lift = .7;
-    return [21 + 12 * v - .92 * lift, -4 + 28 * v + .39 * lift, -21 + 42 * u];
+function screenPoint(u: number, v: number, lift = .7): Point3 {
+    // The screen on the laptop lid faces the rider: from just above the hinge (47, 1) up to (53.6, 25), 40 wide.
+    // `lift` raises a layer off the glass, so the window sits clearly in front of the sheet behind it.
+    return [47 + 6.6 * v - .96 * lift, 1 + 24 * v + .26 * lift, -20 + 40 * u];
 }
 
 /**
@@ -145,37 +148,51 @@ function screenPoint(u: number, v: number): Point3 {
  */
 export function endingLaptopScreen(chair: SkyProjection, e: OrbitEndingState) {
     if (!e.parked) return;
-    const quad = (u0: number, v0: number, u1: number, v1: number, color: string) =>
-        chair.polygon([screenPoint(u0, v0), screenPoint(u1, v0), screenPoint(u1, v1), screenPoint(u0, v1)], color + 'ff');
+    const quad = (u0: number, v0: number, u1: number, v1: number, color: string, lift = .7) =>
+        chair.polygon([screenPoint(u0, v0, lift), screenPoint(u1, v0, lift), screenPoint(u1, v1, lift), screenPoint(u0, v1, lift)], color + 'ff');
     if (e.lightsOut >= 1) return quad(.04, .06, .96, .94, '#1b1f27');
     quad(.04, .06, .96, .94, e.lightsOut > .5 ? '#1b1f27' : '#dce8f2');
     if (e.lightsOut > .5) return;
-    // Rows of figures still being typed in; the last one grows until the hands stop.
-    for (let i = 0; i < 6; i++) {
+    // Rows of figures still being typed in; the last one grows until the hands stop. Once the connection-lost
+    // window is up it covers them, so they are left out rather than risk showing through it.
+    if (e.message < .5) for (let i = 0; i < 6; i++) {
         const v = .8 - i * .12, typing = i === 5 ? .3 + .5 * ((e.t - e.still) * .6 % 1) : .82;
         quad(.1, v - .025, .1 + .78 * typing, v + .025, '#8fa6ba');
     }
     if (e.message <= 0) return;
-    // The connection-lost window over the sheet, with a red warning dot.
-    quad(.1, .26, .9, .7, '#ffffff');
-    quad(.1, .62, .9, .7, '#c9d4de');
-    quad(.15, .4, .23, .48, '#d9534f');
+    // The connection-lost window fills most of the screen, with a title bar and a red warning dot.
+    quad(.05, .12, .95, .88, '#ffffff', 1.3);
+    quad(.05, .8, .95, .88, '#c9d4de', 1.6);
+    quad(.08, .44, .15, .56, '#d9534f', 1.6);
 }
 
-/** The connection-lost line on the laptop screen, written after the chair so it sits on the window. */
+/** Splits a message into two lines at the space nearest its middle (one line if it has no space). */
+function twoLines(text: string): string[] {
+    const spaces = [...text].flatMap((c, i) => c === ' ' ? [i] : []);
+    if (!spaces.length) return [text];
+    const cut = spaces.reduce((best, i) => Math.abs(i - text.length / 2) < Math.abs(best - text.length / 2) ? i : best);
+    return [text.slice(0, cut), text.slice(cut + 1)];
+}
+
+/** The connection-lost message on the laptop screen, in two large lines, written after the chair so it sits on the window. */
 export function endingLaptopText(ctx: RenderCtx, chair: SkyProjection, e: OrbitEndingState) {
     if (!e.parked || e.message <= 0 || e.lightsOut > .5) return;
-    const left = chair.project(screenPoint(.27, .44)), right = chair.project(screenPoint(.8, .44));
-    const top = chair.project(screenPoint(.55, .6)), bottom = chair.project(screenPoint(.55, .28));
+    // The text keeps to the left part of the window: over the shoulder, the rider's head hides its right edge.
+    const left = chair.project(screenPoint(.18, .48)), right = chair.project(screenPoint(.74, .48));
+    const top = chair.project(screenPoint(.46, .76)), bottom = chair.project(screenPoint(.46, .18));
     // Seen from the back of the lid, the screen faces away: nothing to read.
     const facing = (right[0] - left[0]) * (top[1] - left[1]) - (right[1] - left[1]) * (top[0] - left[0]);
     if (facing >= 0) return;
-    const text = translate('orbit.disconnected', ctx.locale);
-    const room = Math.hypot(right[0] - left[0], right[1] - left[1]);
-    const size = Math.min(Math.hypot(top[0] - bottom[0], top[1] - bottom[1]) * .32, room / ctx.measureText(text, 1, SPEECH_FONT));
+    const lines = twoLines(translate('orbit.disconnected', ctx.locale));
+    const room = Math.hypot(right[0] - left[0], right[1] - left[1]), height = Math.hypot(top[0] - bottom[0], top[1] - bottom[1]);
+    const widest = Math.max(...lines.map(line => ctx.measureText(line, 1, SPEECH_FONT)));
+    const size = Math.min(height / (lines.length * 1.25), room / widest);
     if (size < 4) return;
-    const centre = chair.project(screenPoint(.535, .44));
-    ctx.screenText(text, centre[0], centre[1], size, '#2b2f3a', {
-        font: SPEECH_FONT, opacity: e.message, rotation: Math.atan2(right[1] - left[1], right[0] - left[0]),
+    const rotation = Math.atan2(right[1] - left[1], right[0] - left[0]);
+    lines.forEach((line, i) => {
+        // Lines stack down the screen from above its middle.
+        const v = .48 + (((lines.length - 1) / 2) - i) * .58 / lines.length;
+        const at = chair.project(screenPoint(.46, v));
+        ctx.screenText(line, at[0], at[1], size, '#20242c', { font: SPEECH_FONT, opacity: e.message, rotation });
     });
 }

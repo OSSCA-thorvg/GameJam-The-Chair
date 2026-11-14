@@ -252,12 +252,13 @@ test('the ending: the extinguisher floats off, the signal drops bar by bar, the 
 test('after the network is lost the camera circles the chair once, all the way round, with the sky turning too', () => {
     const { disconnect, spinFrom, spin } = ORBIT_ENDING;
     assert.ok(spinFrom > disconnect, 'the circle starts once the network is gone');
-    // The rider's blue glasses sit on the sides of the face: hidden from behind, seen once the camera comes round.
+    // The rider's blue lenses are on the front of the face: hidden from behind, seen once the camera comes round.
     const glasses = t => endingFrame(t).commands.some(command => command.c === '#83c8e4');
     assert.equal(glasses(spinFrom), false, 'it starts from behind');
     const round = Array.from({ length: 9 }, (_, i) => spinFrom + (spin - spinFrom) * (i + 1) / 10).map(glasses);
     assert.ok(round.filter(Boolean).length >= 2, `the rider's face comes into view on the way round (${round})`);
-    assert.equal(glasses(spin), false, 'and it ends behind the chair again');
+    // The camera ends behind where it started, but the chair has swivelled half round to face it.
+    assert.equal(glasses(spin), true, 'and the chair ends turned towards the camera, the rider still on his screen');
     const stars = t => endingFrame(t).commands.filter(command => typeof command.c === 'string' && command.c.startsWith('#ffffff') && command.v.length === 4 && !command.layer).map(command => command.v[0][0]);
     assert.notDeepEqual(stars(spinFrom), stars((spinFrom + spin) / 2), 'the stars swing past');
 });
@@ -266,7 +267,8 @@ test('the lost connection comes up on the laptop screen, his hands stop, and for
     const { disconnect, handsStop, idle } = ORBIT_ENDING;
     const before = endingFrame(disconnect - .5), after = endingFrame(disconnect + 1);
     assert.ok(before.layer('orbit-laptop-screen').length === 0 || !before.labels.some(label => label.startsWith('Network')));
-    assert.ok(after.labels.includes('Network connection lost.'), 'the message is written on the laptop screen');
+    assert.equal(after.labels.join(' '), 'Network connection lost.', 'the message is written on the laptop screen');
+    assert.equal(after.labels.length, 2, 'in two lines, so it can be large enough to read');
     assert.deepEqual(after.layer('attendance-bubble'), [], 'not in a speech bubble over his head');
     const state = t => orbitEndingState(t);
     assert.equal(state(disconnect - .2).rest, 0, 'typing until the message');
@@ -285,6 +287,24 @@ test('the chair swivels and leans back to look out while he keeps his eyes on th
     assert.ok(mid.swivel > .3 && mid.swivel < .7 && mid.recline > .9, 'turning round and leaning back');
     assert.ok(mid.rest === 1 && mid.still > 0, 'his hands still off the keys');
     assert.equal(orbitEndingState(spinFrom - .5).swivel, 0);
+});
+
+test('the camera pushes in on the laptop so the message is large enough to read', () => {
+    const { disconnect } = ORBIT_ENDING;
+    const lineSize = t => Math.max(0, ...endingFrame(t).commands.filter(command => command.text).map(command => command.text.size));
+    assert.ok(orbitEndingState(disconnect - .5).read === 0 && orbitEndingState(disconnect + 1).read === 1);
+    assert.ok(lineSize(disconnect + 1.5) >= 18, `message lines are at least 18 px on a 510 px tall frame (${lineSize(disconnect + 1.5).toFixed(1)})`);
+});
+
+test('the rider works on a laptop, not a monitor: a keyboard base under his hands and a thin lid with the screen', () => {
+    const over = endingFrame(ORBIT_ENDING.focus + 1);
+    // Faces seen at an angle are shaded a few percent, so match colours closely rather than exactly.
+    const rgb = color => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
+    const near = (color, target) => typeof color === 'string' && color.length >= 7
+        && rgb(color).every((channel, i) => Math.abs(channel - rgb(target)[i]) <= 8);
+    for (const [color, part] of [['#3c4350', 'keyboard'], ['#6b7486', 'trackpad'], ['#a8b9c3', 'screen']]) {
+        assert.ok(over.commands.some(command => near(command.c, color)), `the ${part} shows over his shoulder`);
+    }
 });
 
 test('steering fades in during the entry instead of being locked out', () => {
