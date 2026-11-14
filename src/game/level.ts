@@ -38,7 +38,7 @@ export const FIXED_STEP = 1 / 120;
 // Units: px, seconds, radians.
 export const PHYSICS = deepFreeze({
     gravity: 950,
-    lean: { ground: 4.3, air: 6.4 },                         // Q/E (and air steering) spin acceleration
+    lean: { ground: 4.3, air: 6.4 },                         // Balance input and air steering spin acceleration
     upright: { pull: 20, damping: 7, tutorialUntilX: 300 },   // self-righting assist
     drive: { ground: 305, slip: 110, air: 55, convoy: 1200, express: 1400 },
     drag: { ground: .55, slip: .015, air: .09 },

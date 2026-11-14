@@ -35,7 +35,7 @@ Clear each stage to continue to the next. The pause menu lists cleared stages fo
 - Stage 1: dodge copier paper, spilled water, the trash bin and monitor light to leave the office.
 - Stage 2: watch a worker send three cheering chairs home, stop for a chair-only badge scan, and jump over an overtime delivery cart. Enter the extended meeting for an optional six-second scene, or continue straight to the machine room.
 
-Use Left/Right or A/D to move, Space/Up to jump, and Q/E to balance. In stage 3, Up jumps; hold Space (or F) to spray after collecting the extinguisher on the lower rooftop. Sprays repeat every 0.24 seconds without an ammo limit; Left/Right steers the recoil. P pauses.
+Use Left/Right to move and Up to jump. Touch controls have separate balance buttons. In stage 3, hold Space to spray after collecting the extinguisher on the lower rooftop. Sprays repeat every 0.24 seconds without an ammo limit; Left/Right steers the recoil. In stage 5, use the arrow keys to move in four directions; W and S also move up and down. P pauses.
 
 Near the stage 2 meeting door, press Down to enter. Press Down again to leave early. Touch controls use the same down arrow. At the badge scanner, release the movement keys and wait for approval.
 

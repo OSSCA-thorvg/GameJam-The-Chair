@@ -144,8 +144,14 @@ test('the orbit preview reaches the Earth shadow, seeks backwards, and renders f
 test('orbit keys steer while earlier stages keep their jump binding', () => {
     const state = fresh().status();
     for (const [key, action] of [['w', 'up'], ['ArrowUp', 'up'], ['s', 'down'], ['ArrowDown', 'down'],
-        ['a', 'left'], ['d', 'right'], [' ', 'spray']]) {
+        ['ArrowLeft', 'left'], ['ArrowRight', 'right'], [' ', 'spray']]) {
         assert.equal(actionForKey(key, state), action);
+    }
+    for (const stage of [1, 2, 3, 4, 5]) {
+        for (const key of ['a', 'd', 'q', 'e', 'f']) {
+            assert.equal(actionForKey(key, { ...state, stage }), null, `${key} is unbound in stage ${stage}`);
+            assert.equal(actionForKey(key.toUpperCase(), { ...state, stage }), null);
+        }
     }
     assert.equal(actionForKey('ArrowUp', { ...state, stage: 4 }), 'jump');
     assert.equal(actionForKey('Shift', state), null);

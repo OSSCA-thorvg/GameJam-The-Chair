@@ -2,7 +2,7 @@
 import type { Game, GameStatus } from '../game/game';
 import type { Input } from '../game/types';
 
-export type Action = 'up' | 'down' | 'left' | 'right' | 'leanLeft' | 'leanRight' | 'jump' | 'spray' | 'meeting' | 'pause' | 'restart';
+export type Action = 'up' | 'down' | 'left' | 'right' | 'jump' | 'spray' | 'meeting' | 'pause' | 'restart';
 
 interface Control {
     /** KeyboardEvent.key values (letters are matched case-insensitively). */
@@ -16,13 +16,11 @@ interface Control {
 export const CONTROLS: Readonly<Record<Action, Control>> = {
     up:        { keys: ['ArrowUp', 'w'], label: '↑ / W', when: s => s.stage === 5 },
     down:      { keys: ['ArrowDown', 's'], label: '↓ / S', when: s => s.stage === 5 },
-    left:      { keys: ['ArrowLeft', 'a'], label: '← / A' },
-    right:     { keys: ['ArrowRight', 'd'], label: '→ / D' },
-    leanLeft:  { keys: ['q'], label: 'Q' },
-    leanRight: { keys: ['e'], label: 'E' },
+    left:      { keys: ['ArrowLeft'], label: '←' },
+    right:     { keys: ['ArrowRight'], label: '→' },
     // Space is reserved for the extinguisher, so jumping is Up-only in every stage.
     jump:      { keys: ['ArrowUp'], label: '↑' },
-    spray:     { keys: [' ', 'f'], label: 'Space / F', when: s => s.stage >= 3 },
+    spray:     { keys: [' '], label: 'Space', when: s => s.stage >= 3 },
     meeting:   { keys: ['ArrowDown'], label: '↓', when: s => s.stage === 2 },
     pause:     { keys: ['p', 'Escape'], label: 'P / Esc' },
     restart:   { keys: ['r'], label: 'R' },
@@ -30,9 +28,9 @@ export const CONTROLS: Readonly<Record<Action, Control>> = {
 
 /** Short key name used by in-world pictograms (e.g. the extinguisher pickup). */
 export const SPRAY_KEY = 'Space';
-export const MOVE_LABEL = '← → / A D';
+export const MOVE_LABEL = '← →';
 
-const HELD: Partial<Record<Action, Input>> = { up: 'forward', down: 'back', left: 'left', right: 'right', leanLeft: 'q', leanRight: 'e', spray: 'spray' };
+const HELD: Partial<Record<Action, Input>> = { up: 'forward', down: 'back', left: 'left', right: 'right', spray: 'spray' };
 
 const normalize = (key: string) => key.length === 1 ? key.toLowerCase() : key;
 
@@ -104,7 +102,11 @@ export function bindControls(root: HTMLElement, game: Game, hooks: ControlHooks,
 
     root.querySelectorAll<HTMLElement>('[data-key]').forEach(button => {
         const key = button.dataset.key;
-        if (key === 'left' || key === 'right' || key === 'q' || key === 'e' || key === 'forward' || key === 'back' || key === 'brake') hold(button, key);
+        if (key === 'left' || key === 'right' || key === 'forward' || key === 'back' || key === 'brake') hold(button, key);
+    });
+    root.querySelectorAll<HTMLElement>('[data-lean]').forEach(button => {
+        const side = button.dataset.lean;
+        if (side === 'left' || side === 'right') hold(button, side === 'left' ? 'q' : 'e');
     });
     hold(root.querySelector<HTMLElement>('[data-spray]'), 'spray');
     const tap = (selector: string, action: () => void) => {
