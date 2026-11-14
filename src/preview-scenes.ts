@@ -656,14 +656,14 @@ function skySignDepth(): PreviewScene {
     };
 }
 
-function skyPromotionFlag(): PreviewScene {
+function skyPromotionCake(): PreviewScene {
     const game = createGame();
     game.startStage(4);
     const base = game.getSnapshot();
     const effects = createEffects().snapshot();
     return {
-        id: 'sky-promotion-flag', label: 'Sky · Promotion flag on the final desk', duration: 5, focusX: 5210,
-        markers: [{ at: 0, label: 'Flag visible on approach' }, { at: 2.5, label: 'Flag in the wind' }],
+        id: 'sky-promotion-cake', label: 'Sky · Promotion shortcake on the final desk', duration: 5, focusX: 5210,
+        markers: [{ at: 0, label: 'Cake visible on approach' }, { at: 2.5, label: 'Flag in the wind' }],
         sample(time) {
             const at = Math.max(0, Math.min(5, time));
             return { state: { ...base, time: at,
@@ -1036,7 +1036,7 @@ export const previewScenes: readonly PreviewScene[] = [
     skyParrots(),
     skyRobotParrot(),
     skySignDepth(),
-    skyPromotionFlag(),
+    skyPromotionCake(),
     skyEnding(),
     skyToOrbit(),
     orbitRoute(),
