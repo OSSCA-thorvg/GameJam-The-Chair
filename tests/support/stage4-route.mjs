@@ -1,13 +1,16 @@
 // Drives the stage-four sky course. The course is deterministic in time (wind, rocking desks, papers and birds),
-// so before each hop the driver tries launches at different moments on a saved copy of the game and replays the
-// first one that lands cleanly on the next platform.
+// so before each hop a planner tries launches at different moments on a scratch copy of the game and keeps the
+// first one that lands cleanly on the next platform. Planning simulates ~20x the real route, so tests replay the
+// launches recorded in tests/replays/stage4-route.json. After a gameplay change: npm run route:update
+import { readFileSync } from 'node:fs';
 import { loadSource } from './load.mjs';
-const { skyPlatforms, STAGE_FOUR } = await loadSource(`export { skyPlatforms, STAGE_FOUR } from './src/game/stages/sky/data';`);
+const { skyPlatforms, STAGE_FOUR, createGame } = await loadSource(`export { skyPlatforms, STAGE_FOUR } from './src/game/stages/sky/data'; export { createGame } from './src/game/game';`);
 // The last hop waits out the whole stage four ending before stage five starts.
 const { settle, turn, hold } = STAGE_FOUR.reveal;
 const FINISH_TIME = 6 + settle + turn + hold;
 
 export const STAGE_FOUR_ROUTE = ['arrival-roof', 'window-one', 'window-two', 'wind-sign', 'rest', 'drawer-desk', 'little-desk', 'upper-rest', 'last-sign', 'finish'];
+export const STAGE_FOUR_RECORDING = new URL('../replays/stage4-route.json', import.meta.url);
 const STEP = 1 / 120;
 
 function platform(state, id) {
@@ -40,74 +43,133 @@ function hopKeys(state, id) {
     return keys;
 }
 
-// Plays one hop. Returns 'won', 'missed' (a fall, lost focus, a knock on a clean try or a timeout) or the id of
-// the platform the chair next settles on (the target, or wherever the wind and hazards put it instead).
-function run(game, plan, id, visit) {
-    let frames = 0, launched = false;
-    const limit = Math.round((plan.wait + (id === 'finish' ? FINISH_TIME : 5)) / STEP);
-    while (frames++ < limit) {
-        const state = game.getSnapshot();
-        if (state.stage === 5) return 'won';
-        visit?.(state);
-        if (state.sky.phase === 'reveal' || state.sky.phase === 'depth') { game.setInput(); game.step(STEP); game.drainEvents(); continue; }
-        if (state.deaths > plan.deaths || state.mode !== 'play' || (plan.clean && state.sky.knock > 0)) return 'missed';
-        if (state.ground && state.sky.standing !== null && (state.sky.standing !== plan.from || (launched && state.sky.standing === id))) return state.sky.standing;
-        if (!launched && frames * STEP >= plan.wait) {
-            launched = true;
-            const keys = hopKeys(state, id);
-            if (plan.launch === 'jump') { game.setInput(...keys.filter(k => k !== 'spray')); game.jump(); }
-            else game.setInput(...new Set([...keys.filter(k => k !== 'left'), 'right', 'spray']));
-        } else game.setInput(...(launched ? hopKeys(state, id) : standKeys(state)));
-        game.step(STEP); game.drainEvents();
+function startHop(plan, id) {
+    return { plan, id, frames: 0, launched: false, limit: Math.round((plan.wait + (id === 'finish' ? FINISH_TIME : 5)) / STEP) };
+}
+
+// Plays one frame of a hop. Returns nothing while the hop goes on, otherwise 'won', 'missed' (a fall, lost
+// focus or a knock on a clean try) or the id of the platform the chair settled on.
+function hopFrame(sim, hop, visit) {
+    const { game } = sim, { plan, id } = hop, state = sim.read();
+    if (state.stage === 5) return 'won';
+    visit?.(state);
+    if (state.sky.phase === 'reveal' || state.sky.phase === 'depth') { game.setInput(); game.step(STEP); game.drainEvents(); return; }
+    if (state.deaths > plan.deaths || state.mode !== 'play' || (plan.clean && state.sky.knock > 0)) return 'missed';
+    if (state.ground && state.sky.standing !== null && (state.sky.standing !== plan.from || (hop.launched && state.sky.standing === id))) return state.sky.standing;
+    if (!hop.launched && hop.frames * STEP >= plan.wait) {
+        hop.launched = true;
+        const keys = hopKeys(state, id);
+        if (plan.launch === 'jump') { game.setInput(...keys.filter(k => k !== 'spray')); game.jump(); }
+        else game.setInput(...new Set([...keys.filter(k => k !== 'left'), 'right', 'spray']));
+    } else game.setInput(...(hop.launched ? hopKeys(state, id) : standKeys(state)));
+    game.step(STEP); game.drainEvents();
+}
+
+function run(sim, hop, visit) {
+    while (hop.frames++ < hop.limit) {
+        const result = hopFrame(sim, hop, visit);
+        if (result) return result;
     }
     return 'missed';
 }
 
-// Tries launches on a saved copy and keeps the best: a clean landing on the target, then any landing on it,
+// A private game for planning. It reads the core state handed to onStep instead of copying a full snapshot
+// every frame, and only exposes the fields the route needs.
+function scratch() {
+    let core;
+    const game = createGame({ onStep: state => { core = state; } });
+    return {
+        game,
+        read: () => ({ stage: core.stage, mode: core.mode, deaths: core.deaths, ground: core.ground, time: core.time, player: core.p, sky: core.sky }),
+        restore(json) { game.restore(json); core = JSON.parse(json); },
+    };
+}
+
+// Tries launches from the saved state and keeps the best: a clean landing on the target, then any landing on it,
 // then any landing further along the route, then (last resort) any safe landing to re-plan from.
-function plan(game, from, id, route, minWait) {
-    const saved = game.serialize(), deaths = game.getSnapshot().deaths;
-    const order = platform => platform === 'won' || platform === id ? 2 : route.indexOf(platform) > route.indexOf(from) ? 1 : 0;
+// Waiting before a launch is the same for every attempt, so one waiting copy walks forward through the wait times
+// and each attempt only simulates from its own launch frame.
+function plan(sim, saved, from, id, deaths) {
+    const order = result => result === 'won' || result === id ? 2 : STAGE_FOUR_ROUTE.indexOf(result) > STAGE_FOUR_ROUTE.indexOf(from) ? 1 : 0;
+    const minWait = from === 'drawer-desk' ? .8 : 0;
     let fallback = null, forward = null;
-    for (const clean of [true, false]) for (let wait = minWait; wait < 9; wait += .2) for (const launch of ['spray', 'jump']) {
-        const attempt = { wait, launch, clean, from, deaths };
-        game.restore(saved);
-        const result = run(game, attempt, id);
-        if (result === 'missed' || !route.includes(result) && result !== 'won') continue;
-        const rank = order(result);
-        if (rank === 2) { game.restore(saved); return attempt; }
-        if (rank === 1) forward ??= attempt;
-        else if (!clean) fallback ??= attempt;
+    for (const clean of [true, false]) {
+        const waiting = startHop({ wait: Infinity, launch: null, clean, from, deaths }, id);
+        let state = saved, ended = null;
+        for (let wait = minWait; wait < 9; wait += .2) {
+            if (!ended) {
+                sim.restore(state);
+                while (!ended && (waiting.frames + 1) * STEP < wait) { waiting.frames++; ended = hopFrame(sim, waiting); }
+                if (!ended) state = sim.game.serialize();
+            }
+            for (const launch of ['spray', 'jump']) {
+                const attempt = { wait, launch, clean, from, deaths };
+                let result = ended;
+                if (!result) {
+                    sim.restore(state);
+                    result = run(sim, { ...startHop(attempt, id), frames: waiting.frames });
+                }
+                if (result === 'missed' || !STAGE_FOUR_ROUTE.includes(result) && result !== 'won') continue;
+                const rank = order(result);
+                if (rank === 2) return attempt;
+                if (rank === 1) forward ??= attempt;
+                else if (!clean) fallback ??= attempt;
+            }
+        }
     }
-    game.restore(saved);
     return forward ?? fallback;
 }
 
-export function driveStageFour(game, visit = () => {}, route = STAGE_FOUR_ROUTE) {
+function drive(game, choose, visit) {
+    const sim = { game, read: () => game.getSnapshot() };
     // Hover in until the course starts and the chair settles on the arrival roof.
     for (let frame = 0; frame < 120 * 20; frame++) {
-        const state = game.getSnapshot();
+        const state = sim.read();
         visit(state);
         if (state.sky.phase === 'course' && state.ground) break;
         game.setInput(...(state.sky.phase === 'arrival' ? ['right'] : standKeys(state)));
         game.step(STEP); game.drainEvents();
     }
-    let from = game.getSnapshot().sky.standing;
+    let from = sim.read().sky.standing;
     for (let hop = 0; hop < 40; hop++) {
-        const id = route[route.indexOf(from) + 1];
+        const id = STAGE_FOUR_ROUTE[STAGE_FOUR_ROUTE.indexOf(from) + 1];
         if (!id) break;
-        const chosen = plan(game, from, id, route, from === 'drawer-desk' ? .8 : 0);
-        if (!chosen) throw new Error(`No safe hop from ${from} to ${id}: ${JSON.stringify(game.getSnapshot().player)}`);
-        const result = run(game, chosen, id, visit);
-        if (result === 'won') return game.getSnapshot();
-        if (result === 'missed') throw new Error(`Planned hop from ${from} to ${id} did not replay`);
+        const chosen = { ...choose(hop, from, id), from, deaths: sim.read().deaths };
+        const result = run(sim, startHop(chosen, id), visit);
+        if (result === 'won') return sim.read();
+        if (result === 'missed') throw new Error(`Planned hop from ${from} to ${id} did not replay. If stage four gameplay changed on purpose, run: npm run route:update`);
         from = result;
     }
     for (let frame = 0; frame < 120 * 30; frame++) {
-        const state = game.getSnapshot();
+        const state = sim.read();
         if (state.stage === 5) return state;
         visit(state);
         game.setInput(); game.step(STEP); game.drainEvents();
     }
     throw new Error(`Stage 4 did not finish: ${JSON.stringify(game.getSnapshot().sky)}`);
+}
+
+let recording;
+
+/** Plays a game that just started stage four to stage five with the recorded launches, visiting every frame. */
+export function driveStageFour(game, visit = () => {}) {
+    recording ??= JSON.parse(readFileSync(STAGE_FOUR_RECORDING, 'utf8'));
+    return drive(game, (hop, from, id) => {
+        const step = recording[hop];
+        if (step?.from !== from || step.to !== id) throw new Error(`The stage four route recording expects ${step?.from} → ${step?.to} at hop ${hop}, but the chair is on ${from}. If stage four gameplay changed on purpose, run: npm run route:update`);
+        return { wait: step.wait, launch: step.launch, clean: step.clean };
+    }, visit);
+}
+
+/** Plans the stage four route from a fresh game and returns the launches to record. */
+export function planStageFour() {
+    const game = createGame(), sim = scratch(), hops = [];
+    game.startStage(4);
+    drive(game, (hop, from, id) => {
+        const chosen = plan(sim, game.serialize(), from, id, game.getSnapshot().deaths);
+        if (!chosen) throw new Error(`No safe hop from ${from} to ${id}: ${JSON.stringify(game.getSnapshot().player)}`);
+        hops.push({ from, to: id, wait: chosen.wait, launch: chosen.launch, clean: chosen.clean });
+        return chosen;
+    }, () => {});
+    return hops;
 }
