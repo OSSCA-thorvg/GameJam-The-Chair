@@ -2,7 +2,7 @@ import type { RenderCtx } from '../context';
 import type { Player } from '../../game/types';
 import type { Color, DrawCommand, LayerSpec, Vector } from '../types';
 import { STAGE_FIVE } from '../../game/stages/orbit/data';
-import { satelliteLightArrival } from '../../game/stages/orbit/course/decide';
+import { gearAt, satelliteLightArrival } from '../../game/stages/orbit/course/decide';
 import type { RoutePoint } from './orbit-watch';
 import type { SkyProjection } from './sky-projection';
 
@@ -130,7 +130,8 @@ export function satelliteLightStage(b: Beam, travel: number, speed: number) {
     if (past > FOLD || arrival > P.warn) return null;
     if (past > 0) return { kind: 'fold' as const, k: 1 - past / FOLD };
     if (arrival <= 0) return { kind: 'on' as const, k: 1 };
-    if (arrival <= P.lock) return { kind: 'lock' as const, k: 1 - arrival / P.lock };
+    const lock = gearAt(b.from).lock;
+    if (arrival <= lock) return { kind: 'lock' as const, k: 1 - arrival / lock };
     return { kind: 'track' as const, k: smooth((P.warn - arrival) / .3) };
 }
 
@@ -190,7 +191,8 @@ function bigLens(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam
         [cx + radius * Math.cos(i * Math.PI / 14), cy + radius * Math.sin(i * Math.PI / 14)]), c: hex(color, alpha * shown) });
     ring(r * 1.25, '#8d96a6', 1);
     ring(r, '#1b1f27', 1);
-    const charge = arrival <= 0 ? 1 : arrival <= P.lock ? .5 + .5 * (1 - arrival / P.lock) : arrival <= P.warn ? .25 : .1;
+    const lock = gearAt(b.from).lock;
+    const charge = arrival <= 0 ? 1 : arrival <= lock ? .5 + .5 * (1 - arrival / lock) : arrival <= P.warn ? .25 : .1;
     ctx.commands.push({ v: [[cx - r, cy - r], [cx + r, cy - r], [cx + r, cy + r], [cx - r, cy + r]], c: { from: [cx, cy], to: [cx + r, cy], radius: r * .8,
         stops: [[0, ctx.rgba('#ffffff', charge * shown)], [.4, ctx.rgba(WARM, .8 * charge * shown)], [1, ctx.rgba('#27344d', 0)]] } });
     ring(r * .12, '#ff4b52', .9);

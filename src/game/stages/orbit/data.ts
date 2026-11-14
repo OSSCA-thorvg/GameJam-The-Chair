@@ -18,8 +18,15 @@ export const STAGE_FIVE = deepFreeze({
     // The stage four glide hands over at cruise speed; steering fades in over the entry instead of waiting for it.
     // The extinguisher fires on its own and speeds the chair up by `thrust` per second to its gear's top speed.
     entryTime: 1, cruise: 145, thrust: 160,
-    // Three gears: from each depth on the top speed rises, and the beams come closer together.
-    gears: [{ from: 0, maxSpeed: 260 }, { from: 2800, maxSpeed: 330 }, { from: 5600, maxSpeed: 400 }],
+    // Three gears: from each depth on the top speed rises, the beams come closer together, and each satellite
+    // locks on later (`lock` seconds before its beam arrives) after following the chair more tightly (`track`).
+    gears: [
+        { from: 0, maxSpeed: 260, lock: 1, track: 5 },
+        { from: 2800, maxSpeed: 330, lock: .9, track: 7 },
+        { from: 5600, maxSpeed: 400, lock: .8, track: 9 },
+    ],
+    // Restart flags in the quiet stretches after the first and second gears, at cruise speed.
+    restarts: [3200, 5650],
     // The arrow keys move the chair straight across and up the plane (`speed`), chasing that rate: quick to answer
     // (`response`), quick to settle (`release`). Past `bounds` the company geofence (the viewfinder brackets)
     // pushes back (`edge` per unit over) and never lets it more than `overshoot` past.
@@ -32,26 +39,32 @@ export const STAGE_FIVE = deepFreeze({
     bounds: { x: 330, y: 150 },
     rings: [] as { x: number; y: number; z: number; radius: number }[],
     // Each beam's satellite takes aim at the chair `warn` seconds before the beam arrives: its shape follows the
-    // chair (`track` is how quickly) until `lock` seconds before, then holds still where it was aimed. The moment it
-    // locks, the whole flight stops for `freeze` seconds, like a camera shutter. A beam touches the chair once its
-    // shape overlaps the chair's `chairRadius`. Locked a full second ahead, every shape can be left in time.
+    // chair until its gear's `lock`, then holds still where it was aimed. The moment it locks, the whole flight
+    // stops for `freeze` seconds, like a camera shutter. A beam touches the chair once its shape overlaps the chair's
+    // `chairRadius`. Every shape can be left in the time between its lock and its arrival.
     satelliteLight: {
-        slowSpeed: 45, slowResponse: 2.4, shove: 260, chairRadius: 34, warn: 2.2, lock: 1, track: 5, freeze: .2,
+        slowSpeed: 45, slowResponse: 2.4, shove: 260, chairRadius: 34, warn: 2.2, freeze: .2,
         beams: [
             // 5-1, first gear: one at a time, with room to breathe between them.
             { from: 600, to: 1150, half: { x: 95, y: 75 } },
             { from: 1700, to: 2250, half: { x: 95, y: 75 } },
             { from: 2650, to: 3150, half: { x: 200, y: 55 } },
             // 5-2, second gear: closer together, then two satellites locking on one after the other.
-            { from: 3550, to: 4050, half: { x: 95, y: 80 } },
-            { from: 4150, to: 4600, half: { x: 60, y: 150 } },
-            { from: 4900, to: 5300, half: { x: 90, y: 70 } },
-            { from: 5020, to: 5420, half: { x: 90, y: 70 } },
-            // 5-3, third gear: satellites that aim where the chair is heading, a pair, then the big lens ahead.
-            { from: 6100, to: 6500, half: { x: 100, y: 80 }, lead: .5 },
-            { from: 6750, to: 7150, half: { x: 210, y: 55 }, lead: .5 },
-            { from: 6890, to: 7290, half: { x: 60, y: 150 } },
-            { from: 7600, to: 8350, half: { x: 95, y: 95 }, shape: 'circle' },
+            { from: 3800, to: 4250, half: { x: 95, y: 80 } },
+            { from: 4400, to: 4850, half: { x: 60, y: 150 } },
+            { from: 5050, to: 5450, half: { x: 90, y: 70 } },
+            { from: 5170, to: 5570, half: { x: 90, y: 70 } },
+            // 5-3, third gear: a satellite that aims where the chair is heading; one aiming where it is and one
+            // where it is going, together; three in a row; then the big lens ahead firing three times.
+            { from: 6250, to: 6600, half: { x: 100, y: 65 }, lead: .5 },
+            { from: 6850, to: 7250, half: { x: 210, y: 55 } },
+            { from: 6850, to: 7250, half: { x: 60, y: 140 }, lead: .5 },
+            { from: 7450, to: 7800, half: { x: 80, y: 60 } },
+            { from: 7550, to: 7900, half: { x: 80, y: 60 } },
+            { from: 7650, to: 8000, half: { x: 80, y: 60 } },
+            { from: 8100, to: 8250, half: { x: 65, y: 65 }, shape: 'circle' },
+            { from: 8240, to: 8390, half: { x: 65, y: 65 }, shape: 'circle' },
+            { from: 8380, to: 8500, half: { x: 65, y: 65 }, shape: 'circle' },
         ] as SatelliteLightBeam[],
     },
     heights: { air: 3300, space: 6800, shadow: 8800 },

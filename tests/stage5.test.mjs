@@ -17,6 +17,8 @@ const { FOCUS_DAMAGE, ORBIT_ENDING, orbitEnding, createGame, orbitStep, gearAt, 
     export { ORBIT_ENDING, orbitEnding } from './src/render/scene/orbit-ending';
     export { createRenderCtx } from './src/render/context';
 `);
+/** How far the chair gets from a standing start in `t` seconds, chasing full steering speed. */
+const reach = t => STAGE_FIVE.steer.speed * (t - (1 - Math.exp(-STAGE_FIVE.steer.response * t)) / STAGE_FIVE.steer.response);
 const fresh = () => { const game = createGame({ seed: 55 }); game.startStage(5); return game; };
 
 test('the arrow keys move the chair straight across and up, and it speeds up on its own', () => {
@@ -49,7 +51,7 @@ test('stage five climbs through 5-1 to 5-3 and stops in the Earth shadow, withou
     const game = fresh();
     // The preview driver hides in 5-1's clouds and keeps to the widest gap between the beams after that.
     let lowest = 100;
-    for (let i = 0; i < 120 * 150 && game.getSnapshot().checkpoint === 0; i++) {
+    for (let i = 0; i < 120 * 150 && game.getSnapshot().orbit.phase !== 'parked'; i++) {
         game.setInput(...orbitKeys(game.getSnapshot()));
         game.step();
         lowest = Math.min(lowest, game.getSnapshot().focus);
@@ -57,7 +59,7 @@ test('stage five climbs through 5-1 to 5-3 and stops in the Earth shadow, withou
     const end = game.getSnapshot();
     assert.equal(end.orbit.phase, 'parked');
     assert.ok(end.orbit.z >= STAGE_FIVE.heights.shadow, 'parked inside the Earth shadow');
-    assert.equal(end.checkpoint, 1);
+    assert.equal(end.checkpoint, STAGE_FIVE.restarts.length + 1, 'the shadow is the last flag');
     assert.equal(end.deaths, 0);
     assert.ok(lowest > 20, `careful steering keeps some focus (lowest ${lowest})`);
     assert.equal(end.focus, 100, 'reaching the shadow clears the head');
@@ -77,11 +79,9 @@ test('stage five climbs through 5-1 to 5-3 and stops in the Earth shadow, withou
 test('no satellite light reaches into the Earth shadow, every edge is slower than the chair, and each gear is busier', () => {
     const { beams, chairRadius } = STAGE_FIVE.satelliteLight, { bounds, steer, gears } = STAGE_FIVE;
     assert.ok(beams.every(beam => beam.to <= STAGE_FIVE.autopilot.from - 300), 'a quiet stretch before the shadow');
-    const { lock } = STAGE_FIVE.satelliteLight;
     for (const beam of beams) {
-        // From a standing start the chair covers about 85% of its full speed over the second after a lock.
-        const escape = Math.min(beam.half.x, beam.half.y) + chairRadius;
-        assert.ok(escape < steer.speed * lock * .85, `a locked rectangle can be left in time (${escape})`);
+        const escape = Math.min(beam.half.x, beam.half.y) + chairRadius, lock = gearAt(beam.from).lock;
+        assert.ok(escape < reach(lock) * .95, `a shape locked ${lock} s ahead can be left in time (${escape} of ${reach(lock).toFixed(0)})`);
         assert.ok(beam.half.x + chairRadius < bounds.x || beam.half.y + chairRadius < bounds.y, 'and there is room beside it on the plane');
     }
     assert.ok(gears.every((gear, i) => i === 0 || gear.maxSpeed > gears[i - 1].maxSpeed), 'every gear is faster');
@@ -405,7 +405,7 @@ test('the company geofence (the viewfinder) pushes back past the edge', () => {
 });
 
 test('a satellite follows the chair, locks on a second ahead, and moving away in time escapes it', () => {
-    const beam = STAGE_FIVE.satelliteLight.beams[0], { warn, lock, chairRadius } = STAGE_FIVE.satelliteLight, top = STAGE_FIVE.gears[0].maxSpeed;
+    const beam = STAGE_FIVE.satelliteLight.beams[0], { warn, chairRadius } = STAGE_FIVE.satelliteLight, top = STAGE_FIVE.gears[0].maxSpeed, lock = gearAt(beam.from).lock;
     const fly = keysAt => {
         let state = { orbit: cruisingAt(beam.from - top * (warn + .5), { speed: top }), p: still(-150, 0) }, lockedAt = null, lit = false;
         while (state.orbit.z < beam.from + 100) {
@@ -533,7 +533,7 @@ test('glows and streaks of a kind share one layer, so each is a single ThorVG Sc
 });
 
 test('a beam is announced, then drawn on the chair\'s plane exactly where it touches the chair', () => {
-    const beam = STAGE_FIVE.satelliteLight.beams[0], { chairRadius, warn, lock } = STAGE_FIVE.satelliteLight, speed = 200;
+    const beam = STAGE_FIVE.satelliteLight.beams[0], { chairRadius, warn } = STAGE_FIVE.satelliteLight, speed = 200, lock = gearAt(beam.from).lock;
     const view = createSkyProjection(1000, 510, 1, { distance: 820 });
     const aims = STAGE_FIVE.satelliteLight.beams.map(() => ({ x: 60, y: -40 }));
     const frame = travel => {
@@ -608,7 +608,7 @@ test('the ending close-up finds the chair wherever in the shadow it parked', () 
 
 
 test('the instant a satellite locks on, the whole flight stops for a moment, then carries on', () => {
-    const beam = STAGE_FIVE.satelliteLight.beams[0], { lock, freeze } = STAGE_FIVE.satelliteLight, top = STAGE_FIVE.gears[0].maxSpeed;
+    const beam = STAGE_FIVE.satelliteLight.beams[0], { freeze } = STAGE_FIVE.satelliteLight, top = STAGE_FIVE.gears[0].maxSpeed, lock = gearAt(beam.from).lock;
     let state = { orbit: cruisingAt(beam.from - top * (lock + .3), { speed: top }), p: still() };
     while (state.orbit.freeze === 0) state = orbitStep(state.orbit, state.p, ['right'], 1 / 120);
     assert.ok(Math.abs(state.orbit.freeze - freeze) < 1e-9, 'the stop starts as it locks');
@@ -624,17 +624,17 @@ test('the instant a satellite locks on, the whole flight stops for a moment, the
 });
 
 test('a leading satellite aims where the chair is heading, and two in a row lock on one after the other', () => {
-    const beams = STAGE_FIVE.satelliteLight.beams, { lock, warn } = STAGE_FIVE.satelliteLight;
+    const beams = STAGE_FIVE.satelliteLight.beams, { warn } = STAGE_FIVE.satelliteLight, lockOf = i => gearAt(beams[i].from).lock;
     const leading = beams.findIndex(beam => beam.lead), top = STAGE_FIVE.gears[2].maxSpeed;
     let state = { orbit: cruisingAt(beams[leading].from - top * (warn - .1), { speed: top }), p: still(-200, 0) };
-    while ((beams[leading].from - state.orbit.z) / state.orbit.speed > lock) state = orbitStep(state.orbit, state.p, ['right'], 1 / 120);
+    while ((beams[leading].from - state.orbit.z) / state.orbit.speed > lockOf(leading)) state = orbitStep(state.orbit, state.p, ['right'], 1 / 120);
     assert.ok(state.orbit.aims[leading].x > state.p.x + 40, `aimed ahead of the chair (${state.orbit.aims[leading].x.toFixed(0)} vs ${state.p.x.toFixed(0)})`);
     // The pair in 5-2: the second keeps following after the first has locked, so it catches up with the chair.
     const pair = beams.findIndex((beam, i) => i > 0 && beam.from - beams[i - 1].from < 200 && !beam.lead && !beam.shape);
     assert.ok(pair > 0, 'there is a pair');
     const speed = STAGE_FIVE.gears[1].maxSpeed;
     state = { orbit: cruisingAt(beams[pair - 1].from - speed * (warn - .1), { speed }), p: still() };
-    while ((beams[pair].from - state.orbit.z) / state.orbit.speed > lock) state = orbitStep(state.orbit, state.p, ['right'], 1 / 120);
+    while ((beams[pair].from - state.orbit.z) / state.orbit.speed > lockOf(pair)) state = orbitStep(state.orbit, state.p, ['right'], 1 / 120);
     assert.ok(state.orbit.aims[pair].x > state.orbit.aims[pair - 1].x + 40, 'the second locked where the chair had got to');
 });
 
@@ -644,7 +644,7 @@ test('the big lens ahead aims a circle: round, and left in time like the rest', 
     const aims = STAGE_FIVE.satelliteLight.beams.map(() => ({ x: 0, y: 0 })), z = (beam.from + beam.to) / 2;
     assert.equal(satelliteLightOn({ aims }, { x: r * .7 - 3, y: r * .7 - 3 }, z), beam, 'caught inside the circle');
     assert.equal(satelliteLightOn({ aims }, { x: r * .72, y: r * .72 }, z), null, 'clear outside it, even inside its corner square');
-    assert.ok(r < STAGE_FIVE.steer.speed * STAGE_FIVE.satelliteLight.lock * .85, 'can be left in time');
+    assert.ok(r < reach(gearAt(beam.from).lock) * .95, 'can be left in time');
 });
 
 const MARKS = ['!', '✓', '...'];
@@ -655,4 +655,38 @@ test('caught in the light, the rider answers with a mark: !, ✓, … in turn, a
     // The text layer spells the ellipsis out as three dots.
     assert.deepEqual([20.5, 21.5, 22.5].map(age => marks(age)[0]), ['...', '!', '✓']);
     assert.equal(flightFrame().filter(command => command.text && MARKS.includes(command.text.content)).length, 0, 'nothing outside the light');
+});
+
+test('each gear locks on later and follows more tightly, and the third has every pattern', () => {
+    const { gears } = STAGE_FIVE, beams = STAGE_FIVE.satelliteLight.beams;
+    assert.ok(gears.every((gear, i) => i === 0 || (gear.lock < gears[i - 1].lock && gear.track > gears[i - 1].track)));
+    const third = beams.filter(beam => gearAt(beam.from).index === 2);
+    assert.ok(third.some((beam, i) => third.some((other, j) => i !== j && other.from === beam.from && !!other.lead !== !!beam.lead)), 'one aiming where it is and one where it goes, together');
+    assert.ok(third.some((beam, i) => i >= 2 && !beam.shape && third[i - 1].from - third[i - 2].from <= 150 && beam.from - third[i - 1].from <= 150), 'three in a row');
+    assert.equal(third.filter(beam => beam.shape === 'circle').length, 3, 'the big lens fires three times');
+});
+
+test('restart flags after the first and second gears put the chair back at cruise speed, clear of any beam', () => {
+    const game = fresh();
+    for (let i = 0; i < 120 * 60 && game.getSnapshot().checkpoint < 1; i++) {
+        game.setInput(...orbitKeys(game.getSnapshot()));
+        game.step();
+    }
+    assert.equal(game.getSnapshot().checkpoint, 1, 'the first flag is passed on the way');
+    assert.ok(Math.abs(game.getSnapshot().orbit.z - STAGE_FIVE.restarts[0]) < 10);
+    for (const [flag, z] of STAGE_FIVE.restarts.entries()) {
+        const state = JSON.parse(fresh().serialize());
+        state.checkpoint = flag + 1;
+        const game = createGame({ seed: 55 });
+        game.restore(JSON.stringify(state));
+        game.restart();
+        const start = game.getSnapshot();
+        assert.equal(start.orbit.phase, 'door');
+        assert.equal(start.orbit.z, z);
+        assert.equal(start.orbit.speed, STAGE_FIVE.cruise);
+        // The next beam is still far enough off to be announced and locked on as usual.
+        const next = STAGE_FIVE.satelliteLight.beams.find(beam => beam.from > z);
+        assert.ok((next.from - z) / gearAt(next.from).maxSpeed > gearAt(next.from).lock + .5, `room before the next beam after flag ${flag + 1}`);
+        assert.ok(STAGE_FIVE.satelliteLight.beams.every(beam => beam.to < z || beam.from > z), 'no beam on the flag');
+    }
 });

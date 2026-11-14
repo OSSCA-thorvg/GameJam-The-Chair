@@ -12,12 +12,12 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     // Parked in the Earth's shadow, `settled` counts on from 1 so the ending knows how far it has played.
     if (next.phase === 'parked') {
         next.settled += dt;
-        return { orbit: next, p, checkpoint: false, satelliteLit: false, spraying: false };
+        return { orbit: next, p, checkpoint: false, flag: 0, satelliteLit: false, spraying: false };
     }
     // The shutter stop after a satellite locks on: the whole flight holds still for a moment.
     if (next.freeze > 0) {
         next.freeze = Math.max(0, next.freeze - dt);
-        return { orbit: next, p, checkpoint: false, satelliteLit: false, spraying: true };
+        return { orbit: next, p, checkpoint: false, flag: 0, satelliteLit: false, spraying: true };
     }
     if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
     const controlled = next.phase !== 'entry';
@@ -47,7 +47,9 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     }
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
-    return { orbit: next, p, checkpoint, satelliteLit, spraying: !auto || next.speed < landing - 1 };
+    // Restart flags along the way: the index of the one just passed, if any (the shadow's flag comes after them).
+    const flag = controlled ? C.restarts.findIndex(z => orbit.z < z && next.z >= z) + 1 : 0;
+    return { orbit: next, p, checkpoint, flag, satelliteLit, spraying: !auto || next.speed < landing - 1 };
 }
 
 /** The gear the route is in at depth `z`: its top speed rises from one stretch to the next. */
@@ -83,9 +85,9 @@ export function satelliteLightArrival(beam: Beam, z: number, speed: number) {
  * from `lock` seconds before the beam arrives until it has passed.
  */
 function aimAt(orbit: Readonly<OrbitState>, p: Readonly<Pick<Player, 'x' | 'y' | 'vx' | 'vy'>>, dt: number): Aim[] {
-    const { warn, lock, track } = C.satelliteLight;
-    const chase = 1 - Det.exp(-track * dt);
+    const { warn } = C.satelliteLight;
     return C.satelliteLight.beams.map((beam, i) => {
+        const { lock, track } = gearAt(beam.from), chase = 1 - Det.exp(-track * dt);
         const aim = orbit.aims[i] ?? { x: p.x, y: p.y };
         const arrival = satelliteLightArrival(beam, orbit.z, orbit.speed);
         // A leading satellite aims where the chair is heading, never past the edge of the play area.
@@ -99,7 +101,7 @@ function aimAt(orbit: Readonly<OrbitState>, p: Readonly<Pick<Player, 'x' | 'y' |
 
 /** Whether a beam's satellite has stopped following the chair and holds its aim. */
 export function satelliteLightLocked(beam: Beam, z: number, speed: number) {
-    return satelliteLightArrival(beam, z, speed) <= C.satelliteLight.lock;
+    return satelliteLightArrival(beam, z, speed) <= gearAt(beam.from).lock;
 }
 
 /**

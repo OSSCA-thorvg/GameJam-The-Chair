@@ -1,6 +1,7 @@
 import { setPlayer, type GameState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { orbitStep } from './decide';
+import { STAGE_FIVE } from '../data';
 import { FOCUS_DAMAGE } from '../../../level';
 import { applyFocusHit, applyFocusRecovery } from '../../../systems/focus/apply';
 
@@ -14,10 +15,16 @@ export function applyOrbit(s: GameState, out: GameEvent[], dt: number) {
     if (result.satelliteLit && !applyFocusHit(s, out, { kind: 'satelliteLight', id: Math.floor(s.orbit.age), damage: FOCUS_DAMAGE.satelliteLight })) return;
     // The takeover skips the shared tick, so focus comes back here (not while the beam is on the chair).
     if (s.orbit.phase !== 'parked') applyFocusRecovery(s, dt);
+    if (result.flag > s.checkpoint) {
+        s.focus = 100;
+        s.focusClock = 0;
+        s.checkpoint = result.flag;
+        out.push({ type: 'cue', id: 'checkpoint' });
+    }
     if (result.checkpoint) {
         s.focus = 100;
         s.focusClock = 0;
-        s.checkpoint = 1;
+        s.checkpoint = STAGE_FIVE.restarts.length + 1;
         if (s.completedStage < 4) s.completedStage = 4;
         out.push({ type: 'cue', id: 'checkpoint' });
     }
