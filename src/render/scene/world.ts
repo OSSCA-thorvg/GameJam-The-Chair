@@ -102,7 +102,9 @@ export function drawWorld(ctx: RenderCtx) {
         if (x < left - 200 || x > right) continue;
         desk(ctx, x);
         const plantX = x + (x === 110 ? 295 : 205);
-        plant(ctx, Math.abs(plantX - cleaning.x - 55) < 70 ? plantX + 90 : plantX);
+        const potX = Math.abs(plantX - cleaning.x - 55) < 70 ? plantX + 90 : plantX;
+        // Nothing stands in front of the exit door.
+        if (potX + 25 <= EXIT.left || potX - 25 >= EXIT.right) plant(ctx, potX);
     }
     let cleaner: DeepReadonly<Person> | undefined;
     for (const n of people) {
