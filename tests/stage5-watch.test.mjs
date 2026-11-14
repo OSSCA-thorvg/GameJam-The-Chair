@@ -115,7 +115,9 @@ test('the rider answers each camera beat in one curved ThorVG bubble', () => {
         const shape = ctx.commands.filter(command => command.layer?.key === 'orbit-reaction' && !command.text);
         assert.equal(shape.length, 1, 'the tail and body share one outline');
         assert.ok(shape[0].curves.length >= 6, 'the outline is curved');
-        assert.equal(ctx.commands.find(command => command.text)?.text.content, mark);
+        const text = ctx.commands.find(command => command.text)?.text;
+        assert.equal(text?.content, mark);
+        assert.ok(text.x > 500 + 45, 'the bubble sits far enough beside the head for a diagonal tail');
     }
 });
 

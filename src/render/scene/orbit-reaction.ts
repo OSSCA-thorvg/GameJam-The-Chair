@@ -14,7 +14,7 @@ export function orbitReaction(ctx: RenderCtx, head: Vector, age: number, lit: bo
     const scale = .55 + .45 * (1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2);
     const size = ctx.clamp(ctx.H * .05, 16, 28);
     const tip: Vector = [head[0] + size * .35, head[1] - size * .2];
-    const cx = ctx.clamp(head[0] + size * 1.65, size * 1.35, ctx.W - size * 1.35);
+    const cx = ctx.clamp(head[0] + size * 2.45, size * 1.35, ctx.W - size * 1.35);
     const cy = ctx.clamp(head[1] - size * 1.4, size, ctx.H - size);
     const rx = size * 1.05, ry = size * .83;
     const at = (x: number, y: number): Vector => [tip[0] + (x - tip[0]) * scale, tip[1] + (y - tip[1]) * scale];
