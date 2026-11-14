@@ -473,6 +473,16 @@ test('the Earth sits below the chair: its horizon dips under eye level and curve
     assert.ok(sag(low) > 0 && sag(high) > sag(low), 'curving down toward the sides, more so higher up');
     const [lon, lat] = groundTrack(STAGE_FIVE.checkpoint.z);
     assert.ok(lat < 37.5 && Math.abs(lon - 127) < 3, 'the flight ends south of Seoul, looking north at it');
+    // Turning the view to the right slides the ground left, the same way as the sky panorama and the scenery.
+    // Followed by the first city light on the night side below.
+    const ground = spin => {
+        const ctx = createRenderCtx({});
+        Object.assign(ctx, { W: 1000, H: 510, t: 0, commands: [] });
+        orbitEarth(ctx, STAGE_FIVE.checkpoint.z, { ...level, pitch: .4 }, 0, 1, 1, spin);
+        const light = ctx.commands.find(command => command.layer?.key === 'orbit-earth-lights');
+        return light.v.reduce((sum, [x]) => sum + x, 0) / light.v.length;
+    };
+    assert.ok(ground(.05) < ground(0) - 10, `the ground slides left as the view turns right (${ground(0).toFixed(0)} to ${ground(.05).toFixed(0)})`);
 });
 
 test('in the ending Seoul glows on the night side ahead', () => {

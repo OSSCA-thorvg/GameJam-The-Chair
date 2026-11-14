@@ -117,8 +117,9 @@ function earthView(z: number, yaw: number, camera: EarthCamera, spin = 0) {
     const up = globe(lon, lat);
     const ahead = add(globe(bLon, bLat), globe(aLon, aLat), -1);
     let forward = unit(add(ahead, up, -dot(ahead, up)));
+    // Turning by a positive angle swings the view to the right, as the camera and the sky panorama turn.
     const turn = Math.atan(yaw) + spin;
-    forward = unit(add(scale(forward, Math.cos(turn)), cross(up, forward), Math.sin(turn)));
+    forward = unit(add(scale(forward, Math.cos(turn)), cross(forward, up), Math.sin(turn)));
     const right = cross(forward, up);
     const limb = R / (R + h);
     const { cx, cy, focal, roll, pitch } = camera;
