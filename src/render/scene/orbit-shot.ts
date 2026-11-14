@@ -8,6 +8,7 @@ import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGl
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
 import { orbitSatelliteLight, satelliteChairGlow, satelliteGlare, satelliteLitChair, satelliteLightWarmth, satelliteSpots, type Aim } from './orbit-satellite-light';
 import { orbitViewfinder } from './orbit-viewfinder';
+import { orbitReaction } from './orbit-reaction';
 import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
 import { earthSkyBottom, orbitEarth, type EarthCamera } from './orbit-earth';
 import { endingChairLights, endingFade, endingLaptopScreen, endingLaptopText, endingNebula, endingSignal, type OrbitEndingState } from './orbit-ending';
@@ -47,6 +48,8 @@ export type OrbitShot = {
     entry: number;
     /** Where each satellite is aiming on the play plane; absent before stage five starts. */
     aims?: readonly Aim[];
+    /** The shutter stop as a satellite locks on, from 1 the instant it locks down to 0. */
+    shutter?: number;
     ending: OrbitEndingState;
 };
 
@@ -199,7 +202,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // The play plane at the chair's depth, in the frame the chair is drawn in: the bands and the viewfinder sit on it.
     const plane = (x: number, y: number) => view.project(satelliteLightPoint(x, y, travel));
     const lightShown = smooth((turn - ORBIT_WATCH.satelliteAppear) / .3) * (1 - smooth(ending.centre * 4));
-    orbitSatelliteLight(ctx, view, satelliteLightPoint, plane, shot.aims ?? NO_AIMS, travel, shot.speed, lightShown);
+    orbitSatelliteLight(ctx, view, satelliteLightPoint, plane, shot.aims ?? NO_AIMS, travel, shot.speed, lightShown, shot.shutter ?? 0);
     if (cloudsShown) orbitCloudBank(ctx, view, travel, true, { ...options, alpha: clouds });
     if (heights.shadow > 0 && horizon) orbitShadow(ctx, { ...heights, shadow: heights.shadow * (1 - wide) }, horizon);
     skyDeparture(ctx, shot.departure);
@@ -219,13 +222,16 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     ctx.commands.push(...air.over);
     // Caught in a beam, the light washes over the picture a little, and the viewfinder starts recording.
     satelliteGlare(ctx, chair.project([0, 15, 0]), light.warmth, pulse);
-    orbitViewfinder(ctx, plane, light.warmth >= 1 ? 1 : 0, lightShown * blend * (1 - heights.shadow));
+    orbitViewfinder(ctx, plane, light.warmth >= 1 ? 1 : 0, lightShown * blend * (1 - heights.shadow), shot.shutter ?? 0);
+    // The shutter: a white flash over everything as a satellite locks on, fading through the stop.
+    if (shot.shutter) ctx.commands.push({ v: screen(ctx), c: '#ffffff' + Math.round(.28 * shot.shutter * shot.shutter * 255).toString(16).padStart(2, '0'), layer: { key: 'orbit-shutter' } });
     endingLaptopText(ctx, chair, ending);
     endingChairLights(ctx, chair, ending);
     const head = chair.project([4, 70, 0]);
     // The laptop answers the cameras just before stage five and the bubble stays up into its first moments;
     // deep in the Earth's shadow its signal drops away until it loses the network altogether.
     // Deep in the Earth's shadow the signal drops away; the lost connection itself shows on the laptop screen.
+    orbitReaction(ctx, head, since, since >= 0 && light.warmth >= 1);
     if (ending.parked) endingSignal(ctx, head, ending);
     else attendanceBubble(ctx, head, since + ATTENDANCE.lead);
     endingFade(ctx, ending);

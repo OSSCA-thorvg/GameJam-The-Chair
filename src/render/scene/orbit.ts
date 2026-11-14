@@ -2,6 +2,7 @@ import type { RenderCtx } from '../context';
 import { REVEAL_DURATION } from './sky-camera';
 import { endingFade, orbitEnding } from './orbit-ending';
 import { drawOrbitShot } from './orbit-shot';
+import { STAGE_FIVE } from '../../game/stages/orbit/data';
 
 /** Seconds the chair framing takes to pull back from the reveal's close-up once stage five starts. */
 export const ENTRY_FRAMING = 2.5;
@@ -24,6 +25,6 @@ export function drawOrbit(ctx: RenderCtx) {
         clock: REVEAL_DURATION + orbit.age - ending.still,
         // Parked, the spray dies away.
         spray: ending.parked ? .2 * (1 - ending.calm) : ctx.state.spray.burst / .24, rocket: Math.min(1, orbit.age / IGNITION),
-        arrival: 0, departure: 1, basin: 1, entry: orbit.age / ENTRY_FRAMING, aims: orbit.aims, ending,
+        arrival: 0, departure: 1, basin: 1, entry: orbit.age / ENTRY_FRAMING, aims: orbit.aims, shutter: orbit.freeze / STAGE_FIVE.satelliteLight.freeze, ending,
     });
 }

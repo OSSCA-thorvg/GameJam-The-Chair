@@ -124,7 +124,7 @@ const { orbitStep, inSatelliteLight, STAGE_FIVE } = await loadSource(`
 
 const chairAt = (x, y = 0) => ({ x, y, vx: 0, vy: 0, a: 0, w: 0 });
 const centred = () => STAGE_FIVE.satelliteLight.beams.map(() => ({ x: 0, y: 0 }));
-const cruising = z => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, rings: 0, aims: centred(), settled: 0 });
+const cruising = z => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, rings: 0, aims: centred(), freeze: 0, settled: 0 });
 
 test('5-1: the satellite light slows the chair and shoves it out of its rectangle', () => {
     const first = STAGE_FIVE.satelliteLight.beams[0];

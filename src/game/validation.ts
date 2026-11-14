@@ -247,9 +247,9 @@ function sky(value: unknown, path: string) {
 
 function orbit(value: unknown, path: string) {
     const data = record(value, path);
-    exact(data, ['phase', 'age', 'z', 'speed', 'rings', 'aims', 'settled'], path);
+    exact(data, ['phase', 'age', 'z', 'speed', 'rings', 'aims', 'freeze', 'settled'], path);
     choice(data.phase, ['entry', 'rings', 'door', 'parked'], `${path}.phase`);
-    for (const key of ['age', 'z', 'speed', 'settled']) finite(data[key], `${path}.${key}`);
+    for (const key of ['age', 'z', 'speed', 'freeze', 'settled']) finite(data[key], `${path}.${key}`);
     array(data.aims, `${path}.aims`, 64).forEach((aim, i) => {
         const at = record(aim, `${path}.aims[${i}]`);
         exact(at, ['x', 'y'], `${path}.aims[${i}]`);

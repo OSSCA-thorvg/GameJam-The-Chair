@@ -351,7 +351,7 @@ test('the chair flies on by itself: the extinguisher fires and speeds it up to i
 });
 
 const cruisingAt = (z, extra = {}) => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, rings: 0,
-    aims: STAGE_FIVE.satelliteLight.beams.map(() => ({ x: 0, y: 0 })), settled: 0, ...extra });
+    aims: STAGE_FIVE.satelliteLight.beams.map(() => ({ x: 0, y: 0 })), freeze: 0, settled: 0, ...extra });
 const still = (x = 0, y = 0) => ({ x, y, vx: 0, vy: 0, a: 0, w: 0 });
 const hold = (orbit, p, keys, seconds) => {
     for (let i = 0; i < seconds * 120; i++) ({ orbit, p } = orbitStep(orbit, p, keys, 1 / 120));
@@ -360,7 +360,8 @@ const hold = (orbit, p, keys, seconds) => {
 
 test('moving answers at once, settles quickly when released, and nothing moves the chair on its own', () => {
     const { speed } = STAGE_FIVE.steer;
-    const quick = hold(cruisingAt(200), still(), ['right'], .35);
+    // Between the first two beams, so no satellite locks on (and stops the flight) meanwhile.
+    const quick = hold(cruisingAt(1170), still(), ['right'], .35);
     assert.ok(quick.p.vx > speed * .9, `near full speed across after 0.35 s (${quick.p.vx.toFixed(0)})`);
     const settled = hold(quick.orbit, quick.p, [], .6);
     assert.ok(Math.abs(settled.p.vx) < speed * .1, 'and nearly stopped 0.6 s after letting go');
@@ -466,7 +467,7 @@ test('rushing forward pulls the camera back and streams air round the chair, mor
     };
     const air = commands => commands.filter(command => command.layer?.key === 'orbit-slipstream');
     const frame = (speed, burst, z = 300) => flightFrame(state => { Object.assign(state.orbit, { speed, z }); state.sprayBurst = burst; });
-    const third = STAGE_FIVE.gears[2], z3 = third.from + 400;
+    const third = STAGE_FIVE.gears[2], z3 = third.from + 150;
     const slow = frame(STAGE_FIVE.cruise * .4, 0), cruise = frame(STAGE_FIVE.cruise, 0, z3), rushing = frame(third.maxSpeed, .24, z3);
     assert.ok(casters(rushing).width < casters(cruise).width * .9, 'the chair looks smaller as the camera falls back');
     assert.ok(Math.abs(casters(rushing).y - casters(cruise).y) < 30, 'but stays near the same height on screen');
@@ -605,3 +606,53 @@ test('the ending close-up finds the chair wherever in the shadow it parked', () 
     assert.equal(frame(turned).filter(command => command.c === '#f6e6df' || command.c?.startsWith?.('#f6e6df')).length, 0, 'and the fence no longer puffs at it');
 });
 
+
+test('the instant a satellite locks on, the whole flight stops for a moment, then carries on', () => {
+    const beam = STAGE_FIVE.satelliteLight.beams[0], { lock, freeze } = STAGE_FIVE.satelliteLight, top = STAGE_FIVE.gears[0].maxSpeed;
+    let state = { orbit: cruisingAt(beam.from - top * (lock + .3), { speed: top }), p: still() };
+    while (state.orbit.freeze === 0) state = orbitStep(state.orbit, state.p, ['right'], 1 / 120);
+    assert.ok(Math.abs(state.orbit.freeze - freeze) < 1e-9, 'the stop starts as it locks');
+    const stopped = state;
+    for (let t = 0; t < freeze - 1 / 60; t += 1 / 120) state = orbitStep(state.orbit, state.p, ['right', 'forward'], 1 / 120);
+    assert.equal(state.orbit.z, stopped.orbit.z, 'no flying on meanwhile');
+    assert.equal(state.p.x, stopped.p.x, 'and no steering');
+    state = hold(state.orbit, state.p, ['right'], .3);
+    assert.ok(state.orbit.z > stopped.orbit.z && state.p.x > stopped.p.x, 'then it all carries on');
+    // The shutter shows as a white flash over the picture.
+    const flash = flightFrame(s => Object.assign(s.orbit, { freeze: freeze * .9 })).some(command => command.layer?.key === 'orbit-shutter');
+    assert.ok(flash && !flightFrame().some(command => command.layer?.key === 'orbit-shutter'), 'a flash only during the stop');
+});
+
+test('a leading satellite aims where the chair is heading, and two in a row lock on one after the other', () => {
+    const beams = STAGE_FIVE.satelliteLight.beams, { lock, warn } = STAGE_FIVE.satelliteLight;
+    const leading = beams.findIndex(beam => beam.lead), top = STAGE_FIVE.gears[2].maxSpeed;
+    let state = { orbit: cruisingAt(beams[leading].from - top * (warn - .1), { speed: top }), p: still(-200, 0) };
+    while ((beams[leading].from - state.orbit.z) / state.orbit.speed > lock) state = orbitStep(state.orbit, state.p, ['right'], 1 / 120);
+    assert.ok(state.orbit.aims[leading].x > state.p.x + 40, `aimed ahead of the chair (${state.orbit.aims[leading].x.toFixed(0)} vs ${state.p.x.toFixed(0)})`);
+    // The pair in 5-2: the second keeps following after the first has locked, so it catches up with the chair.
+    const pair = beams.findIndex((beam, i) => i > 0 && beam.from - beams[i - 1].from < 200 && !beam.lead && !beam.shape);
+    assert.ok(pair > 0, 'there is a pair');
+    const speed = STAGE_FIVE.gears[1].maxSpeed;
+    state = { orbit: cruisingAt(beams[pair - 1].from - speed * (warn - .1), { speed }), p: still() };
+    while ((beams[pair].from - state.orbit.z) / state.orbit.speed > lock) state = orbitStep(state.orbit, state.p, ['right'], 1 / 120);
+    assert.ok(state.orbit.aims[pair].x > state.orbit.aims[pair - 1].x + 40, 'the second locked where the chair had got to');
+});
+
+test('the big lens ahead aims a circle: round, and left in time like the rest', () => {
+    const index = STAGE_FIVE.satelliteLight.beams.findIndex(beam => beam.shape === 'circle');
+    const beam = STAGE_FIVE.satelliteLight.beams[index], r = beam.half.x + STAGE_FIVE.satelliteLight.chairRadius;
+    const aims = STAGE_FIVE.satelliteLight.beams.map(() => ({ x: 0, y: 0 })), z = (beam.from + beam.to) / 2;
+    assert.equal(satelliteLightOn({ aims }, { x: r * .7 - 3, y: r * .7 - 3 }, z), beam, 'caught inside the circle');
+    assert.equal(satelliteLightOn({ aims }, { x: r * .72, y: r * .72 }, z), null, 'clear outside it, even inside its corner square');
+    assert.ok(r < STAGE_FIVE.steer.speed * STAGE_FIVE.satelliteLight.lock * .85, 'can be left in time');
+});
+
+const MARKS = ['!', '✓', '...'];
+test('caught in the light, the rider answers with a mark: !, ✓, … in turn, and no words', () => {
+    const beam = STAGE_FIVE.satelliteLight.beams[0], z = (beam.from + beam.to) / 2;
+    const marks = age => flightFrame(state => Object.assign(state.orbit, { z, age }))
+        .filter(command => command.text && MARKS.includes(command.text.content)).map(command => command.text.content);
+    // The text layer spells the ellipsis out as three dots.
+    assert.deepEqual([20.5, 21.5, 22.5].map(age => marks(age)[0]), ['...', '!', '✓']);
+    assert.equal(flightFrame().filter(command => command.text && MARKS.includes(command.text.content)).length, 0, 'nothing outside the light');
+});

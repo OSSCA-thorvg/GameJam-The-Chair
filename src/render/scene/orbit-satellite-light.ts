@@ -33,9 +33,23 @@ const smooth = (value: number) => {
 };
 const hex = (color: string, alpha: number) => color + Math.round(Math.max(0, Math.min(1, alpha)) * 255).toString(16).padStart(2, '0');
 
-/** Where a beam's satellite is: over its aim, riding just ahead of the chair while the beam is on. */
+/** The big lens straight ahead hangs this far ahead of the chair and this high, looking back at it. */
+const EYE = { ahead: 1700, up: 60, radius: 120 };
+
+/**
+ * Where a beam's satellite is: over its aim, riding just ahead of the chair while the beam is on. The big lens
+ * instead hangs straight ahead, looking back down the route at the chair.
+ */
 export function satelliteSpot(beam: Beam, aim: Aim, travel: number) {
+    if (beam.shape === 'circle') return { x: aim.x * .3, y: EYE.up, z: travel + EYE.ahead };
     return { x: aim.x, y: LENS_UP, z: Math.max(beam.from, Math.min(beam.to, travel + LEAD)) };
+}
+
+/** A beam's shape on the plane round `aim`: a rectangle, or a circle for the big lens, `grow` times its size. */
+function outline(b: Beam, aim: Aim, grow = 1): { x: number; y: number }[] {
+    const hx = b.half.x * grow, hy = b.half.y * grow;
+    if (b.shape === 'circle') return Array.from({ length: 32 }, (_, i) => ({ x: aim.x + hx * Math.cos(i * Math.PI / 16), y: aim.y + hx * Math.sin(i * Math.PI / 16) }));
+    return [{ x: aim.x - hx, y: aim.y + hy }, { x: aim.x + hx, y: aim.y + hy }, { x: aim.x + hx, y: aim.y - hy }, { x: aim.x - hx, y: aim.y - hy }];
 }
 
 /**
@@ -43,7 +57,7 @@ export function satelliteSpot(beam: Beam, aim: Aim, travel: number) {
  * only the next one or two are ever up. `speed` turns the distance to each beam into seconds.
  */
 export function satelliteSpots(aims: readonly Aim[], travel: number, speed: number) {
-    return P.beams.flatMap((b, i) => travel < b.to && (satelliteLightArrival(b, travel, speed) < P.warn + SATELLITE_LEAD || (i === 0 && b.from - travel < FIRST_SIGHT))
+    return P.beams.flatMap((b, i) => b.shape !== 'circle' && travel < b.to && (satelliteLightArrival(b, travel, speed) < P.warn + SATELLITE_LEAD || (i === 0 && b.from - travel < FIRST_SIGHT))
         ? [satelliteSpot(b, aims[i] ?? { x: 0, y: 0 }, travel)] : []);
 }
 
@@ -69,8 +83,8 @@ function shaft(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, 
     const near = Math.max(b.from, travel + 1);
     if (b.to <= near || arrival > P.warn + SHAFT_LEAD) return null;
     const spot = satelliteSpot(b, aim, travel), points: Vector[] = [];
-    for (const z of [near, b.to]) for (const x of [aim.x - b.half.x, aim.x + b.half.x]) for (const y of [aim.y - b.half.y, aim.y + b.half.y]) {
-        const q = point(x, y, z);
+    for (const z of [near, Math.min(b.to, travel + EYE.ahead - 100)]) for (const at of outline(b, aim)) {
+        const q = point(at.x, at.y, z);
         if (view.depth(q) <= 30) return null;
         points.push(view.project(q));
     }
@@ -120,28 +134,36 @@ export function satelliteLightStage(b: Beam, travel: number, speed: number) {
     return { kind: 'track' as const, k: smooth((P.warn - arrival) / .3) };
 }
 
-/** The rectangle on the chair's plane, drawn from the same aim and size the course checks. Plain alpha, no Scene. */
-function rectangle(ctx: RenderCtx, plane: (x: number, y: number) => Vector, b: Beam, aim: Aim, travel: number, speed: number, strength: number) {
+/**
+ * The shape on the chair's plane, drawn from the same aim and size the course checks. Plain alpha, no Scene.
+ * `shutter` (0 to 1) is the camera-shutter stop as a satellite locks on: the shape that just locked flashes white.
+ */
+function rectangle(ctx: RenderCtx, plane: (x: number, y: number) => Vector, b: Beam, aim: Aim, travel: number, speed: number, strength: number, shutter: number) {
     const stage = satelliteLightStage(b, travel, speed);
     if (!stage) return;
     const shrink = stage.kind === 'fold' ? smooth(stage.k) : 1;
     const hx = b.half.x * shrink, hy = b.half.y * shrink;
-    const corners = [plane(aim.x - hx, aim.y + hy), plane(aim.x + hx, aim.y + hy), plane(aim.x + hx, aim.y - hy), plane(aim.x - hx, aim.y - hy)];
-    const outline = (stroke: DrawCommand['stroke']) => ctx.commands.push({ v: corners, c: null, stroke, layer: PLANE });
+    const corners = outline(b, aim, shrink).map(at => plane(at.x, at.y));
+    const edge = (stroke: DrawCommand['stroke']) => ctx.commands.push({ v: corners, c: null, stroke, layer: PLANE });
     const fill = (alpha: number) => ctx.commands.push({ v: corners, c: hex(GOLD, alpha * strength), layer: PLANE });
     if (stage.kind === 'track') {
         // Following the chair: a dashed outline, with a darker line under it so it reads over bright clouds too.
         const k = stage.k * strength;
-        outline({ width: 4.5, color: hex(SHADE, .35 * k), dash: [10, 8], dashOffset: -ctx.t * 40, cap: 'round' });
-        outline({ width: 2.5, color: hex(EDGE, (.75 + .2 * Math.sin(ctx.t * 8)) * k), dash: [10, 8], dashOffset: -ctx.t * 40, cap: 'round' });
+        edge({ width: 4.5, color: hex(SHADE, .35 * k), dash: [10, 8], dashOffset: -ctx.t * 40, cap: 'round' });
+        edge({ width: 2.5, color: hex(EDGE, (.75 + .2 * Math.sin(ctx.t * 8)) * k), dash: [10, 8], dashOffset: -ctx.t * 40, cap: 'round' });
         return;
     }
     if (stage.kind === 'lock') {
-        // Locked on: it stops following, fills up, and corner brackets close in on it.
-        const k = stage.k;
+        // Locked on: it stops following, fills up, and corner brackets close in on it. The instant it locks it
+        // snaps white and slightly larger, with the flight held still under the shutter.
+        const k = stage.k, snap = stage.k < .1 ? shutter : 0;
+        if (snap > 0) {
+            const flash = outline(b, aim, 1 + .18 * snap).map(at => plane(at.x, at.y));
+            ctx.commands.push({ v: flash, c: hex('#ffffff', .45 * snap * strength), stroke: { width: 6, color: hex('#ffffff', snap * strength) }, layer: PLANE });
+        }
         fill(.16 * k);
-        outline({ width: 4.5 + 1.5 * k, color: hex(SHADE, .35 * strength), dash: [16, 4], dashOffset: -ctx.t * 60, cap: 'round' });
-        outline({ width: 2.5 + 1.5 * k, color: hex(EDGE, strength), dash: [16, 4], dashOffset: -ctx.t * 60, cap: 'round' });
+        edge({ width: 4.5 + 1.5 * k, color: hex(SHADE, .35 * strength), dash: [16, 4], dashOffset: -ctx.t * 60, cap: 'round' });
+        edge({ width: 2.5 + 1.5 * k, color: hex(EDGE, strength), dash: [16, 4], dashOffset: -ctx.t * 60, cap: 'round' });
         const out = (1 - k) * 50, L = Math.min(hx, hy) * .5;
         for (const [sx, sy] of [[-1, 1], [1, 1], [1, -1], [-1, -1]]) {
             const x = aim.x + sx * (hx + out), y = aim.y + sy * (hy + out);
@@ -153,7 +175,25 @@ function rectangle(ctx: RenderCtx, plane: (x: number, y: number) => Vector, b: B
     // On: a solid lit rectangle, folding to its middle once the chair is through.
     const k = stage.kind === 'fold' ? stage.k : 1;
     fill(.3 * k);
-    outline({ width: 2.5, color: hex(EDGE, .95 * k * strength), cap: 'round' });
+    edge({ width: 2.5, color: hex(EDGE, .95 * k * strength), cap: 'round' });
+}
+
+/** The big lens straight ahead: a dark ring round a glass that brightens as it takes aim and locks on. */
+function bigLens(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, aim: Aim, travel: number, speed: number, strength: number) {
+    const arrival = satelliteLightArrival(b, travel, speed);
+    if (travel > b.to || arrival > P.warn + SATELLITE_LEAD) return;
+    const spot = satelliteSpot(b, aim, travel), centre = point(spot.x, spot.y, spot.z);
+    if (view.depth(centre) <= 30) return;
+    const [cx, cy] = view.project(centre), edge = view.project(point(spot.x + EYE.radius, spot.y, spot.z));
+    const r = Math.abs(edge[0] - cx), shown = strength * smooth((P.warn + SATELLITE_LEAD - arrival) / 1.5);
+    const ring = (radius: number, color: string, alpha: number) => ctx.commands.push({ v: Array.from({ length: 28 }, (_, i): Vector =>
+        [cx + radius * Math.cos(i * Math.PI / 14), cy + radius * Math.sin(i * Math.PI / 14)]), c: hex(color, alpha * shown) });
+    ring(r * 1.25, '#8d96a6', 1);
+    ring(r, '#1b1f27', 1);
+    const charge = arrival <= 0 ? 1 : arrival <= P.lock ? .5 + .5 * (1 - arrival / P.lock) : arrival <= P.warn ? .25 : .1;
+    ctx.commands.push({ v: [[cx - r, cy - r], [cx + r, cy - r], [cx + r, cy + r], [cx - r, cy + r]], c: { from: [cx, cy], to: [cx + r, cy], radius: r * .8,
+        stops: [[0, ctx.rgba('#ffffff', charge * shown)], [.4, ctx.rgba(WARM, .8 * charge * shown)], [1, ctx.rgba('#27344d', 0)]] } });
+    ring(r * .12, '#ff4b52', .9);
 }
 
 /**
@@ -161,17 +201,18 @@ function rectangle(ctx: RenderCtx, plane: (x: number, y: number) => Vector, b: B
  * plane. `plane` maps a point on that plane (route x, y at the chair's depth) to the screen.
  */
 export function orbitSatelliteLight(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, plane: (x: number, y: number) => Vector,
-    aims: readonly Aim[], travel: number, speed: number, strength = 1) {
+    aims: readonly Aim[], travel: number, speed: number, strength = 1, shutter = 0) {
     if (strength <= 0) return;
     const aimOf = (i: number) => aims[i] ?? { x: 0, y: 0 };
+    P.beams.forEach((b, i) => { if (b.shape === 'circle') bigLens(ctx, view, point, b, aimOf(i), travel, speed, strength); });
     ctx.commands.push(...P.beams.map((b, i) => shaft(ctx, view, point, b, aimOf(i), travel, speed, strength)).filter(c => c !== null));
     P.beams.forEach((b, i) => {
         const stage = satelliteLightStage(b, travel, speed);
         if (!stage || stage.kind === 'track' || stage.kind === 'fold') return;
-        const spot = satelliteSpot(b, aimOf(i), travel), lens = point(spot.x, spot.y - 30, spot.z);
+        const spot = satelliteSpot(b, aimOf(i), travel), lens = point(spot.x, spot.y - (b.shape === 'circle' ? 0 : 30), spot.z);
         if (view.depth(lens) > 30) lensFlare(ctx, view.project(lens), strength * (stage.kind === 'lock' ? .4 + .6 * stage.k : 1));
     });
-    P.beams.forEach((b, i) => rectangle(ctx, plane, b, aimOf(i), travel, speed, strength));
+    P.beams.forEach((b, i) => rectangle(ctx, plane, b, aimOf(i), travel, speed, strength, shutter));
 }
 
 /**
@@ -200,7 +241,9 @@ export function satelliteLightWarmth(aims: readonly Aim[], p: Readonly<Pick<Play
     P.beams.forEach((b, i) => {
         const aim = aims[i];
         if (!aim) return;
-        const dx = Math.abs(p.x - aim.x) - b.half.x - P.chairRadius, dy = Math.abs(p.y - aim.y) - b.half.y - P.chairRadius;
+        const round = b.shape === 'circle' ? Math.hypot(p.x - aim.x, p.y - aim.y) - b.half.x - P.chairRadius : 0;
+        const dx = b.shape === 'circle' ? round : Math.abs(p.x - aim.x) - b.half.x - P.chairRadius;
+        const dy = b.shape === 'circle' ? 0 : Math.abs(p.y - aim.y) - b.half.y - P.chairRadius;
         const ahead = Math.max(b.from - z, z - b.to);
         const out = Math.hypot(Math.max(0, dx), Math.max(0, dy), Math.max(0, ahead));
         const k = out <= 0 ? 1 : Math.max(0, 1 - out / WARN);

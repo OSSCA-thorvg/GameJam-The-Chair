@@ -3,8 +3,12 @@ import { deepFreeze } from '../../data';
 type SatelliteLightBeam = {
     /** The route depths it covers. */
     from: number; to: number;
-    /** Half the size of its rectangle on the play plane, across (`x`) and up (`y`). */
+    /** Half the size of its rectangle on the play plane, across (`x`) and up (`y`); a circle's radius is `x`. */
     half: { x: number; y: number };
+    /** `circle`: the big lens straight ahead, shining back at the chair. */
+    shape?: 'rect' | 'circle';
+    /** Aims this many seconds ahead of where the chair is heading instead of where it is. */
+    lead?: number;
 };
 
 // Stage five is played on one plane facing the camera, at the chair's depth: what overlaps on screen is what hits.
@@ -27,27 +31,27 @@ export const STAGE_FIVE = deepFreeze({
     autopilot: { from: 8800, response: 1.5, landing: 70, brake: .45 },
     bounds: { x: 330, y: 150 },
     rings: [] as { x: number; y: number; z: number; radius: number }[],
-    // Each beam's satellite takes aim at the chair `warn` seconds before the beam arrives: its rectangle follows the
-    // chair (`track` is how quickly) until `lock` seconds before, then holds still where it was aimed. A beam touches
-    // the chair once its rectangle overlaps the chair's `chairRadius`. Locked a full second ahead, every rectangle
-    // can be left in time.
+    // Each beam's satellite takes aim at the chair `warn` seconds before the beam arrives: its shape follows the
+    // chair (`track` is how quickly) until `lock` seconds before, then holds still where it was aimed. The moment it
+    // locks, the whole flight stops for `freeze` seconds, like a camera shutter. A beam touches the chair once its
+    // shape overlaps the chair's `chairRadius`. Locked a full second ahead, every shape can be left in time.
     satelliteLight: {
-        slowSpeed: 45, slowResponse: 2.4, shove: 260, chairRadius: 34, warn: 2.2, lock: 1, track: 5,
+        slowSpeed: 45, slowResponse: 2.4, shove: 260, chairRadius: 34, warn: 2.2, lock: 1, track: 5, freeze: .2,
         beams: [
             // 5-1, first gear: one at a time, with room to breathe between them.
             { from: 600, to: 1150, half: { x: 95, y: 75 } },
             { from: 1700, to: 2250, half: { x: 95, y: 75 } },
             { from: 2650, to: 3150, half: { x: 200, y: 55 } },
-            // 5-2, second gear: closer together, wide and tall ones in turn.
+            // 5-2, second gear: closer together, then two satellites locking on one after the other.
             { from: 3550, to: 4050, half: { x: 95, y: 80 } },
-            { from: 4150, to: 4650, half: { x: 60, y: 150 } },
-            { from: 4750, to: 5250, half: { x: 210, y: 55 } },
-            { from: 5300, to: 5800, half: { x: 100, y: 80 } },
-            // 5-3, third gear: quick and close, two overlapping, then a quiet stretch before the shadow.
-            { from: 6150, to: 6600, half: { x: 100, y: 80 } },
-            { from: 6850, to: 7300, half: { x: 65, y: 150 } },
-            { from: 7150, to: 7600, half: { x: 220, y: 55 } },
-            { from: 7900, to: 8400, half: { x: 110, y: 85 } },
+            { from: 4150, to: 4600, half: { x: 60, y: 150 } },
+            { from: 4900, to: 5300, half: { x: 90, y: 70 } },
+            { from: 5020, to: 5420, half: { x: 90, y: 70 } },
+            // 5-3, third gear: satellites that aim where the chair is heading, a pair, then the big lens ahead.
+            { from: 6100, to: 6500, half: { x: 100, y: 80 }, lead: .5 },
+            { from: 6750, to: 7150, half: { x: 210, y: 55 }, lead: .5 },
+            { from: 6890, to: 7290, half: { x: 60, y: 150 } },
+            { from: 7600, to: 8350, half: { x: 95, y: 95 }, shape: 'circle' },
         ] as SatelliteLightBeam[],
     },
     heights: { air: 3300, space: 6800, shadow: 8800 },
@@ -62,8 +66,10 @@ export type OrbitState = {
     z: number;
     speed: number;
     rings: number;
-    /** Where each beam's rectangle is centred on the play plane: following the chair, then locked. */
+    /** Where each beam's shape is centred on the play plane: following the chair, then locked. */
     aims: readonly { readonly x: number; readonly y: number }[];
+    /** Seconds left of the shutter stop after a satellite locks on; nothing moves meanwhile. */
+    freeze: number;
     /** 1 on arriving in the Earth's shadow, then counting up in seconds while the ending plays. */
     settled: number;
 };
