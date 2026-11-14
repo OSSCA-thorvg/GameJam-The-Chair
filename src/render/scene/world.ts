@@ -13,6 +13,7 @@ import { geyserPhase } from '../../game/stages/office/geyser/decide';
 import { URGENT_VOLLEY_ID } from '../../game/stages/office/copier/decide';
 import { urgentCopierDraw, urgentPapersDraw } from './urgent-copier';
 import { ceilingCctvs } from './ceiling-cctv';
+import { officeControlHints } from './control-hints';
 
 export function drawWorld(ctx: RenderCtx) {
     const F = ctx.F;
@@ -174,6 +175,7 @@ export function drawWorld(ctx: RenderCtx) {
     ctx.ellipse(p.x, F + 8, 45, 5, '#91959c');
     player(ctx);
     binFront(ctx);
+    officeControlHints(ctx);
     debugCollisions(ctx);
     for (const z of ctx.specks) {
         ctx.ox = z.x;
