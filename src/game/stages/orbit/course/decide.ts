@@ -14,7 +14,7 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
         next.settled += dt;
         return { orbit: next, p, checkpoint: false, flag: 0, satelliteLit: false, spraying: false };
     }
-    // The shutter stop after a satellite locks on: the whole flight holds still for a moment.
+    // The stop after a beam catches the chair: the whole flight holds still for a moment.
     if (next.freeze > 0) {
         next.freeze = Math.max(0, next.freeze - dt);
         return { orbit: next, p, checkpoint: false, flag: 0, satelliteLit: false, spraying: true };
@@ -41,10 +41,8 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     p.x = Math.max(-C.bounds.x - C.steer.overshoot, Math.min(C.bounds.x + C.steer.overshoot, p.x + p.vx * dt));
     p.y = Math.max(-C.bounds.y - C.steer.overshoot, Math.min(C.bounds.y + C.steer.overshoot, p.y + p.vy * dt));
     next.z += next.speed * dt;
-    // A satellite locking on stops the flight for a moment, so the lock cannot be missed.
-    if (controlled && C.satelliteLight.beams.some(beam => !satelliteLightLocked(beam, orbit.z, orbit.speed) && satelliteLightLocked(beam, next.z, next.speed))) {
-        next.freeze = C.satelliteLight.freeze;
-    }
+    // Caught by a beam, the flight stops for a moment, like a photo being taken, so the hit cannot be missed.
+    if (controlled && !beam && satelliteLightOn(next, p, next.z)) next.freeze = C.satelliteLight.freeze;
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
     // Restart flags along the way: the index of the one just passed, if any (the shadow's flag comes after them).

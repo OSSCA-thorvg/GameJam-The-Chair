@@ -14,14 +14,14 @@ const hex = (color: string, alpha: number) => color + Math.round(Math.max(0, Mat
  * chair cannot leave. Inside a beam they light up and blink, and REC shows: the chair is being recorded.
  * `plane` maps a point on the chair's plane to the screen; `shown` fades the whole thing in and out.
  */
-export function orbitViewfinder(ctx: RenderCtx, plane: (x: number, y: number) => Vector, lit: number, shown: number, shutter = 0) {
+export function orbitViewfinder(ctx: RenderCtx, plane: (x: number, y: number) => Vector, lit: number, shown: number, hitStop = 0) {
     if (shown <= .01) return;
     const [x0, y0] = plane(-B.x - MARGIN.x, B.y + MARGIN.top), [x1, y1] = plane(B.x + MARGIN.x, -B.y - MARGIN.bottom);
     const blink = lit > .1 && Math.sin(ctx.t * 9) > -.2 ? lit : 0;
     const L = Math.min(x1 - x0, y1 - y0) * .1;
-    // The shutter snaps the brackets white and thick for a moment as a satellite locks on.
-    const stroke = shutter > 0
-        ? { width: 3 + 3 * shutter, color: hex('#ffffff', shown), cap: 'butt' as const }
+    // Caught, the brackets snap white and thick for a moment, like a photo being taken.
+    const stroke = hitStop > 0
+        ? { width: 3 + 3 * hitStop, color: hex('#ffffff', shown), cap: 'butt' as const }
         : { width: 2 + 1.5 * lit, color: hex('#ff4b52', (.5 + .5 * blink) * shown), cap: 'butt' as const };
     const layer = { key: 'orbit-viewfinder' };
     for (const [x, y, sx, sy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {

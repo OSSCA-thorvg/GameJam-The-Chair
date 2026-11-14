@@ -607,18 +607,31 @@ test('the ending close-up finds the chair wherever in the shadow it parked', () 
 });
 
 
-test('the instant a satellite locks on, the whole flight stops for a moment, then carries on', () => {
+test('the instant a beam catches the chair, the whole flight stops for a moment, then carries on; locking on does not stop it', () => {
     const beam = STAGE_FIVE.satelliteLight.beams[0], { freeze } = STAGE_FIVE.satelliteLight, top = STAGE_FIVE.gears[0].maxSpeed, lock = gearAt(beam.from).lock;
-    let state = { orbit: cruisingAt(beam.from - top * (lock + .3), { speed: top }), p: still() };
-    while (state.orbit.freeze === 0) state = orbitStep(state.orbit, state.p, ['right'], 1 / 120);
-    assert.ok(Math.abs(state.orbit.freeze - freeze) < 1e-9, 'the stop starts as it locks');
+    // Holding still under the lock: it locks without a stop, then catches the chair and stops.
+    let state = { orbit: cruisingAt(beam.from - top * (lock + .3), { speed: top }), p: still() }, lockedAt = null;
+    while (state.orbit.freeze === 0) {
+        state = orbitStep(state.orbit, state.p, [], 1 / 120);
+        if (!lockedAt && (beam.from - state.orbit.z) / state.orbit.speed <= lock) lockedAt = state.orbit.z;
+    }
+    assert.ok(lockedAt !== null && state.orbit.z >= beam.from, 'no stop at the lock, only once inside the beam');
+    assert.ok(Math.abs(state.orbit.freeze - freeze) < 1e-9, 'the stop starts as it hits');
     const stopped = state;
     for (let t = 0; t < freeze - 1 / 60; t += 1 / 120) state = orbitStep(state.orbit, state.p, ['right', 'forward'], 1 / 120);
     assert.equal(state.orbit.z, stopped.orbit.z, 'no flying on meanwhile');
     assert.equal(state.p.x, stopped.p.x, 'and no steering');
-    state = hold(state.orbit, state.p, ['right'], .3);
-    assert.ok(state.orbit.z > stopped.orbit.z && state.p.x > stopped.p.x, 'then it all carries on');
-    // The shutter shows as a white flash over the picture.
+    const after = hold(state.orbit, state.p, ['right'], .3);
+    assert.ok(after.orbit.z > stopped.orbit.z && after.p.x > stopped.p.x, 'then it all carries on');
+    assert.equal(after.orbit.freeze, 0, 'staying in the same beam does not stop it again');
+    // Dodged in time, nothing stops at all.
+    let dodged = { orbit: cruisingAt(beam.from - top * (lock + .3), { speed: top }), p: still() }, stops = 0;
+    while (dodged.orbit.z < beam.to) {
+        dodged = orbitStep(dodged.orbit, dodged.p, (beam.from - dodged.orbit.z) / dodged.orbit.speed <= lock ? ['right'] : [], 1 / 120);
+        if (dodged.orbit.freeze > 0) stops++;
+    }
+    assert.equal(stops, 0, 'no stop without a hit');
+    // The hit shows as a white flash over the picture.
     const flash = flightFrame(s => Object.assign(s.orbit, { freeze: freeze * .9 })).some(command => command.layer?.key === 'orbit-shutter');
     assert.ok(flash && !flightFrame().some(command => command.layer?.key === 'orbit-shutter'), 'a flash only during the stop');
 });

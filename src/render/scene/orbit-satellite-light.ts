@@ -135,11 +135,8 @@ export function satelliteLightStage(b: Beam, travel: number, speed: number) {
     return { kind: 'track' as const, k: smooth((P.warn - arrival) / .3) };
 }
 
-/**
- * The shape on the chair's plane, drawn from the same aim and size the course checks. Plain alpha, no Scene.
- * `shutter` (0 to 1) is the camera-shutter stop as a satellite locks on: the shape that just locked flashes white.
- */
-function rectangle(ctx: RenderCtx, plane: (x: number, y: number) => Vector, b: Beam, aim: Aim, travel: number, speed: number, strength: number, shutter: number) {
+/** The shape on the chair's plane, drawn from the same aim and size the course checks. Plain alpha, no Scene. */
+function rectangle(ctx: RenderCtx, plane: (x: number, y: number) => Vector, b: Beam, aim: Aim, travel: number, speed: number, strength: number) {
     const stage = satelliteLightStage(b, travel, speed);
     if (!stage) return;
     const shrink = stage.kind === 'fold' ? smooth(stage.k) : 1;
@@ -156,8 +153,8 @@ function rectangle(ctx: RenderCtx, plane: (x: number, y: number) => Vector, b: B
     }
     if (stage.kind === 'lock') {
         // Locked on: it stops following, fills up, and corner brackets close in on it. The instant it locks it
-        // snaps white and slightly larger, with the flight held still under the shutter.
-        const k = stage.k, snap = stage.k < .1 ? shutter : 0;
+        // snaps white and slightly larger, like a shutter going off.
+        const k = stage.k, snap = k < .15 ? 1 - k / .15 : 0;
         if (snap > 0) {
             const flash = outline(b, aim, 1 + .18 * snap).map(at => plane(at.x, at.y));
             ctx.commands.push({ v: flash, c: hex('#ffffff', .45 * snap * strength), stroke: { width: 6, color: hex('#ffffff', snap * strength) }, layer: PLANE });
@@ -203,7 +200,7 @@ function bigLens(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam
  * plane. `plane` maps a point on that plane (route x, y at the chair's depth) to the screen.
  */
 export function orbitSatelliteLight(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, plane: (x: number, y: number) => Vector,
-    aims: readonly Aim[], travel: number, speed: number, strength = 1, shutter = 0) {
+    aims: readonly Aim[], travel: number, speed: number, strength = 1) {
     if (strength <= 0) return;
     const aimOf = (i: number) => aims[i] ?? { x: 0, y: 0 };
     P.beams.forEach((b, i) => { if (b.shape === 'circle') bigLens(ctx, view, point, b, aimOf(i), travel, speed, strength); });
@@ -214,7 +211,7 @@ export function orbitSatelliteLight(ctx: RenderCtx, view: SkyProjection, point: 
         const spot = satelliteSpot(b, aimOf(i), travel), lens = point(spot.x, spot.y - (b.shape === 'circle' ? 0 : 30), spot.z);
         if (view.depth(lens) > 30) lensFlare(ctx, view.project(lens), strength * (stage.kind === 'lock' ? .4 + .6 * stage.k : 1));
     });
-    P.beams.forEach((b, i) => rectangle(ctx, plane, b, aimOf(i), travel, speed, strength, shutter));
+    P.beams.forEach((b, i) => rectangle(ctx, plane, b, aimOf(i), travel, speed, strength));
 }
 
 /**

@@ -39,9 +39,9 @@ export const STAGE_FIVE = deepFreeze({
     bounds: { x: 330, y: 150 },
     rings: [] as { x: number; y: number; z: number; radius: number }[],
     // Each beam's satellite takes aim at the chair `warn` seconds before the beam arrives: its shape follows the
-    // chair until its gear's `lock`, then holds still where it was aimed. The moment it locks, the whole flight
-    // stops for `freeze` seconds, like a camera shutter. A beam touches the chair once its shape overlaps the chair's
-    // `chairRadius`. Every shape can be left in the time between its lock and its arrival.
+    // chair until its gear's `lock`, then holds still where it was aimed. A beam touches the chair once its shape
+    // overlaps the chair's `chairRadius`; the moment it catches the chair, the whole flight stops for `freeze`
+    // seconds, like a photo being taken. Every shape can be left in the time between its lock and its arrival.
     satelliteLight: {
         slowSpeed: 45, slowResponse: 2.4, shove: 260, chairRadius: 34, warn: 2.2, freeze: .2,
         beams: [
@@ -81,7 +81,7 @@ export type OrbitState = {
     rings: number;
     /** Where each beam's shape is centred on the play plane: following the chair, then locked. */
     aims: readonly { readonly x: number; readonly y: number }[];
-    /** Seconds left of the shutter stop after a satellite locks on; nothing moves meanwhile. */
+    /** Seconds left of the stop after a beam catches the chair; nothing moves meanwhile. */
     freeze: number;
     /** 1 on arriving in the Earth's shadow, then counting up in seconds while the ending plays. */
     settled: number;
