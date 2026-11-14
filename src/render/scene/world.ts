@@ -2,7 +2,7 @@ import { translate } from '../../i18n';
 import type { DeepReadonly, Person } from '../../game/types';
 import type { RenderCtx } from '../context';
 import { SIGN_FONT } from '../fonts';
-import { plant, desk, binBack, binFront, practiceFloor, checkpointFlag } from './decor';
+import { plant, desk, binBack, binFront, practiceFloor, checkpointFlag, chairPictogram } from './decor';
 import { cleaningDraw, person } from './cleaning';
 import { monitorDraw } from './monitor';
 import { player, debugCollisions } from './player';
@@ -15,6 +15,18 @@ import { urgentCopierDraw, urgentPapersDraw } from './urgent-copier';
 import { ceilingCctvs } from './ceiling-cctv';
 import { windowView } from './window-view';
 import { officeControlHints } from './control-hints';
+
+/** The exit door's span on the back wall, around the goal; no window is drawn behind it. */
+const EXIT = { left: LEVEL.goal - 45, right: LEVEL.goal + 81 };
+
+/** The exit: a door standing against the back wall (its foot on the wall line) under the chair-only exit sign. */
+function exitDoor(ctx: RenderCtx, goal: number, wallFoot: number) {
+    const top = wallFoot - 205;
+    ctx.rect(goal - 35, top, 106, 205, '#677d7e');
+    ctx.rect(goal - 27, top + 8, 90, 190, '#b5c4bf');
+    ctx.rod(goal + 40, top + 85, goal + 40, top + 124, 4, '#677d7e');
+    chairPictogram(ctx, goal + 18, 'exit', top - 70);
+}
 
 export function drawWorld(ctx: RenderCtx) {
     const F = ctx.F;
@@ -45,24 +57,27 @@ export function drawWorld(ctx: RenderCtx) {
     const view = windowView(ctx.windowDusk);
     for (let i = Math.floor(cam / 235) - 1; i < (cam + VW) / 235 + 1; i++) {
         const x = i * 235;
-        ctx.rect(x + 17, 80, 197, 193, view.frame);
-        if (view.skyTop === view.skyBottom) ctx.rect(x + 24, 87, 183, 179, view.skyTop);
-        else ctx.gradientPolygon([[x + 24, 87], [x + 207, 87], [x + 207, 266], [x + 24, 266]], ctx.gradientFill(0, 87, 0, 266, [[0, view.skyTop], [1, view.skyBottom]]));
-        for (let j = 0; j < 4; j++) {
-            const bx = x + 30 + j * 42;
-            const mixed = Math.imul(state.skylineSeed ^ i, 0x45d9f3b) ^ Math.imul(j + 1, 0x119de1f3);
-            const h = 55 + ((mixed ^ (mixed >>> 16)) >>> 0) % 101;
-            ctx.rect(bx, 260 - h, 32, h, view.building);
-            for (let k = 0; k < 3; k++) {
-                const flickers = j === ((i % 4) + 4) % 4 && k === 1;
-                const period = 3.4 + ((i % 3 + 3) % 3) * .7;
-                const phase = (t + (i * 1.37 % period) + period) % period;
-                const color = flickers && phase < .38 ? view.unlit : view.lit;
-                ctx.rect(bx + 6, 269 - h + k * 20, 6, 8, color);
+        // No window behind the exit door: the wall stays solid where the door stands against it.
+        if (x + 214 <= EXIT.left || x + 17 >= EXIT.right) {
+            ctx.rect(x + 17, 80, 197, 193, view.frame);
+            if (view.skyTop === view.skyBottom) ctx.rect(x + 24, 87, 183, 179, view.skyTop);
+            else ctx.gradientPolygon([[x + 24, 87], [x + 207, 87], [x + 207, 266], [x + 24, 266]], ctx.gradientFill(0, 87, 0, 266, [[0, view.skyTop], [1, view.skyBottom]]));
+            for (let j = 0; j < 4; j++) {
+                const bx = x + 30 + j * 42;
+                const mixed = Math.imul(state.skylineSeed ^ i, 0x45d9f3b) ^ Math.imul(j + 1, 0x119de1f3);
+                const h = 55 + ((mixed ^ (mixed >>> 16)) >>> 0) % 101;
+                ctx.rect(bx, 260 - h, 32, h, view.building);
+                for (let k = 0; k < 3; k++) {
+                    const flickers = j === ((i % 4) + 4) % 4 && k === 1;
+                    const period = 3.4 + ((i % 3 + 3) % 3) * .7;
+                    const phase = (t + (i * 1.37 % period) + period) % period;
+                    const color = flickers && phase < .38 ? view.unlit : view.lit;
+                    ctx.rect(bx + 6, 269 - h + k * 20, 6, 8, color);
+                }
             }
+            ctx.rod(x + 113, 87, x + 113, 267, 4, view.frame);
+            ctx.rod(x + 24, 179, x + 207, 179, 3, view.frame);
         }
-        ctx.rod(x + 113, 87, x + 113, 267, 4, view.frame);
-        ctx.rod(x + 24, 179, x + 207, 179, 3, view.frame);
         ctx.rect(x + 43, 27, 145, 7, '#f1e9cf');
     }
     ceilingCctvs(ctx, 940);
@@ -70,6 +85,7 @@ export function drawWorld(ctx: RenderCtx) {
     ctx.rect(cam, 287, VW, rearFloor - 287, '#a0a7b1');
     ctx.rect(cam, rearFloor - 5, VW, 6, '#848e9d');
     ctx.rect(cam, rearFloor + 1, VW, F - rearFloor - 1, '#aeb3bb');
+    exitDoor(ctx, GOAL, rearFloor);
     for (const ob of solids) {
         ctx.polygon(ob.p.map(v => [v.x, v.y]), C.floor);
         const [topLeft, topRight] = ob.p;
@@ -187,11 +203,6 @@ export function drawWorld(ctx: RenderCtx) {
         ctx.rect(-3, -2, 7, 4, z.color);
         ctx.ox = ctx.oy = ctx.rotation = 0;
     }
-    ctx.rect(GOAL - 35, F - 205, 106, 205, '#677d7e');
-    ctx.rect(GOAL - 27, F - 197, 90, 190, '#b5c4bf');
-    ctx.rod(GOAL + 40, F - 120, GOAL + 40, F - 81, 4, '#677d7e');
-    ctx.rect(GOAL - 31, F - 236, 98, 23, '#718e7b');
-    ctx.label(translate('world.exit', ctx.locale), GOAL + 18, F - 218, 12, '#f0eddc');
     if (ctx.glare > 0) {
         ctx.rect(cam, -vertical, VW, H / scale, '#fff7d5' + Math.round(Math.min(.22, ctx.glare * .16) * 255).toString(16).padStart(2, '0'));
     }

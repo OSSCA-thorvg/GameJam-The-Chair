@@ -4,7 +4,7 @@ import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_D
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
 import { chairLift, expressFloor } from './express';
-import { practiceFloor, checkpointFlag } from './decor';
+import { practiceFloor, checkpointFlag, chairPictogram } from './decor';
 import { player } from './player';
 import { bubble, chairBubble } from './building-bubble';
 import { officeAppearance, typingWorker } from './building-workers';
@@ -63,24 +63,6 @@ function liftDoors(ctx: RenderCtx, x: number, aperture: number) {
             ctx.gradientFill(left, 0, left + 99, 0, [[0, '#9eb1b2'], [.5, '#c2ceca'], [1, '#879da3']]));
     }
 }
-function pictogram(ctx: RenderCtx, x: number, kind: 'exit' | 'lift') {
-    ctx.rect(x - 36, 120, 72, 43, '#557f78');
-    ctx.rect(x - 23, 127, 19, 29, '#d5e6da');
-    ctx.rect(x - 19, 132, 11, 24, '#557f78');
-    ctx.rect(x - 18, 134, 3, 11, '#e2eee0');
-    ctx.rect(x - 18, 143, 10, 3, '#e2eee0');
-    ctx.rod(x - 13, 146, x - 13, 150, 2, '#e2eee0');
-    ctx.rod(x - 17, 150, x - 9, 150, 2, '#e2eee0');
-    ctx.ellipse(x - 16, 153, 1.5, 1.5, '#e2eee0');
-    ctx.ellipse(x - 10, 153, 1.5, 1.5, '#e2eee0');
-    if (kind === 'exit') {
-        ctx.rod(x + 3, 141, x + 26, 141, 4, '#e2eee0');
-        ctx.polygon([[x + 18, 132], [x + 29, 141], [x + 18, 150]], '#e2eee0');
-    } else {
-        ctx.polygon([[x + 5, 137], [x + 13, 127], [x + 21, 137]], '#e2eee0');
-        ctx.polygon([[x + 5, 146], [x + 13, 156], [x + 21, 146]], '#e2eee0');
-    }
-}
 function buildingBackdrop(ctx: RenderCtx) {
     const { cam, VW } = ctx;
     ctx.commands = [];
@@ -125,7 +107,7 @@ function liftShaft(ctx: RenderCtx) {
     ctx.rect(lx - 105, 185, 210, 235, '#263b48');
     ctx.rect(lx - 100, 185 + drop, 200, 235 - drop, '#354d5b');
     if (departure.kind !== 'descending') liftDoors(ctx, lx, c.lift.kind === 'open' ? Math.min(1, c.lift.age * 3) : 0);
-    pictogram(ctx, lx, 'lift');
+    chairPictogram(ctx, lx, 'lift');
     if (c.lift.kind === 'arriving') {
         ctx.ellipse(lx + 138, 277, 7, 7, Math.sin(ctx.t * 8) > 0 ? '#f2d191' : '#aa9475');
         ctx.polygon([[lx - 130, 437], [lx - 105, 428], [lx - 105, 446]], '#eed39a');
@@ -141,7 +123,7 @@ function corridorExit(ctx: RenderCtx) {
     ctx.rect(ctx.GOAL - 48, 190, 105, 230, '#587878');
     ctx.rect(ctx.GOAL - 40, 198, 89, 220, '#a6bcb1');
     ctx.rod(ctx.GOAL + 29, 299, ctx.GOAL + 29, 330, 4, '#5f797b');
-    pictogram(ctx, ctx.GOAL, 'exit');
+    chairPictogram(ctx, ctx.GOAL, 'exit');
     practiceFloor(ctx);
 }
 
