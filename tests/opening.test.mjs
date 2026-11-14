@@ -2,14 +2,53 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { createGame, createRenderCtx, drawOpening, openingFrame, openingState, OPENING_BEATS, OPENING_DURATION, translate, previewScenes } = await loadSource(`
+const { createGame, createOpening, createRenderCtx, drawOpening, openingFrame, openingState, OPENING_BEATS, OPENING_DURATION, translate, previewScenes } = await loadSource(`
     export { createGame } from './src/game/game';
+    export { createOpening } from './src/ui/opening';
     export { createRenderCtx } from './src/render/context';
     export { drawOpening, openingFrame, openingState, OPENING_BEATS, OPENING_DURATION } from './src/render/scene/opening';
     export { translate } from './src/i18n';
     export { previewScenes } from './src/preview-scenes';
 `);
 const B = OPENING_BEATS;
+
+test('the opening plays once per page load after either a skip or a full run', () => {
+    const originalWindow = globalThis.window;
+    const originalDocument = globalThis.document;
+    const scene = { append() {} };
+    globalThis.window = { addEventListener() {} };
+    globalThis.document = { createElement: () => ({
+        setAttribute() {}, append() {}, addEventListener() {}, focus() {}, remove() {},
+    }) };
+    const root = { querySelector: () => scene };
+
+    try {
+        const skipped = createOpening(root, () => 'en');
+        assert.equal(skipped.seen, false);
+        let finished = 0;
+        skipped.start(() => finished++);
+        assert.equal(skipped.active, true);
+        skipped.skip();
+        assert.equal(finished, 1);
+        assert.equal(skipped.seen, true);
+        skipped.destroy();
+
+        const reloaded = createOpening(root, () => 'en');
+        assert.equal(reloaded.seen, false);
+        reloaded.start(() => finished++);
+        reloaded.advance(OPENING_DURATION);
+        assert.equal(finished, 2);
+        assert.equal(reloaded.seen, true);
+        reloaded.destroy();
+
+        const nextLoad = createOpening(root, () => 'en');
+        assert.equal(nextLoad.seen, false);
+        nextLoad.destroy();
+    } finally {
+        globalThis.window = originalWindow;
+        globalThis.document = originalDocument;
+    }
+});
 
 function render(time, locale = 'ko') {
     const ctx = createRenderCtx({});

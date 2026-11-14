@@ -10,7 +10,7 @@ import { createErrorLog, replayData, saveBrowserData } from './ui/replay-store';
 import { bindReplayMenu } from './ui/replay-menu';
 import { createReplayPlayer } from './ui/replay-player';
 import { showStartupSplash } from './ui/splash';
-import { createOpening, openingSeen } from './ui/opening';
+import { createOpening } from './ui/opening';
 import { openingState } from './render/scene/opening/timeline';
 import type { StageId } from './game/stages/building/data';
 import type { Input } from './game/types';
@@ -117,7 +117,7 @@ window.addEventListener('error', event => logWindowError(event.error ?? event.me
 window.addEventListener('unhandledrejection', event => logWindowError(event.reason));
 const feedback = createFeedback(() => locale);
 const player = createReplayPlayer(root, () => locale, () => replaySettings, () => unbind.sync());
-// The opening cutscene plays once per browser over the first fresh game; the game waits until it ends.
+// The opening cutscene plays over the first fresh game after each page load.
 const opening = createOpening(root, () => locale);
 // The keycap hints go as soon as the player tries their key, so live presses are noted on the way to the game.
 const hintedInput = { left: 'left', right: 'right', spray: 'spray' } as const;
@@ -135,7 +135,7 @@ const hintedGame: typeof game = {
 const unbind = bindInput(root, hintedGame, {
     blocked: () => player.active || opening.active,
     onStart() {
-        if (!openingSeen()) opening.start(() => unbind.sync());
+        if (!opening.seen) opening.start(() => unbind.sync());
     },
 });
 function watchReplay(file: ReplayFile) {
