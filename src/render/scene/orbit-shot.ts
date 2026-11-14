@@ -6,12 +6,11 @@ import { skyDeparture } from './sky-departure';
 import { basinCloudSeeds, orbitCloudBank, orbitSky, type CloudBankOptions } from './orbit-atmosphere';
 import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGlow } from './orbit-watch';
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
-import { orbitSatelliteLight, satelliteChairGlow, satelliteGlare, satelliteLitChair, satelliteLightWarmth, satelliteSpots } from './orbit-satellite-light';
+import { orbitSatelliteLight, satelliteChairGlow, satelliteGlare, satelliteLitChair, satelliteLightWarmth, satelliteSpots, type Aim } from './orbit-satellite-light';
 import { orbitViewfinder } from './orbit-viewfinder';
 import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
 import { earthSkyBottom, orbitEarth, type EarthCamera } from './orbit-earth';
 import { endingChairLights, endingFade, endingLaptopScreen, endingLaptopText, endingNebula, endingSignal, type OrbitEndingState } from './orbit-ending';
-import { orbitSprayHint } from './orbit-spray-hint';
 import { STAGE_FIVE as C } from '../../game/stages/orbit/data';
 import { gearAt } from '../../game/stages/orbit/course/decide';
 
@@ -46,8 +45,8 @@ export type OrbitShot = {
     basin: number;
     /** The stage five chair framing pulling back from the reveal's close-up. */
     entry: number;
-    /** Seconds the player has coasted without spraying, for the Space hint; 0 or absent hides it. */
-    idle?: number;
+    /** Where each satellite is aiming on the play plane; absent before stage five starts. */
+    aims?: readonly Aim[];
     ending: OrbitEndingState;
 };
 
@@ -75,6 +74,8 @@ function gearFeel(travel: number, speed: number) {
     const kick = since < CAMERA.kickTime ? Math.sin(Math.PI * since / CAMERA.kickTime) : 0;
     return { top: gear.maxSpeed, pull: at(CAMERA.pull), air: at(CAMERA.air), shake: at(CAMERA.shake), kick };
 }
+
+const NO_AIMS: readonly Aim[] = C.satelliteLight.beams.map(() => ({ x: 0, y: 0 }));
 
 const screen = (ctx: RenderCtx): [number, number][] => [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]];
 
@@ -190,7 +191,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     if (turn >= ORBIT_WATCH.glintsFrom) orbitCloudGlints(ctx, clouds);
     // The watchers stay out of the flat side view and turn up one by one as the view turns into 3D.
     if (turn >= ORBIT_WATCH.beacon.appear) orbitBeacon(ctx, view, point);
-    const lamps = turn > 0 ? orbitWatchers(view, point, travel, ctx.t, turn, satelliteLightPoint, satelliteSpots(since, travel, shot.speed)) : [];
+    const lamps = turn > 0 ? orbitWatchers(view, point, travel, ctx.t, turn, satelliteLightPoint, satelliteSpots(shot.aims ?? NO_AIMS, travel, shot.speed)) : [];
     // Scenery beyond the chair first; the chair and whatever passes beside it are painted after the clouds.
     const split = { depth: chair.depth([0, pivot, 0]) + 90, part: 'far' as const };
     ctx.commands.push(...view.commands(split));
@@ -198,7 +199,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // The play plane at the chair's depth, in the frame the chair is drawn in: the bands and the viewfinder sit on it.
     const plane = (x: number, y: number) => view.project(satelliteLightPoint(x, y, travel));
     const lightShown = smooth((turn - ORBIT_WATCH.satelliteAppear) / .3) * (1 - smooth(ending.centre * 4));
-    orbitSatelliteLight(ctx, view, satelliteLightPoint, plane, since, travel, shot.speed, lightShown);
+    orbitSatelliteLight(ctx, view, satelliteLightPoint, plane, shot.aims ?? NO_AIMS, travel, shot.speed, lightShown);
     if (cloudsShown) orbitCloudBank(ctx, view, travel, true, { ...options, alpha: clouds });
     if (heights.shadow > 0 && horizon) orbitShadow(ctx, { ...heights, shadow: heights.shadow * (1 - wide) }, horizon);
     skyDeparture(ctx, shot.departure);
@@ -208,7 +209,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     const air = orbitSlipstream(ctx, chair, rush * feel.air * (.35 + .65 * push) * (1 - wide));
     ctx.commands.push(...air.behind);
     // The light the chair is catching shows on the chair itself: warming as it nears a beam, glowing inside one.
-    const light = since >= 0 && wide <= 0 ? satelliteLightWarmth(since, p, travel) : { warmth: 0, side: 1, axis: 'x' as const };
+    const light = since >= 0 && wide <= 0 ? satelliteLightWarmth(shot.aims ?? NO_AIMS, p, travel) : { warmth: 0, toward: { x: 0, y: 0 } };
     const pulse = Math.sin(ctx.t * 9) * .5 + .5;
     endingChair(satelliteLitChair(chair, light.warmth >= 1 ? .62 + .18 * pulse : light.warmth * .7), shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest, shot.rocket);
     endingLaptopScreen(chair, ending);
@@ -222,7 +223,6 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     endingLaptopText(ctx, chair, ending);
     endingChairLights(ctx, chair, ending);
     const head = chair.project([4, 70, 0]);
-    if (shot.idle) orbitSprayHint(ctx, chair.project([-46, -30, 0]), shot.idle);
     // The laptop answers the cameras just before stage five and the bubble stays up into its first moments;
     // deep in the Earth's shadow its signal drops away until it loses the network altogether.
     // Deep in the Earth's shadow the signal drops away; the lost connection itself shows on the laptop screen.

@@ -2,7 +2,7 @@ import { createGame, type Game, type GameState } from './game/game';
 import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
-import { orbitStep, satelliteLightOn, satelliteLightSweep } from './game/stages/orbit/course/decide';
+import { orbitStep, satelliteLightOn } from './game/stages/orbit/course/decide';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { revealGlideStart, SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
 import { ATTENDANCE } from './render/scene/attendance-bubble';
@@ -689,14 +689,13 @@ function skyToOrbit(): PreviewScene {
         const state = game.getSnapshot();
         if (state.stage === 5 && !markers.some(marker => marker.label === 'Stage 5')) markers.push({ at: i / 60, label: 'Stage 5' });
         const age = state.stage === 5 && state.orbit ? state.orbit.age : -1;
-        // Steer while spraying, let go to coast (the plume dies and the chair slows), then spray again.
-        game.setInput(...(age < 0 ? [] : age < 1.6 ? ['right' as const, 'spray' as const] : age < 3.2 ? ['left' as const, 'forward' as const, 'spray' as const]
-            : age < 5.5 ? [] : ['spray' as const]));
+        // The chair flies on by itself: steer right, then left and up, then let go.
+        game.setInput(...(age < 0 ? [] : age < 1.6 ? ['right' as const] : age < 3.2 ? ['left' as const, 'forward' as const] : []));
         stepGame(game, effects);
         frames.push(capture(game, effects));
         if (age > 7.5) break;
     }
-    return recordedScene('sky-to-orbit', 'Sky → Orbit · Hand-off, steering fade-in, spray to fly', 0, markers, frames);
+    return recordedScene('sky-to-orbit', 'Sky → Orbit · Hand-off, steering fade-in, flying on by itself', 0, markers, frames);
 }
 
 /** Moves the chair across toward `x`. */
@@ -718,17 +717,18 @@ export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSn
     if (!orbit) return [];
     let best = -Infinity, keys: Input[] = [];
     for (const turn of TURNS) for (const climb of CLIMBS) {
-        const held = [...turn, ...climb, 'spray' as const];
+        const held = [...turn, ...climb];
         let o = orbit, q = p, lit = 0;
         for (let t = 0; t < PLAN.seconds; t += PLAN.step) {
             ({ orbit: o, p: q } = orbitStep(o, q, held, PLAN.step));
             // Nearer moments count more: those are the ones still certain.
-            if (satelliteLightOn(o.age, q, o.z)) lit += 1.5 - t;
+            if (satelliteLightOn(o, q, o.z)) lit += 1.5 - t;
         }
-        const score = (o.z - orbit.z) * .05 - lit * 40 - (Math.abs(q.x) + Math.abs(q.y)) * .01;
+        // Keeping on the way it already moves breaks ties, so it commits to one way out instead of dithering.
+        const along = (turn[0] === 'left' ? -p.vx : turn[0] === 'right' ? p.vx : 0) + (climb[0] === 'forward' ? p.vy : climb[0] === 'back' ? -p.vy : 0);
+        const score = (o.z - orbit.z) * .05 - lit * 40 - (Math.abs(q.x) + Math.abs(q.y)) * .01 + along * .02;
         if (score > best) { best = score; keys = turn.concat(climb); }
     }
-    keys.push('spray');
     return keys;
 }
 
@@ -753,20 +753,6 @@ function orbitRoute(): PreviewScene {
         if (orbit.phase === 'parked' && i / 60 - (markers.at(-1)?.at ?? 0) > ORBIT_ENDING.end + 1) break;
     }
     return recordedScene('orbit-route', 'Orbit · 5-1 to 5-3 and the ending', 0, markers, frames);
-}
-
-function orbitSprayHintScene(): PreviewScene {
-    const game = createGame();
-    game.startStage(5);
-    const effects = createEffects();
-    const frames = [capture(game, effects)];
-    const markers = [{ at: 0, label: 'Coasting' }, { at: STAGE_FIVE.entryTime + 3, label: 'Space hint' }, { at: STAGE_FIVE.entryTime + 6, label: 'Spray: hint gone' }];
-    for (let i = 0; i < 60 * (STAGE_FIVE.entryTime + 8); i++) {
-        game.setInput(...(i / 60 >= STAGE_FIVE.entryTime + 6 ? ['spray' as const] : []));
-        stepGame(game, effects);
-        frames.push(capture(game, effects));
-    }
-    return recordedScene('orbit-spray-hint', 'Orbit · Space hint after 3 s without spraying', 0, markers, frames);
 }
 
 function orbitEndingScene(aside = false): PreviewScene {
@@ -827,8 +813,8 @@ function orbitSatelliteLightLitScene(): PreviewScene {
     for (let i = 0; i < 2400; i++) {
         const state = game.getSnapshot(), orbit = state.orbit, p = state.player;
         if (!orbit || orbit.z > first.to) break;
-        const target = satelliteLightSweep(first, orbit.age + .4) + first.halfWidth + 40 + 90 * Math.cos(orbit.age * .9);
-        const keys: Input[] = [...moveToward(p, target), 'spray'];
+        const target = orbit.aims[0].x + first.half.x + 40 + 90 * Math.cos(orbit.age * .9);
+        const keys: Input[] = moveToward(p, target);
         game.setInput(...keys);
         stepGame(game, effects);
         frames.push(capture(game, effects));
@@ -1015,7 +1001,6 @@ export const previewScenes: readonly PreviewScene[] = [
     skyEnding(),
     skyToOrbit(),
     orbitRoute(),
-    orbitSprayHintScene(),
     orbitSatelliteLightScene(),
     orbitSatelliteLightLitScene(),
     orbitEndingScene(),

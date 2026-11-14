@@ -35,7 +35,7 @@ const messages = {
     'orbit.up': { en: 'Up', ko: '위로' },
     'orbit.down': { en: 'Down', ko: '아래로' },
     'orbit.parked': { en: 'Checkpoint · End of this route', ko: '체크포인트 · 이번 구간 완료' },
-    'orbit.controls': { en: 'WASD / arrows · Steer   Space · Thrust', ko: 'WASD / 방향키 · 이동   Space · 추진' },
+    'orbit.controls': { en: 'Move', ko: '이동' },
     'stageLabel.stage5': { en: '05 Clock-out orbit', ko: '05 퇴근 궤도' },
     'status.extinguisherPickup': { en: 'Extinguisher attached. Hold Space.', ko: '소화기 장착. Space를 누르세요.' },
     'status.stage1Clear':        { en: 'Office escaped.',                                                ko: '사무실 탈출.' },
