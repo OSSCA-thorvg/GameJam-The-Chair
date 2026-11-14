@@ -7,7 +7,7 @@ import { skyDeparture } from './sky-departure';
 import { basinCloudSeeds, orbitCloudBank, orbitSky, type CloudBankOptions } from './orbit-atmosphere';
 import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGlow } from './orbit-watch';
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
-import { orbitPraise, orbitPraiseOnChair } from './orbit-praise';
+import { orbitPraise, orbitPraiseOnChair, praiseChairGlow, praiseLitChair, praiseWarmth } from './orbit-praise';
 import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
 import { earthHorizonAhead, orbitEarth, type EarthCamera } from './orbit-earth';
 import { endingChairLights, endingFade, endingLaptopScreen, endingLaptopText, endingNebula, endingSignal, type OrbitEndingState } from './orbit-ending';
@@ -172,9 +172,13 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // and the plume stretches out behind it.
     const air = orbitSlipstream(ctx, chair, rush * (.35 + .65 * push) * (1 - wide));
     ctx.commands.push(...air.behind);
-    endingChair(chair, shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest);
+    // The light the chair is catching shows on the chair itself: warming as it nears a beam, glowing inside one.
+    const light = since >= 0 && wide <= 0 ? praiseWarmth(since, p, travel) : { warmth: 0, side: 1, axis: 'x' as const };
+    const pulse = Math.sin(ctx.t * 9) * .5 + .5;
+    endingChair(praiseLitChair(chair, light.warmth >= 1 ? .62 + .18 * pulse : light.warmth * .7), shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest);
     endingLaptopScreen(chair, ending);
     orbitEdgePuffs(chair, edge, over, ctx.t);
+    praiseChairGlow(ctx, chair, light, pulse);
     ctx.commands.push(...view.commands({ ...split, part: 'near' }));
     ctx.commands.push(...air.over);
     endingLaptopText(ctx, chair, ending);

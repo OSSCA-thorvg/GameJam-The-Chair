@@ -102,3 +102,60 @@ export function orbitPraiseOnChair(ctx: RenderCtx, chairAt: Vector, p: Readonly<
     if (!praiseSheltered(p, travel)) return;
     inScreenSpace(ctx, () => puffCloud(ctx, chairAt[0], chairAt[1] + ctx.H * .16, ctx.W / 1400, 7400, CLOUD_TONES.bread, { alpha: .8, fade: true }));
 }
+
+/** Outside a beam, the chair starts to catch its light this far from the edge. */
+const WARN = 140;
+
+/**
+ * How much of a beam's light falls on the chair, by the same slices the course checks: 1 inside one, rising from
+ * 0 over `WARN` as it nears an edge, 0 while hidden in a shelter cloud. `side` is which way the light lies along
+ * the beam's sweep (-1 or 1), and `axis` that sweep.
+ */
+export function praiseWarmth(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
+    let best = { warmth: 0, side: 1, axis: 'x' as 'x' | 'y' };
+    if (praiseSheltered(p, z)) return best;
+    for (const b of P.beams) {
+        const along = b.axis === 'y' ? p.y : p.x;
+        const slice = praiseSection(b, age, b.axis === 'y' ? p.x : p.y);
+        if (slice.scale <= 0) continue;
+        const across = Math.abs(along - slice.centre) - slice.halfWidth;
+        const ahead = Math.max(slice.from - z, z - slice.to);
+        const out = Math.hypot(Math.max(0, across), Math.max(0, ahead));
+        const k = out <= 0 ? 1 : Math.max(0, 1 - out / WARN);
+        const warmth = out <= 0 ? 1 : .4 * k * k * (3 - 2 * k);
+        if (warmth > best.warmth) best = { warmth, side: slice.centre >= along ? 1 : -1, axis: b.axis };
+    }
+    return best;
+}
+
+// How strongly each channel is lifted toward white: warm light lifts red most and blue least.
+const GOLD = [1, .86, .5];
+
+/** The chair as `chair` draws it, lit by warm light: each colour screened with gold at `amount` (0 to 1). */
+export function praiseLitChair(chair: SkyProjection, amount: number): SkyProjection {
+    if (amount <= 0) return chair;
+    const tint = (color: string) => '#' + GOLD.map((gold, i) => {
+        const value = parseInt(color.slice(1 + i * 2, 3 + i * 2), 16);
+        return Math.round(value + (255 - value) * gold * amount).toString(16).padStart(2, '0');
+    }).join('') + color.slice(7);
+    return {
+        ...chair,
+        polygon: (points, color) => chair.polygon(points, tint(color)),
+        profile: (outline, halfWidth, color, z, options) => chair.profile(outline, halfWidth, tint(color), z, options),
+        oval: (center, radii, color) => chair.oval(center, radii, tint(color)),
+        rod: (a, b, r, color) => chair.rod(a, b, r, tint(color)),
+    };
+}
+
+/** A soft glow round the chair, leaning toward the light it is catching; painted just before the chair. */
+export function praiseChairGlow(ctx: RenderCtx, chair: SkyProjection, light: ReturnType<typeof praiseWarmth>, pulse: number) {
+    if (light.warmth <= 0) return;
+    const [x, y] = chair.project([0, 15, 0]);
+    const radius = Math.hypot(...[0, 1].map(i => chair.project([0, 95, 0])[i] - chair.project([0, 15, 0])[i])) * 1.8;
+    // A down beam lies to one side across the screen; a side beam above or below.
+    const lean: Vector = light.axis === 'y' ? [0, -light.side * radius * .35] : [light.side * radius * .35, 0];
+    const at: Vector = [x + lean[0], y + lean[1]];
+    const alpha = light.warmth >= 1 ? .55 + .15 * pulse : .35 * light.warmth / .4;
+    ctx.commands.push({ v: [[at[0] - radius, at[1] - radius], [at[0] + radius, at[1] - radius], [at[0] + radius, at[1] + radius], [at[0] - radius, at[1] + radius]],
+        c: { from: at, to: [at[0] + radius, at[1]], radius, stops: [[0, ctx.rgba('#ffe08a', alpha)], [.55, ctx.rgba('#ffd66e', alpha * .4)], [1, ctx.rgba('#ffd66e', 0)]] } });
+}

@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { ORBIT_ENDING, orbitEnding, createGame, orbitStep, praiseBeamX, praiseBeamOn, praiseSection, orbitPraise, createSkyProjection, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
+const { ORBIT_ENDING, orbitEnding, createGame, orbitStep, praiseBeamX, praiseBeamOn, praiseSection, orbitPraise, praiseWarmth, createSkyProjection, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
     export { createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } from './src/game/replay';
     export { actionForKey } from './src/ui/controls';
     export { createGame, stepGame } from './src/game/game';
     export { orbitStep, praiseBeamX, praiseBeamOn, praiseSection } from './src/game/stages/orbit/course/decide';
-    export { orbitPraise } from './src/render/scene/orbit-praise';
+    export { orbitPraise, praiseWarmth } from './src/render/scene/orbit-praise';
     export { createSkyProjection } from './src/render/scene/sky-projection';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
     export { parseCommand } from './src/game/commands';
@@ -500,4 +500,19 @@ test('a praise beam is drawn where it pushes, at every height, and nothing of it
     assert.ok(praiseSection(beam, age, 400).halfWidth < praiseSection(beam, age, -400).halfWidth, 'it spreads out below the satellite');
     // Cut at the chair: the satellite's lens is behind the chair now, so the light no longer reaches up to it.
     assert.ok(!inside(light.v, view.project(point(beam.satellite.x, beam.satellite.y - STAGE_FIVE.praise.lens, beam.satellite.z))));
+});
+
+test('the chair catches the light: warming near a beam, glowing inside it, plain far from it', () => {
+    const beam = STAGE_FIVE.praise.beams[1], age = 20, z = beam.satellite.z;
+    const slice = praiseSection(beam, age, 0), edge = slice.centre + slice.halfWidth;
+    const warmth = x => praiseWarmth(age, { x, y: 0 }, z).warmth;
+    assert.equal(praiseBeamOn(age, { x: edge - 10, y: 0 }, z), beam);
+    assert.equal(warmth(edge - 10), 1, 'inside, exactly where the course says it is lit');
+    assert.ok(warmth(edge + 40) > 0 && warmth(edge + 40) < 1, 'warming just outside the edge');
+    assert.ok(warmth(edge + 40) > warmth(edge + 100), 'more the nearer it gets');
+    const far = edge + 400;
+    if (praiseBeamOn(age, { x: far, y: 0 }, z) === null) assert.ok(warmth(far) < warmth(edge + 40));
+    const glow = x => flightFrame(state => { Object.assign(state.orbit, { z, age }); Object.assign(state.p, { x, vx: 0 }); })
+        .filter(command => command.c?.radius && command.c.stops?.[0]?.[1]?.[0] === 255 && command.c.stops[0][1][1] === 224).length;
+    assert.ok(glow(edge - 10) > 0, 'a warm glow round the chair inside the light');
 });

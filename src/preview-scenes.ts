@@ -819,6 +819,34 @@ function orbitPraiseScene(): PreviewScene {
     return recordedScene('orbit-praise', 'Orbit · 5-1: hide from the praise beam', 0, markers, frames);
 }
 
+// 5-1: weave in and out of the praise beam's edge, so the chair can be seen warming up and lighting up.
+function orbitPraiseLitScene(): PreviewScene {
+    const game = createGame();
+    game.startStage(5);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    const markers = [{ at: 0, label: 'Stage 5 start' }];
+    const first = STAGE_FIVE.praise.beams[0];
+    let previous = '';
+    for (let i = 0; i < 2400; i++) {
+        const state = game.getSnapshot(), orbit = state.orbit, p = state.player;
+        if (!orbit || orbit.z > first.to) break;
+        // Hold off to the side of the light, then drift in past its edge and back out every few seconds.
+        const slice = praiseSection(first, orbit.age + .4, p.y);
+        const target = slice.centre + slice.halfWidth + 60 + 150 * Math.cos(orbit.age * .9);
+        const keys: Input[] = [];
+        if (target - p.x > p.vx * .65 + 6) keys.push('right');
+        if (target - p.x < p.vx * .65 - 6) keys.push('left');
+        if (orbit.speed < STAGE_FIVE.cruise) keys.push('spray');
+        game.setInput(...keys);
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+        const stage = orbit.z < first.from - 300 ? 'approach' : 'in and out of the light';
+        if (stage !== previous) { markers.push({ at: i / 60, label: stage }); previous = stage; }
+    }
+    return recordedScene('orbit-praise-lit', 'Orbit · The chair lights up near and inside a praise beam', 0, markers, frames);
+}
+
 // The duct's timed sneezes: the first big one that spits out the overtime junk, and the later gusts.
 function ductSneeze(gust = false): PreviewScene {
     const game = createGame();
@@ -956,6 +984,7 @@ export const previewScenes: readonly PreviewScene[] = [
     skyToOrbit(),
     orbitRoute(),
     orbitPraiseScene(),
+    orbitPraiseLitScene(),
     orbitEndingScene(),
     officeTyping(),
 ];
