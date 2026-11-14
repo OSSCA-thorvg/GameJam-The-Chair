@@ -782,15 +782,16 @@ function orbitEndingScene(): PreviewScene {
     game.restore(JSON.stringify(parked));
     const effects = createEffects();
     const frames = [capture(game, effects)];
-    const { release, signal, disconnect, spinFrom, spin, lightsOut, dark, end } = ORBIT_ENDING;
-    const markers = [{ at: 0, label: 'Spray dies down' }, { at: release, label: 'Extinguisher floats off' }, { at: signal, label: 'Signal dropping' },
-        { at: disconnect, label: 'Network lost' }, { at: spinFrom, label: 'Camera circles the chair' }, { at: (spinFrom + spin) / 2, label: 'Facing the rider' },
+    const { release, focus, signal, disconnect, handsStop, wideFrom, spinFrom, spin, lightsOut, dark, end } = ORBIT_ENDING;
+    const markers = [{ at: 0, label: 'Spray dies down' }, { at: release, label: 'Extinguisher floats off' }, { at: focus, label: 'Over his shoulder' },
+        { at: signal, label: 'Signal dropping' }, { at: disconnect, label: 'Network lost on screen' }, { at: handsStop, label: 'Hands stop · nothing' },
+        { at: wideFrom, label: 'Pulling back' }, { at: spinFrom, label: 'Chair swivels, camera circles' },
         { at: spin, label: 'Laptop goes dark' }, { at: lightsOut, label: 'Fading out' }, { at: dark, label: 'THE END' }];
     for (let i = 0; i < (end + 1) * 60; i++) {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('orbit-ending', 'Orbit · Ending: signal lost, a full circle round the chair, THE END', 0, markers, frames);
+    return recordedScene('orbit-ending', 'Orbit · Ending: network lost on screen, hands stop, the chair looks out, THE END', 0, markers, frames);
 }
 
 // 5-1: duck from shelter cloud to shelter cloud while the satellite's praise beam sweeps the cloud layer.

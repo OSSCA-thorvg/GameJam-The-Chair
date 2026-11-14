@@ -5,13 +5,16 @@ import type { Point3, SkyProjection } from './sky-projection';
 import { endingHair } from './sky-player-hair';
 import { endingGlasses } from './sky-player-glasses';
 
-/** `loose`: seconds since the extinguisher came off the chair at the end of the flight (negative while attached). */
-export function endingChair(view: SkyProjection, elapsed: number, spray = 1, arrival = 0, loose = -1) {
+/**
+ * `loose`: seconds since the extinguisher came off the chair at the end of the flight (negative while attached).
+ * `rest`: how far the rider's hands have lifted off the keys (0 typing, 1 stopped above them).
+ */
+export function endingChair(view: SkyProjection, elapsed: number, spray = 1, arrival = 0, loose = -1, rest = 0) {
     const draw = chairDrawing(view, elapsed, arrival);
     chairFrame(draw);
     riderBody(draw);
     riderHead(view, draw);
-    riderArms(draw);
+    riderArms(draw, rest);
     if (loose < 0) extinguisher(draw, spray);
     // Its last puffs set it tumbling as it drifts away.
     else extinguisher(looseDrawing(view, draw, loose), spray * Math.exp(-loose * .6));
@@ -96,14 +99,16 @@ function riderHead(view: SkyProjection, { C, bob, oval }: ChairDrawing) {
     endingGlasses(view, bob);
 }
 
-function riderArms({ C, elapsed, profile }: ChairDrawing) {
+function riderArms({ C, elapsed, profile }: ChairDrawing, rest = 0) {
     profile(PLAYER_OUTLINES.laptop, 23, '#555f70');
     profile([[35, -55], [59, -55], [51, -35], [27, -35]], .5, '#a8b9c3', 23.8);
     for (const z of [-19, 19]) {
         profile([[-17, -58], [-13, -60], [-9, -57], [-8, -35], [-18, -34]], 4, '#e6e0cc', z);
         profile([[-19, -39], [-8, -39], [-8, -34], [-19, -33]], 4.5, '#fff6de', z);
-        profile([[-16, -34], [-9, -35], [23, -36], [25, -32], [-15, -27]], 3, C.skin, z);
-        const tap = Math.sin(elapsed * 24) * 1.2;
+        // Lifting off the keys, the forearms tip up and the fingers hover still.
+        const lift = -5 * rest;
+        profile([[-16, -34], [-9, -35], [23, -36 + lift], [25, -32 + lift], [-15, -27]], 3, C.skin, z);
+        const tap = Math.sin(elapsed * 24) * 1.2 * (1 - rest) + lift;
         profile([[21, -36 + tap], [25, -39 + tap], [30, -38 + tap], [35, -35 + tap], [36, -33 + tap], [29, -35 + tap], [23, -33 + tap]], 2, C.skin, z);
     }
 }

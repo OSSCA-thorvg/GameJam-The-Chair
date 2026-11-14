@@ -10,7 +10,7 @@ import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
 import { orbitPraise, orbitPraiseOnChair } from './orbit-praise';
 import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
 import { earthHorizonAhead, orbitEarth, type EarthCamera } from './orbit-earth';
-import { endingChairLights, endingFade, endingNebula, endingSignal, ORBIT_ENDING, type OrbitEndingState } from './orbit-ending';
+import { endingChairLights, endingFade, endingLaptopScreen, endingLaptopText, endingNebula, endingSignal, type OrbitEndingState } from './orbit-ending';
 import { STAGE_FIVE as C } from '../../game/stages/orbit/data';
 
 /**
@@ -47,6 +47,9 @@ export type OrbitShot = {
     entry: number;
     ending: OrbitEndingState;
 };
+
+/** How far round the chair (in quarter turns) the camera leans over the rider's shoulder at the start of the ending. */
+const SHOULDER = .38;
 
 const smooth = (value: number) => {
     const t = Math.max(0, Math.min(1, value));
@@ -100,28 +103,38 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // Climbing out of the clouds the camera tips down to take in the Earth below, as a chase camera would.
     const climb = orbitHeights(travel);
     const lookDown = (14 * climb.air + 12 * climb.space + 4 * wide) * Math.PI / 180;
+    // At the start of the ending the camera leans in over the rider's shoulder onto the laptop screen; while it
+    // circles the chair it comes in a little, so the chair can be seen swivelling and leaning back.
+    const focus = ending.focus;
+    const near = mix(distance, 170, focus);
     const framing = {
-        centerY: .5 - .13 * turn + Math.sin(ctx.t * 47) * .002 * push, eyeY: 45 - 30 * turn + distance * Math.tan(lookDown),
-        distance, zoom: mix(1 - .08 * fast, .72, wide), roll: mix(p.a * .35, 0, wide),
+        centerY: mix(.5 - .13 * turn + Math.sin(ctx.t * 47) * .002 * push, .68, focus),
+        eyeY: 45 - 30 * turn + near * Math.tan(lookDown) + 35 * focus,
+        distance: near, zoom: mix(mix(mix(1 - .08 * fast, .72, wide), 1.15, ending.recline), 1.7, focus), roll: mix(p.a * .35, 0, wide),
         offsetX: Math.sin(ctx.t * 53) * 1.2 * push,
     };
     // In the ending, once the network is lost, the camera makes one slow full circle round the chair (four
     // quarter turns), and the sky, the nebula and the Earth below turn with it.
     const spin = ending.spin * 4;
-    const view = createSkyProjection(ctx.W, ctx.H, turn + spin, framing);
+    // Well round to the right, so the laptop screen shows past the rider's head rather than behind it.
+    const view = createSkyProjection(ctx.W, ctx.H, turn + spin + SHOULDER * focus, framing);
     // The Earth is seen through the same lens, so its horizon sits where the world's eye level puts it.
     const earth: EarthCamera = { cx: ctx.W / 2 + framing.offsetX, cy: ctx.H * framing.centerY,
         focal: Math.min(ctx.H * 1.65, ctx.W * .94) * framing.zoom, roll: framing.roll, pitch: lookDown };
-    const heights = backdrop(ctx, shot, clouds, cam, heading, earth, spin * Math.PI / 2);
+    const heights = backdrop(ctx, shot, clouds, cam, heading, earth, (spin + SHOULDER * focus) * Math.PI / 2);
     const point = (x: number, y: number, z: number): Point3 => [z - travel, 15 + y - cam.y, x - cam.x + routeBend(travel, heading, z - travel)];
     // The chair sits a little below the camera's line of sight, banking and pitching with its own motion. Its
     // drop scales with the camera distance, so a pulled-back camera shows it smaller at the same height.
-    const sink = (38 * turn + 72 * blend) * distance / (480 + 210 * blend) / (1 - .08 * fast * (1 - wide));
-    const bank = mix(p.a * .65, 0, wide), pitch = mix(Math.max(-.2, Math.min(.2, p.vy / 900)), 0, wide);
+    const sink = (38 * turn + 72 * blend) * distance / (480 + 210 * blend) / (1 - .08 * fast * (1 - wide)) * (1 - focus);
+    // In the ending the chair itself swivels round and leans back, as if to take in space; its rider turns with it,
+    // eyes still on the laptop.
+    const bank = mix(p.a * .65, 0, wide), pitch = mix(Math.max(-.2, Math.min(.2, p.vy / 900)), 0, wide) + .32 * ending.recline;
+    const swivel = ending.swivel * Math.PI;
     // Pressing against the edge, the chair shudders.
     const shudder = edge * 2.6;
     const pivot = -25, offset: Point3 = [0, -sink + p.y - cam.y + Math.sin(ctx.t * 61) * shudder, p.x - cam.x + Math.cos(ctx.t * 53) * shudder];
-    const chair = placedProjection(view, ([x, y, z]) => {
+    const chair = placedProjection(view, ([x0, y, z0]) => {
+        const x = x0 * Math.cos(swivel) - z0 * Math.sin(swivel), z = x0 * Math.sin(swivel) + z0 * Math.cos(swivel);
         const ly = y - pivot;
         const x1 = x * Math.cos(pitch) - ly * Math.sin(pitch), y1 = x * Math.sin(pitch) + ly * Math.cos(pitch);
         return [x1 + offset[0], y1 * Math.cos(bank) - z * Math.sin(bank) + pivot + offset[1], y1 * Math.sin(bank) + z * Math.cos(bank) + offset[2]];
@@ -157,20 +170,21 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // and the plume stretches out behind it.
     const air = orbitSlipstream(ctx, chair, rush * (.35 + .65 * push) * (1 - wide));
     ctx.commands.push(...air.behind);
-    endingChair(chair, shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose);
+    endingChair(chair, shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest);
+    endingLaptopScreen(chair, ending);
     if (shot.sip > 0) sipCup(chair, shot.sip);
     orbitEdgePuffs(chair, edge, over, ctx.t);
     ctx.commands.push(...view.commands({ ...split, part: 'near' }));
     ctx.commands.push(...air.over);
+    endingLaptopText(ctx, chair, ending);
     endingChairLights(ctx, chair, ending);
     orbitPraiseOnChair(ctx, chair.project([0, 0, 0]), since, p, travel);
     const head = chair.project([4, 70, 0]);
     // The laptop answers the cameras just before stage five and the bubble stays up into its first moments;
     // deep in the Earth's shadow its signal drops away until it loses the network altogether.
-    if (ending.parked) {
-        endingSignal(ctx, head, ending);
-        attendanceBubble(ctx, head, ending.t - ORBIT_ENDING.disconnect, 'orbit.disconnected');
-    } else attendanceBubble(ctx, head, since + ATTENDANCE.lead);
+    // Deep in the Earth's shadow the signal drops away; the lost connection itself shows on the laptop screen.
+    if (ending.parked) endingSignal(ctx, head, ending);
+    else attendanceBubble(ctx, head, since + ATTENDANCE.lead);
     endingFade(ctx, ending);
 }
 
