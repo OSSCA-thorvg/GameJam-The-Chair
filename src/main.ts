@@ -119,7 +119,20 @@ const feedback = createFeedback(() => locale);
 const player = createReplayPlayer(root, () => locale, () => replaySettings, () => unbind.sync());
 // The opening cutscene plays once per browser over the first fresh game; the game waits until it ends.
 const opening = createOpening(root, () => locale);
-const unbind = bindInput(root, game, {
+// The keycap hints go as soon as the player tries their key, so live presses are noted on the way to the game.
+const hintedInput = { left: 'left', right: 'right', spray: 'spray' } as const;
+const hintedGame: typeof game = {
+    ...game,
+    press(input) {
+        if (input in hintedInput) effects.pressKey(hintedInput[input as keyof typeof hintedInput]);
+        game.press(input);
+    },
+    jump() {
+        effects.pressKey('jump');
+        game.jump();
+    },
+};
+const unbind = bindInput(root, hintedGame, {
     blocked: () => player.active || opening.active,
     onStart() {
         if (!openingSeen()) opening.start(() => unbind.sync());

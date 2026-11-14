@@ -3,6 +3,7 @@ import type { GameEvent } from '../game/types';
 import { EFFECT_STYLE } from './art';
 import { WATER_GRAVITY, bucketMouth, pourFlow, pourLaunch } from './bucket';
 import { createPersonalBoxObserver } from './personal-box-motion';
+import { createKeyHints } from './key-hints';
 export { EFFECT_STYLE } from './art';
 export type Speck = {
     x: number;
@@ -56,6 +57,7 @@ export type WaterPuddle = {
 // Changing these values changes appearance only, never focus recovery or damage.
 export function createEffects() {
     const personalBox = createPersonalBoxObserver();
+    const keyHints = createKeyHints();
     const F = LEVEL.floor;
     let specks: Speck[] = [];
     let waterDrops: WaterDrop[] = [];
@@ -238,9 +240,14 @@ export function createEffects() {
         }
     }
 
-    return { receive, observe: personalBox.observe, restorePersonalBox: personalBox.restore,
+    function observe(input: Parameters<typeof personalBox.observe>[0]) {
+        keyHints.observe(input);
+        personalBox.observe(input);
+    }
+
+    return { receive, observe, restorePersonalBox: personalBox.restore, pressKey: keyHints.press,
         snapshot: () => ({ specks, waterDrops, waterRipples, waterPour, waterPuddle, paperFace, glare, copierFlash, practiceBurst, saveFlash,
-            personalBox: personalBox.snapshot() }),
+            personalBox: personalBox.snapshot(), keysTried: keyHints.snapshot() }),
     };
 }
 export type EffectsState = ReturnType<ReturnType<typeof createEffects>['snapshot']>;

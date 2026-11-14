@@ -24,19 +24,20 @@ function keyRow(ctx: RenderCtx, faces: KeyFace[], centre: Vector, age: number) {
 }
 
 /**
- * Stage one's first steps: left and right over the chair until it has rolled off, and up over the practice pile
- * until it has been jumped.
+ * Stage one's first steps: left and right over the chair, and up over the practice pile. Each key goes as soon as
+ * it is pressed, or once its lesson is done anyway.
  */
 export function officeControlHints(ctx: RenderCtx) {
     if (ctx.mode !== 'play' || ctx.cam > 340) return;
-    const { lessons } = ctx.state, p = ctx.p, age = ctx.t;
-    if (!lessons.moved) keyRow(ctx, ['left', 'right'], ctx.screenPoint(p.x, p.y - 95), age);
-    if (!lessons.jumped) keyRow(ctx, ['up'], ctx.screenPoint(LEVEL.practicePaper.x, ctx.F - 40), age);
+    const { lessons } = ctx.state, tried = ctx.keysTried, p = ctx.p, age = ctx.t;
+    const arrows = (['left', 'right'] as const).filter(key => !tried[key]);
+    if (!lessons.moved && arrows.length) keyRow(ctx, arrows, ctx.screenPoint(p.x, p.y - 95), age);
+    if (!lessons.jumped && !tried.jump) keyRow(ctx, ['up'], ctx.screenPoint(LEVEL.practicePaper.x, ctx.F - 40), age);
 }
 
-/** Stage three: a Space keycap over the extinguisher, until the chair has gone on past it. */
+/** Stage three: a Space keycap over the extinguisher, until Space is pressed or the chair has gone on past it. */
 export function rooftopSprayHint(ctx: RenderCtx) {
     const pickup = STAGE_THREE.pickup;
-    if (ctx.p.x >= 790 || !ctx.visible({ left: 560, top: 250, right: 640, bottom: 390 }, 40)) return;
+    if (ctx.keysTried.spray || ctx.p.x >= 790 || !ctx.visible({ left: 560, top: 250, right: 640, bottom: 390 }, 40)) return;
     keyRow(ctx, [{ text: SPRAY_KEY }], ctx.screenPoint(pickup.x, pickup.y - 92), ctx.t);
 }
