@@ -150,7 +150,6 @@ function riderArms(ctx: RenderCtx) {
 function riderEffects(ctx: RenderCtx) {
     const C = ctx.C;
     const state = ctx.state;
-    const TAU = ctx.TAU;
     if (state.focusNotice?.kind === 'water' || state.focusNotice?.kind === 'steam') ctx.rod(7, -39, 44, -57, 5, C.skin);
     if (ctx.saveFlash > 0) {
         ctx.rect(40, -52, 11, 11, '#e0ecd2');
@@ -171,12 +170,6 @@ function riderEffects(ctx: RenderCtx) {
         }
         ctx.polygon([[-14, -94], [-2, -104], [7, -94]], '#c4ae73');
         ctx.rod(-3, -98, 0, -88, 2, '#849267');
-    }
-    if (ctx.mode === 'impact' || (ctx.mode === 'dead' && state.lossReason === 'head')) {
-        for (let i = 0; i < 8; i++) {
-            const angle = i * TAU / 8;
-            ctx.rod(Math.cos(angle) * 19, -77 + Math.sin(angle) * 19, Math.cos(angle) * 28, -77 + Math.sin(angle) * 28, 3, '#e5b17f');
-        }
     }
 }
 
