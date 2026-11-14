@@ -1,67 +1,66 @@
 # GameJam-The-Chair
 
-[English](README.md) | [한국어](README-ko.md)
+A physics action game about an office chair escaping the company—with an employee who refuses to stop working still sitting on it.
+Roll, jump, and use fire-extinguisher recoil to escape through five stages: office, meeting rooms and corridors, rooftop, sky, and space.
+**The chair wants to clock out. The employee keeps typing.**
 
-A chair escape game rendered with ThorVG WebCanvas. The employee keeps working while the chair rolls through the building.
+<a href="https://ossca-thorvg.github.io/GameJam-The-Chair/">
+  <img width="1189" height="607" alt="KakaoTalk_Photo_2026-11-14-23-36-12 001" src="https://github.com/user-attachments/assets/9e7f1993-fd3c-46c6-b691-787d98c25030" />
+</a>
 
-[Live demo](https://ossca-thorvg.github.io/GameJam-The-Chair/)
+<br/>
+<br/>
 
-## Run locally
+## Controls
 
-Requires Node.js 22+ and a browser with WebGL 2 support.
+| Key | Action |
+|---|---|
+| ← / → | Move |
+| ↑ | Jump in stages |
+| ↓ | Enter or leave the meeting room |
+| Space | Spray after collecting the fire extinguisher |
+| P / Esc | Pause |
+| R | Retry from the last checkpoint |
 
-```sh
-nvm use # If using nvm
-npm ci
-npm run dev
-```
+<br/>
+<br/>
 
-Open http://127.0.0.1:5173/.
+## Screenshots
 
-To inspect the cleaner, bucket, copier, duct, head impact, extinguisher animation, or sky ending, open http://127.0.0.1:5173/preview.html while the development server is running. Choose a scene, drag the time slider, step one frame at a time, or play the loop. The URL keeps the selected scene and time across reloads. For the stage 4 ending, open http://127.0.0.1:5173/preview.html?motion=sky-ending. The chair stays in side view for one second, the camera turns behind it over seven seconds, and the back view holds for two seconds before the stage clears.
+<img width="402" height="205" alt="KakaoTalk_Photo_2026-11-14-23-36-13 006" src="https://github.com/user-attachments/assets/e1a2dfb7-c57d-4bf3-9a76-272c228b3c55" />
+<img width="402" height="205" alt="KakaoTalk_Photo_2026-11-14-23-36-13 008" src="https://github.com/user-attachments/assets/d80b926f-e9ef-4b10-b14a-1888bcb86a44" />
 
-## Renderer
+<br/>
+<br/>
 
-The game draws with ThorVG's GPU renderer (`gl`, WebGL2) whenever the browser has hardware-backed WebGL2, and falls back to ThorVG's software renderer (`sw`) otherwise, including when WebGL is only emulated on the CPU. The software renderer rasterizes every pixel on one CPU core, so it slows down on large and high-DPI screens. Add `?renderer=sw` or `?renderer=gl` to the URL to force one, for example to compare them.
+## ThorVG Features
 
-## Performance overlay
+All in-game scenery, characters, objects, and visual effects are rendered as vectors with ThorVG WebCanvas.
+- **Shape, paths, and gradients:** backgrounds, characters, and objects.
+- **Masks, clipping, and blending:** clock transition and puddle reflections.
+- **Gaussian and motion blur:** glowing graph lines and flying documents.
+- **Scene transforms and reuse:** grouped background movement.
+- **Text and TTF fonts:** dialogue and signs.
+- **Vector-rendered 2.5D:** camera transitions and space scenes.
 
-Press `F3` or `` ` `` in the game, or open http://127.0.0.1:5173/?debug=1, to show developer metrics: FPS and frame time (average, p95, max over the last second), a stacked frame-time graph, time per stage (`sim`, `build`, `sync`, `render`, `hud`), fixed ticks per frame and discarded simulation time, the render backend (with a warning when ThorVG fell back from the requested one), GPU time from WebGL2 timer queries (average, p95, max, and a white line on the graph; Chrome on most desktops, `n/a` with the software renderer), the canvas size in CSS pixels and the raster size ThorVG actually draws (it applies its own DPR, `1 + (dpr - 1) × 0.75`), ThorVG counters (draw commands, pooled shapes and layer scenes, paint-order rebuilds, gaussian and motion blur with their on-canvas area, masks, clips), the JS heap (Chrome only) and the ThorVG WebAssembly memory. **Copy metrics** puts a JSON snapshot on the clipboard. The **Layers** list shows every layer scene drawn recently with its shape count, screen coverage and effects; **Hide** stops drawing it and **Flat** draws its shapes without the scene (no opacity, blend, blur, clip or mask), so the change in `render` shows what the layer costs. Switches reset when the overlay closes. From the console: `officeStageOne.perf.layers.hide(key)`, `.flatten(key)`, `.reset()`, `.list()`. Timing stays outside the game core and is off while the overlay is closed.
+<br/>
+<br/>
 
-## Play
+## Team
 
-Clear each stage to continue to the next. The pause menu lists cleared stages for replay and saves your progress in this browser.
+| Member | Main Contributions |
+|---|---|
+| [juyonLee00](https://github.com/juyonLee00) | Stage 1–3 design, 2.5D visual presentation, character and environment graphics |
+| [leedonggyu1848](https://github.com/leedonggyu1848) | Opening sequence, overall story design, Stage 4–5 design, debugging tools |
 
-- Stage 1: dodge copier paper, spilled water, the trash bin and monitor light to leave the office.
-- Stage 2: watch a worker send three cheering chairs home, stop for a chair-only badge scan, and jump over an overtime delivery cart. Enter the extended meeting for an optional six-second scene, or continue straight to the machine room.
+Both members contributed across shared areas.
 
-Use Left/Right to move and Up to jump. Touch controls have separate balance buttons. In stage 3, hold Space to spray after collecting the extinguisher on the lower rooftop. Sprays repeat every 0.24 seconds without an ammo limit; Left/Right steers the recoil. In stage 5, use the arrow keys to move in four directions; W and S also move up and down. P pauses.
+<br/>
+<br/>
 
-Near the stage 2 meeting door, press Down to enter. Press Down again to leave early. Touch controls use the same down arrow. At the badge scanner, release the movement keys and wait for approval.
+## Credits
 
-Stages 1 and 2 start with a safe jump practice area. R retries from the last flag: before the trash bin in stage 1, or the last checkpoint in stage 2. Retries restore full focus and a dry chair. Selecting a stage starts it from the beginning.
-
-## Code structure
-
-Base new code and changes on the refactored structure and style present when the task starts. Follow the [game core rules](src/game/README.md), [stage layout](src/game/stages/README.md), and [shared test tools](tests/support/README.md).
-
-Keep stage behaviour in its stage folder. Separate pure decisions in `decide.ts` from state updates in `apply.ts`. Render and UI code consume game snapshots. Use the existing golden tests to check that refactors preserve gameplay.
-
-## Test
-
-```sh
-npm test
-```
-
-The tests check stage 2 traversal, chair dispatch, meeting entry and return, badge scanning, cart avoidance and collision, starter jump landings, checkpoint retries, actual movement speed, failure guidance, and stage 1 hazards.
-
-## Build
-
-```sh
-npm run build
-npm run preview
-```
-
-Pushes to `main` automatically deploy to GitHub Pages via GitHub Actions.
-
-At the end of the stage 3 rooftop, release Left/Right and hold Space for three consecutive upward bursts. The extinguisher switches to continuous thrust, carrying the chair smoothly upward into the stage 4 starting area, where it keeps spraying and hovering in open air.
+- Rendering: [ThorVG](https://github.com/thorvg/thorvg) and ThorVG WebCanvas.
+- Fonts: Black Han Sans, Do Hyeon, and Jua, licensed under SIL OFL 1.1. See [font licenses](src/assets/fonts/).
+- Created for the OSSCA ThorVG Game Jam.
+- Project license: [MIT](LICENSE).
