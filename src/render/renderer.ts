@@ -51,6 +51,9 @@ function setup(
     const ctx = createRenderCtx(bg);
     let lastTime = 0;
     let lastStage = 0;
+    /** The view the end-of-run close-up started from, and how far into the shot the last frame was. */
+    let closeUpFrom: { cam: number } | null = null;
+    let closeUpAge = -1;
     const pool = createPaintPool();
     let TVG: ThorVGNamespace | null = null;
     let tvg: Canvas | null = null;
@@ -148,6 +151,7 @@ function setup(
         ctx.vertical = next.stage >= 3 ? baseVertical + Math.max(0, focusY - ctx.p.y) : baseVertical;
         if (opening) openingCamera(opening, baseWidth, baseVertical);
         else if (effects.deathShot) deathCamera(effects.deathShot);
+        else closeUpFrom = null;
         lastStage = next.stage;
         lastTime = t;
         const buildStart = stats ? performance.now() : 0;
@@ -215,13 +219,19 @@ function setup(
      * loss), then eases back. The screen centre and the visible width blend between the two framings.
      */
     function deathCamera(shot: DeathShot) {
+        // Outside play the camera is not recomputed each frame, so the shot works from where it found the view.
+        if (!closeUpFrom || shot.age < closeUpAge) closeUpFrom = { cam: ctx.cam };
+        closeUpAge = shot.age;
         const u = deathShotCloseness(shot);
+        // It pushes in from the play framing the run ended in and eases back to exactly that framing.
+        ctx.cam = closeUpFrom.cam;
         if (u <= 0) return;
-        const [fx, fy] = riderPoint(shot.kind === 'focus' ? EYES : HEAD);
         const width0 = ctx.VW, scale0 = ctx.scale;
-        const cx = ctx.cam + width0 / 2 + (fx - ctx.cam - width0 / 2) * u;
-        const cy0 = ctx.H / (2 * scale0) - ctx.vertical;
-        const cy = cy0 + (fy - cy0) * u;
+        const restX = closeUpFrom.cam + width0 / 2;
+        const restY = ctx.H / (2 * scale0) - ctx.vertical;
+        const [fx, fy] = riderPoint(shot.kind === 'focus' ? EYES : HEAD);
+        const cx = restX + (fx - restX) * u;
+        const cy = restY + (fy - restY) * u;
         ctx.VW = width0 / (1 + (DEATH_SHOT[shot.kind].zoom - 1) * u);
         ctx.scale = ctx.W / ctx.VW;
         ctx.cam = cx - ctx.VW / 2;
