@@ -12,8 +12,14 @@ const value = document.querySelector<HTMLOutputElement>('#time-value')!;
 const playButton = document.querySelector<HTMLButtonElement>('#play')!;
 const markers = document.querySelector<HTMLElement>('#markers')!;
 const backend = document.querySelector<HTMLElement>('#renderer')!;
-// `?locale=ko` previews Korean copy drawn in the scene (e.g. the stage-four billboard).
-const locale: Locale = new URLSearchParams(location.search).get('locale') === 'ko' ? 'ko' : 'en';
+// `?locale=ko` or `?locale=en` picks the language of the copy drawn in the scene (speech bubbles, the stage-four
+// billboard); without it the preview follows the language last chosen in the game.
+function previewLocale(): Locale {
+    const asked = new URLSearchParams(location.search).get('locale');
+    if (asked === 'ko' || asked === 'en') return asked;
+    try { return localStorage.getItem('the-chair-locale') === 'ko' ? 'ko' : 'en'; } catch { return 'en'; }
+}
+const locale: Locale = previewLocale();
 const renderer = createRenderer(root, () => locale);
 const splashCanvas = document.querySelector<HTMLCanvasElement>('#splash-preview')!;
 const splash = createSplashPlayer(splashCanvas);

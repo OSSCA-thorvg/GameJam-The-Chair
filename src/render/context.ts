@@ -75,6 +75,8 @@ export type RenderCtx = {
     cutscene: boolean;
     /** Which hinted keys the player has tried this stage; their keycap hints are gone. */
     keysTried: KeysTried;
+    /** How many times the player has entered the stage two meeting room (1 on the first visit). */
+    meetingVisit: number;
 
     screenPoint(x: number, y: number): Vector;
     polygon(points: Vector[], color: string | Gradient, opts?: PathOptions): void;
@@ -167,6 +169,7 @@ export function createRenderCtx(bg: CanvasRenderingContext2D): RenderCtx {
         chairPose: { backrest: 0, riderPop: 0, shiver: 0 },
         cutscene: false,
         keysTried: { left: false, right: false, jump: false, spray: false },
+        meetingVisit: 0,
     } as unknown as RenderCtx;
 
     ctx.screenPoint = (x, y) => {

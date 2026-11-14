@@ -4,6 +4,7 @@ import { EFFECT_STYLE } from './art';
 import { WATER_GRAVITY, bucketMouth, pourFlow, pourLaunch } from './bucket';
 import { createPersonalBoxObserver } from './personal-box-motion';
 import { createKeyHints } from './key-hints';
+import { createMeetingVisits } from './meeting-visits';
 export { EFFECT_STYLE } from './art';
 export type Speck = {
     x: number;
@@ -58,6 +59,7 @@ export type WaterPuddle = {
 export function createEffects() {
     const personalBox = createPersonalBoxObserver();
     const keyHints = createKeyHints();
+    const meetingVisits = createMeetingVisits();
     const F = LEVEL.floor;
     let specks: Speck[] = [];
     let waterDrops: WaterDrop[] = [];
@@ -240,14 +242,15 @@ export function createEffects() {
         }
     }
 
-    function observe(input: Parameters<typeof personalBox.observe>[0]) {
+    function observe(input: Parameters<typeof personalBox.observe>[0] & Partial<Parameters<typeof meetingVisits.observe>[0]>) {
         keyHints.observe(input);
+        meetingVisits.observe(input);
         personalBox.observe(input);
     }
 
     return { receive, observe, restorePersonalBox: personalBox.restore, pressKey: keyHints.press,
         snapshot: () => ({ specks, waterDrops, waterRipples, waterPour, waterPuddle, paperFace, glare, copierFlash, practiceBurst, saveFlash,
-            personalBox: personalBox.snapshot(), keysTried: keyHints.snapshot() }),
+            personalBox: personalBox.snapshot(), keysTried: keyHints.snapshot(), meetingVisit: meetingVisits.snapshot() }),
     };
 }
 export type EffectsState = ReturnType<ReturnType<typeof createEffects>['snapshot']>;
