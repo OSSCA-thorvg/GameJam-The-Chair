@@ -335,7 +335,7 @@ test('only the extinguisher moves the chair forward: it coasts to a crawl withou
     assert.ok(pushed.orbit.z > idle.orbit.z + 600, 'and carries it much further');
 });
 
-const cruisingAt = (z, extra = {}) => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, heading: 0, yaw: 0, rings: 0, settled: 0, ...extra });
+const cruisingAt = (z, extra = {}) => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, heading: 0, yaw: 0, rings: 0, idle: 0, settled: 0, ...extra });
 const still = (x = 0, y = 0) => ({ x, y, vx: 0, vy: 0, a: 0, w: 0 });
 const hold = (orbit, p, keys, seconds) => {
     for (let i = 0; i < seconds * 120; i++) ({ orbit, p } = orbitStep(orbit, p, keys, 1 / 120));
@@ -578,4 +578,14 @@ test('the ending close-up finds the chair wherever in the shadow it parked', () 
     const shapes = commands => commands.filter(command => typeof command.c === 'string' && !/^#(7d9fbb|fffaf0)/.test(command.c)).map(command => command.c + command.v.map(([x, y]) => `${Math.round(x)},${Math.round(y)}`).join(' '));
     assert.deepEqual(shapes(frame(turned)), shapes(frame(() => {})), 'the Earth below lies the same way round');
     assert.equal(frame(turned).filter(command => command.c === '#f6e6df' || command.c?.startsWith?.('#f6e6df')).length, 0, 'and the fence no longer puffs at it');
+});
+
+test('the Space hint clock counts only while the player could spray and does not', () => {
+    const coasting = hold(cruisingAt(1000), still(), ['left'], 3.2);
+    assert.ok(Math.abs(coasting.orbit.idle - 3.2) < 1e-6, 'steering without spraying still counts as idle');
+    assert.equal(hold(coasting.orbit, coasting.p, ['spray'], 1 / 120).orbit.idle, 0, 'one spray resets it');
+    const entry = hold({ ...cruisingAt(0), phase: 'entry', age: 0 }, still(), [], STAGE_FIVE.entryTime * .9);
+    assert.equal(entry.orbit.idle, 0, 'not during the entry glide');
+    const auto = hold(cruisingAt(STAGE_FIVE.autopilot.from + 10, { speed: 0 }), still(), [], 2);
+    assert.equal(auto.orbit.idle, 0, 'not once the autopilot flies the chair');
 });

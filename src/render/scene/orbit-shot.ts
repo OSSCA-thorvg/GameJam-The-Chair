@@ -10,6 +10,7 @@ import { orbitPraise, orbitPraiseOnChair, praiseChairGlow, praiseLitChair, prais
 import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
 import { earthHorizonAhead, orbitEarth, type EarthCamera } from './orbit-earth';
 import { endingChairLights, endingFade, endingLaptopScreen, endingLaptopText, endingNebula, endingSignal, type OrbitEndingState } from './orbit-ending';
+import { orbitSprayHint } from './orbit-spray-hint';
 import { STAGE_FIVE as C } from '../../game/stages/orbit/data';
 
 /**
@@ -44,6 +45,8 @@ export type OrbitShot = {
     /** Which way the chair faces (radians, 0 toward the Earth's shadow) and how fast it is turning; 0 in the reveal. */
     heading?: number;
     yaw?: number;
+    /** Seconds the player has coasted without spraying, for the Space hint; 0 or absent hides it. */
+    idle?: number;
     ending: OrbitEndingState;
 };
 
@@ -194,6 +197,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     endingChairLights(ctx, chair, ending);
     orbitPraiseOnChair(ctx, chair.project([0, 0, 0]), p, travel);
     const head = chair.project([4, 70, 0]);
+    if (shot.idle) orbitSprayHint(ctx, chair.project([-46, -30, 0]), shot.idle);
     // The laptop answers the cameras just before stage five and the bubble stays up into its first moments;
     // deep in the Earth's shadow its signal drops away until it loses the network altogether.
     // Deep in the Earth's shadow the signal drops away; the lost connection itself shows on the laptop screen.

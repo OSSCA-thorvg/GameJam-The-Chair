@@ -123,7 +123,7 @@ const { orbitStep, inPraise, praiseBeamX, praiseSheltered, STAGE_FIVE } = await 
 `);
 
 const chairAt = (x, y = 0) => ({ x, y, vx: 0, vy: 0, a: 0, w: 0 });
-const cruising = z => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, heading: 0, yaw: 0, rings: 0, settled: 0 });
+const cruising = z => ({ phase: 'door', age: 10, z, speed: STAGE_FIVE.cruise, heading: 0, yaw: 0, rings: 0, idle: 0, settled: 0 });
 
 test('5-1: the praise beam slows the chair and shoves it out of the beam', () => {
     const first = STAGE_FIVE.praise.beams[0];

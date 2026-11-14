@@ -73,6 +73,8 @@ export type OrbitState = {
     /** How fast it is turning, radians per second. */
     yaw: number;
     rings: number;
+    /** Seconds the player has been flying without spraying; the Space hint shows once this runs long. */
+    idle: number;
     /** 1 on arriving in the Earth's shadow, then counting up in seconds while the ending plays. */
     settled: number;
 };
