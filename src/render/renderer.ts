@@ -107,6 +107,7 @@ function setup(
         ctx.glare = effects.glare;
         ctx.practiceBurst = effects.practiceBurst;
         ctx.saveFlash = effects.saveFlash;
+        ctx.keysTried = effects.keysTried;
         ctx.personalBox = effects.personalBox;
 
         const baseWidth = VIEW_WIDTH;

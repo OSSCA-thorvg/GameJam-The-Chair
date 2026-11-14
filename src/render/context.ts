@@ -7,6 +7,7 @@ import { fitGlyphs, fontCss, LABEL_FONT, SIGN_FONT, type FontName } from './font
 import { ART } from './art';
 import type { EffectsState } from './effects';
 import type { PersonalBoxReaction } from './personal-box-motion';
+import type { KeysTried } from './key-hints';
 
 export type RenderCtx = {
     locale: Locale;
@@ -68,6 +69,8 @@ export type RenderCtx = {
     practiceBurst: number;
     saveFlash: number;
     personalBox: PersonalBoxReaction;
+    /** Which hinted keys the player has tried this stage; their keycap hints are gone. */
+    keysTried: KeysTried;
 
     screenPoint(x: number, y: number): Vector;
     polygon(points: Vector[], color: string | Gradient, opts?: PathOptions): void;
@@ -157,6 +160,7 @@ export function createRenderCtx(bg: CanvasRenderingContext2D): RenderCtx {
         practiceBurst: 0,
         saveFlash: 0,
         personalBox: { kind: 'idle' },
+        keysTried: { left: false, right: false, jump: false, spray: false },
     } as unknown as RenderCtx;
 
     ctx.screenPoint = (x, y) => {

@@ -1,4 +1,3 @@
-import { SPRAY_KEY } from '../../ui/controls';
 import { STAGE_THREE } from '../../game/stages/rooftop/data';
 import type { RenderCtx } from '../context';
 import { checkpointFlag } from './decor';
@@ -10,6 +9,7 @@ import { rooftopDuct, rooftopVents } from './rooftop-duct';
 import { rooftopGraphSign } from './rooftop-graph';
 import { employeeBoard } from './employee-board';
 import { personalBox } from './personal-box';
+import { rooftopSprayHint } from './control-hints';
 
 export function drawRooftop(ctx: RenderCtx) {
     const state = ctx.state;
@@ -50,9 +50,6 @@ export function drawRooftop(ctx: RenderCtx) {
         ctx.rod(pickup.x, pickup.y - 77, pickup.x, pickup.y - 84, 4, '#394657');
         ctx.rod(pickup.x - 3, pickup.y - 84, pickup.x + 12, pickup.y - 84, 3, '#394657');
     }
-    if (p.x < 790 && ctx.visible({ left: 560, top: 250, right: 640, bottom: 390 }, 40)) {
-        ctx.label(SPRAY_KEY, STAGE_THREE.pickup.x, STAGE_THREE.pickup.y - 97, 20, '#f0dfb9');
-    }
 
     for (let i = 1; i < STAGE_THREE.checkpoints.length; i++) {
         const mark = STAGE_THREE.checkpoints[i];
@@ -70,6 +67,7 @@ export function drawRooftop(ctx: RenderCtx) {
 
     sprayPlume(ctx);
     airSprayGauge(ctx);
+    rooftopSprayHint(ctx);
 }
 
 // Three charges above the chair: one goes dark per burst in the air, all refill on touching down.
