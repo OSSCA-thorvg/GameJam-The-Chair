@@ -7,7 +7,11 @@ type PraiseBeam = {
      * `y`: shines in from the side and sweeps up and down, dodged by climbing or diving.
      */
     axis: 'x' | 'y';
-    /** Route depths the beam covers, how wide it is, and how it sweeps along its axis. */
+    /**
+     * The light spreads from the satellite's lens like a tent. These give its slice through the middle of the play
+     * area (y = 0 for a down beam, x = 0 for a side beam): the route depths it covers there, how wide it is, and how
+     * it sweeps along its axis. Nearer the satellite the slice is smaller, further away larger.
+     */
     from: number; to: number; halfWidth: number; amplitude: number; rate: number; phase: number;
 };
 
@@ -27,19 +31,20 @@ export const STAGE_FIVE = deepFreeze({
     // Company satellites sweep beams of praise across the route. Inside one, trophies and certificates shove the
     // chair aside and slow it down. 5-1 has shelter clouds to duck into; 5-2 only the dark gaps between three beams;
     // in 5-3 the last beam stops at the edge of the Earth's shadow.
-    // Every beam sweeps slower than the chair can steer (210 per second), so it can always be dodged.
+    // Every beam sweeps slower than the chair can steer (210 per second) at every height, so it can always be dodged.
+    // The satellites hang well above (or beside) the play area, so the slices stay close in size across it.
     praise: {
-        slowSpeed: 45, slowResponse: 2.4, shove: 380,
+        slowSpeed: 45, slowResponse: 2.4, shove: 380, lens: 40,
         beams: [
             // 5-1: one wide beam over the cloud layer.
-            { satellite: { x: 0, y: 560, z: 2300 }, axis: 'x', from: 1300, to: 3300, halfWidth: 210, amplitude: 430, rate: .28, phase: 0 },
+            { satellite: { x: 0, y: 1100, z: 2300 }, axis: 'x', from: 1300, to: 3300, halfWidth: 210, amplitude: 430, rate: .28, phase: 0 },
             // 5-2: three narrow beams in the upper atmosphere, overlapping in depth and crossing. The middle one shines
             // in from the right and sweeps up and down, so dodging it takes climbing or diving.
-            { satellite: { x: -420, y: 620, z: 4700 }, axis: 'x', from: 3800, to: 5600, halfWidth: 140, amplitude: 480, rate: .22, phase: 0 },
-            { satellite: { x: 1050, y: 0, z: 5300 }, axis: 'y', from: 4400, to: 6200, halfWidth: 120, amplitude: 300, rate: .27, phase: 2.2 },
-            { satellite: { x: 0, y: 760, z: 5900 }, axis: 'x', from: 5000, to: 6800, halfWidth: 140, amplitude: 480, rate: .18, phase: 4.1 },
+            { satellite: { x: -420, y: 1100, z: 4700 }, axis: 'x', from: 3800, to: 5600, halfWidth: 140, amplitude: 480, rate: .22, phase: 0 },
+            { satellite: { x: 1700, y: 0, z: 5300 }, axis: 'y', from: 4400, to: 6200, halfWidth: 120, amplitude: 300, rate: .27, phase: 2.2 },
+            { satellite: { x: 0, y: 1250, z: 5900 }, axis: 'x', from: 5000, to: 6800, halfWidth: 140, amplitude: 480, rate: .18, phase: 4.1 },
             // 5-3: the last beam in space, cut off by the Earth's shadow.
-            { satellite: { x: 300, y: 640, z: 8000 }, axis: 'x', from: 7200, to: 8800, halfWidth: 250, amplitude: 380, rate: .3, phase: 1 },
+            { satellite: { x: 300, y: 1100, z: 8600 }, axis: 'x', from: 7200, to: 8700, halfWidth: 250, amplitude: 380, rate: .3, phase: 1 },
         ] as PraiseBeam[],
         shelters: [{ x: -380, y: -60, z: 1700 }, { x: 340, y: 40, z: 2350 }, { x: -260, y: -20, z: 3000 }],
         shelterSize: { x: 210, y: 170, z: 330 },

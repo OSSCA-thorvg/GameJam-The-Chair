@@ -93,8 +93,21 @@ export function cctvLamp(ahead: number, t: number): LampState {
 const recording = (t: number, seed: number) => (t * .8 + seed * .618) % 1 < .55;
 const lampColor = (state: LampState, rec: boolean) => state !== 'idle' || rec ? '#ff4a3a' : '#5e1d1a';
 
+/**
+ * Within this distance ahead of the chair a camera swerves out past the edge of the view, so none ever comes
+ * between the chair and the camera. The reveal field starts further out than this, so its framing is untouched.
+ */
+const SWERVE = 200;
+
+function swerve(p: Point3, ahead: number): Point3 {
+    const t = Math.max(0, Math.min(1, 1 - ahead / SWERVE));
+    const out = 700 * t * t * (3 - 2 * t);
+    const y = p[1] - 15, x = p[2], r = Math.hypot(x, y) || 1;
+    return [p[0], 15 + y * (1 + out / r), x * (1 + out / r)];
+}
+
 function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: number, t: number): Lamp[] {
-    const anchor = point(spot.x, spot.y + Math.sin(t * .9 + spot.seed) * 8, spot.z);
+    const anchor = swerve(point(spot.x, spot.y + Math.sin(t * .9 + spot.seed) * 8, spot.z), spot.z - travel);
     // The lens keeps turning toward the chair at the projection's origin.
     const yaw = aim(-anchor[0], -anchor[2]) + Math.sin(t * .6 + spot.seed) * .05;
     const state = cctvLamp(spot.z - travel, t);
@@ -134,14 +147,16 @@ function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: n
 /**
  * Adds the watchers to `view`; returns their lamps for the glow pass. The reveal's field sits behind stage five's
  * start and the route's ahead of it, so both are always placed and the projection leaves out what is behind it.
- * `shown` is how far the reveal has turned into 3D; watchers that come later stay hidden.
+ * `shown` is how far the reveal has turned into 3D; watchers that come later stay hidden. Satellites are placed with
+ * `praisePoint`, the frame their beams are drawn in. Nothing the chair has passed is drawn.
  */
-export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, shown = 1) {
-    const lamps = [...ORBIT_WATCH.reveal, ...ORBIT_WATCH.route].filter(spot => spot.appear <= shown && spot.z - travel > -600)
+export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, shown = 1, praisePoint = point) {
+    const lamps = [...ORBIT_WATCH.reveal, ...ORBIT_WATCH.route].filter(spot => spot.appear <= shown && spot.z > travel)
         .flatMap(spot => floating(view, point, spot, travel, t));
     // Far satellites are left out until the chair is within sight of them.
     if (ORBIT_WATCH.satelliteAppear <= shown) for (const at of ORBIT_WATCH.satellites) {
-        if (at.z - travel < 6000) lamps.push(satellite(view, point, at, travel, t));
+        const ahead = at.z - travel;
+        if (ahead > 0 && ahead < 6000) lamps.push(satellite(view, praisePoint, at, travel, t));
     }
     return lamps;
 }

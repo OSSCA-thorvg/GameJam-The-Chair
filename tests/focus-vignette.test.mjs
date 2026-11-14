@@ -33,3 +33,13 @@ test('the vignette is one border band appended last, and skipped when idle', () 
     focusVignette(ctx);
     assert.equal(ctx.commands.length, 0);
 });
+
+test('the vignette pulses in stage five too, when a satellite beam costs focus', () => {
+    const game = createGame();
+    game.startStage(5);
+    const state = { ...game.getSnapshot(), mode: 'play', focus: 60, focusNotice: { kind: 'praise', life: 1.6 } };
+    const ctx = createRenderCtx({});
+    Object.assign(ctx, { state, p: state.player, mode: 'play', t: 0, cam: 0, W: 1000, H: 510, VW: 1000, scale: 1, vertical: 0 });
+    focusVignette(ctx);
+    assert.equal(ctx.commands.length, 1);
+});

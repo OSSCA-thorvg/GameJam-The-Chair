@@ -58,6 +58,9 @@ export type CloudBankOptions = {
     alpha?: number;
 };
 
+/** Route distance ahead of the chair over which a cloud fades out as the chair flies into it. */
+const PASS_FADE = 260;
+
 type PlacedCloud = { seed: number; x: number; y: number; size: number; opacity: number };
 
 function placeClouds(ctx: RenderCtx, view: SkyProjection, travel: number, foreground: boolean, options: CloudBankOptions) {
@@ -66,7 +69,8 @@ function placeClouds(ctx: RenderCtx, view: SkyProjection, travel: number, foregr
     for (const cloud of CLOUDS) {
         if (options.only && !options.only.has(cloud.seed)) continue;
         const z = options.unwrapped ? ((cloud.z + 12000) % 10000) - 500 - travel : ((cloud.z - travel + 12000) % 10000) - 500;
-        if (z < -160 || (z < 900) !== foreground) continue;
+        // Nothing the chair has passed is drawn: a cloud thins out as the chair reaches it.
+        if (z <= 0 || (z < 900) !== foreground) continue;
         const center: [number,number,number] = [z, cloud.y - anchor.y * .45, cloud.x - anchor.x * .55 + (options.bend?.(z) ?? 0)];
         const depth = view.depth(center);
         if (depth < (options.nearDepth ?? 200)) continue;
@@ -76,7 +80,8 @@ function placeClouds(ctx: RenderCtx, view: SkyProjection, travel: number, foregr
         if (!options.only && !foreground && z < 4500 && Math.abs(x-ctx.W/2) < ctx.W*.34+size*90) continue;
         if (x < -size*300 || x > ctx.W+size*300 || y-size*180 > ctx.H || y+size*40 < 0) continue;
         // With a custom cutoff, clouds swinging in past the camera fade in rather than popping at it.
-        const opacity = options.nearDepth === undefined ? 1 : ctx.clamp((depth - options.nearDepth) / 600, 0, 1);
+        const reach = ctx.clamp(z / PASS_FADE, 0, 1);
+        const opacity = reach * (options.nearDepth === undefined ? 1 : ctx.clamp((depth - options.nearDepth) / 600, 0, 1));
         placed.push({ seed: cloud.seed, x, y, size, opacity });
     }
     return placed;

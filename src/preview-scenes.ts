@@ -2,7 +2,7 @@ import { createGame, type Game, type GameState } from './game/game';
 import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
-import { praiseBeamX } from './game/stages/orbit/course/decide';
+import { praiseSection } from './game/stages/orbit/course/decide';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { revealGlideStart, SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
 import { ATTENDANCE } from './render/scene/attendance-bubble';
@@ -724,18 +724,34 @@ export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSn
     let target = { x: 0, y: 0 };
     if (shelter) target = shelter;
     else {
-        const ahead = beams.filter(b => orbit.z + 250 >= b.from && orbit.z <= b.to);
-        // Each axis on its own: the widest gap from the down beams across, and from the side beams up and down.
-        const gap = (axis: 'x' | 'y', at: number, range: number) => {
-            const facing = ahead.filter(b => b.axis === axis);
-            let best = -Infinity, pick = 0;
-            for (let v = -range; v <= range; v += 40) {
-                const room = Math.min(...facing.map(b => Math.abs(v - praiseBeamX(b, orbit.age + .6)) - b.halfWidth), 9999) - Math.abs(v - at) * .15;
-                if (room > best) { best = room; pick = v; }
+        // Look a second ahead: score spots across the play area by how far they stay from every beam's light
+        // (where the beam will have swept to by then, at that spot's height), and head for the best one nearby.
+        const horizon = [.3, .7, 1.1];
+        const reach = Math.max(STAGE_FIVE.bounds.x, STAGE_FIVE.bounds.y) + STAGE_FIVE.steer.overshoot;
+        const near = beams.filter(b => [-reach, reach].some(r => {
+            const slice = praiseSection(b, orbit.age, r);
+            return slice.to > orbit.z - 200 && slice.from < orbit.z + orbit.speed * 1.2 + 200;
+        }));
+        const clearance = (x: number, y: number) => {
+            let least = 160;
+            for (const dt of horizon) {
+                const z = orbit.z + orbit.speed * dt;
+                for (const b of near) {
+                    const slice = praiseSection(b, orbit.age + dt, b.axis === 'y' ? x : y);
+                    if (slice.scale <= 0) continue;
+                    const across = Math.abs((b.axis === 'y' ? y : x) - slice.centre) - slice.halfWidth;
+                    const ahead = Math.max(slice.from - z, z - slice.to);
+                    const gap = across < 0 && ahead < 0 ? Math.max(across, ahead) : Math.hypot(Math.max(0, across), Math.max(0, ahead));
+                    least = Math.min(least, gap);
+                }
             }
-            return facing.length ? pick : 0;
+            return least;
         };
-        target = { x: gap('x', p.x, 620), y: gap('y', p.y, 400) };
+        let best = -Infinity;
+        if (near.length) for (let x = -600; x <= 600; x += 60) for (let y = -390; y <= 390; y += 60) {
+            const score = clearance(x, y) - Math.hypot(x - p.x, y - p.y) * .3;
+            if (score > best) { best = score; target = { x, y }; }
+        }
     }
     const keys: Input[] = [];
     if (target.x - p.x > p.vx * .65 + 6) keys.push('right');
@@ -771,11 +787,13 @@ function orbitRoute(): PreviewScene {
 }
 
 // The ending, from the moment the chair parks in the Earth's shadow to THE END.
-function orbitEndingScene(): PreviewScene {
+function orbitEndingScene(aside = false): PreviewScene {
     const game = createGame();
     game.startStage(5);
     const parked = JSON.parse(game.serialize());
     Object.assign(parked.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1, age: 76 });
+    // The whole shadow is the goal, so in play the chair can park well off the middle of the route.
+    if (aside) Object.assign(parked.p, { x: 520, y: -330, vx: 0, vy: 0, a: 0 });
     // As in play, the chair arrives well into the stage, long after the stage title has gone.
     parked.checkpoint = 1;
     parked.time = 76;
@@ -791,7 +809,9 @@ function orbitEndingScene(): PreviewScene {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('orbit-ending', 'Orbit · Ending: network lost on screen, hands stop, the chair looks out, THE END', 0, markers, frames);
+    return aside
+        ? recordedScene('orbit-ending-aside', 'Orbit · Ending after parking off to one side', 0, markers, frames)
+        : recordedScene('orbit-ending', 'Orbit · Ending: network lost on screen, hands stop, the chair looks out, THE END', 0, markers, frames);
 }
 
 // 5-1: duck from shelter cloud to shelter cloud while the satellite's praise beam sweeps the cloud layer.
@@ -813,6 +833,34 @@ function orbitPraiseScene(): PreviewScene {
         if (stage !== previous) { markers.push({ at: i / 60, label: stage }); previous = stage; }
     }
     return recordedScene('orbit-praise', 'Orbit · 5-1: hide from the praise beam', 0, markers, frames);
+}
+
+// 5-1: weave in and out of the praise beam's edge, so the chair can be seen warming up and lighting up.
+function orbitPraiseLitScene(): PreviewScene {
+    const game = createGame();
+    game.startStage(5);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    const markers = [{ at: 0, label: 'Stage 5 start' }];
+    const first = STAGE_FIVE.praise.beams[0];
+    let previous = '';
+    for (let i = 0; i < 2400; i++) {
+        const state = game.getSnapshot(), orbit = state.orbit, p = state.player;
+        if (!orbit || orbit.z > first.to) break;
+        // Hold off to the side of the light, then drift in past its edge and back out every few seconds.
+        const slice = praiseSection(first, orbit.age + .4, p.y);
+        const target = slice.centre + slice.halfWidth + 90 + 130 * Math.cos(orbit.age * .9);
+        const keys: Input[] = [];
+        if (target - p.x > p.vx * .65 + 6) keys.push('right');
+        if (target - p.x < p.vx * .65 - 6) keys.push('left');
+        if (orbit.speed < STAGE_FIVE.cruise) keys.push('spray');
+        game.setInput(...keys);
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+        const stage = orbit.z < first.from - 300 ? 'approach' : 'in and out of the light';
+        if (stage !== previous) { markers.push({ at: i / 60, label: stage }); previous = stage; }
+    }
+    return recordedScene('orbit-praise-lit', 'Orbit · The chair lights up near and inside a praise beam', 0, markers, frames);
 }
 
 // The duct's timed sneezes: the first big one that spits out the overtime junk, and the later gusts.
@@ -952,6 +1000,8 @@ export const previewScenes: readonly PreviewScene[] = [
     skyToOrbit(),
     orbitRoute(),
     orbitPraiseScene(),
+    orbitPraiseLitScene(),
     orbitEndingScene(),
+    orbitEndingScene(true),
     officeTyping(),
 ];

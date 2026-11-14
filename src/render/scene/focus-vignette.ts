@@ -30,7 +30,7 @@ export function focusVignetteAlpha(focus: number, noticeLife: number | null, tim
 // is cut out of the path so the renderer only rasterises the border band.
 export function focusVignette(ctx: RenderCtx) {
     const state = ctx.state;
-    if (ctx.mode !== 'play' || state.stage === 5) return;
+    if (ctx.mode !== 'play') return;
     const { alpha, inner } = focusVignetteAlpha(state.focus, state.focusNotice?.life ?? null, ctx.t);
     if (alpha < .01) return;
     const w = ctx.W / ctx.scale, h = ctx.H / ctx.scale;

@@ -7,7 +7,7 @@ import { skyDeparture } from './sky-departure';
 import { basinCloudSeeds, orbitCloudBank, orbitSky, type CloudBankOptions } from './orbit-atmosphere';
 import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGlow } from './orbit-watch';
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
-import { orbitPraise, orbitPraiseOnChair } from './orbit-praise';
+import { orbitPraise, orbitPraiseOnChair, praiseChairGlow, praiseLitChair, praiseWarmth } from './orbit-praise';
 import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
 import { earthHorizonAhead, orbitEarth, type EarthCamera } from './orbit-earth';
 import { endingChairLights, endingFade, endingLaptopScreen, endingLaptopText, endingNebula, endingSignal, type OrbitEndingState } from './orbit-ending';
@@ -87,7 +87,9 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // the edge of the play area, so a chair pressing past it slides out toward the side of the screen.
     const lag = .3, follow = .82;
     const within = (v: number, bound: number) => Math.max(-bound, Math.min(bound, v));
-    const cam = { x: follow * within(p.x - p.vx * lag, C.bounds.x), y: follow * within(p.y - p.vy * lag, C.bounds.y) };
+    // Once parked, it moves right onto the chair, so the close-ups find it wherever in the shadow it stopped.
+    const cam = { x: mix(follow * within(p.x - p.vx * lag, C.bounds.x), p.x, ending.centre),
+        y: mix(follow * within(p.y - p.vy * lag, C.bounds.y), p.y, ending.centre) };
     // How hard the chair is pressing out past the edge, and which way.
     const over = { x: Math.max(0, Math.abs(p.x) - C.bounds.x + 40) * Math.sign(p.x), y: Math.max(0, Math.abs(p.y) - C.bounds.y + 40) * Math.sign(p.y) };
     const edge = smooth(Math.hypot(over.x, over.y) / (C.steer.overshoot + 40)) * (1 - wide);
@@ -128,6 +130,10 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // The chair sits a little below the camera's line of sight, banking and pitching with its own motion. Its
     // drop scales with the camera distance, so a pulled-back camera shows it smaller at the same height.
     const sink = (38 * turn + 72 * blend) * distance / (480 + 210 * blend) / (1 - .08 * fast * (1 - wide)) * (1 - focus);
+    // The chair is drawn `sink` below its place on the route (its body centre sits 15 above its origin, like the
+    // route's eye line). The satellites, their beams and the shelter clouds are placed in the chair's drawn frame,
+    // so what the light touches on screen is what the course says it touches.
+    const praisePoint = (x: number, y: number, z: number) => point(x, y - sink, z);
     // In the ending the chair itself swivels round and leans back, as if to take in space; its rider turns with it,
     // eyes still on the laptop.
     const bank = mix(p.a * .65, 0, wide), pitch = mix(Math.max(-.2, Math.min(.2, p.vy / 900)), 0, wide) + .32 * ending.recline;
@@ -153,13 +159,13 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     if (turn >= ORBIT_WATCH.glintsFrom) orbitCloudGlints(ctx, clouds);
     // The watchers stay out of the flat side view and turn up one by one as the view turns into 3D.
     if (turn >= ORBIT_WATCH.beacon.appear) orbitBeacon(ctx, view, point);
-    const lamps = turn > 0 ? orbitWatchers(view, point, travel, ctx.t, turn) : [];
+    const lamps = turn > 0 ? orbitWatchers(view, point, travel, ctx.t, turn, praisePoint) : [];
     // Scenery beyond the chair first; the chair and whatever passes beside it are painted after the clouds.
     const split = { depth: chair.depth([0, pivot, 0]) + 90, part: 'far' as const };
     ctx.commands.push(...view.commands(split));
     orbitWatchGlow(ctx, view, lamps);
     // The praise beams fade in with their satellites while the camera turns.
-    orbitPraise(ctx, view, point, since, travel, smooth((turn - ORBIT_WATCH.satelliteAppear) / .3));
+    orbitPraise(ctx, view, praisePoint, since, travel, smooth((turn - ORBIT_WATCH.satelliteAppear) / .3));
     if (cloudsShown) orbitCloudBank(ctx, view, travel, true, { ...options, alpha: clouds });
     orbitShadow(ctx, { ...heights, shadow: heights.shadow * (1 - wide) }, earthHorizonAhead(travel, earth, heading));
     skyDeparture(ctx, shot.departure);
@@ -168,9 +174,13 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // and the plume stretches out behind it.
     const air = orbitSlipstream(ctx, chair, rush * (.35 + .65 * push) * (1 - wide));
     ctx.commands.push(...air.behind);
-    endingChair(chair, shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest);
+    // The light the chair is catching shows on the chair itself: warming as it nears a beam, glowing inside one.
+    const light = since >= 0 && wide <= 0 ? praiseWarmth(since, p, travel) : { warmth: 0, side: 1, axis: 'x' as const };
+    const pulse = Math.sin(ctx.t * 9) * .5 + .5;
+    endingChair(praiseLitChair(chair, light.warmth >= 1 ? .62 + .18 * pulse : light.warmth * .7), shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest);
     endingLaptopScreen(chair, ending);
     orbitEdgePuffs(chair, edge, over, ctx.t);
+    praiseChairGlow(ctx, chair, light, pulse);
     ctx.commands.push(...view.commands({ ...split, part: 'near' }));
     ctx.commands.push(...air.over);
     endingLaptopText(ctx, chair, ending);

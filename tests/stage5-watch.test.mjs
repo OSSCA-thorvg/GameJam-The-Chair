@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { FIVE, createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, revealChairOrbit, revealGlideStart, revealTravel, STAGE_FOUR, attendanceBubble } = await loadSource(`
+const { FIVE, createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, orbitWatchers, createSkyProjection, revealChairOrbit, revealGlideStart, revealTravel, STAGE_FOUR, attendanceBubble } = await loadSource(`
     export { createGame } from './src/game/game';
     export { STAGE_FIVE as FIVE } from './src/game/stages/orbit/data';
     export { createRenderCtx } from './src/render/context';
     export { drawOrbit } from './src/render/scene/orbit';
-    export { cctvLamp, ORBIT_WATCH } from './src/render/scene/orbit-watch';
+    export { cctvLamp, ORBIT_WATCH, orbitWatchers } from './src/render/scene/orbit-watch';
+    export { createSkyProjection } from './src/render/scene/sky-projection';
     export { revealChairOrbit, revealGlideStart, revealTravel } from './src/render/scene/sky-camera';
     export { STAGE_FOUR } from './src/game/stages/sky/data';
     export { attendanceBubble } from './src/render/scene/attendance-bubble';
@@ -151,4 +152,17 @@ test('5-1: a shelter cloud hides the chair, and outside the beam nothing happens
     const coasting = orbitStep(before, chairAt(0), [], 1 / 120).orbit.speed;
     assert.ok(Math.abs(pushed - (STAGE_FIVE.cruise + STAGE_FIVE.thrust / 120)) < 1e-9);
     assert.ok(Math.abs(coasting - STAGE_FIVE.cruise * Math.exp(-STAGE_FIVE.coast / 120)) < 1e-6);
+});
+
+test('nothing the chair has flown past is drawn between it and the camera', () => {
+    const view = createSkyProjection(1000, 510, 1, { distance: 690 });
+    const watchers = travel => orbitWatchers(view, (x, y, z) => [z - travel, 15 + y, x], travel, 0, 1);
+    const satellite = FIVE.praise.beams[4].satellite;
+    assert.equal(watchers(satellite.z - 5).length - watchers(satellite.z + 5).length, 1, 'a satellite is gone once the chair passes under it');
+    const route = ORBIT_WATCH.route[3];
+    const lensAt = travel => watchers(travel).filter(lamp => Math.abs(lamp.at[0] - (route.z - travel)) < 60)
+        .map(lamp => Math.hypot(lamp.at[1] - 15, lamp.at[2]));
+    // A camera the chair is about to pass swerves out of the way first.
+    assert.ok(Math.min(...lensAt(route.z - 20)) > Math.min(...lensAt(route.z - 400)) + 400, 'swerves aside before the chair reaches it');
+    assert.equal(lensAt(route.z + 20).length, 0, 'and is gone after');
 });
