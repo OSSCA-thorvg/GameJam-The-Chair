@@ -12,8 +12,11 @@ export function player(ctx: RenderCtx) {
     ctx.oy = p.y + ART.player.offsetY;
     ctx.rotation = p.a + (ctx.mode === 'play' && ctx.t < 1 && !state.lessons.moved ? Math.sin(ctx.t * 12) * .025 : 0);
     ctx.localScale = ART.player.scale;
+    chairAfterimages(ctx);
     playerChair(ctx);
     chairStains(ctx, ctx.soaks);
+    // Bucked by the backrest in the opening, the worker leaves the seat for a moment (and keeps typing).
+    if (ctx.chairPose.riderPop) shiftLocal(ctx, ctx.chairPose.riderPop / 8, -ctx.chairPose.riderPop);
     riderBody(ctx);
     const lift = focusTension(ctx).lift;
     const base = { ox: ctx.ox, oy: ctx.oy };
@@ -26,6 +29,25 @@ export function player(ctx: RenderCtx) {
     riderWorry(ctx);
     ctx.ox = ctx.oy = ctx.rotation = 0;
     ctx.localScale = 1;
+}
+
+/**
+ * Shaking with rage in the opening, the chair leaves faint copies of itself either side, a little apart and
+ * flickering on its own beat, so it reads as trembling without any lines drawn round it.
+ */
+function chairAfterimages(ctx: RenderCtx) {
+    const shiver = ctx.chairPose.shiver;
+    if (shiver <= 0) return;
+    const base = { ox: ctx.ox, oy: ctx.oy };
+    ctx.beginLayer({ key: 'opening-chair-afterimage', opacity: .5 * shiver });
+    for (const side of [-1, 1]) {
+        const reach = side * (8 + 6 * Math.abs(Math.sin(ctx.t * 37 + side)));
+        shiftLocal(ctx, reach, Math.sin(ctx.t * 51 + side) * 1.5);
+        playerChair(ctx);
+        ctx.ox = base.ox;
+        ctx.oy = base.oy;
+    }
+    ctx.endLayer();
 }
 
 // How far the rider is from snapping out of work: drifting eyes below 60%, sweat and stalled typing below 40%,

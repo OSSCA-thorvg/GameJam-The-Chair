@@ -80,6 +80,25 @@ test('the worker talks first, the chair hopes, then the chair snaps while the wo
     assert.ok(openingFrame(B.rage + 1).rage > .9);
 });
 
+test('7 pm the chair creaks harder and faster; 8 pm the backrest bucks the worker', () => {
+    const at = t => openingFrame(t);
+    for (const t of [B.creak + 1, B.kick + .5]) assert.equal(at(t).shot, 'office');
+    assert.equal(at(B.spinToEight + .5).shot, 'clock');
+    assert.equal(at(B.creak + 1).zoom, at(B.rage).zoom, 'both are close-ups on the chair');
+    // The loudest creak late in the hour is harder than the loudest early on.
+    const loudest = (from, to) => Math.max(...Array.from({ length: 120 }, (_, i) => at(from + (to - from) * i / 120).creakPulse));
+    assert.ok(loudest(B.creakClose - 1.2, B.creakClose - .2) > loudest(B.creak, B.creak + 1) + .2);
+    assert.equal(at(B.kick - .1).chair.backrest, 0);
+    assert.ok(at(B.kick + .17).chair.backrest < -.4, 'the backrest leans back');
+    assert.ok(Math.max(...Array.from({ length: 60 }, (_, i) => at(B.kick + .3 + i / 100).chair.riderPop)) > 20, 'the worker is thrown up');
+    assert.ok(at(B.kick + 2).bubbles.some(b => b.message === 'opening.riderTyping'), 'and he types on');
+    const kick = render(B.kick + .5);
+    assert.ok(!kick.commands.some(c => c.layer?.key === 'opening-anger'), 'no anger marks at 8 pm');
+    for (const t of [B.riderOvertime + 1, B.chairHope + 1, B.creak + 1, B.kick + .5]) {
+        assert.ok(!render(t).commands.some(c => !c.text && c.stroke && typeof c.c === 'string' && c.c.startsWith('#f4f1ea')), `no keycap hints in the film at ${t}`);
+    }
+});
+
 test('the cutscene state only poses the chair; the core snapshot is untouched', () => {
     const game = createGame();
     game.reset();
@@ -111,6 +130,9 @@ test('office frames light the scene and draw the bubbles with their words', () =
     assert.ok(wide.labels.some(l => l.text === translate('opening.riderOvertime', 'ko').replace('…', '...')));
 
     const hope = render(B.chairHope + 2.5);
+    const chairBubble = hope.commands.find(c => c.layer?.key === 'opening-bubble-0' && !c.text && c.stroke);
+    const riderBubble = wide.commands.find(c => c.layer?.key === 'opening-bubble-0' && !c.text && c.stroke);
+    assert.notEqual(chairBubble.c, riderBubble.c, 'the chair and the worker have bubbles of their own colour');
     assert.ok(hope.commands.some(c => c.layer?.key.endsWith('-glow') && c.layer.blur > 0), 'the chair bubble glows');
     assert.ok(hope.commands.some(c => c.layer?.key === 'opening-notes'));
     assert.ok(hope.commands.some(c => c.layer?.key.endsWith('-note')), 'the chair hums a drawn note in place of the missing ♪ glyph');
@@ -118,7 +140,10 @@ test('office frames light the scene and draw the bubbles with their words', () =
 
     const rage = render(B.riderTyping + 1);
     assert.ok(rage.commands.some(c => c.layer?.key === 'opening-laptop' && c.layer.blend === 'add'));
-    assert.ok(rage.commands.some(c => c.layer?.key === 'opening-rage' && c.stroke?.dash));
+    assert.ok(!rage.commands.some(c => c.layer?.key === 'opening-rage' && c.stroke?.dash), 'no dashed lines round the chair');
+    assert.ok(rage.commands.some(c => c.layer?.key === 'opening-chair-afterimage'), 'the chair trembles in afterimages');
+    assert.ok(rage.commands.some(c => c.layer?.key === 'opening-floor-dust'), 'dust jumps off the floor');
+    assert.ok(!render(B.chairHope + 1).commands.some(c => c.layer?.key === 'opening-chair-afterimage'), 'calm before 9 pm');
     const words = rage.labels.map(l => l.text).join(' ');
     assert.ok(words.includes(translate('opening.riderTyping', 'ko')));
     assert.ok(words.includes('극악무도'), 'the rage line has typed out');

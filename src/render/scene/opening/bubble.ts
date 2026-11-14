@@ -7,11 +7,14 @@ import { circle, PathBuilder, push } from './shapes';
 
 // Speech bubbles. The shapes are ThorVG paths in screen space (so they keep their size while the camera
 // zooms); the words are ThorVG Text with a typewriter reveal.
-//   solid: the office worker, opaque white.
-//   glass: the chair daydreaming, translucent white with a soft blurred glow.
-//   rage:  the chair snapping, a translucent spiky burst that shakes.
+//   solid: the office worker, opaque white with a pointed tail.
+//   glass: the chair daydreaming, in the chair's own slate with light words and a trail of bubbles for a tail.
+//   rage:  the chair snapping, a slate spiky burst with a red edge that shakes.
+// The chair's bubbles share its slate colour, so who is talking reads at a glance.
 
 const TYPE_SPEED = 28;
+/** The chair's own colour, shared by everything it says. */
+const CHAIR_SLATE = '#4c5368';
 
 export function wrap(measure: (line: string) => number, text: string, maxWidth: number) {
     const lines: string[] = [];
@@ -92,6 +95,14 @@ function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, 
         path = new PathBuilder(...scaled[0]);
         for (const point of scaled.slice(1)) path.line(...point);
         path.line(...scaled[0]);
+    } else if (bubble.speaker === 'chair') {
+        // No tail on the body; small bubbles trail down to the chair instead.
+        const r = Math.min(h / 2, size * .9), s = (px: number, py: number) => grow([px, py]);
+        path = new PathBuilder(...s(x + r, y))
+            .line(...s(x + w - r, y)).corner(...s(x + w, y), ...s(x + w, y + r))
+            .line(...s(x + w, y + h - r)).corner(...s(x + w, y + h), ...s(x + w - r, y + h))
+            .line(...s(x + r, y + h)).corner(...s(x, y + h), ...s(x, y + h - r))
+            .line(...s(x, y + r)).corner(...s(x, y), ...s(x + r, y));
     } else {
         const r = Math.min(h / 2, size * .9);
         const tw = Math.min(size * .8, w / 4);
@@ -110,23 +121,31 @@ function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, 
     const key = `opening-bubble-${index}`;
     if (bubble.style === 'glass') {
         ctx.beginLayer({ key: `${key}-glow`, blur: size * .45, opacity: .55 * bubble.alpha });
-        push(ctx, path.command('#ffffff'));
+        push(ctx, path.command('#9aa3c0'));
         ctx.endLayer();
     }
-    const fill = bubble.style === 'solid' ? '#ffffff' : bubble.style === 'glass' ? '#ffffffa8' : '#fffaf2c4';
+    const fill = bubble.style === 'solid' ? '#ffffff' : bubble.style === 'glass' ? CHAIR_SLATE + 'eb' : CHAIR_SLATE + 'e6';
     const stroke = bubble.style === 'solid'
         ? { width: 2, color: '#2b2f3a' }
         : bubble.style === 'glass'
-            ? { width: 1.5, color: '#ffffffe6' }
-            : { width: 3, color: '#c8443a' };
+            ? { width: 2, color: '#9aa3c0' }
+            : { width: 3, color: '#e0473a' };
     ctx.beginLayer({ key, opacity: bubble.alpha });
     push(ctx, path.command(fill, { ...stroke, cap: 'round' }));
+    if (bubble.style === 'glass') {
+        // The trail of bubbles from the body down to the chair, shrinking as it goes.
+        const from: Vector = [ctx.clamp(tip[0], x + w * .3, x + w * .9), y + h];
+        for (const [k, radius] of [[.3, .42], [.62, .28], [.88, .17]]) {
+            const [bx, by] = grow([from[0] + (tip[0] - from[0]) * k, from[1] + (tip[1] - from[1]) * k]);
+            push(ctx, circle(bx, by, size * radius * scale).command(fill, { width: 2, color: stroke.color, cap: 'round' }));
+        }
+    }
     ctx.endLayer();
 
     // Words, revealed a few characters at a time.
     let shown = Math.floor(bubble.age * TYPE_SPEED * (bubble.style === 'rage' ? 2 : 1));
     const [cx, cy] = grow([x + w / 2, y + h / 2]);
-    const ink = bubble.style === 'rage' ? '#a8322a' : '#2b2f3a';
+    const ink = bubble.style === 'solid' ? '#2b2f3a' : bubble.style === 'rage' ? '#ffd2c6' : '#f4f1ea';
     lines.forEach((line, i) => {
         const visible = [...line].slice(0, Math.max(0, shown)).join('');
         shown -= [...line].length + 1;

@@ -108,6 +108,7 @@ function setup(
         ctx.practiceBurst = effects.practiceBurst;
         ctx.saveFlash = effects.saveFlash;
         ctx.keysTried = effects.keysTried;
+        ctx.meetingVisit = effects.meetingVisit;
         ctx.personalBox = effects.personalBox;
 
         const baseWidth = VIEW_WIDTH;

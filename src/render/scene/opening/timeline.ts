@@ -14,15 +14,23 @@ export const OPENING_BEATS = {
     chairHope: 8.3,
     irisClose: 11.3,
     sevenPm: 12.0,
-    spinToEight: 12.5,
-    eightPm: 13.7,
-    spinToNine: 14.1,
-    ninePm: 15.3,
-    darkChair: 16.0,
-    rage: 16.5,
-    riderTyping: 17.4,
-    handoff: 19.6,
-    end: 21.0,
+    // 7 pm: back on the chair, creaking louder and louder while the worker types.
+    creakOpen: 12.5,
+    creak: 13.1,
+    creakClose: 15.9,
+    spinToEight: 16.6,
+    eightPm: 17.8,
+    // 8 pm: the backrest bucks the worker up twice, and he types on.
+    kickOpen: 18.3,
+    kick: 18.9,
+    kickClose: 21.6,
+    spinToNine: 22.3,
+    ninePm: 23.5,
+    darkChair: 24.2,
+    rage: 24.7,
+    riderTyping: 25.6,
+    handoff: 27.8,
+    end: 29.2,
 } as const;
 
 export const OPENING_DURATION = OPENING_BEATS.end;
@@ -64,11 +72,18 @@ export type OpeningFrame = {
     lighting: number;
     /** Screen shake in screen px. */
     shake: [number, number];
-    /** Chair pose relative to the gameplay pose. */
-    chair: { lift: number; tilt: number };
+    /**
+     * Chair pose relative to the gameplay pose. `backrest`: the backrest's own swing in radians (negative leans it
+     * back); `riderPop`: how far the worker is bucked up off the seat; `shiver`: how hard the chair shakes with
+     * rage (0..1), drawn as afterimages beside it.
+     */
+    chair: { lift: number; tilt: number; backrest: number; riderPop: number; shiver: number };
     /** Chair humming (0..1) and rage (0..1) intensities for the decorations around it. */
     hum: number;
     rage: number;
+    /** 7 pm creaking: how strained the chair is (0..1, growing) and the current creak (0..1, pulsing). */
+    creak: number;
+    creakPulse: number;
     bubbles: OpeningBubble[];
     done: boolean;
 };
@@ -114,26 +129,69 @@ function clockSpin(t: number) {
     return Math.max(spinOf(B.spinToEight, B.eightPm), spinOf(B.spinToNine, B.ninePm));
 }
 
+/** Office visits between clock shots: [the iris starts opening, fully open, starts closing, back on the clock]. */
+const VISITS = [
+    [OPENING_BEATS.irisOpen, OPENING_BEATS.riderOvertime, OPENING_BEATS.irisClose, OPENING_BEATS.sevenPm],
+    [OPENING_BEATS.creakOpen, OPENING_BEATS.creak, OPENING_BEATS.creakClose, OPENING_BEATS.spinToEight],
+    [OPENING_BEATS.kickOpen, OPENING_BEATS.kick, OPENING_BEATS.kickClose, OPENING_BEATS.spinToNine],
+] as const;
+
+/** Whether the office is on screen, and the clock cover diving into it or closing over it. */
+function cover(t: number) {
+    if (t >= OPENING_BEATS.darkChair) return { office: true, iris: null, clockScale: 1 };
+    for (const [open, opened, close, closed] of VISITS) {
+        if (t < open || t >= closed) continue;
+        if (t < opened) {
+            const u = easeIn(progress(t, open, opened));
+            return { office: true, iris: u, clockScale: 1 + 2.4 * u };
+        }
+        if (t >= close) {
+            const u = 1 - easeOut(progress(t, close, closed));
+            return { office: true, iris: u, clockScale: 1 + 2.4 * u };
+        }
+        return { office: true, iris: null, clockScale: 1 };
+    }
+    return { office: false, iris: 0, clockScale: 1 };
+}
+
+/**
+ * 7 pm: a creak every so often, coming quicker and harder as the hour drags on. `strain` grows 0..1 across the
+ * shot; `pulse` is the creak sounding now.
+ */
+function creaking(t: number) {
+    const B = OPENING_BEATS;
+    if (t < B.creak || t >= B.creakClose) return { strain: 0, pulse: 0 };
+    const strain = progress(t, B.creak, B.creakClose - .4);
+    // The gap between creaks shrinks from .9 s to .35 s; integrate it so the beat speeds up smoothly.
+    const age = t - B.creak, span = B.creakClose - B.creak;
+    const beats = age / .9 + (age * age / (2 * span)) * (1 / .35 - 1 / .9);
+    const phase = beats % 1;
+    const pulse = phase < .3 ? Math.sin(phase / .3 * Math.PI) * (.35 + .65 * strain) : 0;
+    return { strain, pulse };
+}
+
+/** One buck of the backrest at `at`: leans back, snaps forward and throws the worker up, then wobbles still. */
+function buck(t: number, at: number) {
+    const age = t - at;
+    if (age < 0 || age > 1) return { backrest: 0, riderPop: 0, jolt: 0 };
+    const back = .18, snap = .26;
+    const backrest = age < back ? -.5 * smooth(age / back)
+        : age < snap ? lerp(-.5, .28, smooth((age - back) / (snap - back)))
+            : .28 * Math.cos((age - snap) * 22) * Math.exp(-(age - snap) * 6);
+    const air = (age - snap) / .45;
+    const riderPop = air > 0 && air < 1 ? 34 * Math.sin(air * Math.PI) : 0;
+    return { backrest, riderPop, jolt: pop(t, at + snap, .4) };
+}
+
 export function openingFrame(time: number): OpeningFrame {
     const B = OPENING_BEATS;
     const t = clamp(time, 0, B.end);
-    const office = (t >= B.irisOpen && t < B.sevenPm) || t >= B.darkChair;
-    let iris: number | null = office ? null : 0;
-    let clockScale = 1;
-    if (t >= B.irisOpen && t < B.riderOvertime) {
-        const u = progress(t, B.irisOpen, B.riderOvertime);
-        iris = easeIn(u);
-        clockScale = 1 + 2.4 * easeIn(u);
-    } else if (t >= B.irisClose && t < B.sevenPm) {
-        const u = progress(t, B.irisClose, B.sevenPm);
-        iris = 1 - easeOut(u);
-        clockScale = 1 + 2.4 * (1 - easeOut(u));
-    }
+    const { office, iris, clockScale } = cover(t);
 
-    // Wide office → chair close-up, held until the clock returns; the dark chair shot starts close.
+    // Wide office → chair close-up for the 6 pm hope; every later office shot starts close on the chair.
     let closeness = 0;
     if (t >= B.pushIn && t < B.sevenPm) closeness = smooth(progress(t, B.pushIn, B.chairHope));
-    if (t >= B.darkChair) closeness = 1;
+    if (t >= B.creakOpen) closeness = 1;
     const zoom = lerp(WIDE_ZOOM, CLOSE_ZOOM, closeness);
     const handoff = smooth(progress(t, B.handoff, B.end));
 
@@ -142,18 +200,23 @@ export function openingFrame(time: number): OpeningFrame {
     const hum = t >= B.chairHope && t < B.irisClose ? Math.min(1, (t - B.chairHope) / .3, (B.irisClose - t) / .3) : 0;
     const rageRise = progress(t, B.rage, B.rage + .25);
     const rage = t >= B.rage ? rageRise * (1 - progress(t, B.handoff - .2, B.handoff + .5)) : 0;
-    const lift = -Math.abs(Math.sin(t * 7.5)) * 4 * hum - Math.abs(Math.sin(t * 41)) * 3 * rage;
-    const tilt = Math.sin(t * 3.75) * .05 * hum + Math.sin(t * 53) * .045 * rage;
+    const { strain: creak, pulse: creakPulse } = creaking(t);
+    const kick = [buck(t, B.kick), buck(t, B.kick + 1.15)].reduce((a, b) => Math.abs(b.backrest) + b.riderPop > Math.abs(a.backrest) + a.riderPop ? b : a);
+    // 6 pm: bouncy hops and a side-to-side dance, with a jump for joy as the hope begins.
+    const joy = -Math.abs(Math.sin(t * 6)) * 13 * hum - pop(t, B.chairHope, .6) * 10;
+    const lift = joy - Math.abs(Math.sin(t * 41)) * 3 * rage - creakPulse * 2 - Math.abs(kick.jolt) * 6;
+    const tilt = Math.sin(t * 3) * .13 * hum + Math.sin(t * 53) * .045 * rage + Math.sin(t * 70) * .05 * creakPulse;
     const punch = pop(t, B.rage, .45) * 7;
     const shake: [number, number] = [
-        Math.sin(t * 61) * 3 * rage + punch,
-        Math.cos(t * 47) * 2 * rage,
+        Math.sin(t * 61) * 3 * rage + punch + Math.sin(t * 83) * 1.6 * creakPulse,
+        Math.cos(t * 47) * 2 * rage + kick.jolt * 6,
     ];
 
     const bubbles = [
         bubble(t, 'rider', 'solid', 'opening.riderOvertime', B.riderOvertime, B.riderSales - .15),
         bubble(t, 'rider', 'solid', 'opening.riderSales', B.riderSales, B.pushIn + .2),
         bubble(t, 'chair', 'glass', 'opening.chairHope', B.chairHope + .1, B.irisClose),
+        bubble(t, 'rider', 'solid', 'opening.riderTyping', B.kick + 1.8, B.kickClose),
         bubble(t, 'chair', 'rage', 'opening.chairRage', B.rage, B.handoff + .3),
         bubble(t, 'rider', 'solid', 'opening.riderTyping', B.riderTyping, B.handoff + .3),
     ].filter((item): item is OpeningBubble => item !== null);
@@ -172,9 +235,11 @@ export function openingFrame(time: number): OpeningFrame {
         dusk,
         lighting: 1 - handoff,
         shake,
-        chair: { lift, tilt },
+        chair: { lift, tilt, backrest: kick.backrest, riderPop: kick.riderPop, shiver: rage },
         hum,
         rage,
+        creak,
+        creakPulse,
         bubbles,
         done: time >= B.end,
     };

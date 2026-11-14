@@ -1,12 +1,17 @@
 import { translate, type Message } from '../../i18n';
 import { STAGE_TWO } from '../../game/stages/building/data';
 import type { RenderCtx } from '../context';
-import { bubble } from './building-bubble';
+import { bubble, chairBubble } from './building-bubble';
 import { head, officeAppearance, worker } from './building-workers';
 import { player } from './player';
 import { entryDoorOpening, doorPanel } from './meeting-doors';
 
-const COMPLAINTS = ['building.chairStuck', 'building.chairMinutes', 'building.chairOvertime'] satisfies Message[];
+/** What the three chairs grumble, one set per visit to the room; after the last set it starts over. */
+const COMPLAINTS = [
+    ['building.chairStuck', 'building.chairMinutes', 'building.chairOvertime'],
+    ['building.chairBackAgain', 'building.chairInMinutes', 'building.chairHeavier'],
+    ['building.chairEndToday', 'building.chairAsleep', 'building.chairOvertimePay'],
+] satisfies Message[][];
 
 export function meetingChairPose(time: number, index: number) {
     const phase = (time + index * 1.1) % 6;
@@ -79,7 +84,7 @@ function meetingBoard(ctx: RenderCtx, x: number) {
     for (let i = 0; i < 3; i++) ctx.rod(x - 180, 177 + i * 16, x + 65 - i * 32, 177 + i * 16, 3, '#9ba9a0');
     // The end of the meeting moves forward while the agenda stays exactly the same.
     const extensions = Math.floor(ctx.state.corridor.room.kind === 'meeting' ? ctx.state.corridor.room.age / 2 : 0);
-    ctx.label(`18:${String(30 + extensions * 5).padStart(2, '0')}`, x + 170, 208, 19, '#a76e56');
+    ctx.label(`21:${String(30 + extensions * 5).padStart(2, '0')}`, x + 170, 208, 19, '#a76e56');
 }
 
 function meetingSpeech(ctx: RenderCtx, age: number) {
@@ -98,8 +103,8 @@ function chairSpeech(ctx: RenderCtx, index: number) {
     const x = STAGE_TWO.meeting + 30 + index * 90;
     const seat = 420 - 48 + meetingChairPose(ctx.t, index).sink;
     const y = 460;
-    ctx.polygon([[x-42,y-22],[x-31,y-22],[x-24,seat-22]], ctx.tint('#e2e8df', .85));
-    bubble(ctx, COMPLAINTS[index], x, y, 250, false, .85, false);
+    const visit = COMPLAINTS[Math.max(0, ctx.meetingVisit - 1) % COMPLAINTS.length];
+    chairBubble(ctx, visit[index], x, y, 250, { alpha: .85, to: [x - 24, seat - 22], dots: 7 });
 }
 
 export function meetingRoom(ctx: RenderCtx) {

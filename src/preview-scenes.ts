@@ -846,7 +846,8 @@ function ductSneeze(gust = false): PreviewScene {
     };
 }
 
-function meetingVisit(): PreviewScene {
+/** The meeting room on the `visit`-th walk in; the chairs grumble a different set of lines each time. */
+function meetingVisit(visit = 1): PreviewScene {
     const game = createGame({ seed: 8 });
     game.startStage(2);
     const saved = JSON.parse(game.serialize());
@@ -856,12 +857,19 @@ function meetingVisit(): PreviewScene {
     game.restore(JSON.stringify(saved));
     game.interact();
     const effects = createEffects();
+    // Earlier visits, as the effects would have counted them walking in and out of the room.
+    for (let i = 1; i < visit; i++) {
+        const state = game.getSnapshot();
+        for (const kind of ['entering', 'corridor']) effects.observe({ ...state, corridor: { ...state.corridor, room: { kind } } });
+    }
     const frames = [capture(game, effects)];
     for (let i = 0; i < Math.ceil((6 + STAGE_TWO.meetingEntry) / FRAME_TIME); i++) {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
-    return recordedScene('building-meeting', 'Building · The chairs cannot clock out', STAGE_TWO.meeting,
+    const id = visit === 1 ? 'building-meeting' : `building-meeting-${visit}`;
+    const label = visit === 1 ? 'Building · The chairs cannot clock out' : `Building · The chairs cannot clock out (visit ${visit})`;
+    return recordedScene(id, label, STAGE_TWO.meeting,
         [{ at: 0, label: 'Closed door' }, { at: .25, label: 'Opening and entering' },
             { at: STAGE_TWO.meetingEntry, label: 'Inside the meeting' }, { at: 2.4, label: 'Chairs sigh under their people' },
             { at: 2.75, label: 'End time extended' }, { at: 5.45, label: 'Return the borrowed chair' }], frames);
@@ -947,7 +955,8 @@ function opening(): PreviewScene {
         markers: [
             { at: B.sixPm, label: '6 pm' }, { at: B.irisOpen, label: 'Into the office' }, { at: B.riderOvertime, label: 'Worker: overtime' },
             { at: B.riderSales, label: 'Worker: sales' }, { at: B.pushIn, label: 'Push in' }, { at: B.chairHope, label: 'Chair hopes' },
-            { at: B.irisClose, label: 'Back to clock' }, { at: B.spinToEight, label: '7 → 8 pm' }, { at: B.spinToNine, label: '8 → 9 pm' },
+            { at: B.irisClose, label: 'Back to clock' }, { at: B.creak, label: '7 pm: creaking' }, { at: B.spinToEight, label: '7 → 8 pm' },
+            { at: B.kick, label: '8 pm: backrest kick' }, { at: B.spinToNine, label: '8 → 9 pm' },
             { at: B.darkChair, label: 'Dark chair' }, { at: B.rage, label: 'Rage' }, { at: B.handoff, label: 'Handoff' },
         ],
         sample: time => ({ state: openingState(base, openingFrame(time)), effects }),
@@ -1006,6 +1015,8 @@ export const previewScenes: readonly PreviewScene[] = [
     orbitEndingScene(),
     orbitEndingScene(true),
     meetingVisit(),
+    meetingVisit(2),
+    meetingVisit(3),
     chairDispatch(),
     officeTyping(),
 ];

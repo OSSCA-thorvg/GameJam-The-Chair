@@ -43,53 +43,95 @@ export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame) {
     }
 }
 
-/** Musical notes while the chair hums, an anger mark and quivering lines while it rages. */
+/** The chair's moods around it: 6 pm joy, 7 pm creaks and the 9 pm rage. */
 export function drawChairMood(ctx: RenderCtx, frame: OpeningFrame) {
+    if (frame.hum > 0) drawJoy(ctx, frame);
+    if (frame.creakPulse > 0) drawCreak(ctx, frame);
+    if (frame.rage > 0) drawRage(ctx, frame);
+}
+
+/** One musical note at the current origin, `big` doubling it into a pair of beamed quavers. */
+function note(ctx: RenderCtx, color: string, big: boolean) {
+    ctx.ellipse(0, 0, 3.6, 2.7, color);
+    ctx.rod(3, -1, 3, -13, 1.4, color);
+    if (!big) ctx.polygon([[3, -13], [9, -9], [9, -6], [3, -9]], color);
+    else {
+        ctx.ellipse(9, 2, 3.6, 2.7, color);
+        ctx.rod(12, 1, 12, -11, 1.4, color);
+        ctx.rod(3, -13, 12, -11, 2.2, color);
+    }
+}
+
+/** 6 pm: notes bubbling up on both sides and sparkles twinkling round the dancing chair. */
+function drawJoy(ctx: RenderCtx, frame: OpeningFrame) {
+    const p = ctx.p, t = frame.t;
+    ctx.beginLayer({ key: 'opening-notes', opacity: frame.hum });
+    for (let i = 0; i < 5; i++) {
+        const u = (t * .9 + i / 5) % 1, side = i % 2 ? 1 : -1;
+        ctx.ox = p.x + 10 + side * (45 + u * 30) + Math.sin(u * 7 + i) * 6;
+        ctx.oy = p.y - 70 - u * 60;
+        ctx.rotation = Math.sin(t * 5 + i) * .3;
+        ctx.localScale = 1.2 + .3 * Math.sin(u * Math.PI);
+        note(ctx, ctx.tint('#fff3d6', Math.sin(u * Math.PI)), i % 3 === 1);
+    }
+    ctx.ox = ctx.oy = ctx.rotation = 0;
+    ctx.localScale = 1;
+    for (let i = 0; i < 6; i++) {
+        const angle = i / 6 * Math.PI * 2 + t * .8, twinkle = Math.max(0, Math.sin(t * 7 + i * 2.1));
+        const cx = p.x + 8 + Math.cos(angle) * 78, cy = p.y - 40 + Math.sin(angle) * 58, r = 2 + 5 * twinkle;
+        ctx.polygon([[cx, cy - r * 1.6], [cx + r * .35, cy - r * .35], [cx + r * 1.6, cy], [cx + r * .35, cy + r * .35],
+            [cx, cy + r * 1.6], [cx - r * .35, cy + r * .35], [cx - r * 1.6, cy], [cx - r * .35, cy - r * .35]], ctx.tint('#ffe9a8', twinkle));
+    }
+    ctx.endLayer();
+}
+
+/** 7 pm: strain lines flicking out from the wheels and the backrest joint with every creak, longer as it worsens. */
+function drawCreak(ctx: RenderCtx, frame: OpeningFrame) {
+    const p = ctx.p, reach = 8 + 14 * frame.creak;
+    ctx.beginLayer({ key: 'opening-creak', opacity: frame.creakPulse });
+    for (const [x, y, aim] of [[-30, 26, Math.PI * .85], [30, 26, Math.PI * .15], [-30, -16, Math.PI * 1.1]]) {
+        for (const spread of [-.45, 0, .45]) {
+            const a = aim + spread, from = 9;
+            ctx.rod(p.x + x + Math.cos(a) * from, p.y + y + Math.sin(a) * from,
+                p.x + x + Math.cos(a) * (from + reach), p.y + y + Math.sin(a) * (from + reach), 2, '#fff3d6');
+        }
+    }
+    ctx.endLayer();
+}
+
+function angerMark(ctx: RenderCtx, x: number, y: number, scale: number) {
+    ctx.ox = x;
+    ctx.oy = y;
+    ctx.localScale = scale;
+    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        ctx.strokePath([sx * 2, sy * 8], [[sx * 3, sy * 3, sx * 3, sy * 3, sx * 8, sy * 2]], { width: 2.8, color: '#e0473a', cap: 'round' });
+    }
+    ctx.ox = ctx.oy = 0;
+    ctx.localScale = 1;
+}
+
+/**
+ * 9 pm: the chair trembles (its afterimages are drawn with it) under a throbbing anger mark by the backrest,
+ * and dust jumps off the floor round its wheels.
+ */
+function drawRage(ctx: RenderCtx, frame: OpeningFrame) {
+    const p = ctx.p, t = frame.t;
+    ctx.beginLayer({ key: 'opening-rage', opacity: frame.rage });
+    angerMark(ctx, p.x - 50, p.y - 8, 1 + .22 * Math.max(0, Math.sin(t * 13)));
+    ctx.endLayer();
+    floorDust(ctx, t, frame.rage);
+}
+
+/** Dust hopping off the floor round the trembling wheels. */
+function floorDust(ctx: RenderCtx, t: number, shake: number) {
     const p = ctx.p;
-    const t = frame.t;
-    if (frame.hum > 0) {
-        ctx.beginLayer({ key: 'opening-notes', opacity: frame.hum });
-        for (let i = 0; i < 3; i++) {
-            const u = (t * .75 + i / 3) % 1;
-            const fade = Math.sin(u * Math.PI);
-            ctx.ox = p.x - 40 - u * 34 + Math.sin(u * 7 + i) * 6;
-            ctx.oy = p.y - 66 - u * 52;
-            ctx.rotation = Math.sin(t * 4 + i) * .2;
-            const color = ctx.tint('#fff3d6', fade);
-            ctx.ellipse(0, 0, 3.6, 2.7, color);
-            ctx.rod(3, -1, 3, -13, 1.4, color);
-            if (i !== 1) ctx.polygon([[3, -13], [9, -9], [9, -6], [3, -9]], color);
-            else {
-                ctx.ellipse(9, 2, 3.6, 2.7, color);
-                ctx.rod(12, 1, 12, -11, 1.4, color);
-                ctx.rod(3, -13, 12, -11, 2.2, color);
-            }
-        }
-        ctx.ox = ctx.oy = ctx.rotation = 0;
-        ctx.endLayer();
+    ctx.beginLayer({ key: 'opening-floor-dust', opacity: shake });
+    for (let i = 0; i < 6; i++) {
+        const u = (t * 2.6 + i / 6) % 1, side = i % 2 ? 1 : -1;
+        const x = p.x + side * (22 + i * 4 + u * 10), y = ctx.F + 2 - Math.sin(u * Math.PI) * (8 + i % 3 * 4);
+        ctx.ellipse(x, y, 1.8, 1.4, ctx.tint('#c9c3b4', 1 - u));
     }
-    if (frame.rage > 0) {
-        const rage = frame.rage;
-        ctx.beginLayer({ key: 'opening-rage', opacity: rage });
-        // Quivering dashed arcs on both sides of the chair.
-        for (const side of [-1, 1]) {
-            for (let k = 0; k < 2; k++) {
-                const x = p.x + (side < 0 ? -50 - k * 9 : 70 + k * 9);
-                ctx.strokePath([x, p.y - 72], [[x + side * 12, p.y - 50, x + side * 12, p.y - 10, x, p.y + 12]],
-                    { width: 2.2 - k * .6, color: '#ffe2c0', cap: 'round', dash: [5, 6], dashOffset: t * 40 * (k ? -1 : 1) });
-            }
-        }
-        // Anger mark beside the backrest, throbbing.
-        ctx.ox = p.x - 50;
-        ctx.oy = p.y - 8;
-        ctx.localScale = 1 + .22 * Math.max(0, Math.sin(t * 13));
-        for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-            ctx.strokePath([sx * 2, sy * 8], [[sx * 3, sy * 3, sx * 3, sy * 3, sx * 8, sy * 2]], { width: 2.8, color: '#e0473a', cap: 'round' });
-        }
-        ctx.ox = ctx.oy = 0;
-        ctx.localScale = 1;
-        ctx.endLayer();
-    }
+    ctx.endLayer();
 }
 
 /** Hard white flash when the rage line hits. */

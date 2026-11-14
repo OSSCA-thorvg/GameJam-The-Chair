@@ -28,7 +28,7 @@ function keyRow(ctx: RenderCtx, faces: KeyFace[], centre: Vector, age: number) {
  * it is pressed, or once its lesson is done anyway.
  */
 export function officeControlHints(ctx: RenderCtx) {
-    if (ctx.mode !== 'play' || ctx.cam > 340) return;
+    if (ctx.mode !== 'play' || ctx.cutscene || ctx.cam > 340) return;
     const { lessons } = ctx.state, tried = ctx.keysTried, p = ctx.p, age = ctx.t;
     const arrows = (['left', 'right'] as const).filter(key => !tried[key]);
     if (!lessons.moved && arrows.length) keyRow(ctx, arrows, ctx.screenPoint(p.x, p.y - 95), age);

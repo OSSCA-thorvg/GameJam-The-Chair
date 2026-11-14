@@ -6,7 +6,7 @@ import type { Vector } from '../types';
 import { chairLift, expressFloor } from './express';
 import { practiceFloor, checkpointFlag } from './decor';
 import { player } from './player';
-import { bubble } from './building-bubble';
+import { bubble, chairBubble } from './building-bubble';
 import { officeAppearance, typingWorker } from './building-workers';
 import { meetingDoor, meetingRoom } from './meeting-room';
 import { dispatchRoom } from './dispatch-room';
@@ -175,7 +175,7 @@ function chairSpeech(ctx: RenderCtx) {
         const x = Math.max(ctx.cam + 180, Math.min(ctx.cam + ctx.VW - 180, speaker.x));
         const fade = departure.kind === 'descending' ? Math.min(1, (CHAIR_DEPARTURE.descending - departure.age) * 4) : 1;
         if (speaker.x > ctx.cam - 60 && speaker.x < ctx.cam + ctx.VW + 60) {
-            bubble(ctx, line.text, x, 242 + Math.min(drop, 38), 350, false, Math.min(1, localAge * 6) * fade, 'right');
+            chairBubble(ctx, line.text, x, 242 + Math.min(drop, 38), 350, { alpha: Math.min(1, localAge * 6) * fade, side: 1 });
         }
     } else if (departure.kind === 'none' && c.chat.kind !== 'waiting') {
         const interval = CHAIR_CHAT_INTERVAL[c.chat.kind];
@@ -186,7 +186,7 @@ function chairSpeech(ctx: RenderCtx) {
             const left = ctx.cam + 180, right = ctx.cam + ctx.VW - 180;
             const x = Math.max(left, Math.min(right, speaker.x));
             if (c.chat.kind === 'dismissed' || (speaker.x > ctx.cam - 60 && speaker.x < ctx.cam + ctx.VW + 60)) {
-                bubble(ctx, line.text, x, 242, 350, c.chat.kind === 'wary' || c.chat.kind === 'rush', Math.min(1, localAge * 6, (interval - .35 - localAge) * 5));
+                chairBubble(ctx, line.text, x, 242, 350, { spiky: c.chat.kind === 'wary' || c.chat.kind === 'rush', alpha: Math.min(1, localAge * 6, (interval - .35 - localAge) * 5) });
             }
         }
     }
@@ -199,7 +199,7 @@ function chairActors(ctx: RenderCtx) {
     const drop = departure.kind === 'descending' ? Math.min(1, departure.age / CHAIR_DEPARTURE.descending) * 165 : 0;
     state.furniture.forEach((item, i) => {
         if (!item.released) return;
-        if (departure.kind === 'none' && item.cheer > 0 && c.chat.kind === 'waiting') bubble(ctx, (['cheer.freedom', 'cheer.clockingOut', 'cheer.overtime'] satisfies Message[])[i], item.x, 285 - (i % 2) * 60, 185, true, Math.min(1, item.cheer * 2));
+        if (departure.kind === 'none' && item.cheer > 0 && c.chat.kind === 'waiting') chairBubble(ctx, (['cheer.freedom', 'cheer.clockingOut', 'cheer.overtime'] satisfies Message[])[i], item.x, 285 - (i % 2) * 60, 185, { spiky: true, alpha: Math.min(1, item.cheer * 2) });
     });
     state.furniture.forEach((item, i) => {
         if (!item.released || departure.kind === 'gone' || departure.kind === 'lost') return;
