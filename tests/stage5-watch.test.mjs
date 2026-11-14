@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { FIVE, createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, orbitWatchers, createSkyProjection, revealChairOrbit, revealGlideStart, revealTravel, STAGE_FOUR, attendanceBubble } = await loadSource(`
+const { FIVE, createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, orbitWatchers, createSkyProjection, revealChairOrbit, revealGlideStart, revealTravel, STAGE_FOUR, attendanceBubble, orbitReaction } = await loadSource(`
     export { createGame } from './src/game/game';
     export { STAGE_FIVE as FIVE } from './src/game/stages/orbit/data';
     export { createRenderCtx } from './src/render/context';
@@ -12,6 +12,7 @@ const { FIVE, createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, orb
     export { revealChairOrbit, revealGlideStart, revealTravel } from './src/render/scene/sky-camera';
     export { STAGE_FOUR } from './src/game/stages/sky/data';
     export { attendanceBubble } from './src/render/scene/attendance-bubble';
+    export { orbitReaction } from './src/render/scene/orbit-reaction';
 `);
 
 /** The words drawn as ThorVG Text in a frame. */
@@ -100,6 +101,21 @@ test('the attendance bubble says its line in both languages', () => {
         Object.assign(ctx, { locale, W: 1000, H: 510 });
         attendanceBubble(ctx, [500, 200], 2);
         assert.deepEqual(words(ctx.commands), [line]);
+    }
+});
+
+test('the rider answers each camera beat in one curved ThorVG bubble', () => {
+    const ctx = createRenderCtx({});
+    Object.assign(ctx, { W: 1000, H: 510 });
+    orbitReaction(ctx, [500, 250], 1.5, false);
+    assert.equal(ctx.commands.length, 0);
+    for (const [age, mark] of [[0.5, '!'], [1.5, '✓'], [2.5, '...']]) {
+        ctx.commands.length = 0;
+        orbitReaction(ctx, [500, 250], age, true);
+        const shape = ctx.commands.filter(command => command.layer?.key === 'orbit-reaction' && !command.text);
+        assert.equal(shape.length, 1, 'the tail and body share one outline');
+        assert.ok(shape[0].curves.length >= 6, 'the outline is curved');
+        assert.equal(ctx.commands.find(command => command.text)?.text.content, mark);
     }
 });
 
