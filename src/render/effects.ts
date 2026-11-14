@@ -5,6 +5,7 @@ import { WATER_GRAVITY, bucketMouth, pourFlow, pourLaunch } from './bucket';
 import { createPersonalBoxObserver } from './personal-box-motion';
 import { createKeyHints } from './key-hints';
 import { createMeetingVisits } from './meeting-visits';
+import { createDeathShot } from './death-shot';
 export { EFFECT_STYLE } from './art';
 export type Speck = {
     x: number;
@@ -60,6 +61,7 @@ export function createEffects() {
     const personalBox = createPersonalBoxObserver();
     const keyHints = createKeyHints();
     const meetingVisits = createMeetingVisits();
+    const deathShot = createDeathShot();
     const F = LEVEL.floor;
     let specks: Speck[] = [];
     let waterDrops: WaterDrop[] = [];
@@ -242,15 +244,16 @@ export function createEffects() {
         }
     }
 
-    function observe(input: Parameters<typeof personalBox.observe>[0] & Partial<Parameters<typeof meetingVisits.observe>[0]>) {
+    function observe(input: Parameters<typeof personalBox.observe>[0] & Partial<Parameters<typeof meetingVisits.observe>[0]> & { mode?: string }) {
         keyHints.observe(input);
         meetingVisits.observe(input);
+        deathShot.observe(input);
         personalBox.observe(input);
     }
 
-    return { receive, observe, restorePersonalBox: personalBox.restore, pressKey: keyHints.press,
+    return { receive, observe, restorePersonalBox: personalBox.restore, pressKey: keyHints.press, advance: deathShot.advance,
         snapshot: () => ({ specks, waterDrops, waterRipples, waterPour, waterPuddle, paperFace, glare, copierFlash, practiceBurst, saveFlash,
-            personalBox: personalBox.snapshot(), keysTried: keyHints.snapshot(), meetingVisit: meetingVisits.snapshot() }),
+            personalBox: personalBox.snapshot(), keysTried: keyHints.snapshot(), meetingVisit: meetingVisits.snapshot(), deathShot: deathShot.snapshot() }),
     };
 }
 export type EffectsState = ReturnType<ReturnType<typeof createEffects>['snapshot']>;
