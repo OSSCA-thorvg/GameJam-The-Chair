@@ -175,7 +175,6 @@ const messages = {
 
     'building.meetingFirst':     { en: 'Clock-out review', ko: '퇴근 시각 협의회' },
     'building.meetingSecond':    { en: 'Adjournment review', ko: '회의 종료 심의회' },
-    'building.chairSpeaker':     { en: 'Overtime chair', ko: '야근 의자' },
     'building.meetingExtended':  { en: 'Meeting extended',                                               ko: '회의 연장' },
     'building.meetingPrompt':    { en: 'Meeting: when should this meeting end?',                         ko: '회의 종료 시각을 정하기 위한 회의' },
     'building.chairCreak':       { en: 'Creeeak…', ko: '끼이이익…' },

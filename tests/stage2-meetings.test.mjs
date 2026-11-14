@@ -3,11 +3,12 @@ import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 import { corridorPolicy } from './support/harness.mjs';
 
-const { createGame, STAGE_TWO, previewScenes, meetingChairPose } = await loadSource(`
+const { createGame, STAGE_TWO, previewScenes, meetingChairPose, entryDoorOpening, dispatchDoorOpening } = await loadSource(`
     export { createGame } from './src/game/game';
     export { STAGE_TWO } from './src/game/stages/building/data';
     export { previewScenes } from './src/preview-scenes';
     export { meetingChairPose } from './src/render/scene/meeting-room';
+    export { entryDoorOpening, dispatchDoorOpening } from './src/render/scene/meeting-doors';
 `);
 const dt = 1 / 120;
 function travel(game, stop) {
@@ -29,7 +30,7 @@ test('the visitable meeting never dispatches chairs and stays before the first s
     const entry = travel(game, s => s.canEnterMeeting);
     assert.equal(entry.corridor.dispatchStarted, false);
     game.interact();
-    for (let i = 0; i < 720; i++) game.step(dt);
+    for (let i = 0; i <= Math.ceil((6 + STAGE_TWO.meetingEntry) / dt); i++) game.step(dt);
     const exit = game.getSnapshot();
     assert.equal(exit.corridor.room.kind, 'corridor');
     assert.equal(exit.corridor.meetingVisited, true);
@@ -68,7 +69,7 @@ test('meeting and dispatch previews support deterministic forward and backward s
     const room = previewScenes.find(scene => scene.id === 'building-meeting');
     assert.equal(room.sample(1.8).state.corridor.room.kind, 'meeting');
     assert.equal(room.sample(5).state.furniture.some(chair => chair.released), false);
-    assert.equal(room.sample(6).state.corridor.room.kind, 'corridor');
+    assert.equal(room.sample(room.duration).state.corridor.room.kind, 'corridor');
     const dispatch = previewScenes.find(scene => scene.id === 'building-dispatch');
     assert.equal(dispatch.sample(0).state.furniture.some(chair => chair.released), false);
     assert.ok(dispatch.sample(4.8).state.furniture.every(chair => chair.released));
@@ -77,4 +78,48 @@ test('meeting and dispatch previews support deterministic forward and backward s
         assert.ok(pose.sink >= 0 && pose.sink <= 3, 'only the seat sinks; human limb lengths stay fixed');
         assert.ok(pose.lean >= 0 && pose.lean <= 4);
     }
+});
+
+
+test('enter opens the first door before entering and restores halfway through the approach', () => {
+    const game = createGame({ seed: 8 });
+    game.startStage(2);
+    const before = travel(game, state => state.canEnterMeeting);
+    assert.equal(entryDoorOpening(before.corridor.room), 0);
+    game.interact();
+    assert.equal(game.getSnapshot().corridor.room.kind, 'entering');
+    assert.equal(game.getSnapshot().player.x, before.player.x, 'enter does not teleport through the closed door');
+    for (let i = 0; i < 25; i++) game.step(dt);
+    const approach = game.getSnapshot();
+    const aperture = entryDoorOpening(approach.corridor.room);
+    assert.ok(aperture > 0 && aperture < 1);
+    assert.ok(approach.player.x > before.player.x && approach.player.x < STAGE_TWO.meeting);
+    const restored = createGame();
+    restored.restore(game.serialize());
+    for (let i = 0; i < 120; i++) { game.step(dt); restored.step(dt); }
+    assert.deepEqual(restored.getSnapshot(), game.getSnapshot());
+    assert.equal(game.getSnapshot().corridor.room.kind, 'meeting');
+});
+
+test('the dispatch door starts shut and closes only after every chair clears its frame', () => {
+    const game = createGame({ seed: 8 });
+    game.startStage(2);
+    const policy = corridorPolicy(false);
+    let sawOpening = false, sawOpen = false, sawClosing = false, closed = false;
+    for (let i = 0; i < 5000; i++) {
+        const s = game.getSnapshot(), c = s.corridor;
+        const clear = s.furniture.every(chair => chair.released && chair.x - chair.width / 2 > STAGE_TWO.dispatch.room + 78);
+        const aperture = dispatchDoorOpening(c.dispatchAge, c.dispatchStarted, clear);
+        if (!c.dispatchStarted) assert.equal(aperture, 0);
+        else if (c.dispatchAge < .5 && aperture > 0) sawOpening = true;
+        if (aperture === 1) sawOpen = true;
+        if (c.dispatchAge > 3.4 && aperture > 0 && aperture < 1) {
+            sawClosing = true;
+            assert.ok(clear, 'the last chair is completely outside before the door closes');
+        }
+        if (c.dispatchAge > 4.2) { assert.equal(aperture, 0); closed = true; break; }
+        policy(s, game);
+        game.step(dt);
+    }
+    assert.ok(sawOpening && sawOpen && sawClosing && closed);
 });

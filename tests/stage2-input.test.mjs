@@ -33,11 +33,11 @@ test('stage2 uses Down for meeting entry and exit, keeps Up for jumping, and sup
         game.clearInput();
         assert.ok(game.getSnapshot().canEnterMeeting);
         assert.ok(key('ArrowDown').defaultPrevented);
-        assert.equal(game.getSnapshot().corridor.room.kind, 'meeting');
+        assert.equal(game.getSnapshot().corridor.room.kind, 'entering');
         key('ArrowDown', true);
-        assert.equal(game.getSnapshot().corridor.room.kind, 'meeting', 'holding Down must not immediately leave');
+        assert.equal(game.getSnapshot().corridor.room.kind, 'entering', 'holding Down must not immediately leave');
         game.pause(); key('ArrowDown');
-        assert.equal(game.getSnapshot().corridor.room.kind, 'meeting', 'pause ignores meeting input');
+        assert.equal(game.getSnapshot().corridor.room.kind, 'entering', 'pause ignores meeting input');
         game.pause(); key('ArrowDown');
         assert.equal(game.getSnapshot().corridor.room.kind, 'corridor');
         for (let i = 0; i < 12; i++) game.step(1 / 120);
@@ -49,7 +49,7 @@ test('stage2 uses Down for meeting entry and exit, keeps Up for jumping, and sup
         for (let i = 0; i < 180; i++) game.step(1 / 120);
         assert.ok(game.getSnapshot().canEnterMeeting);
         downButton.dispatchEvent(new Event('pointerdown', { cancelable: true }));
-        assert.equal(game.getSnapshot().corridor.room.kind, 'meeting');
+        assert.equal(game.getSnapshot().corridor.room.kind, 'entering');
         downButton.dispatchEvent(new Event('pointerdown', { cancelable: true }));
         assert.equal(game.getSnapshot().corridor.room.kind, 'corridor');
         await Promise.resolve();

@@ -900,18 +900,19 @@ function meetingVisit(): PreviewScene {
     const saved = JSON.parse(game.serialize());
     saved.mode = 'play';
     saved.ground = true;
-    saved.p.x = STAGE_TWO.meeting;
+    saved.p.x = STAGE_TWO.meeting - 110;
     game.restore(JSON.stringify(saved));
     game.interact();
     const effects = createEffects();
     const frames = [capture(game, effects)];
-    for (let i = 0; i < 360; i++) {
+    for (let i = 0; i < Math.ceil((6 + STAGE_TWO.meetingEntry) / FRAME_TIME); i++) {
         stepGame(game, effects);
         frames.push(capture(game, effects));
     }
     return recordedScene('building-meeting', 'Building · The chairs cannot clock out', STAGE_TWO.meeting,
-        [{ at: 0, label: 'Five more minutes' }, { at: 1.8, label: 'Chairs sigh under their people' },
-            { at: 2.1, label: 'End time extended' }, { at: 4.8, label: 'Return the borrowed chair' }], frames);
+        [{ at: 0, label: 'Closed door' }, { at: .25, label: 'Opening and entering' },
+            { at: STAGE_TWO.meetingEntry, label: 'Inside the meeting' }, { at: 2.4, label: 'Chairs sigh under their people' },
+            { at: 2.75, label: 'End time extended' }, { at: 5.45, label: 'Return the borrowed chair' }], frames);
 }
 
 function chairDispatch(): PreviewScene {
@@ -932,7 +933,7 @@ function chairDispatch(): PreviewScene {
     }
     return recordedScene('building-dispatch', 'Building · Chairs leave after the first flag', STAGE_TWO.dispatch.room,
         [{ at: 0, label: 'First checkpoint' }, { at: 1.1, label: 'Room opens' },
-            { at: 2.9, label: 'Last chair leaves' }, { at: 4.8, label: 'Join the convoy' }], frames);
+            { at: 2.9, label: 'Last chair leaves' }, { at: 4.1, label: 'Door closes' }, { at: 4.8, label: 'Join the convoy' }], frames);
 }
 
 function officeTyping(): PreviewScene {

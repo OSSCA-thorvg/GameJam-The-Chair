@@ -40,11 +40,13 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // The convoy starts later and the first flag retries before dispatch; both building routes intentionally change.
 // Other stages only gain the inactive corridor layout in their final snapshot. After restoring that layout
 // and its checkpoint-one defaults, all four non-building fingerprints match the previous values exactly.
+// The optional meeting now opens its door and rolls the rider inside before the six-second scene.
+// Only the two building routes change; chair dispatch and express rules are unchanged.
 const EXPECTED = {
     'office route': 'dc1474e26415d233',
     'office crash': '0652e26f05b10b96',
-    'building exit': 'c71d545ba2ec469e',
-    'building lift': 'b85a0be0e6e94832',
+    'building exit': '9448ff990d402979',
+    'building lift': 'd6f8f06b1a38a8f7',
     'rooftop to sky': 'fb2bca14e9ce5a4f',
     'rooftop duct': '08d279f29312f7c7',
 };

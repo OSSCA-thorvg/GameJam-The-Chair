@@ -55,9 +55,20 @@ export function meetingExit(returnX: number, pushed: boolean): Player {
 }
 
 // The optional meeting plays out by itself, then shoves the rider back into the corridor.
-export function meetingStep(room: { kind: 'meeting'; age: number; returnX: number }, dt: number): { room: Corridor['room']; x: number; leave: boolean } {
+export function meetingStep(room: Exclude<Corridor['room'], { kind: 'corridor' }>, dt: number): { room: Corridor['room']; x: number; leave: boolean } {
+    if (room.kind === 'entering') return meetingEntryStep(room, dt);
     const age = room.age + dt;
     return { room: { ...room, age }, x: STAGE_TWO.meeting - 100 + Math.max(0, age - 4.6) * 100, leave: age >= 6 };
+}
+
+function meetingEntryStep(room: Exclude<Corridor['room'], { kind: 'corridor' }>, dt: number) {
+    const age = room.age + dt;
+    if (age >= STAGE_TWO.meetingEntry) {
+        return { room: { ...room, kind: 'meeting', age: age - STAGE_TWO.meetingEntry } satisfies Corridor['room'], x: MEETING_SEAT.x, leave: false };
+    }
+    const progress = Math.max(0, (age / STAGE_TWO.meetingEntry - .2) / .8);
+    const glide = progress * progress * (3 - 2 * progress);
+    return { room: { ...room, age }, x: room.returnX + (STAGE_TWO.meeting - room.returnX) * glide, leave: false };
 }
 
 export type CorridorInput = { corridor: Readonly<Corridor>; furniture: readonly Readonly<Furniture>[]; p: Readonly<Player>; ground: boolean; steering: boolean; rng: number; length: number };

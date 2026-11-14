@@ -4,6 +4,7 @@ import type { RenderCtx } from '../context';
 import { bubble } from './building-bubble';
 import { head, officeAppearance, worker } from './building-workers';
 import { player } from './player';
+import { entryDoorOpening, doorPanel } from './meeting-doors';
 
 const COMPLAINTS = ['building.chairStuck', 'building.chairMinutes', 'building.chairOvertime'] satisfies Message[];
 
@@ -58,19 +59,16 @@ export function meetingDoor(ctx: RenderCtx) {
     const x = STAGE_TWO.meeting;
     ctx.rect(x - 78, 180, 156, 240, '#687f80');
     ctx.rect(x - 70, 187, 140, 232, '#91a29b');
-    occupiedChair(ctx, x + 14, 420, 0);
-    ctx.rect(x - 68, 190, 37, 225, '#d8d6bf');
-    ctx.rod(x - 40, 294, x - 40, 319, 3, '#687f80');
+    const opening = entryDoorOpening(ctx.state.corridor.room);
+    if (opening > 0) occupiedChair(ctx, x + 14, 420, 0);
+    doorPanel(ctx, x, opening);
     ctx.rect(x - 70, 147, 140, 25, '#e1d7bb');
     ctx.label(translate('building.meetingFirst', ctx.locale), x, 164, 13, '#4f6268');
     if (ctx.state.canEnterMeeting) {
         ctx.rect(x - 57, 216, 114, 32, '#263a45e8');
         ctx.label(translate('interact.enter', ctx.locale), x, 238, 16, '#f6eddc');
     }
-    const phase = ctx.t % 6;
-    if (Math.abs(ctx.p.x - x) < 220 && phase > 1 && phase < 3) {
-        bubble(ctx, 'building.chairCreak', x + 12, 275, 145, false, .65);
-    }
+
 }
 
 function meetingBoard(ctx: RenderCtx, x: number) {
@@ -87,7 +85,9 @@ function meetingBoard(ctx: RenderCtx, x: number) {
 function meetingSpeech(ctx: RenderCtx, age: number) {
     if (age < 1.2 || age >= 4.6) {
         const line = age < 1.2 ? 'building.meetingFiveMore' : 'building.meetingLoanReturn';
-        bubble(ctx, line, STAGE_TWO.meeting - 5, 78, 360, false, .85);
+        const speakerX = STAGE_TWO.meeting - 156 + Math.max(0, age - 4.6) * 100;
+        bubble(ctx, line, speakerX + 90, 268, 290, false, .85, false);
+        ctx.polygon([[speakerX+5,290],[speakerX+18,290],[speakerX+3,303]], ctx.tint('#e2e8df', .85));
     } else {
         const index = speakingChair(age);
         if (index !== null) chairSpeech(ctx, index);
@@ -100,7 +100,6 @@ function chairSpeech(ctx: RenderCtx, index: number) {
     const y = 460;
     ctx.polygon([[x-42,y-22],[x-31,y-22],[x-24,seat-22]], ctx.tint('#e2e8df', .85));
     bubble(ctx, COMPLAINTS[index], x, y, 250, false, .85, false);
-    ctx.label(translate('building.chairSpeaker', ctx.locale), x, y - 11, 10, '#617975');
 }
 
 export function meetingRoom(ctx: RenderCtx) {

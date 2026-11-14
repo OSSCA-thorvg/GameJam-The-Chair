@@ -20,6 +20,7 @@ const EXPRESS = {
 export const STAGE_TWO = deepFreeze({
     length: 4850, goal: 4600,
     meeting: 620,
+    meetingEntry: .65,
     dispatch: { room: 1840, trigger: 1320 },
     lift: 4050,
     offices: [220, 1030, 1560, 2370],
@@ -128,7 +129,7 @@ export const CHAIR_DEPARTURE_LINES = deepFreeze({
 } satisfies Record<ChairDepartureReason, readonly { readonly speaker: 0 | 1 | 2; readonly text: Message }[]>);
 export type Corridor = {
     appearanceSeed: number;
-    room: { kind: 'corridor' } | { kind: 'meeting'; age: number; returnX: number };
+    room: { kind: 'corridor' } | { kind: 'entering' | 'meeting'; age: number; returnX: number };
     meetingVisited: boolean;
     dispatchAge: number;
     dispatchStarted: boolean;
