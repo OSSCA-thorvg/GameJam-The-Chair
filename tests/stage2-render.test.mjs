@@ -88,3 +88,25 @@ test('corridor and meeting render finite vector paths in both languages and narr
         }
     }
 });
+
+
+test('the two meeting doors have distinct titles and chair complaints come from below the seats', () => {
+    const game = createGame();
+    game.startStage(2);
+    const base = game.getSnapshot();
+    const hall = render(base, 'ko', 1000).labels.map(label => label.text);
+    assert.ok(hall.includes('퇴근 시각 협의회'));
+    assert.ok(hall.includes('회의 종료 심의회'));
+    for (const [age, complaint] of [[1.8, '사람이 안 일어나...'], [2.8, '다리는 진작 퇴근했어...'], [3.9, '내 위에 야근이 앉아 있어...']]) {
+        const state = { ...base, mode: 'play', time: age,
+            player: { ...base.player, x: 520 },
+            corridor: { ...base.corridor, room: { kind: 'meeting', age, returnX: 620 } },
+        };
+        const labels = render(state, 'ko', 1000).labels;
+        const speech = labels.find(label => label.text === complaint);
+        const speaker = labels.find(label => label.text === '야근 의자');
+        assert.ok(speech && speaker, 'the active chair owns a named complaint');
+        assert.ok(speech.y > 420 && speaker.y > 420, 'chair voices are below the castors, away from human faces');
+        assert.equal(speaker.x, speech.x);
+    }
+});

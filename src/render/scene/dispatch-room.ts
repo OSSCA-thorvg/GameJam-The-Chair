@@ -12,7 +12,7 @@ export function dispatchRoom(ctx: RenderCtx) {
     const opening = Math.min(1, c.dispatchAge / .5);
     ctx.rect(mx - 64 + opening * 112, 190, 126 * (1 - opening), 225, '#d8d6bf');
     ctx.rect(mx - 70, 147, 140, 25, '#e1d7bb');
-    ctx.label(translate('building.meetingExtended', ctx.locale), mx, 164, 13, '#4f6268');
+    ctx.label(translate('building.meetingSecond', ctx.locale), mx, 164, 13, '#4f6268');
     const pushPhase = c.dispatchStarted && c.dispatchAge < 3.5 ? Math.sin(Math.max(0, c.dispatchAge - .35) * Math.PI / .9) ** 2 : 0;
     worker(ctx, mx - 57 + pushPhase * 10, 420, 'facilitator', 1,
         pushPhase > 0 ? [mx - 18 + pushPhase * 9, 344 - pushPhase * 11] : undefined);

@@ -13,29 +13,45 @@ export function meetingChairPose(time: number, index: number) {
     return { sink: sigh * 3, lean: sigh * 4, sigh };
 }
 
-function occupiedChair(ctx: RenderCtx, x: number, floor: number, index: number) {
+function occupiedChair(ctx: RenderCtx, x: number, floor: number, index: number, speaking = false) {
     const pose = meetingChairPose(ctx.t, index);
     const seat = floor - 48 + pose.sink;
+    const hip = seat - 10;
+    const lean = pose.lean + (speaking ? Math.sin(ctx.t * 15) * 1.5 : 0);
     const look = officeAppearance(ctx.state.corridor.appearanceSeed, 4, index);
     ctx.ellipse(x, floor + 2, 30, 3, '#35465624');
     ctx.rod(x, seat + 5, x, floor - 12, 5, '#a5b1b7');
     ctx.rod(x - 23, floor - 8, x + 23, floor - 8, 4, '#81959d');
     for (const side of [-1, 1]) ctx.ellipse(x + side * 21, floor - 5, 5, 5, '#3f4650');
-    ctx.polygon([[x-29,seat-46],[x-15,seat-44],[x-15-pose.lean,seat],[x-28-pose.lean,seat]], '#6f7687');
+    ctx.polygon([[x-29,seat-46],[x-15,seat-44],[x-15-lean,seat],[x-28-lean,seat]], '#6f7687');
     ctx.rect(x - 23, seat, 48, 8, '#6f7687');
-    ctx.polygon([[x-10,seat-1],[x+17,seat-1],[x+27,floor-12],[x+16,floor-12],[x+7,seat+11],[x-10,seat+9]], '#485467');
-    ctx.polygon([[x+16,floor-15],[x+27,floor-15],[x+35,floor-5],[x+15,floor-5]], '#34404c');
-    ctx.polygon([[x-10,seat-40],[x+6,seat-42],[x+16,seat-30],[x+11,seat],[x-12,seat]], look.shirt);
-    ctx.rod(x - 1, seat - 46, x + 1, seat - 37, 9, look.skin);
-    head(ctx, x, seat - 59, 1, look.hair, look.hairstyle, look.glasses, look.skin);
-    ctx.rod(x + 8, seat - 33, x + 20, seat - 20, 8, look.sleeve);
-    ctx.rod(x + 20, seat - 20, x + 36, seat - 27, 5, look.skin);
-    ctx.ellipse(x + 36, seat - 27, 4, 2, look.skin);
+    ctx.polygon([[x-10,hip],[x+22,hip],[x+30,hip+9],[x+37,floor-14],[x+26,floor-14],[x+18,hip+10],[x-10,hip+10]], '#485467');
+    ctx.polygon([[x+26,floor-17],[x+37,floor-17],[x+43,floor-5],[x+25,floor-5]], '#34404c');
+    ctx.polygon([[x-10,hip-40],[x+6,hip-42],[x+16,hip-30],[x+11,hip],[x-12,hip]], look.shirt);
+    ctx.rod(x - 1, hip - 46, x + 1, hip - 37, 9, look.skin);
+    head(ctx, x, hip - 59, 1, look.hair, look.hairstyle, look.glasses, look.skin);
+    ctx.rod(x + 8, hip - 33, x + 20, hip - 20, 8, look.sleeve);
+    ctx.rod(x + 20, hip - 20, x + 36, hip - 27, 5, look.skin);
+    ctx.ellipse(x + 36, hip - 27, 4, 2, look.skin);
+    if (speaking) chairVoice(ctx, x, seat);
     if (pose.sigh > .15) {
         const alpha = pose.sigh * .55;
         ctx.strokePath([x - 37, seat - 27], [[x-49,seat-29,x-39,seat-37,x-49,seat-40]],
             { width: 2, color: ctx.tint('#e2e8df', alpha) });
     }
+}
+
+function chairVoice(ctx: RenderCtx, x: number, seat: number) {
+    const alpha = .55 + Math.sin(ctx.t * 15) * .2;
+    for (const distance of [0, 6]) {
+        ctx.strokePath([x - 35 - distance, seat - 35],
+            [[x-42-distance,seat-31,x-42-distance,seat-23,x-35-distance,seat-19]],
+            { width: 1.5, color: ctx.tint('#e2e8df', alpha) });
+    }
+}
+
+function speakingChair(age: number) {
+    return age >= 1.2 && age < 4.6 ? Math.min(2, Math.floor((age - 1.2) / 1.1)) : null;
 }
 
 export function meetingDoor(ctx: RenderCtx) {
@@ -46,7 +62,7 @@ export function meetingDoor(ctx: RenderCtx) {
     ctx.rect(x - 68, 190, 37, 225, '#d8d6bf');
     ctx.rod(x - 40, 294, x - 40, 319, 3, '#687f80');
     ctx.rect(x - 70, 147, 140, 25, '#e1d7bb');
-    ctx.label(translate('building.meetingExtended', ctx.locale), x, 164, 13, '#4f6268');
+    ctx.label(translate('building.meetingFirst', ctx.locale), x, 164, 13, '#4f6268');
     if (ctx.state.canEnterMeeting) {
         ctx.rect(x - 57, 216, 114, 32, '#263a45e8');
         ctx.label(translate('interact.enter', ctx.locale), x, 238, 16, '#f6eddc');
@@ -73,9 +89,18 @@ function meetingSpeech(ctx: RenderCtx, age: number) {
         const line = age < 1.2 ? 'building.meetingFiveMore' : 'building.meetingLoanReturn';
         bubble(ctx, line, STAGE_TWO.meeting - 5, 78, 360, false, .85);
     } else {
-        const index = Math.min(2, Math.floor((age - 1.2) / 1.1));
-        bubble(ctx, COMPLAINTS[index], STAGE_TWO.meeting + 65 + index * 30, 265, 290, false, .75);
+        const index = speakingChair(age);
+        if (index !== null) chairSpeech(ctx, index);
     }
+}
+
+function chairSpeech(ctx: RenderCtx, index: number) {
+    const x = STAGE_TWO.meeting + 30 + index * 90;
+    const seat = 420 - 48 + meetingChairPose(ctx.t, index).sink;
+    const y = 460;
+    ctx.polygon([[x-42,y-22],[x-31,y-22],[x-24,seat-22]], ctx.tint('#e2e8df', .85));
+    bubble(ctx, COMPLAINTS[index], x, y, 250, false, .85, false);
+    ctx.label(translate('building.chairSpeaker', ctx.locale), x, y - 11, 10, '#617975');
 }
 
 export function meetingRoom(ctx: RenderCtx) {
@@ -83,7 +108,7 @@ export function meetingRoom(ctx: RenderCtx) {
     if (scene.kind !== 'meeting') return;
     const x = STAGE_TWO.meeting;
     meetingBoard(ctx, x);
-    for (let i = 0; i < 3; i++) occupiedChair(ctx, x + 30 + i * 90, 420, i);
+    for (let i = 0; i < 3; i++) occupiedChair(ctx, x + 30 + i * 90, 420, i, speakingChair(scene.age) === i);
     ctx.rect(x + 1, 342, 270, 12, '#ab9274');
     ctx.rod(x + 13, 354, x + 13, 420, 8, '#657b7b');
     ctx.rod(x + 255, 354, x + 255, 420, 8, '#657b7b');
