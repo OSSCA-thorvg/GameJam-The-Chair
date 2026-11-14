@@ -83,13 +83,13 @@ const NO_AIMS: readonly Aim[] = C.satelliteLight.beams.map(() => ({ x: 0, y: 0 }
 const screen = (ctx: RenderCtx): [number, number][] => [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]];
 
 /** The sky: the reveal's plain sky under the basin sky, warm sunlight, and the climb toward space. */
-function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: number; y: number }, earth: EarthCamera, spin: number) {
+function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, earth: EarthCamera, spin: number) {
     const heights = orbitHeights(shot.travel);
     if (heights.air < 1) {
         if (shot.basin < 1) {
             ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H], stops: [[0, ctx.rgba('#678eae')], [1, ctx.rgba('#b7ced1')]] } });
-            inOpacity(ctx, { key: 'orbit-basin-sky', opacity: shot.basin }, () => orbitSky(ctx, cam, spin));
-        } else orbitSky(ctx, cam, spin);
+            inOpacity(ctx, { key: 'orbit-basin-sky', opacity: shot.basin }, () => orbitSky(ctx));
+        } else orbitSky(ctx);
     }
     // Low sunlight over the cloud basin, thinning out as the chair climbs out of the clouds. Plain alpha instead of
     // a screen-blended Scene: over the sky behind the sun, #fff2eb paints what #ffdfb5 screened would
@@ -156,7 +156,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     const earth: EarthCamera = { cx: ctx.W / 2 + framing.offsetX, cy: ctx.H * framing.centerY,
         focal: Math.min(ctx.H * 1.65, ctx.W * .94) * framing.zoom, roll: framing.roll, pitch: lookDown };
     const turned = look + (spin + SHOULDER * focus) * Math.PI / 2;
-    const { heights, horizon } = backdrop(ctx, shot, clouds, cam, earth, turned);
+    const { heights, horizon } = backdrop(ctx, shot, clouds, earth, turned);
     // The world as the camera sees it: ahead of the chair along the way the camera faces, up, and to its right.
     const facing = { cos: Math.cos(look), sin: Math.sin(look) };
     const point = (x: number, y: number, z: number): Point3 => {
