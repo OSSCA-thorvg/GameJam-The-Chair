@@ -1,11 +1,10 @@
 import type { RenderCtx } from '../context';
 import type { Player } from '../../game/types';
-import type { Color, Vector } from '../types';
+import type { Color, DrawCommand, Vector } from '../types';
 import { STAGE_FIVE } from '../../game/stages/orbit/data';
-import { satelliteLightApex, satelliteLightSection, satelliteLightSheltered } from '../../game/stages/orbit/course/decide';
+import { satelliteLightApex, satelliteLightSection } from '../../game/stages/orbit/course/decide';
 
 type Beam = typeof STAGE_FIVE.satelliteLight.beams[number];
-import { CLOUD_TONES, puffCloud } from './cloud-art';
 import type { RoutePoint } from './orbit-watch';
 import type { SkyProjection } from './sky-projection';
 
@@ -36,18 +35,21 @@ const DRAW_AHEAD = 4200;
 type BeamPoint = { a: number; r: number; z: number };
 const lerp = (p: BeamPoint, q: BeamPoint, k: number): BeamPoint => ({ a: p.a + (q.a - p.a) * k, r: p.r + (q.r - p.r) * k, z: p.z + (q.z - p.z) * k });
 
+/** The beam's screen outline at `width` times its real half width (1 is exactly what the course checks). */
+type BeamShape = { hull: Vector[]; from: Vector; to: Vector; start: number };
+
 /**
  * The light is the tent the course checks (`satelliteLightSection`): from the satellite's lens out to the far end of the
  * light. Whatever of it lies nearer the camera than the chair is cut away, so it never hangs between the two:
  * `point` maps into the camera's frame, whose first axis is how far ahead of the chair a point lies.
  */
-function beam(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, age: number, travel: number, strength: number) {
+function beamShape(view: SkyProjection, point: RoutePoint, b: Beam, age: number, travel: number, width: number): BeamShape | null {
     const lens = satelliteLightApex(b);
     const reach = b.axis === 'y' ? -Math.sign(b.satellite.x) * FAR_SIDE : FLOOR;
     const end = satelliteLightSection(b, age, reach);
-    if (Math.min(end.from, lens.z) - travel > DRAW_AHEAD) return;
+    if (Math.min(end.from, lens.z) - travel > DRAW_AHEAD) return null;
     const apex: BeamPoint = { a: lens.across, r: lens.reach, z: lens.z };
-    const corner = (side: number, z: number): BeamPoint => ({ a: end.centre + side * end.halfWidth, r: reach, z });
+    const corner = (side: number, z: number): BeamPoint => ({ a: end.centre + side * end.halfWidth * width, r: reach, z });
     const corners = [corner(-1, end.from), corner(1, end.from), corner(1, end.to), corner(-1, end.to)];
     const edges: [BeamPoint, BeamPoint][] = [...corners.map(c => [apex, c] as [BeamPoint, BeamPoint]), ...corners.map((c, i) => [c, corners[(i + 1) % 4]] as [BeamPoint, BeamPoint])];
     const place = (q: BeamPoint) => b.axis === 'y' ? point(q.r, q.a, q.z) : point(q.a, q.r, q.z);
@@ -56,50 +58,84 @@ function beam(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, a
     const kept = [apex, ...corners].filter(ahead);
     for (const [p, q] of edges) if (ahead(p) !== ahead(q)) kept.push(lerp(p, q, depth(p) / (depth(p) - depth(q))));
     const placed = kept.map(place);
-    if (placed.length < 3 || placed.some(q => view.depth(q) <= 30)) return;
+    if (placed.length < 3 || placed.some(q => view.depth(q) <= 30)) return null;
     const middle: BeamPoint = { a: end.centre, r: reach, z: (end.from + end.to) / 2 };
     const start = ahead(apex) ? 0 : Math.min(.98, depth(apex) / (depth(apex) - depth(middle)));
-    const glow = (k: number) => k < .6 ? .55 + (.24 - .55) * k / .6 : .24 * (1 - (k - .6) / .4);
-    const stop = (k: number): [number, Color] => [(k - start) / (1 - start), ctx.rgba(k < .6 ? '#fff3c4' : '#ffe9a8', glow(k) * strength)];
+    return { hull: hull(placed.map(view.project)), from: view.project(place(lerp(apex, middle, start))), to: view.project(place(middle)), start };
+}
+
+/** Gradient along the beam from its lens: `[at, colour, alpha]` stops, rescaled to the part that is drawn. */
+function along(ctx: RenderCtx, shape: BeamShape, stops: [number, string, number][], strength: number) {
+    const k = (at: number) => (at - shape.start) / (1 - shape.start);
+    const kept = stops.filter(([at]) => at > shape.start);
+    const first = stops.find(([at]) => at >= shape.start) ?? stops[stops.length - 1];
+    return { from: shape.from, to: shape.to, stops: [[0, ctx.rgba(first[1], first[2] * strength)] as [number, Color],
+        ...kept.map(([at, c, a]) => [k(at), ctx.rgba(c, a * strength)] as [number, Color])] };
+}
+
+const WARM = '#fff3c4', PALE = '#ffe9a8';
+
+/**
+ * A blinding beam of light: a warm haze over exactly what the course checks and a white-hot blade down its middle,
+ * both screened so they brighten whatever lies behind. It shimmers slowly, like light too strong to look at.
+ */
+function beamOfLight(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, age: number, travel: number, strength: number) {
+    const haze = beamShape(view, point, b, age, travel, 1);
+    if (!haze) return null;
+    const shimmer = strength * (.9 + .1 * Math.sin(ctx.t * 6 + b.phase * 5));
     // Fading out toward its far end, so the light never reads as a sheet laid over the Earth below.
-    const stops = [stop(start), ...[.6, 1].filter(k => k > start).map(stop)];
-    ctx.commands.push({ v: hull(placed.map(view.project)), c: {
-        from: view.project(place(lerp(apex, middle, start))), to: view.project(place(middle)), stops,
-    }, layer: { key: 'orbit-satellite-light-beam', blend: 'screen' } });
+    const hazeFill = along(ctx, haze, [[0, WARM, .62], [.6, PALE, .28], [1, PALE, 0]], shimmer);
+    const core = beamShape(view, point, b, age, travel, .2);
+    return {
+        haze: { v: haze.hull, c: hazeFill, layer: { key: 'orbit-satellite-light-beam', blend: 'screen' } } as DrawCommand,
+        core: core ? { v: core.hull, c: along(ctx, core, [[0, '#ffffff', .9], [.5, '#fff8e2', .45], [1, WARM, 0]], shimmer),
+            layer: { key: 'orbit-satellite-light-core', blend: 'screen' } } as DrawCommand : null,
+        lens: core ? core.from : haze.from, apexShown: haze.start === 0,
+    };
 }
 
-/** Runs `draw` with the world camera reset, so cloud helpers place shapes in canvas pixels. */
-function inScreenSpace(ctx: RenderCtx, draw: () => void) {
-    const saved = { scale: ctx.scale, cam: ctx.cam, vertical: ctx.vertical, ox: ctx.ox, oy: ctx.oy,
-        rotation: ctx.rotation, localScale: ctx.localScale, mirror: ctx.mirror };
-    Object.assign(ctx, { scale: 1, cam: 0, vertical: 0, ox: 0, oy: 0, rotation: 0, localScale: 1, mirror: null });
-    draw();
-    Object.assign(ctx, saved);
+/** A thin bright spike through `at` at `angle`, `length` long either way: one ray of a lens flare's star. */
+function spike(ctx: RenderCtx, at: Vector, angle: number, length: number, width: number, alpha: number): DrawCommand {
+    const c = Math.cos(angle), s = Math.sin(angle);
+    const tip = (k: number): Vector => [at[0] + c * length * k, at[1] + s * length * k];
+    const side = (k: number): Vector => [at[0] - s * width * k, at[1] + c * width * k];
+    return { v: [tip(-1), side(1), tip(1), side(-1)], c: { from: at, to: tip(1), radius: length,
+        stops: [[0, ctx.rgba('#ffffff', alpha)], [.35, ctx.rgba(WARM, alpha * .45)], [1, ctx.rgba(WARM, 0)]] },
+        layer: { key: 'orbit-satellite-light-flare', blend: 'screen' } };
 }
 
-/** The clouds the chair can duck into, drawn like the basin's bread clouds. They are there from the stage four ending on. */
-export function orbitSatelliteLightShelters(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, travel: number) {
-    inScreenSpace(ctx, () => P.shelters.forEach((s, i) => {
-        // It thins out as the chair reaches it and is gone before it could come between the chair and the camera;
-        // a chair inside it gets the veil instead.
-        const center = point(s.x, s.y - P.shelterSize.y * .4, s.z);
-        const opacity = Math.min(1, center[0] / P.shelterSize.z);
-        if (opacity <= 0 || view.depth(center) <= 30) return;
-        const [x, y] = view.project(center), edge = view.project(point(s.x + P.shelterSize.x * 1.2, s.y, s.z));
-        puffCloud(ctx, x, y, Math.abs(edge[0] - x) / 170, 7300 + i, CLOUD_TONES.bread, { alpha: .72 * opacity, fade: true });
-    }));
+/** The satellite's lens blazing where the light leaves it: a wide glow and a four-pointed star. */
+function lensFlare(ctx: RenderCtx, at: Vector, strength: number) {
+    const breathe = 1 + .12 * Math.sin(ctx.t * 5), radius = 90 * breathe;
+    ctx.commands.push({ v: [[at[0] - radius, at[1] - radius], [at[0] + radius, at[1] - radius], [at[0] + radius, at[1] + radius], [at[0] - radius, at[1] + radius]],
+        c: { from: at, to: [at[0] + radius, at[1]], radius, stops: [[0, ctx.rgba('#ffffff', strength)], [.18, ctx.rgba(WARM, .8 * strength)], [1, ctx.rgba(PALE, 0)]] },
+        layer: { key: 'orbit-satellite-light-flare', blend: 'screen' } });
+    for (const [angle, length] of [[0, 230], [Math.PI / 2, 170], [Math.PI / 4, 80], [-Math.PI / 4, 80]]) {
+        ctx.commands.push(spike(ctx, at, angle + ctx.t * .15, length * breathe, 4, .85 * strength));
+    }
 }
 
-/** Every beam and the shelter clouds, all ahead of the chair. `strength` fades the beams in. */
+/** Every beam ahead of the chair: the hazes first, then the white-hot cores and flares, so each look is one layer. */
 export function orbitSatelliteLight(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, age: number, travel: number, strength = 1) {
-    if (strength > 0) for (const b of P.beams) beam(ctx, view, point, b, age, travel, strength);
-    orbitSatelliteLightShelters(ctx, view, point, travel);
+    if (strength <= 0) return;
+    const beams = P.beams.map(b => beamOfLight(ctx, view, point, b, age, travel, strength)).filter(l => l !== null);
+    for (const l of beams) ctx.commands.push(l.haze);
+    for (const l of beams) if (l.core) ctx.commands.push(l.core);
+    for (const l of beams) if (l.apexShown) lensFlare(ctx, l.lens, strength);
 }
 
-/** Over the chair: a cloud veil while it hides in a shelter cloud. */
-export function orbitSatelliteLightOnChair(ctx: RenderCtx, chairAt: Vector, p: Readonly<Pick<Player, 'x' | 'y'>>, travel: number) {
-    if (!satelliteLightSheltered(p, travel)) return;
-    inScreenSpace(ctx, () => puffCloud(ctx, chairAt[0], chairAt[1] + ctx.H * .16, ctx.W / 1400, 7400, CLOUD_TONES.bread, { alpha: .8, fade: true }));
+/**
+ * Over the whole picture while the chair is in the light: the screen washes out toward white round the chair, as if
+ * the light were shining straight into the camera. It starts as the chair nears a beam and is strongest inside one.
+ */
+export function satelliteGlare(ctx: RenderCtx, chairAt: Vector, warmth: number, pulse: number) {
+    if (warmth <= 0) return;
+    const inside = warmth >= 1, alpha = inside ? .42 + .1 * pulse : .26 * warmth / .4;
+    const radius = Math.hypot(ctx.W, ctx.H) * .75;
+    const screen: Vector[] = [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]];
+    ctx.commands.push({ v: screen, c: { from: chairAt, to: [chairAt[0] + radius, chairAt[1]], radius,
+        stops: [[0, ctx.rgba('#ffffff', alpha)], [.35, ctx.rgba(WARM, alpha * .55)], [1, ctx.rgba(PALE, alpha * .25)]] },
+        layer: { key: 'orbit-satellite-light-glare', blend: 'screen' } });
 }
 
 /** Outside a beam, the chair starts to catch its light this far from the edge. */
@@ -107,12 +143,11 @@ const WARN = 140;
 
 /**
  * How much of a beam's light falls on the chair, by the same slices the course checks: 1 inside one, rising from
- * 0 over `WARN` as it nears an edge, 0 while hidden in a shelter cloud. `side` is which way the light lies along
+ * 0 over `WARN` as it nears an edge. `side` is which way the light lies along
  * the beam's sweep (-1 or 1), and `axis` that sweep.
  */
 export function satelliteLightWarmth(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
     let best = { warmth: 0, side: 1, axis: 'x' as 'x' | 'y' };
-    if (satelliteLightSheltered(p, z)) return best;
     for (const b of P.beams) {
         const along = b.axis === 'y' ? p.y : p.x;
         const slice = satelliteLightSection(b, age, b.axis === 'y' ? p.x : p.y);

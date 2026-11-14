@@ -34,7 +34,7 @@ export const STAGE_FIVE = deepFreeze({
     // Across either way up to `x`, down to `-y`, and up to a higher ceiling `top`.
     bounds: { x: 680, y: 430, top: 750 },
     rings: [] as { x: number; y: number; z: number; radius: number }[],
-    // 5-1 has shelter clouds; 5-2 has gaps between three lights; the last light ends at the Earth's shadow.
+    // 5-1 has one slow beam; 5-2 has gaps between three beams; the last beam ends at the Earth's shadow.
     // Every beam sweeps slower than the chair can steer (210 per second) at every height, so it can always be dodged.
     // The satellites hang well above (or beside) the play area, so the slices stay close in size across it.
     satelliteLight: {
@@ -50,8 +50,6 @@ export const STAGE_FIVE = deepFreeze({
             // 5-3: the last beam in space, cut off by the Earth's shadow.
             { satellite: { x: 300, y: 1450, z: 8600 }, axis: 'x', from: 7200, to: 8700, halfWidth: 250, amplitude: 380, rate: .3, phase: 1 },
         ] as SatelliteLightBeam[],
-        shelters: [{ x: -380, y: -60, z: 1700 }, { x: 340, y: 40, z: 2350 }, { x: -260, y: -20, z: 3000 }],
-        shelterSize: { x: 210, y: 170, z: 330 },
     },
     heights: { air: 3300, space: 6800, shadow: 8800 },
     // The goal is deep inside the Earth's shadow. It keeps the name `door` so saved states stay readable.
