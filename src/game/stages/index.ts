@@ -16,7 +16,6 @@ export const STAGES: DeepReadonly<Record<StageId, StageDefinition>> = deepFreeze
 
 const F = LEVEL.floor;
 const pile = LEVEL.practicePaper;
-// The paper pile used to practise the first jump (stages with `practicePile`).
 export const PRACTICE_PILE: readonly Point[] = deepFreeze([
     { x: pile.x - pile.width / 2, y: F },
     { x: pile.x - 3, y: F - pile.height },

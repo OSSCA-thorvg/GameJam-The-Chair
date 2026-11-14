@@ -12,11 +12,10 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     if (next.phase === 'parked') {
         next.settled += dt;
         next.idle = 0;
-        return { orbit: next, p, checkpoint: false, praised: false, spraying: false };
+        return { orbit: next, p, checkpoint: false, satelliteLit: false, spraying: false };
     }
     if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
     const controlled = next.phase !== 'entry';
-    // In the Earth's shadow the autopilot flies the chair in: the player's keys no longer steer it.
     const auto = autopilot(next);
     // Steering grows from nothing to full over the entry, so the chair is under control right after the glide.
     const steer = auto ? 0 : controlled ? 1 : Math.min(1, next.age / C.entryTime);
@@ -24,7 +23,6 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     if (auto) next.yaw = -next.heading * C.autopilot.turn;
     else next.yaw += (turning * C.steer.turn - next.yaw) * (1 - Det.exp(-(turning !== 0 ? C.steer.response : C.steer.release) * dt));
     next.heading += next.yaw * dt;
-    // At the widest turn the chair stops turning further: it never faces away from the Earth's shadow.
     if (Math.abs(next.heading) >= C.steer.heading) {
         next.heading = Math.sign(next.heading) * C.steer.heading;
         if (next.yaw * next.heading > 0) next.yaw = 0;
@@ -41,16 +39,16 @@ export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>,
     if (auto) next.speed += (landing - next.speed) * (1 - Det.exp(-C.autopilot.response * dt));
     else if (thrust) next.speed = Math.min(C.maxSpeed, next.speed + C.thrust * dt);
     else if (controlled) next.speed *= Det.exp(-C.coast * dt);
-    const beam = controlled ? praiseBeamOn(next.age, p, next.z) : null;
-    if (beam) praiseShove(next, p, beam, dt);
-    const praised = beam !== null;
+    const beam = controlled ? satelliteLightOn(next.age, p, next.z) : null;
+    if (beam) satelliteLightShove(next, p, beam, dt);
+    const satelliteLit = beam !== null;
     p.x = clamp(p.x + (next.speed * Det.sin(next.heading) + p.vx) * dt, C.bounds.x + C.steer.overshoot);
     p.y = Math.max(-C.bounds.y - C.steer.overshoot, Math.min(C.bounds.top + C.steer.overshoot, p.y + p.vy * dt));
     next.z += next.speed * Det.cos(next.heading) * dt;
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
     // The autopilot fires the extinguisher itself whenever it is bringing the chair up to speed.
-    return { orbit: next, p, checkpoint, praised, spraying: thrust || !controlled || (auto && next.speed < landing - 1) };
+    return { orbit: next, p, checkpoint, satelliteLit, spraying: thrust || !controlled || (auto && next.speed < landing - 1) };
 }
 
 /** Whether the company autopilot is flying the chair: from the edge of the Earth's shadow until it parks. */
@@ -58,7 +56,7 @@ export function autopilot(orbit: Readonly<OrbitState>) {
     return orbit.phase === 'door' && orbit.z >= C.autopilot.from;
 }
 
-type Beam = typeof C.praise.beams[number];
+type Beam = typeof C.satelliteLight.beams[number];
 
 /**
  * One steering axis: chase the held direction's velocity, settle quickly on release, and past `low` or `high` let the
@@ -71,8 +69,7 @@ function steerAxis(v: number, at: number, input: number, low: number, high: numb
     return v + (target - v) * (1 - Det.exp(-rate * dt));
 }
 
-/** Centre of a praise beam along its own axis (across for `x`, up for `y`) at `age` seconds into stage five. */
-export function praiseBeamX(beam: Beam, age: number) {
+export function satelliteLightSweep(beam: Beam, age: number) {
     return beam.amplitude * Det.sin(age * beam.rate + beam.phase);
 }
 
@@ -81,22 +78,22 @@ const along = (beam: Beam, p: Readonly<Pick<Player, 'x' | 'y'>>) => beam.axis ==
 const reachOf = (beam: Beam, p: Readonly<Pick<Player, 'x' | 'y'>>) => beam.axis === 'y' ? p.x : p.y;
 
 /** The point the light spreads from, the satellite's lens: across the sweep, out from the satellite, and route depth. */
-export function praiseApex(beam: Beam) {
+export function satelliteLightApex(beam: Beam) {
     const { x, y, z } = beam.satellite;
     return beam.axis === 'y'
-        ? { across: y, reach: x - Math.sign(x) * C.praise.lens, z }
-        : { across: x, reach: y - C.praise.lens, z };
+        ? { across: y, reach: x - Math.sign(x) * C.satelliteLight.lens, z }
+        : { across: x, reach: y - C.satelliteLight.lens, z };
 }
 
 /**
  * The beam's slice at `reach` (0 is the middle of the play area): its centre across the sweep, half width, and the
  * route depths it covers. The light is a tent from the lens, so the slice scales with the distance from it.
  */
-export function praiseSection(beam: Beam, age: number, reach: number) {
-    const apex = praiseApex(beam), scale = (apex.reach - reach) / apex.reach;
+export function satelliteLightSection(beam: Beam, age: number, reach: number) {
+    const apex = satelliteLightApex(beam), scale = (apex.reach - reach) / apex.reach;
     return {
         scale,
-        centre: apex.across + (praiseBeamX(beam, age) - apex.across) * scale,
+        centre: apex.across + (satelliteLightSweep(beam, age) - apex.across) * scale,
         halfWidth: beam.halfWidth * scale,
         from: apex.z + (beam.from - apex.z) * scale,
         to: apex.z + (beam.to - apex.z) * scale,
@@ -104,31 +101,29 @@ export function praiseSection(beam: Beam, age: number, reach: number) {
 }
 
 /** Whether the chair is tucked into one of the 5-1 shelter clouds, out of the satellites' sight. */
-export function praiseSheltered(p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
-    const { shelters, shelterSize: size } = C.praise;
+export function satelliteLightSheltered(p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
+    const { shelters, shelterSize: size } = C.satelliteLight;
     return shelters.some(s => Math.abs(p.x - s.x) < size.x && Math.abs(p.y - s.y) < size.y && Math.abs(z - s.z) < size.z);
 }
 
 /** The beam falling on the chair at route depth `z`, if any. */
-export function praiseBeamOn(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number): Beam | null {
-    if (praiseSheltered(p, z)) return null;
-    for (const beam of C.praise.beams) {
-        const slice = praiseSection(beam, age, reachOf(beam, p));
+export function satelliteLightOn(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number): Beam | null {
+    if (satelliteLightSheltered(p, z)) return null;
+    for (const beam of C.satelliteLight.beams) {
+        const slice = satelliteLightSection(beam, age, reachOf(beam, p));
         if (slice.scale > 0 && z >= slice.from && z <= slice.to && Math.abs(along(beam, p) - slice.centre) < slice.halfWidth) return beam;
     }
     return null;
 }
 
-/** Whether a praise beam is falling on the chair at route depth `z`. */
-export function inPraise(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
-    return praiseBeamOn(age, p, z) !== null;
+export function inSatelliteLight(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
+    return satelliteLightOn(age, p, z) !== null;
 }
 
-/** The shower of praise slows the chair to a crawl and shoves it out of the beam's centre. */
-function praiseShove(next: OrbitState, p: Player, beam: Beam, dt: number) {
-    const { slowSpeed, slowResponse, shove } = C.praise;
+function satelliteLightShove(next: OrbitState, p: Player, beam: Beam, dt: number) {
+    const { slowSpeed, slowResponse, shove } = C.satelliteLight;
     next.speed += (slowSpeed - next.speed) * Math.min(1, slowResponse * dt);
-    const push = (along(beam, p) >= praiseSection(beam, next.age, reachOf(beam, p)).centre ? 1 : -1) * shove * dt;
+    const push = (along(beam, p) >= satelliteLightSection(beam, next.age, reachOf(beam, p)).centre ? 1 : -1) * shove * dt;
     if (beam.axis === 'y') p.vy += push;
     else p.vx += push;
 }

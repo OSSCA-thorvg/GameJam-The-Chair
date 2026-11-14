@@ -2,7 +2,7 @@ import { createGame, type Game, type GameState } from './game/game';
 import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
-import { orbitStep, praiseBeamOn, praiseSection } from './game/stages/orbit/course/decide';
+import { orbitStep, satelliteLightOn, satelliteLightSection } from './game/stages/orbit/course/decide';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { revealGlideStart, SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
 import { ATTENDANCE } from './render/scene/attendance-bubble';
@@ -378,7 +378,6 @@ function extinguisherSpray(): PreviewScene {
         [{ at: 0, label: 'Spray' }, { at: .16, label: 'Recoil' }, { at: .24, label: 'Plume ends' }, { at: .6, label: 'Landing' }], frames);
 }
 
-// Rolling onto the sales-graph billboard, up the surging line, out of the sign and straight up to the sky stage.
 function rooftopTakeoff(): PreviewScene {
     const game = createGame();
     game.startStage(3);
@@ -420,8 +419,6 @@ function graphTargetMarkers(frames: PreviewFrame[]): PreviewScene['markers'] {
     }));
 }
 
-// The duct shaft's hazards seen from a ledge: the awake duct's gusts and the steam vents' hiss and blast.
-// Starts from the shaft flag (the duct already awake) with the chair parked on a ledge, then lets time run.
 // `startTime` shifts the attempt clock so the vents' cycle begins where the scene wants it.
 function shaftHazards(id: string, label: string, at: { x: number; y: number }, startTime: number, markers: PreviewScene['markers']): PreviewScene {
     const game = createGame();
@@ -444,8 +441,6 @@ function shaftHazards(id: string, label: string, at: { x: number; y: number }, s
     return recordedScene(id, label, at.x, markers, frames);
 }
 
-// The rush-hour express from the flag before it: `hop` hops the speed bump; the convoy then takes the
-// launch ramp over the construction hole, and the rider jumps off it again before the lift.
 function expressRun(id: string, label: string, hop: boolean, markers: PreviewScene['markers']): PreviewScene {
     const game = createGame();
     game.startStage(2);
@@ -473,7 +468,6 @@ function expressRun(id: string, label: string, hop: boolean, markers: PreviewSce
     return { ...recordedScene(id, label, 2600, markers, frames), follow: true };
 }
 
-// The executive printer's urgent volleys, one scene per pattern, seen from a chair parked in front of it.
 function urgentCopier(volley: number, id: string, label: string): PreviewScene {
     const game = createGame();
     game.startStage(1);
@@ -506,8 +500,6 @@ function cloudEntry(): PreviewScene {
         [{ at: 0, label: 'Bread on arrival' }, { at: 1, label: 'Continuous spray' }], frames);
 }
 
-// A full gust cycle over the floating desks: calm, warning breeze and scraps, the gust with its paper bundles,
-// parrots crossing, then a parrot clipping the chair (feathers) in the last second.
 function skyGustCycle(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -532,7 +524,6 @@ function skyGustCycle(): PreviewScene {
     };
 }
 
-// The floating office facade with its staff still at work behind the windows.
 function skyOfficeFacade(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -549,7 +540,6 @@ function skyOfficeFacade(): PreviewScene {
     };
 }
 
-// Office gear drifting over the gap to the drawer desk, then a tower PC clanging into the chair.
 function skyOfficeGear(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -571,7 +561,6 @@ function skyOfficeGear(): PreviewScene {
     };
 }
 
-// Hold a spray in open air so its response is readable through a full gust cycle.
 function skyWindFeedback(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -597,7 +586,6 @@ function skyWindFeedback(): PreviewScene {
     };
 }
 
-// Many passes of the upper-desk bird lane in a row: every pass draws a different lovebird colour, the macaw or a robot parrot.
 function skyParrots(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -617,8 +605,6 @@ function skyParrots(): PreviewScene {
     };
 }
 
-// Two passes of the first bird lane flown by the chrome robot parrots (liquid metal, then black chrome);
-// each clips the chair and it clangs away with the office-gear keycaps and sparks.
 function skyRobotParrot(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -642,7 +628,6 @@ function skyRobotParrot(): PreviewScene {
     };
 }
 
-// The chair hovers in front of the last billboard while a lovebird crosses it: both must cover the ThorVG Text copy.
 function skySignDepth(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -689,7 +674,6 @@ function skyEnding(): PreviewScene {
     };
 }
 
-// The real hand-off: the stage four reveal plays out, stage five takes over mid-glide, and steering fades in.
 function skyToOrbit(): PreviewScene {
     const game = createGame();
     game.startStage(4);
@@ -733,7 +717,7 @@ const CLIMBS: Input[][] = [['forward'], [], ['back']];
 export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSnapshot']>): Input[] {
     const orbit = state.orbit, p = state.player;
     if (!orbit) return [];
-    const shelter = orbit.z < STAGE_FIVE.heights.air ? STAGE_FIVE.praise.shelters.find(s => s.z > orbit.z - 120) : undefined;
+    const shelter = orbit.z < STAGE_FIVE.heights.air ? STAGE_FIVE.satelliteLight.shelters.find(s => s.z > orbit.z - 120) : undefined;
     let keys: Input[];
     if (shelter) {
         keys = turnToward(orbit, p, shelter.x);
@@ -748,7 +732,7 @@ export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSn
             for (let t = 0; t < PLAN.seconds; t += PLAN.step) {
                 ({ orbit: o, p: q } = orbitStep(o, q, held, PLAN.step));
                 // Nearer moments count more: those are the ones still certain.
-                if (praiseBeamOn(o.age, q, o.z)) lit += 1.5 - t;
+                if (satelliteLightOn(o.age, q, o.z)) lit += 1.5 - t;
             }
             const score = (o.z - orbit.z) * .05 - lit * 40 - Math.abs(o.heading) * 30 - Math.max(0, Math.abs(q.x) - STAGE_FIVE.bounds.x + 120) * .5;
             if (score > best) { best = score; keys = turn.concat(climb); }
@@ -781,7 +765,6 @@ function orbitRoute(): PreviewScene {
     return recordedScene('orbit-route', 'Orbit · 5-1 to 5-3 and the ending', 0, markers, frames);
 }
 
-// Coast without spraying until the Space keycap pops up by the extinguisher, then spray and watch it vanish.
 function orbitSprayHintScene(): PreviewScene {
     const game = createGame();
     game.startStage(5);
@@ -796,7 +779,6 @@ function orbitSprayHintScene(): PreviewScene {
     return recordedScene('orbit-spray-hint', 'Orbit · Space hint after 3 s without spraying', 0, markers, frames);
 }
 
-// The ending, from the moment the chair parks in the Earth's shadow to THE END.
 function orbitEndingScene(aside = false): PreviewScene {
     const game = createGame();
     game.startStage(5);
@@ -824,14 +806,13 @@ function orbitEndingScene(aside = false): PreviewScene {
         : recordedScene('orbit-ending', 'Orbit · Ending: network lost on screen, hands stop, the chair looks out, THE END', 0, markers, frames);
 }
 
-// 5-1: duck from shelter cloud to shelter cloud while the satellite's praise beam sweeps the cloud layer.
-function orbitPraiseScene(): PreviewScene {
+function orbitSatelliteLightScene(): PreviewScene {
     const game = createGame();
     game.startStage(5);
     const effects = createEffects();
     const frames = [capture(game, effects)];
     const markers = [{ at: 0, label: 'Stage 5 start' }];
-    const first = STAGE_FIVE.praise.beams[0];
+    const first = STAGE_FIVE.satelliteLight.beams[0];
     let previous = '';
     for (let i = 0; i < 2400; i++) {
         const state = game.getSnapshot(), orbit = state.orbit;
@@ -839,26 +820,24 @@ function orbitPraiseScene(): PreviewScene {
         game.setInput(...orbitKeys(state));
         stepGame(game, effects);
         frames.push(capture(game, effects));
-        const stage = orbit.z < first.from ? 'clouds' : orbit.z < first.to ? 'praise beam' : 'past the beam';
+        const stage = orbit.z < first.from ? 'clouds' : orbit.z < first.to ? 'satellite light' : 'past the beam';
         if (stage !== previous) { markers.push({ at: i / 60, label: stage }); previous = stage; }
     }
-    return recordedScene('orbit-praise', 'Orbit · 5-1: hide from the praise beam', 0, markers, frames);
+    return recordedScene('orbit-satellite-light', 'Orbit · 5-1: hide from the satellite light', 0, markers, frames);
 }
 
-// 5-1: weave in and out of the praise beam's edge, so the chair can be seen warming up and lighting up.
-function orbitPraiseLitScene(): PreviewScene {
+function orbitSatelliteLightLitScene(): PreviewScene {
     const game = createGame();
     game.startStage(5);
     const effects = createEffects();
     const frames = [capture(game, effects)];
     const markers = [{ at: 0, label: 'Stage 5 start' }];
-    const first = STAGE_FIVE.praise.beams[0];
+    const first = STAGE_FIVE.satelliteLight.beams[0];
     let previous = '';
     for (let i = 0; i < 2400; i++) {
         const state = game.getSnapshot(), orbit = state.orbit, p = state.player;
         if (!orbit || orbit.z > first.to) break;
-        // Hold off to the side of the light, then drift in past its edge and back out every few seconds.
-        const slice = praiseSection(first, orbit.age + .4, p.y);
+        const slice = satelliteLightSection(first, orbit.age + .4, p.y);
         const target = slice.centre + slice.halfWidth + 90 + 130 * Math.cos(orbit.age * .9);
         const keys: Input[] = turnToward(orbit, p, target);
         if (orbit.speed < STAGE_FIVE.cruise) keys.push('spray');
@@ -868,10 +847,9 @@ function orbitPraiseLitScene(): PreviewScene {
         const stage = orbit.z < first.from - 300 ? 'approach' : 'in and out of the light';
         if (stage !== previous) { markers.push({ at: i / 60, label: stage }); previous = stage; }
     }
-    return recordedScene('orbit-praise-lit', 'Orbit · The chair lights up near and inside a praise beam', 0, markers, frames);
+    return recordedScene('orbit-satellite-light-lit', 'Orbit · The chair lights up near and inside a satellite light', 0, markers, frames);
 }
 
-// The duct's timed sneezes: the first big one that spits out the overtime junk, and the later gusts.
 function ductSneeze(gust = false): PreviewScene {
     const game = createGame();
     game.startStage(3);
@@ -1050,8 +1028,8 @@ export const previewScenes: readonly PreviewScene[] = [
     skyToOrbit(),
     orbitRoute(),
     orbitSprayHintScene(),
-    orbitPraiseScene(),
-    orbitPraiseLitScene(),
+    orbitSatelliteLightScene(),
+    orbitSatelliteLightLitScene(),
     orbitEndingScene(),
     orbitEndingScene(true),
     meetingVisit(),

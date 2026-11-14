@@ -1,5 +1,5 @@
 
-export type FocusKind = 'paper' | 'water' | 'light' | 'door' | 'bump' | 'bird' | 'gear' | 'steam' | 'praise';
+export type FocusKind = 'paper' | 'water' | 'light' | 'door' | 'bump' | 'bird' | 'gear' | 'steam' | 'satelliteLight';
 // One distraction. The same kind and id only ever costs focus once per attempt.
 export type FocusHit = { kind: FocusKind; id: number; damage: number };
 export type FocusNotice = { kind: FocusKind; life: number };
@@ -30,7 +30,6 @@ export function focusRecovery(f: Readonly<Focus>, blocked: boolean, dt: number):
     return { focus, focusClock, focusNotice };
 }
 
-// The rider stares at the distraction for a moment before the attempt ends.
 export function focusLossStep(time: number, dt: number) {
     const next = time + dt;
     return { time: next, over: next >= FOCUS_LOSS_DURATION };

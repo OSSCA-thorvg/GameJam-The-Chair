@@ -154,7 +154,6 @@ export function createLayerPanel(getLocale: () => Locale, overrides: LayerOverri
         applyLocale,
         set,
         clear,
-        /** Keys currently listed, in first-seen order. */
         keys: () => [...rows.keys()],
         destroy() {
             for (const r of rows.values()) r.el.remove();

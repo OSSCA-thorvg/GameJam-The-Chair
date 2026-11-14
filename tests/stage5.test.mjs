@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { FOCUS_DAMAGE, ORBIT_ENDING, orbitEnding, createGame, orbitStep, praiseBeamX, praiseBeamOn, praiseSection, orbitPraise, praiseWarmth, createSkyProjection, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
+const { FOCUS_DAMAGE, ORBIT_ENDING, orbitEnding, createGame, orbitStep, satelliteLightSweep, satelliteLightOn, satelliteLightSection, orbitSatelliteLight, satelliteLightWarmth, createSkyProjection, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
     export { createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } from './src/game/replay';
     export { FOCUS_DAMAGE } from './src/game/level';
     export { actionForKey } from './src/ui/controls';
     export { createGame, stepGame } from './src/game/game';
-    export { orbitStep, praiseBeamX, praiseBeamOn, praiseSection } from './src/game/stages/orbit/course/decide';
-    export { orbitPraise, praiseWarmth } from './src/render/scene/orbit-praise';
+    export { orbitStep, satelliteLightSweep, satelliteLightOn, satelliteLightSection } from './src/game/stages/orbit/course/decide';
+    export { orbitSatelliteLight, satelliteLightWarmth } from './src/render/scene/orbit-satellite-light';
     export { createSkyProjection } from './src/render/scene/sky-projection';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
     export { parseCommand } from './src/game/commands';
@@ -74,12 +74,12 @@ test('stage five climbs through 5-1 to 5-3 and stops in the Earth shadow, withou
     assert.equal(aside.orbit.phase, 'parked');
 });
 
-test('no praise beam reaches into the Earth shadow, and every beam sweeps slower than the chair steers', () => {
-    const { beams } = STAGE_FIVE.praise;
+test('no satellite light reaches into the Earth shadow, and every beam sweeps slower than the chair steers', () => {
+    const { beams } = STAGE_FIVE.satelliteLight;
     // The light spreads out away from the satellite: check it at every height the chair can reach.
     const { bounds, steer: { overshoot } } = STAGE_FIVE;
     const reaches = beam => beam.axis === 'y' ? [-1, 1].map(s => s * (bounds.x + overshoot)) : [-bounds.y - overshoot, bounds.top + overshoot];
-    const slices = beam => reaches(beam).map(reach => praiseSection(beam, 0, reach));
+    const slices = beam => reaches(beam).map(reach => satelliteLightSection(beam, 0, reach));
     assert.ok(beams.every(beam => slices(beam).every(slice => slice.scale > 0 && slice.to <= STAGE_FIVE.heights.shadow)));
     const steer = STAGE_FIVE.steer.speed;
     assert.ok(beams.every(beam => slices(beam).every(slice => beam.amplitude * beam.rate * slice.scale < steer)), 'the chair can always outrun a sweep');
@@ -173,7 +173,7 @@ test('repeated orbit frames do not accumulate previous drawing commands', () => 
 });
 
 /** A stage five state with the chair at route depth `z` and lateral `x`, `age` seconds in. */
-function praiseState(z, x, age = 10) {
+function satelliteLightState(z, x, age = 10) {
     const state = JSON.parse(fresh().serialize());
     Object.assign(state.orbit, { phase: 'door', age, z, speed: STAGE_FIVE.cruise });
     Object.assign(state.p, { x, y: 0, vx: 0, vy: 0 });
@@ -186,21 +186,21 @@ const run = (state, seconds) => {
     return { state: r.state, events };
 };
 
-test('5-1: each second under the praise beam costs focus, and it does not come back meanwhile', () => {
-    const first = STAGE_FIVE.praise.beams[0], z = first.from + 30;
-    const { state } = run(praiseState(z, praiseBeamX(first, 10)), 1.5);
+test('5-1: each second under the satellite light costs focus, and it does not come back meanwhile', () => {
+    const first = STAGE_FIVE.satelliteLight.beams[0], z = first.from + 30;
+    const { state } = run(satelliteLightState(z, satelliteLightSweep(first, 10)), 1.5);
     assert.ok(state.focus < 100, `focus ${state.focus}`);
-    assert.ok(state.focus >= 100 - 2 * FOCUS_DAMAGE.praise, 'at most one hit per second');
-    assert.equal(state.focusNotice?.kind, 'praise');
+    assert.ok(state.focus >= 100 - 2 * FOCUS_DAMAGE.satelliteLight, 'at most one hit per second');
+    assert.equal(state.focusNotice?.kind, 'satelliteLight');
     assert.equal(state.deaths, 0);
 });
 
 test('5-1: outside the beam focus recovers, and running out of focus ends the attempt', () => {
-    const first = STAGE_FIVE.praise.beams[0];
-    const calm = praiseState(first.from - 900, 0);
+    const first = STAGE_FIVE.satelliteLight.beams[0];
+    const calm = satelliteLightState(first.from - 900, 0);
     calm.focus = 80;
     assert.ok(run(calm, 4.1).state.focus > 80, 'recovers away from the beam');
-    const shaky = praiseState(first.from + 30, praiseBeamX(first, 10));
+    const shaky = satelliteLightState(first.from + 30, satelliteLightSweep(first, 10));
     shaky.focus = 5;
     const { state, events } = run(shaky, .2);
     assert.equal(state.mode, 'focuslost');
@@ -395,18 +395,18 @@ test('the company geofence is an invisible wall that pushes back past the edge',
 });
 
 test('a side beam sweeps up and down: only climbing or diving gets out of it', () => {
-    const side = STAGE_FIVE.praise.beams.find(beam => beam.axis === 'y');
+    const side = STAGE_FIVE.satelliteLight.beams.find(beam => beam.axis === 'y');
     assert.ok(side, 'one satellite shines in from the side');
     assert.ok(side.amplitude + side.halfWidth <= STAGE_FIVE.bounds.y + 100, 'its sweep stays within reach');
     const z = (side.from + side.to) / 2;
-    const age = Array.from({ length: 400 }, (_, i) => 10 + i / 10).find(t => Math.abs(praiseBeamX(side, t)) < 20);
+    const age = Array.from({ length: 400 }, (_, i) => 10 + i / 10).find(t => Math.abs(satelliteLightSweep(side, t)) < 20);
     // Other beams cross this stretch too: test across from where the down beams are shining at that moment.
-    const downs = STAGE_FIVE.praise.beams.filter(beam => beam.axis === 'x' && z >= beam.from && z <= beam.to);
-    const clear = x => downs.every(beam => Math.abs(x - praiseBeamX(beam, age)) >= beam.halfWidth);
+    const downs = STAGE_FIVE.satelliteLight.beams.filter(beam => beam.axis === 'x' && z >= beam.from && z <= beam.to);
+    const clear = x => downs.every(beam => Math.abs(x - satelliteLightSweep(beam, age)) >= beam.halfWidth);
     const xs = Array.from({ length: 33 }, (_, i) => -640 + i * 40).filter(clear);
     assert.ok(xs.length >= 2, 'there is a gap between the down beams');
-    for (const x of [xs[0], xs.at(-1)]) assert.equal(praiseBeamOn(age, still(x, 0), z), side, `level with the beam it has the chair (x ${x})`);
-    assert.equal(praiseBeamOn(age, still(xs[0], side.halfWidth + 60), z), null, 'climbing clear escapes it');
+    for (const x of [xs[0], xs.at(-1)]) assert.equal(satelliteLightOn(age, still(x, 0), z), side, `level with the beam it has the chair (x ${x})`);
+    assert.equal(satelliteLightOn(age, still(xs[0], side.halfWidth + 60), z), null, 'climbing clear escapes it');
     const lit = orbitStep(cruisingAt(z, { age }), still(xs[0], 0), [], 1 / 120);
     assert.ok(Math.abs(lit.p.vy) > Math.abs(lit.p.vx), 'and it shoves the chair up or down');
 });
@@ -507,17 +507,17 @@ test('glows and streaks of a kind share one layer, so each is a single ThorVG Sc
     for (const key of ['orbit-speed-lines', 'orbit-cctv-rec', 'orbit-cctv-light', 'orbit-robot-eye']) assert.ok(runs(key) <= 1, `${key} is one layer run`);
 });
 
-test('a praise beam is drawn where it pushes, at every height, and nothing of it nearer than the chair', () => {
-    const beam = STAGE_FIVE.praise.beams[1];
+test('a satellite light is drawn where it pushes, at every height, and nothing of it nearer than the chair', () => {
+    const beam = STAGE_FIVE.satelliteLight.beams[1];
     // A moment when the beam lies off to the right, so its right edge is an outline of the drawn light.
-    const age = Array.from({ length: 600 }, (_, i) => i / 10).find(t => Math.abs(praiseBeamX(beam, t) - 300) < 20);
+    const age = Array.from({ length: 600 }, (_, i) => i / 10).find(t => Math.abs(satelliteLightSweep(beam, t) - 300) < 20);
     const travel = beam.satellite.z + 200;
     const view = createSkyProjection(1000, 510, 1, { distance: 690 });
     const point = (x, y, z) => [z - travel, 15 + y, x];
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 1000, H: 510, t: 0 });
-    orbitPraise(ctx, view, point, age, travel);
-    const lights = ctx.commands.filter(command => command.layer?.key === 'orbit-praise-beam');
+    orbitSatelliteLight(ctx, view, point, age, travel);
+    const lights = ctx.commands.filter(command => command.layer?.key === 'orbit-satellite-light-beam');
     const inside = (polygon, [x, y]) => polygon.every((a, i) => {
         const b = polygon[(i + 1) % polygon.length];
         return (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]) >= 0;
@@ -526,30 +526,30 @@ test('a praise beam is drawn where it pushes, at every height, and nothing of it
         return (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]) <= 0;
     });
     const at = (x, y) => view.project(point(x, y, travel + 1));
-    const light = lights.find(command => inside(command.v, at(praiseSection(beam, age, 0).centre, 0)));
+    const light = lights.find(command => inside(command.v, at(satelliteLightSection(beam, age, 0).centre, 0)));
     assert.ok(light, 'the beam is drawn');
     for (const y of [-400, 0, 400]) {
-        const slice = praiseSection(beam, age, y), edge = slice.centre + slice.halfWidth;
-        assert.equal(praiseBeamOn(age, { x: edge - 30, y }, travel + 1), beam);
-        assert.notEqual(praiseBeamOn(age, { x: edge + 30, y }, travel + 1), beam);
+        const slice = satelliteLightSection(beam, age, y), edge = slice.centre + slice.halfWidth;
+        assert.equal(satelliteLightOn(age, { x: edge - 30, y }, travel + 1), beam);
+        assert.notEqual(satelliteLightOn(age, { x: edge + 30, y }, travel + 1), beam);
         assert.ok(inside(light.v, at(edge - 30, y)), `lit just inside its edge at height ${y}`);
         assert.ok(!inside(light.v, at(edge + 30, y)), `dark just outside it at height ${y}`);
     }
-    assert.ok(praiseSection(beam, age, 400).halfWidth < praiseSection(beam, age, -400).halfWidth, 'it spreads out below the satellite');
+    assert.ok(satelliteLightSection(beam, age, 400).halfWidth < satelliteLightSection(beam, age, -400).halfWidth, 'it spreads out below the satellite');
     // Cut at the chair: the satellite's lens is behind the chair now, so the light no longer reaches up to it.
-    assert.ok(!inside(light.v, view.project(point(beam.satellite.x, beam.satellite.y - STAGE_FIVE.praise.lens, beam.satellite.z))));
+    assert.ok(!inside(light.v, view.project(point(beam.satellite.x, beam.satellite.y - STAGE_FIVE.satelliteLight.lens, beam.satellite.z))));
 });
 
 test('the chair catches the light: warming near a beam, glowing inside it, plain far from it', () => {
-    const beam = STAGE_FIVE.praise.beams[1], age = 20, z = beam.satellite.z;
-    const slice = praiseSection(beam, age, 0), edge = slice.centre + slice.halfWidth;
-    const warmth = x => praiseWarmth(age, { x, y: 0 }, z).warmth;
-    assert.equal(praiseBeamOn(age, { x: edge - 10, y: 0 }, z), beam);
+    const beam = STAGE_FIVE.satelliteLight.beams[1], age = 20, z = beam.satellite.z;
+    const slice = satelliteLightSection(beam, age, 0), edge = slice.centre + slice.halfWidth;
+    const warmth = x => satelliteLightWarmth(age, { x, y: 0 }, z).warmth;
+    assert.equal(satelliteLightOn(age, { x: edge - 10, y: 0 }, z), beam);
     assert.equal(warmth(edge - 10), 1, 'inside, exactly where the course says it is lit');
     assert.ok(warmth(edge + 40) > 0 && warmth(edge + 40) < 1, 'warming just outside the edge');
     assert.ok(warmth(edge + 40) > warmth(edge + 100), 'more the nearer it gets');
     const far = edge + 400;
-    if (praiseBeamOn(age, { x: far, y: 0 }, z) === null) assert.ok(warmth(far) < warmth(edge + 40));
+    if (satelliteLightOn(age, { x: far, y: 0 }, z) === null) assert.ok(warmth(far) < warmth(edge + 40));
     const glow = x => flightFrame(state => { Object.assign(state.orbit, { z, age }); Object.assign(state.p, { x, vx: 0 }); })
         .filter(command => command.c?.radius && command.c.stops?.[0]?.[1]?.[0] === 255 && command.c.stops[0][1][1] === 224).length;
     assert.ok(glow(edge - 10) > 0, 'a warm glow round the chair inside the light');

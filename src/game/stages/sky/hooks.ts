@@ -1,4 +1,3 @@
-// Stage 4 · Above the clouds: the sky course runs its own movement every tick.
 import type { StageHooks } from '../types';
 import { applySky } from './course/apply';
 import { STAGE_FOUR } from './data';

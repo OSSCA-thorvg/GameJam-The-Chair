@@ -108,7 +108,6 @@ export function ventPhase(vent: Vent, time: number): VentPhase {
     return { kind: 'blow', age: t - quiet - vent.warn };
 }
 
-// Whether a point sits in the vent's blast: in front of the vent, within its reach and spread.
 export function inVentBlast(vent: Vent, p: Readonly<Point>) {
     const along = vent.axis === 'x' ? p.x - vent.x : p.y - vent.y;
     const across = vent.axis === 'x' ? p.y - vent.y : p.x - vent.x;
@@ -116,7 +115,6 @@ export function inVentBlast(vent: Vent, p: Readonly<Point>) {
     return ahead >= 0 && ahead <= vent.reach && Math.abs(across) <= vent.spread;
 }
 
-// Whether the chair (centre `p`, wheels down) stands on one of the paper-covered spans.
 export function onSlickPaper(p: Readonly<Point>, ground: boolean) {
     return ground && STAGE_THREE.slick.some(span => p.x >= span.left && p.x <= span.right && Math.abs(p.y - (span.y - 28)) < 14);
 }

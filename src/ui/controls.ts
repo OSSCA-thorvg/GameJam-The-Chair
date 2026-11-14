@@ -1,4 +1,3 @@
-// All player controls live here: key bindings, on-screen labels, keyboard and touch handlers.
 // To change a key, edit CONTROLS; labels in the menu and in the world update automatically.
 import type { Game, GameStatus } from '../game/game';
 import type { Input } from '../game/types';
@@ -33,7 +32,6 @@ export const CONTROLS: Readonly<Record<Action, Control>> = {
 export const SPRAY_KEY = 'Space';
 export const MOVE_LABEL = '← → / A D';
 
-/** Held actions map onto the game's continuous inputs. */
 const HELD: Partial<Record<Action, Input>> = { up: 'forward', down: 'back', left: 'left', right: 'right', leanLeft: 'q', leanRight: 'e', spray: 'spray' };
 
 const normalize = (key: string) => key.length === 1 ? key.toLowerCase() : key;

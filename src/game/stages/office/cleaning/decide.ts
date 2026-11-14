@@ -6,7 +6,6 @@ export type Cleaning = { x: number; a: number; b: number; spilled: boolean; age:
 export type Bucket = { age: number; armed: boolean; spills: number };
 export type CleaningResult = { cleaning: Cleaning; bucket: Bucket; splash: boolean; followup: boolean; soak: FocusHit | null };
 
-// The chair is close enough to the fresh spill to get splashed.
 export function waterExposure(bucketAge: number, p: Readonly<Point>, cleaningX: number = LEVEL.cleaning.x) {
     return bucketAge < RULES.waterExposure && Math.abs(p.x - cleaningX) < 210 && p.y > LEVEL.floor - 150;
 }
@@ -42,7 +41,6 @@ export function cleaningStep(input: { p: Readonly<Point>; cleaning: Readonly<Cle
     return { cleaning, bucket, splash, followup, soak };
 }
 
-// Rolling over the spreading puddle makes the wheels slip.
 export function slipping(p: Readonly<Point>, cleaning: Readonly<Cleaning>, grounded: boolean) {
     return grounded && cleaning.spilled && p.x > cleaning.a
         && p.x < cleaning.a + Math.min(1, cleaning.age / .8) * (cleaning.b - cleaning.a) && p.y > LEVEL.floor - 55;
