@@ -98,7 +98,7 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
             c.typingCooldown = office.life + .3;
         }
     }
-    if (p.x > 320) c.dispatchStarted = true;
+    if (p.x > STAGE_TWO.dispatch.trigger) c.dispatchStarted = true;
     if (c.dispatchStarted) {
         c.dispatchAge += dt;
         furniture.forEach((chair, i) => {

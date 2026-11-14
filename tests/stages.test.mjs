@@ -135,11 +135,12 @@ test('three chairs are dispatched in sequence and snapshots cannot edit them', (
     assert.deepEqual(released, [0, 1, 2, 3]);
     const state = game.getSnapshot();
     assert.ok(state.furniture.every(c => c.x > 680));
+    const originalPlayerX = state.player.x, originalChairX = state.furniture[0].x;
     state.player.x = 99999; state.furniture[0].x = 99999;
     const convoy = state.corridor.convoy;
     state.corridor.convoy = convoy === 'free' ? 'carried' : 'free';
-    assert.ok(game.getSnapshot().player.x < 1000);
-    assert.ok(game.getSnapshot().furniture[0].x < 2000);
+    assert.equal(game.getSnapshot().player.x, originalPlayerX);
+    assert.equal(game.getSnapshot().furniture[0].x, originalChairX);
     assert.equal(game.getSnapshot().corridor.convoy, convoy);
 });
 

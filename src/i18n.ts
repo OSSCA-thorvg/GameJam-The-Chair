@@ -175,6 +175,12 @@ const messages = {
 
     'building.meetingExtended':  { en: 'Meeting extended',                                               ko: '회의 연장' },
     'building.meetingPrompt':    { en: 'Meeting: when should this meeting end?',                         ko: '회의 종료 시각을 정하기 위한 회의' },
+    'building.chairCreak':       { en: 'Creeeak…', ko: '끼이이익…' },
+    'building.chairStuck':       { en: "They won't get up…", ko: '사람이 안 일어나…' },
+    'building.chairMinutes':     { en: 'My legs went home hours ago.', ko: '다리는 진작 퇴근했어…' },
+    'building.chairOvertime':    { en: 'Overtime. Under a person.', ko: '내 위에 야근이 앉아 있어…' },
+    'building.meetingFiveMore':  { en: 'Just five more minutes.', ko: '딱 5분만 더 하죠.' },
+    'building.meetingLoanReturn': { en: 'Return the spare chair first.', ko: '빌린 의자는 먼저 돌려보내죠.' },
     'building.chairsGone':       { en: 'The chairs have gone home.',                                     ko: '의자 세 분은 먼저 퇴근하셨습니다.' },
     'building.stayNext':         { en: 'People, please stay for the next agenda.',                       ko: '사람은 다음 안건까지 남아 주세요.' },
     'building.oneMoreChair':     { en: 'Oh, one more chair! You may leave!',                             ko: '어, 의자 한 분 더 계셨네요. 먼저 가세요!' },

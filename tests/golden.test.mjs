@@ -36,13 +36,17 @@ import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 // `sky` gained `airSprays`, `knock` and `knockKind`, and 'rooftop to sky' arrives into the windier course.
 // Updated when rooftop steam started costing focus: the 'rooftop to sky' route is knocked back by the duct's
 // sneeze, so its focus trace now dips. The route still ends the same way.
+// Stage two now separates the visitable, occupied meeting from the dispatch room after the first flag.
+// The convoy starts later and the first flag retries before dispatch; both building routes intentionally change.
+// Other stages only gain the inactive corridor layout in their final snapshot. After restoring that layout
+// and its checkpoint-one defaults, all four non-building fingerprints match the previous values exactly.
 const EXPECTED = {
-    'office route': '1f6c7af5a2c9c250',
-    'office crash': '5005e98391e06449',
-    'building exit': 'eb7e41a8dd50f40a',
-    'building lift': '1b0ed8796642c3f7',
-    'rooftop to sky': 'c357bc9fdf2e3684',
-    'rooftop duct': 'd5138fcfc6d66e37',
+    'office route': 'dc1474e26415d233',
+    'office crash': '0652e26f05b10b96',
+    'building exit': 'c71d545ba2ec469e',
+    'building lift': 'b85a0be0e6e94832',
+    'rooftop to sky': 'fb2bca14e9ce5a4f',
+    'rooftop duct': '08d279f29312f7c7',
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {
