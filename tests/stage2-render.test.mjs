@@ -88,3 +88,38 @@ test('corridor and meeting render finite vector paths in both languages and narr
         }
     }
 });
+
+
+test('the two meeting doors have distinct titles and chair complaints come from below the seats', () => {
+    const game = createGame();
+    game.startStage(2);
+    const base = game.getSnapshot();
+    const hall = render(base, 'ko', 1000).labels.map(label => label.text);
+    assert.ok(hall.includes('퇴근 시각 협의회'));
+    assert.ok(hall.includes('회의 종료 심의회'));
+    for (const [age, complaint] of [[1.8, '엉덩이님, 저 퇴근 좀요.'], [2.8, '한 번만 일어나 봐. 나 튄다.'], [3.9, '나사 하나 풀고 병가 낼까...']]) {
+        const state = { ...base, mode: 'play', time: age,
+            player: { ...base.player, x: 520 },
+            corridor: { ...base.corridor, room: { kind: 'meeting', age, returnX: 620 } },
+        };
+        const labels = render(state, 'ko', 1000).labels;
+        const speech = labels.find(label => label.text === complaint);
+        assert.ok(speech && speech.y > 420, 'chair voices stay below the castors, away from human faces');
+        assert.ok(!labels.some(label => label.text === '야근 의자'), 'chair speech has no added name');
+    }
+});
+
+
+test('the loan-return line sits just above the purple facilitator', () => {
+    const game = createGame();
+    game.startStage(2);
+    const base = game.getSnapshot();
+    const age = 5;
+    const state = { ...base, mode: 'play', time: age, player: { ...base.player, x: 560 },
+        corridor: { ...base.corridor, room: { kind: 'meeting', age, returnX: 620 } },
+    };
+    const labels = render(state, 'ko', 1000).labels;
+    const speech = labels.find(label => label.text === '빌린 의자는 먼저 돌려보내죠.');
+    assert.ok(speech);
+    assert.ok(speech.y > 245 && speech.y < 300, 'the bubble is next to the facilitator head, below the board');
+});

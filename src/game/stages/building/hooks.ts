@@ -27,7 +27,7 @@ export const buildingHooks: StageHooks = {
     afterCollide(s) {
         applyConvoyLanding(s);
     },
-    canJump: s => s.building.corridor.room.kind !== 'meeting',
+    canJump: s => s.building.corridor.room.kind === 'corridor',
     interact: s => applyInteract(s),
     leave: s => { if (s.mode === 'play') applyLeaveMeeting(s); },
     canInteract: s => meetingReachable(s),

@@ -2,7 +2,7 @@ import { setPlayer, type GameState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { applyFocusHit } from '../../../systems/focus/apply';
 import { STAGES } from '../../index';
-import { MEETING_SEAT, canEnterMeeting, convoyLanding, corridorStep, liftRide, meetingExit, meetingStep } from './decide';
+import { canEnterMeeting, convoyLanding, corridorStep, liftRide, meetingExit, meetingStep } from './decide';
 export function applyConvoyLanding(s: GameState) {
     const r = convoyLanding(s.building.corridor, s.building.furniture, s.p, s.ground);
     if (!r) return;
@@ -55,7 +55,7 @@ export function applyCorridor(s: GameState, out: GameEvent[], dt: number, previo
 
 // Returns true while the meeting scene owns the rider.
 export function applyMeeting(s: GameState, dt: number) {
-    if (s.building.corridor.room.kind !== 'meeting') return false;
+    if (s.building.corridor.room.kind === 'corridor') return false;
     const r = meetingStep(s.building.corridor.room, dt);
     s.building.corridor.room = r.room;
     s.p.x = r.x;
@@ -65,7 +65,7 @@ export function applyMeeting(s: GameState, dt: number) {
 
 export function applyLeaveMeeting(s: GameState, pushed = false) {
     const room = s.building.corridor.room;
-    if (room.kind !== 'meeting') return;
+    if (room.kind === 'corridor') return;
     setPlayer(s, meetingExit(room.returnX, pushed));
     s.building.corridor.room = { kind: 'corridor' };
     s.keys = [];
@@ -81,11 +81,11 @@ export function meetingReachable(s: Readonly<GameState>) {
 
 export function applyInteract(s: GameState) {
     if (s.mode !== 'play') return;
-    if (s.building.corridor.room.kind === 'meeting') { applyLeaveMeeting(s); return; }
+    if (s.building.corridor.room.kind !== 'corridor') { applyLeaveMeeting(s); return; }
     if (!meetingReachable(s)) return;
-    s.building.corridor.room = { kind: 'meeting', age: 0, returnX: s.p.x };
+    s.building.corridor.room = { kind: 'entering', age: 0, returnX: s.p.x };
     s.building.corridor.meetingVisited = true;
-    setPlayer(s, MEETING_SEAT);
+    setPlayer(s, { ...s.p, vx: 0, vy: 0, a: 0, w: 0 });
     s.keys = [];
     s.jumpQ = 0;
     s.actualSpeed = 0;

@@ -135,11 +135,12 @@ test('three chairs are dispatched in sequence and snapshots cannot edit them', (
     assert.deepEqual(released, [0, 1, 2, 3]);
     const state = game.getSnapshot();
     assert.ok(state.furniture.every(c => c.x > 680));
+    const originalPlayerX = state.player.x, originalChairX = state.furniture[0].x;
     state.player.x = 99999; state.furniture[0].x = 99999;
     const convoy = state.corridor.convoy;
     state.corridor.convoy = convoy === 'free' ? 'carried' : 'free';
-    assert.ok(game.getSnapshot().player.x < 1000);
-    assert.ok(game.getSnapshot().furniture[0].x < 2000);
+    assert.equal(game.getSnapshot().player.x, originalPlayerX);
+    assert.equal(game.getSnapshot().furniture[0].x, originalChairX);
     assert.equal(game.getSnapshot().corridor.convoy, convoy);
 });
 
@@ -177,14 +178,14 @@ test('optional meeting scene returns the rider automatically and can be left ear
         drive(game, state => state.canEnterMeeting);
         const start = game.getSnapshot().player.x;
         game.interact();
-        assert.equal(game.getSnapshot().corridor.room.kind, 'meeting');
+        assert.equal(game.getSnapshot().corridor.room.kind, 'entering');
         assert.ok(game.getSnapshot().corridor.meetingVisited);
         game.setInput('right'); game.jump();
         for (let i = 0; i < 120; i++) game.step(dt);
         game.pause(); const paused = game.getSnapshot(); game.advance(5);
         assert.deepEqual(game.getSnapshot(), paused); game.pause();
         if (early) game.interact();
-        else for (let i = 0; i < 610; i++) game.step(dt);
+        else for (let i = 0; i < 700; i++) game.step(dt);
         const state = game.getSnapshot();
         assert.equal(state.mode, 'play');
         assert.equal(state.corridor.room.kind, 'corridor');

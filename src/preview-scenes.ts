@@ -894,6 +894,48 @@ function ductSneeze(gust = false): PreviewScene {
     };
 }
 
+function meetingVisit(): PreviewScene {
+    const game = createGame({ seed: 8 });
+    game.startStage(2);
+    const saved = JSON.parse(game.serialize());
+    saved.mode = 'play';
+    saved.ground = true;
+    saved.p.x = STAGE_TWO.meeting - 110;
+    game.restore(JSON.stringify(saved));
+    game.interact();
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    for (let i = 0; i < Math.ceil((6 + STAGE_TWO.meetingEntry) / FRAME_TIME); i++) {
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene('building-meeting', 'Building · The chairs cannot clock out', STAGE_TWO.meeting,
+        [{ at: 0, label: 'Closed door' }, { at: .25, label: 'Opening and entering' },
+            { at: STAGE_TWO.meetingEntry, label: 'Inside the meeting' }, { at: 2.4, label: 'Chairs sigh under their people' },
+            { at: 2.75, label: 'End time extended' }, { at: 5.45, label: 'Return the borrowed chair' }], frames);
+}
+
+function chairDispatch(): PreviewScene {
+    const game = createGame({ seed: 8 });
+    game.startStage(2);
+    const saved = JSON.parse(game.serialize());
+    saved.mode = 'play';
+    saved.ground = true;
+    saved.checkpoint = 1;
+    saved.p.x = STAGE_TWO.checkpoints[1].x;
+    game.restore(JSON.stringify(saved));
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    for (let i = 0; i < 300; i++) {
+        game.setInput('right');
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return recordedScene('building-dispatch', 'Building · Chairs leave after the first flag', STAGE_TWO.dispatch.room,
+        [{ at: 0, label: 'First checkpoint' }, { at: 1.1, label: 'Room opens' },
+            { at: 2.9, label: 'Last chair leaves' }, { at: 4.1, label: 'Door closes' }, { at: 4.8, label: 'Join the convoy' }], frames);
+}
+
 function officeTyping(): PreviewScene {
     const game = createGame();
     game.startStage(2);
@@ -1012,5 +1054,7 @@ export const previewScenes: readonly PreviewScene[] = [
     orbitPraiseLitScene(),
     orbitEndingScene(),
     orbitEndingScene(true),
+    meetingVisit(),
+    chairDispatch(),
     officeTyping(),
 ];

@@ -122,9 +122,9 @@ function office(value: unknown, path: string) {
 
 function room(value: unknown, path: string) {
     const data = record(value, path);
-    const kind = choice(data.kind, ['corridor', 'meeting'], `${path}.kind`);
-    exact(data, kind === 'meeting' ? ['kind', 'age', 'returnX'] : ['kind'], path);
-    if (kind === 'meeting') {
+    const kind = choice(data.kind, ['corridor', 'entering', 'meeting'], `${path}.kind`);
+    exact(data, kind !== 'corridor' ? ['kind', 'age', 'returnX'] : ['kind'], path);
+    if (kind !== 'corridor') {
         finite(data.age, `${path}.age`);
         finite(data.returnX, `${path}.returnX`);
     }

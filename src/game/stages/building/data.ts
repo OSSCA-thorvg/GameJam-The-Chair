@@ -20,8 +20,10 @@ const EXPRESS = {
 export const STAGE_TWO = deepFreeze({
     length: 4850, goal: 4600,
     meeting: 620,
+    meetingEntry: .65,
+    dispatch: { room: 1840, trigger: 1320 },
     lift: 4050,
-    offices: [220, 1030, 1840, 2370],
+    offices: [220, 1030, 1560, 2370],
     checkpoints: [{ x: 100, y: 392 }, { x: 1300, y: 392 }, { x: 2200, y: 392 }, { x: 4200, y: 392 }],
     express: EXPRESS,
     terrain: [
@@ -127,7 +129,7 @@ export const CHAIR_DEPARTURE_LINES = deepFreeze({
 } satisfies Record<ChairDepartureReason, readonly { readonly speaker: 0 | 1 | 2; readonly text: Message }[]>);
 export type Corridor = {
     appearanceSeed: number;
-    room: { kind: 'corridor' } | { kind: 'meeting'; age: number; returnX: number };
+    room: { kind: 'corridor' } | { kind: 'entering' | 'meeting'; age: number; returnX: number };
     meetingVisited: boolean;
     dispatchAge: number;
     dispatchStarted: boolean;
@@ -144,7 +146,7 @@ export function createCorridor(checkpoint: number, appearanceSeed: number): Corr
     return {
         appearanceSeed,
         room: { kind: 'corridor' }, meetingVisited: false,
-        dispatchStarted: checkpoint > 0, dispatchAge: checkpoint > 0 ? 10 : 0,
+        dispatchStarted: checkpoint >= 2, dispatchAge: checkpoint >= 2 ? 10 : 0,
         chat: { kind: 'waiting' },
         convoy: 'free',
         pace: 'casual',
@@ -155,9 +157,9 @@ export function createCorridor(checkpoint: number, appearanceSeed: number): Corr
     };
 }
 export function createFurniture(checkpoint = 0): Furniture[] {
-    const front = checkpoint > 0 ? STAGE_TWO.checkpoints[checkpoint].x + 190 : STAGE_TWO.meeting + 12;
+    const front = checkpoint >= 2 ? STAGE_TWO.checkpoints[checkpoint].x + 190 : STAGE_TWO.dispatch.room + 12;
     return [0, 1, 2].map(i => {
-        const x = checkpoint > 0 ? front - i * 130 : front;
-        return { kind: 'chair', x, y: 420, width: 48, height: 40, vx: checkpoint > 0 ? 185 : 0, released: checkpoint > 0, cheer: 0 };
+        const x = checkpoint >= 2 ? front - i * 130 : front;
+        return { kind: 'chair', x, y: 420, width: 48, height: 40, vx: checkpoint >= 2 ? 185 : 0, released: checkpoint >= 2, cheer: 0 };
     });
 }
