@@ -1,6 +1,5 @@
 import { createCorridor, type Corridor, type Furniture } from './data';
 
-// Everything the building changes during an attempt. Lives in state.building.
 export type BuildingState = {
     furniture: Furniture[];   // the chair convoy
     corridor: Corridor;       // meeting room, typing bubbles, chatter, lift

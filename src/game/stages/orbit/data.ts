@@ -1,6 +1,6 @@
 import { deepFreeze } from '../../data';
 
-type PraiseBeam = {
+type SatelliteLightBeam = {
     satellite: { x: number; y: number; z: number };
     /**
      * `x`: shines down from above and sweeps from side to side, dodged by steering left and right.
@@ -33,14 +33,11 @@ export const STAGE_FIVE = deepFreeze({
     autopilot: { from: 8800, turn: 1.8, response: 1.5, landing: 70, brake: .45 },
     // Across either way up to `x`, down to `-y`, and up to a higher ceiling `top`.
     bounds: { x: 680, y: 430, top: 750 },
-    // No hoops: after the entry the chair heads straight for the Earth's shadow.
     rings: [] as { x: number; y: number; z: number; radius: number }[],
-    // Company satellites sweep beams of praise across the route. Inside one, trophies and certificates shove the
-    // chair aside and slow it down. 5-1 has shelter clouds to duck into; 5-2 only the dark gaps between three beams;
-    // in 5-3 the last beam stops at the edge of the Earth's shadow.
+    // 5-1 has shelter clouds; 5-2 has gaps between three lights; the last light ends at the Earth's shadow.
     // Every beam sweeps slower than the chair can steer (210 per second) at every height, so it can always be dodged.
     // The satellites hang well above (or beside) the play area, so the slices stay close in size across it.
-    praise: {
+    satelliteLight: {
         slowSpeed: 45, slowResponse: 2.4, shove: 380, lens: 40,
         beams: [
             // 5-1: one wide beam over the cloud layer.
@@ -52,11 +49,10 @@ export const STAGE_FIVE = deepFreeze({
             { satellite: { x: 0, y: 1600, z: 5900 }, axis: 'x', from: 5000, to: 6800, halfWidth: 140, amplitude: 480, rate: .18, phase: 4.1 },
             // 5-3: the last beam in space, cut off by the Earth's shadow.
             { satellite: { x: 300, y: 1450, z: 8600 }, axis: 'x', from: 7200, to: 8700, halfWidth: 250, amplitude: 380, rate: .3, phase: 1 },
-        ] as PraiseBeam[],
+        ] as SatelliteLightBeam[],
         shelters: [{ x: -380, y: -60, z: 1700 }, { x: 340, y: 40, z: 2350 }, { x: -260, y: -20, z: 3000 }],
         shelterSize: { x: 210, y: 170, z: 330 },
     },
-    // Where the cloud layer thins into the upper atmosphere, where space begins, and where the Earth's shadow starts.
     heights: { air: 3300, space: 6800, shadow: 8800 },
     // The goal is deep inside the Earth's shadow. It keeps the name `door` so saved states stay readable.
     door: { x: 0, y: 0, z: 9600, width: 240, height: 340, clearance: 2000, stopDistance: 220 },

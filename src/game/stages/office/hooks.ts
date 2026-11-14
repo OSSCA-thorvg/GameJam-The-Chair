@@ -1,4 +1,3 @@
-// Stage 1 · Office: copier papers, the mop bucket, geysers, wet floor, the bin and the monitors.
 import type { StageHooks } from '../types';
 import { applyCopier, applyPapers, applyUrgentCopier } from './copier/apply';
 import { copierStep, papersStep, urgentCopierStep } from './copier/decide';

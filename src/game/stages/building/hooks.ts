@@ -1,4 +1,3 @@
-// Stage 2 · Inside the building: the meeting room, the chair convoy and the lift.
 import type { StageHooks } from '../types';
 import { meetingReachable, applyConvoyLanding, applyCorridor, applyInteract, applyLeaveMeeting, applyLiftRide, applyMeeting } from './corridor/apply';
 

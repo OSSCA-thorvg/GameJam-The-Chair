@@ -21,7 +21,6 @@ export function applySky(s: GameState, out: GameEvent[], dt: number) {
     s.sprayDir = r.sprayDir;
     if (r.speed !== null) s.actualSpeed = r.speed;
     if (r.reached) {
-        // Like every flag, the halfway desk clears the head.
         s.focus = 100;
         s.focusClock = 0;
         out.push({ type: 'cue', id: 'checkpoint' });

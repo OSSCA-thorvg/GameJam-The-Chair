@@ -74,7 +74,6 @@ export function applyLeaveMeeting(s: GameState, pushed = false) {
     s.actualSpeed = 0;
 }
 
-/** The rider can roll into the meeting room right now. */
 export function meetingReachable(s: Readonly<GameState>) {
     return canEnterMeeting({ stage: s.stage, mode: s.mode, corridor: s.building.corridor, p: s.p, ground: s.ground });
 }

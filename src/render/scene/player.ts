@@ -140,7 +140,6 @@ function riderEffects(ctx: RenderCtx) {
         ctx.rod(-8, -82, 9, -80, 1, '#a8a79e');
         ctx.rod(-8, -77, 7, -75, 1, '#a8a79e');
     }
-    // Fresh spray just after a splash.
     if (state.focusNotice?.kind === 'water') riderSplash(ctx, state.focusNotice.life);
     if (ctx.dirty) {
         for (let i = 0; i < 9; i++) {

@@ -1,4 +1,3 @@
-// Replay section of the pause menu. Players can watch their last attempt and export the replay data;
 // nothing here changes how replays are recorded. Developers open the exported data in /replay.html.
 import type { Recorder, ReplayFile } from '../game/replay';
 import { translate, type Locale, type Message } from '../i18n';

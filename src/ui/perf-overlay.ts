@@ -16,11 +16,9 @@ export type FrameSample = {
     frameMs: number;
     /** `game.advance()` (or replay/opening advance). */
     simMs: number;
-    /** Fixed 120 Hz ticks run this frame. */
     ticks: number;
     /** Accumulated simulation time discarded on a mode change. */
     droppedMs: number;
-    /** DOM HUD update. */
     hudMs: number;
 };
 
@@ -40,7 +38,6 @@ export type PerfSurface = {
 };
 
 type PerfDeps = {
-    /** Starts (stats) or stops (null) the renderer's per-frame counters. */
     profile(stats: RenderStats | null): void;
     /** Applies (or with null, removes) debug layer hiding and flattening. */
     layerOverrides(overrides: LayerOverrides | null): void;

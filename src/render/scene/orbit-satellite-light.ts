@@ -2,17 +2,16 @@ import type { RenderCtx } from '../context';
 import type { Player } from '../../game/types';
 import type { Color, Vector } from '../types';
 import { STAGE_FIVE } from '../../game/stages/orbit/data';
-import { praiseApex, praiseSection, praiseSheltered } from '../../game/stages/orbit/course/decide';
+import { satelliteLightApex, satelliteLightSection, satelliteLightSheltered } from '../../game/stages/orbit/course/decide';
 
-type Beam = typeof STAGE_FIVE.praise.beams[number];
+type Beam = typeof STAGE_FIVE.satelliteLight.beams[number];
 import { CLOUD_TONES, puffCloud } from './cloud-art';
 import type { RoutePoint } from './orbit-watch';
 import type { SkyProjection } from './sky-projection';
 
-// Every satellite's beam sweeps across the route and showers whatever it lights with praise (unseen: the beam is the hazard).
 // Scenery reads the same pure checks the course uses, so what is drawn is what pushes the chair.
 
-const P = STAGE_FIVE.praise;
+const P = STAGE_FIVE.satelliteLight;
 // The light reaches past every spot the chair can be pushed to: down to below the play area, or across beyond its far edge.
 const FLOOR = -(STAGE_FIVE.bounds.y + STAGE_FIVE.steer.overshoot + 40);
 const FAR_SIDE = STAGE_FIVE.bounds.x + STAGE_FIVE.steer.overshoot + 40;
@@ -38,14 +37,14 @@ type BeamPoint = { a: number; r: number; z: number };
 const lerp = (p: BeamPoint, q: BeamPoint, k: number): BeamPoint => ({ a: p.a + (q.a - p.a) * k, r: p.r + (q.r - p.r) * k, z: p.z + (q.z - p.z) * k });
 
 /**
- * The light is the tent the course checks (`praiseSection`): from the satellite's lens out to the far end of the
+ * The light is the tent the course checks (`satelliteLightSection`): from the satellite's lens out to the far end of the
  * light. Whatever of it lies nearer the camera than the chair is cut away, so it never hangs between the two:
  * `point` maps into the camera's frame, whose first axis is how far ahead of the chair a point lies.
  */
 function beam(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, age: number, travel: number, strength: number) {
-    const lens = praiseApex(b);
+    const lens = satelliteLightApex(b);
     const reach = b.axis === 'y' ? -Math.sign(b.satellite.x) * FAR_SIDE : FLOOR;
-    const end = praiseSection(b, age, reach);
+    const end = satelliteLightSection(b, age, reach);
     if (Math.min(end.from, lens.z) - travel > DRAW_AHEAD) return;
     const apex: BeamPoint = { a: lens.across, r: lens.reach, z: lens.z };
     const corner = (side: number, z: number): BeamPoint => ({ a: end.centre + side * end.halfWidth, r: reach, z });
@@ -54,12 +53,10 @@ function beam(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, a
     const place = (q: BeamPoint) => b.axis === 'y' ? point(q.r, q.a, q.z) : point(q.a, q.r, q.z);
     const depth = (q: BeamPoint) => place(q)[0];
     const ahead = (q: BeamPoint) => depth(q) >= 0;
-    // The corners of what is left once the tent is cut at the chair's depth.
     const kept = [apex, ...corners].filter(ahead);
     for (const [p, q] of edges) if (ahead(p) !== ahead(q)) kept.push(lerp(p, q, depth(p) / (depth(p) - depth(q))));
     const placed = kept.map(place);
     if (placed.length < 3 || placed.some(q => view.depth(q) <= 30)) return;
-    // The glow runs from the lens to the middle of the far end, starting from wherever the cut leaves it.
     const middle: BeamPoint = { a: end.centre, r: reach, z: (end.from + end.to) / 2 };
     const start = ahead(apex) ? 0 : Math.min(.98, depth(apex) / (depth(apex) - depth(middle)));
     const glow = (k: number) => k < .6 ? .55 + (.24 - .55) * k / .6 : .24 * (1 - (k - .6) / .4);
@@ -68,7 +65,7 @@ function beam(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, a
     const stops = [stop(start), ...[.6, 1].filter(k => k > start).map(stop)];
     ctx.commands.push({ v: hull(placed.map(view.project)), c: {
         from: view.project(place(lerp(apex, middle, start))), to: view.project(place(middle)), stops,
-    }, layer: { key: 'orbit-praise-beam', blend: 'screen' } });
+    }, layer: { key: 'orbit-satellite-light-beam', blend: 'screen' } });
 }
 
 /** Runs `draw` with the world camera reset, so cloud helpers place shapes in canvas pixels. */
@@ -81,7 +78,7 @@ function inScreenSpace(ctx: RenderCtx, draw: () => void) {
 }
 
 /** The clouds the chair can duck into, drawn like the basin's bread clouds. They are there from the stage four ending on. */
-export function orbitPraiseShelters(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, travel: number) {
+export function orbitSatelliteLightShelters(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, travel: number) {
     inScreenSpace(ctx, () => P.shelters.forEach((s, i) => {
         // It thins out as the chair reaches it and is gone before it could come between the chair and the camera;
         // a chair inside it gets the veil instead.
@@ -94,14 +91,14 @@ export function orbitPraiseShelters(ctx: RenderCtx, view: SkyProjection, point: 
 }
 
 /** Every beam and the shelter clouds, all ahead of the chair. `strength` fades the beams in. */
-export function orbitPraise(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, age: number, travel: number, strength = 1) {
+export function orbitSatelliteLight(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, age: number, travel: number, strength = 1) {
     if (strength > 0) for (const b of P.beams) beam(ctx, view, point, b, age, travel, strength);
-    orbitPraiseShelters(ctx, view, point, travel);
+    orbitSatelliteLightShelters(ctx, view, point, travel);
 }
 
 /** Over the chair: a cloud veil while it hides in a shelter cloud. */
-export function orbitPraiseOnChair(ctx: RenderCtx, chairAt: Vector, p: Readonly<Pick<Player, 'x' | 'y'>>, travel: number) {
-    if (!praiseSheltered(p, travel)) return;
+export function orbitSatelliteLightOnChair(ctx: RenderCtx, chairAt: Vector, p: Readonly<Pick<Player, 'x' | 'y'>>, travel: number) {
+    if (!satelliteLightSheltered(p, travel)) return;
     inScreenSpace(ctx, () => puffCloud(ctx, chairAt[0], chairAt[1] + ctx.H * .16, ctx.W / 1400, 7400, CLOUD_TONES.bread, { alpha: .8, fade: true }));
 }
 
@@ -113,12 +110,12 @@ const WARN = 140;
  * 0 over `WARN` as it nears an edge, 0 while hidden in a shelter cloud. `side` is which way the light lies along
  * the beam's sweep (-1 or 1), and `axis` that sweep.
  */
-export function praiseWarmth(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
+export function satelliteLightWarmth(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
     let best = { warmth: 0, side: 1, axis: 'x' as 'x' | 'y' };
-    if (praiseSheltered(p, z)) return best;
+    if (satelliteLightSheltered(p, z)) return best;
     for (const b of P.beams) {
         const along = b.axis === 'y' ? p.y : p.x;
-        const slice = praiseSection(b, age, b.axis === 'y' ? p.x : p.y);
+        const slice = satelliteLightSection(b, age, b.axis === 'y' ? p.x : p.y);
         if (slice.scale <= 0) continue;
         const across = Math.abs(along - slice.centre) - slice.halfWidth;
         const ahead = Math.max(slice.from - z, z - slice.to);
@@ -130,11 +127,10 @@ export function praiseWarmth(age: number, p: Readonly<Pick<Player, 'x' | 'y'>>, 
     return best;
 }
 
-// How strongly each channel is lifted toward white: warm light lifts red most and blue least.
 const GOLD = [1, .86, .5];
 
 /** The chair as `chair` draws it, lit by warm light: each colour screened with gold at `amount` (0 to 1). */
-export function praiseLitChair(chair: SkyProjection, amount: number): SkyProjection {
+export function satelliteLitChair(chair: SkyProjection, amount: number): SkyProjection {
     if (amount <= 0) return chair;
     const tint = (color: string) => '#' + GOLD.map((gold, i) => {
         const value = parseInt(color.slice(1 + i * 2, 3 + i * 2), 16);
@@ -150,7 +146,7 @@ export function praiseLitChair(chair: SkyProjection, amount: number): SkyProject
 }
 
 /** A soft glow round the chair, leaning toward the light it is catching; painted just before the chair. */
-export function praiseChairGlow(ctx: RenderCtx, chair: SkyProjection, light: ReturnType<typeof praiseWarmth>, pulse: number) {
+export function satelliteChairGlow(ctx: RenderCtx, chair: SkyProjection, light: ReturnType<typeof satelliteLightWarmth>, pulse: number) {
     if (light.warmth <= 0) return;
     const [x, y] = chair.project([0, 15, 0]);
     const radius = Math.hypot(...[0, 1].map(i => chair.project([0, 95, 0])[i] - chair.project([0, 15, 0])[i])) * 1.8;

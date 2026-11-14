@@ -1,4 +1,3 @@
-// Plays a recorded attempt back inside the game view: play/pause, frame steps, speed, seek with markers, loop.
 import { FIXED_STEP } from '../game/level';
 import { viewState } from '../game/game';
 import { buildTimeline, seekTimeline, type ReplayCursor, type ReplayFile, type ReplaySettings, type Timeline } from '../game/replay';

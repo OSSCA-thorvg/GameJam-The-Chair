@@ -329,7 +329,7 @@ test('the ending clouds are bread clouds, not flat pale ovals', () => {
 test('ending clouds are bread from the start and none vanishes while the camera turns', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     // Cloud bodies: linear crown-to-belly gradients whose underside fades out.
-    const bodies = commands => commands.filter(command => command.layer?.key !== 'orbit-praise-beam' && Array.isArray(command.c?.stops) && !command.c.radius
+    const bodies = commands => commands.filter(command => command.layer?.key !== 'orbit-satellite-light-beam' && Array.isArray(command.c?.stops) && !command.c.radius
         && command.c.stops.length === 3 && command.c.stops[2][1][3] === 0);
     const bread = hex(CLOUD_TONES.bread.top).join();
     let previous = 0;

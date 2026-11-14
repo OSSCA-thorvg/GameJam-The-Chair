@@ -29,7 +29,6 @@ export type SkyResult = Omit<SkyInput, 'time' | 'direction' | 'length' | 'sky' |
     hit: { kind: SkyHazardKind; focusId: number } | null;  // a paper bundle, bird or office gear knocked the chair back this tick
 };
 
-// Stage 4 above the clouds: hover in, hop across growing windows, a gusting sign and floating desks,
 // then an automatic side-to-back camera turn and final hold. Works on its own copies.
 export function skyStep(input: SkyInput, dt: number): SkyResult {
     const sky = { ...input.sky };

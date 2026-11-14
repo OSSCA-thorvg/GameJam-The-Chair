@@ -1,4 +1,3 @@
-// Stage-specific parts of a fresh attempt. One case per stage; each stage keeps its rules in its own folder.
 import type { Attempt } from '../state';
 import { createOfficeState } from './office/state';
 import { createBuildingState } from './building/state';

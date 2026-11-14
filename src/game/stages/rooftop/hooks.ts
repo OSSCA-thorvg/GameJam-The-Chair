@@ -1,4 +1,3 @@
-// Stage 3 · Rooftop: the door scene, the duct, the extinguisher pickup and the ride up the sales graph to the sky.
 import { startStage } from '../../state';
 import type { StageHooks } from '../types';
 import { applyFlight, applyRooftop, applyRooftopEntrance } from './course/apply';

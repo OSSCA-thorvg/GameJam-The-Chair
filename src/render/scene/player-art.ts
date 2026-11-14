@@ -1,6 +1,5 @@
 import type { Vector } from '../types';
 
-// Shared by the side-view player and the ending's rotating illustration.
 export const PLAYER_OUTLINES = {
     backrest: [[-40, -69], [-24, -68], [-23, -20], [-37, -20]],
     farLeg: [[-10, -25], [22, -25], [32, -22], [43, 4], [35, 6], [23, -13], [-9, -15]],

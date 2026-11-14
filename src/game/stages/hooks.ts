@@ -1,4 +1,3 @@
-// Picks the behaviour hooks of the current stage. One case per stage; see stages/types.ts for the hook order.
 import type { StageId } from '../types';
 import type { StageHooks } from './types';
 import { officeHooks } from './office/hooks';

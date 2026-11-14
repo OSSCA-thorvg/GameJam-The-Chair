@@ -66,8 +66,7 @@ export const ORBIT_WATCH = {
     glide: GLIDE,
     reveal: revealCctvs(4100, GLIDE),
     route: routeCctvs(5200, 10, 600, 4700),
-    // The satellites whose beams shower the chair with praise (5-1 to 5-3).
-    satellites: STAGE_FIVE.praise.beams.map(beam => beam.satellite),
+    satellites: STAGE_FIVE.satelliteLight.beams.map(beam => beam.satellite),
     satelliteAppear: .35,
     // A far speck in the sky above the office door, the last landing of the route.
     beacon: { x: 90, y: 760, z: 7400, appear: .55 },
@@ -149,15 +148,14 @@ function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: n
  * Adds the watchers to `view`; returns their lamps for the glow pass. The reveal's field sits behind stage five's
  * start and the route's ahead of it, so both are always placed and the projection leaves out what is behind it.
  * `shown` is how far the reveal has turned into 3D; watchers that come later stay hidden. Satellites are placed with
- * `praisePoint`, the frame their beams are drawn in. Nothing the chair has passed is drawn.
+ * `satelliteLightPoint`, the frame their beams are drawn in. Nothing the chair has passed is drawn.
  */
-export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, shown = 1, praisePoint = point) {
+export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, shown = 1, satelliteLightPoint = point) {
     const lamps = [...ORBIT_WATCH.reveal, ...ORBIT_WATCH.route].filter(spot => spot.appear <= shown && point(spot.x, spot.y, spot.z)[0] > 0)
         .flatMap(spot => floating(view, point, spot, travel, t));
-    // Far satellites are left out until the chair is within sight of them.
     if (ORBIT_WATCH.satelliteAppear <= shown) for (const at of ORBIT_WATCH.satellites) {
-        const ahead = praisePoint(at.x, at.y, at.z)[0];
-        if (ahead > 0 && ahead < 6000) lamps.push(satellite(view, praisePoint, at, travel, t));
+        const ahead = satelliteLightPoint(at.x, at.y, at.z)[0];
+        if (ahead > 0 && ahead < 6000) lamps.push(satellite(view, satelliteLightPoint, at, travel, t));
     }
     return lamps;
 }

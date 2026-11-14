@@ -108,7 +108,6 @@ export function endingChairLights(ctx: RenderCtx, chair: SkyProjection, e: Orbit
     }
 }
 
-/** Everything fades to black, then a small THE END. */
 export function endingFade(ctx: RenderCtx, e: OrbitEndingState) {
     if (e.dark <= 0) return;
     ctx.commands.push({ v: [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]], c: '#000000' + alpha(e.dark), layer: { key: 'orbit-ending-black' } });

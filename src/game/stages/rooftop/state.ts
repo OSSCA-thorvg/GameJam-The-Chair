@@ -1,6 +1,5 @@
 import type { DuctReaction, FirstFlight, RooftopEntrance } from './course/decide';
 
-// Everything the rooftop changes during an attempt. Lives in state.rooftop.
 export type RooftopState = {
     entrance: RooftopEntrance;
     duct: DuctReaction;
