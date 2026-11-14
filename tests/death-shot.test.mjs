@@ -27,7 +27,7 @@ test('a head hit in stages one to four bonks, pushes in on the face and eases ba
     assert.equal(deathShotBurst(at(hit - .1)), null);
     assert.ok(deathShotBurst(at(hit + .1)) !== null, 'the BONK lands with the hit');
     assert.equal(deathShotCloseness(at(hit + zoomIn + hold / 2)), 1, 'held on the face');
-    assert.equal(deathShotCloseness(at(deathShotLength('head'))), 0, 'back to the usual framing');
+    assert.equal(deathShotCloseness(at(deathShotLength('head'))), 0, 'back to the play framing');
     shot.advance(deathShotLength('head') - .01);
     assert.equal(shot.snapshot().done, false, 'the game-over panel still waits');
     shot.advance(.02);
