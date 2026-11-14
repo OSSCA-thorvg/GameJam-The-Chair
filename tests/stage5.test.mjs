@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { ORBIT_ENDING, createGame, orbitStep, praiseBeamX, praiseBeamOn, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
+const { ORBIT_ENDING, orbitEnding, createGame, orbitStep, praiseBeamX, praiseBeamOn, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
     export { createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } from './src/game/replay';
     export { actionForKey } from './src/ui/controls';
     export { createGame, stepGame } from './src/game/game';
@@ -11,7 +11,7 @@ const { ORBIT_ENDING, createGame, orbitStep, praiseBeamX, praiseBeamOn, STAGE_FI
     export { parseCommand } from './src/game/commands';
     export { previewScenes, orbitKeys } from './src/preview-scenes';
     export { drawOrbit } from './src/render/scene/orbit';
-    export { ORBIT_ENDING } from './src/render/scene/orbit-ending';
+    export { ORBIT_ENDING, orbitEnding } from './src/render/scene/orbit-ending';
     export { createRenderCtx } from './src/render/context';
 `);
 const fresh = () => { const game = createGame({ seed: 55 }); game.startStage(5); return game; };
@@ -202,6 +202,9 @@ test('5-1: outside the beam focus recovers, and running out of focus ends the at
 });
 
 /** Renders stage five parked in the Earth shadow, `t` seconds into the ending. */
+/** The ending's progress `t` seconds in. */
+const orbitEndingState = t => orbitEnding({ phase: 'parked', age: 0, z: 0, speed: 0, rings: 0, settled: 1 + t });
+
 function endingFrame(t) {
     const state = JSON.parse(fresh().serialize());
     Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 + t });
@@ -210,7 +213,7 @@ function endingFrame(t) {
     drawOrbit(ctx);
     const layer = key => ctx.commands.filter(command => command.layer?.key === key);
     const labels = ctx.commands.filter(command => command.text).map(command => command.text.content);
-    return { labels, layer, commands: ctx.commands };
+    return { labels, layer, commands: ctx.commands, height: ctx.H };
 }
 
 test('parked in the Earth shadow, the ending clock counts on and the chair stays put', () => {
@@ -224,24 +227,64 @@ test('parked in the Earth shadow, the ending clock counts on and the chair stays
 test('the ending: the extinguisher floats off, the signal drops bar by bar, the network goes, then THE END', () => {
     const { release, signal, signalStep, disconnect } = ORBIT_ENDING;
     const at = t => endingFrame(t);
-    // The extinguisher's red body: where it sits on screen.
+    // The extinguisher's red body on screen, or null once it has floated out of the picture.
     const extinguisher = frame => {
-        const xs = frame.commands.filter(command => command.c === '#b75f4a' || command.c === '#c7765c').flatMap(command => command.v.map(([x]) => x));
-        return xs.reduce((sum, x) => sum + x, 0) / xs.length;
+        const points = frame.commands.filter(command => command.c === '#b75f4a' || command.c === '#c7765c').flatMap(command => command.v)
+            .filter(([x, y]) => x > 0 && x < 1000 && y > 0 && y < frame.height);
+        return points.length ? points : null;
     };
     assert.ok(!at(0).labels.some(label => label.startsWith('Network')), 'no network message straight away');
-    assert.ok(Math.abs(extinguisher(at(release + 6)) - extinguisher(at(0))) > 60, 'the extinguisher has drifted well away from the chair');
+    assert.ok(extinguisher(at(release + .1)), 'the extinguisher is still in the picture as it comes off');
+    assert.equal(extinguisher(at(release + 6)), null, 'and it has floated away out of the picture');
     const bars = frame => frame.layer('orbit-signal').filter(command => command.stroke?.color === '#ffffff').length;
     assert.deepEqual(at(signal - 2).layer('orbit-signal'), [], 'no signal icon before it starts to drop');
     assert.equal(bars(at(signal + .1)), 3);
     assert.ok(bars(at(signal + signalStep * 1.2)) < 3 && bars(at(signal + signalStep * 2.2)) < bars(at(signal + signalStep * 1.2)), 'losing bars one by one');
     assert.ok(at(disconnect + .5).labels.some(label => label.startsWith('Network')), 'then the network is lost');
-    const wide = at(ORBIT_ENDING.wide - 1), out = at(15), end = at(20);
+    const wide = at(ORBIT_ENDING.wide - 1), out = at(ORBIT_ENDING.lightsOut + 1), end = at(ORBIT_ENDING.end);
     assert.ok(wide.layer('orbit-nebula').length > 0 && wide.layer('orbit-laptop-light').length > 0, 'the laptop still glows under the nebula');
     assert.deepEqual(out.layer('orbit-laptop-light'), [], 'the screen has gone dark');
     assert.ok(out.layer('orbit-ending-black').length === 1, 'fading out');
     assert.deepEqual(end.labels.filter(label => label === 'THE END'), ['THE END']);
     assert.deepEqual(wide.labels.filter(label => label === 'THE END'), []);
+});
+
+test('after the network is lost the camera circles the chair once, all the way round, with the sky turning too', () => {
+    const { disconnect, spinFrom, spin } = ORBIT_ENDING;
+    assert.ok(spinFrom > disconnect, 'the circle starts once the network is gone');
+    // The rider's blue glasses sit on the sides of the face: hidden from behind, seen once the camera comes round.
+    const glasses = t => endingFrame(t).commands.some(command => command.c === '#83c8e4');
+    assert.equal(glasses(spinFrom), false, 'it starts from behind');
+    const round = Array.from({ length: 9 }, (_, i) => spinFrom + (spin - spinFrom) * (i + 1) / 10).map(glasses);
+    assert.ok(round.filter(Boolean).length >= 2, `the rider's face comes into view on the way round (${round})`);
+    assert.equal(glasses(spin), false, 'and it ends behind the chair again');
+    const stars = t => endingFrame(t).commands.filter(command => typeof command.c === 'string' && command.c.startsWith('#ffffff') && command.v.length === 4 && !command.layer).map(command => command.v[0][0]);
+    assert.notDeepEqual(stars(spinFrom), stars((spinFrom + spin) / 2), 'the stars swing past');
+});
+
+test('the lost connection comes up on the laptop screen, his hands stop, and for a moment nothing moves', () => {
+    const { disconnect, handsStop, idle } = ORBIT_ENDING;
+    const before = endingFrame(disconnect - .5), after = endingFrame(disconnect + 1);
+    assert.ok(before.layer('orbit-laptop-screen').length === 0 || !before.labels.some(label => label.startsWith('Network')));
+    assert.ok(after.labels.includes('Network connection lost.'), 'the message is written on the laptop screen');
+    assert.deepEqual(after.layer('attendance-bubble'), [], 'not in a speech bubble over his head');
+    const state = t => orbitEndingState(t);
+    assert.equal(state(disconnect - .2).rest, 0, 'typing until the message');
+    assert.equal(state(disconnect + 1).rest, 1, 'then the hands come off the keys');
+    assert.equal(state(handsStop - .1).still, 0);
+    assert.ok(state(handsStop + 1).still > 0, 'and stay where they stopped');
+    for (const t of [handsStop + .2, (handsStop + idle) / 2, idle - .1]) {
+        const e = state(t);
+        assert.ok(e.focus === 1 && e.wide === 0 && e.spin === 0, `a held moment of nothing at ${t}`);
+    }
+});
+
+test('the chair swivels and leans back to look out while he keeps his eyes on the dead screen', () => {
+    const { spinFrom, spin } = ORBIT_ENDING;
+    const mid = orbitEndingState((spinFrom + spin) / 2);
+    assert.ok(mid.swivel > .3 && mid.swivel < .7 && mid.recline > .9, 'turning round and leaning back');
+    assert.ok(mid.rest === 1 && mid.still > 0, 'his hands still off the keys');
+    assert.equal(orbitEndingState(spinFrom - .5).swivel, 0);
 });
 
 test('steering fades in during the entry instead of being locked out', () => {

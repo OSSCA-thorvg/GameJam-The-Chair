@@ -108,8 +108,8 @@ const CITIES: [number, number, number][] = [[127, 37.5, 3.4], [129, 35.1, 1.7], 
 /** The world camera's lens: where its axis meets the screen, its focal length, roll, and how far it looks down. */
 export type EarthCamera = { cx: number; cy: number; focal: number; roll: number; pitch: number };
 
-/** The camera at route depth `z` looking along the ground track, turned by the route's bend `yaw`. */
-function earthView(z: number, yaw: number, camera: EarthCamera) {
+/** The camera at route depth `z` looking along the ground track, turned by the route's bend `yaw` and by `spin` radians. */
+function earthView(z: number, yaw: number, camera: EarthCamera, spin = 0) {
     const h = earthAltitude(z);
     const [lon, lat] = groundTrack(z);
     // The heading along the track; at its end the track stops, so take it from just before.
@@ -117,7 +117,7 @@ function earthView(z: number, yaw: number, camera: EarthCamera) {
     const up = globe(lon, lat);
     const ahead = add(globe(bLon, bLat), globe(aLon, aLat), -1);
     let forward = unit(add(ahead, up, -dot(ahead, up)));
-    const turn = Math.atan(yaw);
+    const turn = Math.atan(yaw) + spin;
     forward = unit(add(scale(forward, Math.cos(turn)), cross(up, forward), Math.sin(turn)));
     const right = cross(forward, up);
     const limb = R / (R + h);
@@ -172,9 +172,9 @@ function earthView(z: number, yaw: number, camera: EarthCamera) {
  * The Earth below: ocean, land, clouds, the thin blue line of the atmosphere, and in its shadow the night side with
  * its cities. `strength` fades it in as the clouds thin out; `night` is how deep into the Earth's shadow it is.
  */
-export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, yaw: number, strength: number, night: number) {
+export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, yaw: number, strength: number, night: number, spin = 0) {
     if (strength <= 0) return;
-    const view = earthView(travel, yaw, camera);
+    const view = earthView(travel, yaw, camera, spin);
     const { horizon, middle } = view;
     const far = Math.max(ctx.W, ctx.H) * 4;
     const ground: Vector[] = [...horizon, [horizon.at(-1)![0] + far, horizon.at(-1)![1] + far], [horizon[0][0] - far, horizon[0][1] + far]];
