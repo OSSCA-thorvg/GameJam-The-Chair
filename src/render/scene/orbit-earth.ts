@@ -90,14 +90,15 @@ const CLOUDS: [number, number, number, number][] = (() => {
 })();
 
 /** Coastlines with a point at least every degree, so their edges follow the curve of the globe. */
-const DENSE = (() => {
+const LAND_DENSE = (() => {
     const densify = (outline: [number, number][]) => outline.flatMap(([lon, lat], i) => {
         const [nextLon, nextLat] = outline[(i + 1) % outline.length];
         const steps = Math.max(1, Math.ceil(Math.hypot(nextLon - lon, nextLat - lat)));
         return Array.from({ length: steps }, (_, k) => globe(lon + (nextLon - lon) * k / steps, lat + (nextLat - lat) * k / steps));
     });
-    return (land: { outline: [number, number][] }) => densify(land.outline);
+    return LAND.map(land => ({ ...land, points: densify(land.outline) }));
 })();
+const LAND_ORDER = [...LAND_DENSE.filter(land => !land.inland), ...LAND_DENSE.filter(land => land.inland)];
 
 // City lights for the night side: [longitude, latitude, size]. Seoul is the brightest of all.
 const CITIES: [number, number, number][] = [[127, 37.5, 3.4], [129, 35.1, 1.7], [128.6, 35.9, 1.4], [127.4, 36.3, 1.2], [126.9, 35.2, 1.2], [139.7, 35.7, 3],
@@ -188,8 +189,8 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
     const surface = { key: 'orbit-earth-surface', clip };
     const faded = (color: string) => color.slice(0, 7) + alpha((color.length > 7 ? parseInt(color.slice(7, 9), 16) / 255 : 1) * strength);
     // Coasts get a pale surf line; inland patches (desert, snow, forest) sit on top without one.
-    for (const land of [...LAND.filter(item => !item.inland), ...LAND.filter(item => item.inland)]) {
-        const points = DENSE(land);
+    for (const land of LAND_ORDER) {
+        const points = land.points;
         // A coast wholly beyond the horizon would only squash onto it.
         if (!points.some(view.visible)) continue;
         const v = view.outline(points);
@@ -208,9 +209,9 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
     if (night > 0) {
         ctx.commands.push({ v: ground, c: '#06101f' + alpha(.86 * night * strength), layer: surface });
         // Coasts still faintly visible under the night sky.
-        for (const land of LAND) {
+        for (const land of LAND_DENSE) {
             if (land.inland) continue;
-            const points = DENSE(land);
+            const points = land.points;
             if (!points.some(view.visible)) continue;
             const v = view.outline(points);
             if (v.length) ctx.commands.push({ v, c: null, stroke: { width: Math.max(1, ctx.W / 800), color: '#6f8fbf' + alpha(.45 * night * strength) }, layer: surface });

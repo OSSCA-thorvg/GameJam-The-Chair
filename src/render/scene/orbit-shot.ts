@@ -8,7 +8,7 @@ import { ORBIT_WATCH, orbitBeacon, orbitCloudGlints, orbitWatchers, orbitWatchGl
 import { ATTENDANCE, attendanceBubble } from './attendance-bubble';
 import { orbitPraise, orbitPraiseOnChair, praiseChairGlow, praiseLitChair, praiseWarmth } from './orbit-praise';
 import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './orbit-heights';
-import { earthHorizonAhead, orbitEarth, type EarthCamera } from './orbit-earth';
+import { orbitEarth, type EarthCamera } from './orbit-earth';
 import { endingChairLights, endingFade, endingLaptopScreen, endingLaptopText, endingNebula, endingSignal, type OrbitEndingState } from './orbit-ending';
 import { orbitSprayHint } from './orbit-spray-hint';
 import { STAGE_FIVE as C } from '../../game/stages/orbit/data';
@@ -65,10 +65,12 @@ const screen = (ctx: RenderCtx): [number, number][] => [[0, 0], [ctx.W, 0], [ctx
 /** The sky: the reveal's plain sky under the basin sky, warm sunlight, and the climb toward space. */
 function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: number; y: number }, earth: EarthCamera, spin: number) {
     const heights = orbitHeights(shot.travel);
-    if (shot.basin < 1) {
-        ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H], stops: [[0, ctx.rgba('#678eae')], [1, ctx.rgba('#b7ced1')]] } });
-        inOpacity(ctx, { key: 'orbit-basin-sky', opacity: shot.basin }, () => orbitSky(ctx, cam, spin));
-    } else orbitSky(ctx, cam, spin);
+    if (heights.air < 1) {
+        if (shot.basin < 1) {
+            ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H], stops: [[0, ctx.rgba('#678eae')], [1, ctx.rgba('#b7ced1')]] } });
+            inOpacity(ctx, { key: 'orbit-basin-sky', opacity: shot.basin }, () => orbitSky(ctx, cam, spin));
+        } else orbitSky(ctx, cam, spin);
+    }
     // Low sunlight over the cloud basin, thinning out as the chair climbs out of the clouds. Plain alpha instead of
     // a screen-blended Scene: over the sky behind the sun, #fff2eb paints what #ffdfb5 screened would
     // (c + d(1 - c) for d = #7499b9), without a full-canvas offscreen pass.
@@ -79,8 +81,8 @@ function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, cam: { x: num
     orbitHighSky(ctx, heights, 0, spin);
     endingNebula(ctx, shot.ending.wide, spin);
     // In the ending the sun comes up over the rim and day returns to the ground below.
-    orbitEarth(ctx, shot.travel, earth, 0, heights.air, heights.shadow * (1 - shot.ending.wide), spin);
-    return heights;
+    const horizon = orbitEarth(ctx, shot.travel, earth, 0, heights.air, heights.shadow * (1 - shot.ending.wide), spin);
+    return { heights, horizon };
 }
 
 export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
@@ -130,7 +132,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     const earth: EarthCamera = { cx: ctx.W / 2 + framing.offsetX, cy: ctx.H * framing.centerY,
         focal: Math.min(ctx.H * 1.65, ctx.W * .94) * framing.zoom, roll: framing.roll, pitch: lookDown };
     const turned = look + (spin + SHOULDER * focus) * Math.PI / 2;
-    const heights = backdrop(ctx, shot, clouds, cam, earth, turned);
+    const { heights, horizon } = backdrop(ctx, shot, clouds, cam, earth, turned);
     // The world as the camera sees it: ahead of the chair along the way the camera faces, up, and to its right.
     const facing = { cos: Math.cos(look), sin: Math.sin(look) };
     const point = (x: number, y: number, z: number): Point3 => {
@@ -177,7 +179,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // The praise beams fade in with their satellites while the camera turns.
     orbitPraise(ctx, view, praisePoint, since, travel, smooth((turn - ORBIT_WATCH.satelliteAppear) / .3));
     if (cloudsShown) orbitCloudBank(ctx, view, travel, true, { ...options, alpha: clouds });
-    orbitShadow(ctx, { ...heights, shadow: heights.shadow * (1 - wide) }, earthHorizonAhead(travel, earth, 0, turned));
+    if (heights.shadow > 0 && horizon) orbitShadow(ctx, { ...heights, shadow: heights.shadow * (1 - wide) }, horizon);
     skyDeparture(ctx, shot.departure);
     orbitSpeedLines(ctx, view.project(point(p.x + Math.sin(heading) * 100000, p.y, travel + Math.cos(heading) * 100000)), fast * (1 - wide));
     // The air resistance shows as streaks wrapping round the chair, strongest while the extinguisher pushes,
