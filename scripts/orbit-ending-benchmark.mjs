@@ -29,7 +29,7 @@ function draw(pool, current, at) {
 function pixels(current, at) {
     tvg.remove();
     const work = draw(createPaintPool(), current, at);
-    if (work < (current && at >= 37 ? 1 : 100)) throw new Error(`Missing work at ${at}: ${work}`);
+    if (work < (at >= 37 ? 1 : 100)) throw new Error(`Missing work at ${at}: ${work}`);
     captureContext.drawImage(canvas, 0, 0);
     return new Uint8ClampedArray(captureContext.getImageData(0, 0, capture.width, capture.height).data);
 }
@@ -89,6 +89,7 @@ document.querySelector('#run').onclick = async event => {
                 drawMs: median(rows.map(row => row.drawMs)),
                 intervalMs: median(rows.map(row => row.intervalMs)),
                 rangeMs: [Math.min(...rows.map(row => row.drawMs)), Math.max(...rows.map(row => row.drawMs))],
+                intervalRangeMs: [Math.min(...rows.map(row => row.intervalMs)), Math.max(...rows.map(row => row.intervalMs))],
                 frames: rows.reduce((total, row) => total + row.frames, 0),
             });
             runs[at] = { baseline: summarize(baseline), current: summarize(current) };

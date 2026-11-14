@@ -35,7 +35,7 @@ export function inOpacity(ctx: RenderCtx, layer: LayerSpec, draw: () => void) {
     for (let i = from; i < ctx.commands.length; i++) if (!ctx.commands[i].layer) ctx.commands[i] = { ...ctx.commands[i], layer };
 }
 
-const screen = (ctx: RenderCtx): Vector[] => [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]];
+const screen = (ctx: RenderCtx, bottom = ctx.H): Vector[] => [[0, 0], [ctx.W, 0], [ctx.W, bottom], [0, bottom]];
 
 /** Screen widths the backdrop slides by over one full turn of the camera: about one per 72 degree view. */
 export const PANORAMA = 5;
@@ -47,10 +47,11 @@ export const panoramaX = (x: number, spin: number) => {
 };
 
 /** The sky darkens to indigo, then to the black of space, and the stars come out. `spin` turns the camera round the chair. */
-export function orbitHighSky(ctx: RenderCtx, h: Heights, yaw = 0, spin = 0) {
-    if (h.air > 0 && h.space < 1) ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H],
+export function orbitHighSky(ctx: RenderCtx, h: Heights, yaw = 0, spin = 0, bottom = ctx.H) {
+    // Opaque Earth covers the lower sky during the ending; keep the gradient's original full-height coordinates.
+    if (h.air > 0 && h.space < 1) ctx.commands.push({ v: screen(ctx, bottom), c: { from: [0, 0], to: [0, ctx.H],
         stops: [[0, ctx.rgba('#1b2550', h.air)], [.55, ctx.rgba('#43578a', h.air)], [1, ctx.rgba('#8090b4', h.air)]] } });
-    if (h.space > 0) ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H],
+    if (h.space > 0) ctx.commands.push({ v: screen(ctx, bottom), c: { from: [0, 0], to: [0, ctx.H],
         stops: [[0, ctx.rgba('#060a1a', h.space)], [1, ctx.rgba('#121c3e', h.space)]] } });
     const stars = Math.max(h.air * .5, h.space);
     if (stars <= 0) return;

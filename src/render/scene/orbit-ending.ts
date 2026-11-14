@@ -73,21 +73,9 @@ export type OrbitEndingState = ReturnType<typeof orbitEnding>;
 const alpha = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0');
 
 /** A soft violet and rose nebula in the upper right, as in the storyboard; it swings past as the camera circles. */
-export function endingNebula(ctx: RenderCtx, strength: number, spin = 0, horizon?: Vector[]) {
+export function endingNebula(ctx: RenderCtx, strength: number, spin = 0, bottom = ctx.H) {
     if (strength <= 0) return;
     // Opaque Earth is painted after this scene and covers everything below the lowest visible horizon.
-    const skyY: number[] = [];
-    if (horizon) for (let i = 0; i < horizon.length - 1; i++) {
-        const a = horizon[i], b = horizon[i + 1];
-        if (a[0] >= 0 && a[0] <= ctx.W) skyY.push(a[1]);
-        for (const x of [0, ctx.W]) if ((a[0] < x && b[0] > x) || (a[0] > x && b[0] < x))
-            skyY.push(a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]));
-    }
-    if (horizon?.length) {
-        const last = horizon[horizon.length - 1];
-        if (last[0] >= 0 && last[0] <= ctx.W) skyY.push(last[1]);
-    }
-    const bottom = skyY.length ? Math.min(ctx.H, Math.max(...skyY) + 16) : ctx.H;
     const layer = { key: 'orbit-nebula', blend: 'screen' as const };
     const clouds: [number, number, number, string, number][] = [
         [.68, .2, .34, '#5b3fb0', .55], [.8, .14, .22, '#c25a86', .5], [.55, .3, .26, '#3d2f8a', .45],

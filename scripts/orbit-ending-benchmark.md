@@ -11,7 +11,7 @@ Open `/scripts/orbit-ending-benchmark.html?renderer=sw` at the printed address i
 
 The benchmark uses the existing `orbit-ending` preview snapshots. At each of 15, 20, 25, 30 and 38 seconds, it compares five alternating pairs of eight moving frames per version, after two warmup frames. It measures synchronous drawing time and `requestAnimationFrame` intervals. It also compares every raster pixel at half-second steps from 14 through 38 seconds. The 25-second sample shows a camera angle where little of the nebula is covered by Earth. The 38-second sample covers the fully black ending card. A background tab can throttle `requestAnimationFrame`; keep the tab active.
 
-## Observed result
+## Initial ending optimizations
 
 Headless Chrome on the current Mac, ThorVG 1.1.3 software renderer, 1000 × 510 CSS pixels, 1562 × 796 raster pixels, five runs per version and sample:
 
@@ -24,3 +24,9 @@ Headless Chrome on the current Mac, ThorVG 1.1.3 software renderer, 1000 × 510 
 | 38 s, ending card | 33.44 ms | 4.59 ms | 33.34 ms (30 fps) | 16.66 ms (60 fps) |
 
 The five drawing-time runs at 20 seconds ranged from 28.79 to 29.89 ms before and from 19.96 to 21.26 ms after. At 38 seconds, they ranged from 33.26 to 34.27 ms before and from 4.43 to 4.98 ms after. All measured frames completed without errors. Software-rendered pixel differences were zero at each checked half-second from 14 through 38 seconds. A separate WebGL comparison at 1750 × 892 raster pixels found 703 changed color channels across those 49 frames, each by only 1/255. While Earth is opaque, the optimized path bounds the nebula geometry to the visible sky above its horizon. From 37 seconds, the ending card is fully opaque, so only the black rectangle and title are built. The 60 fps result is the refresh-rate ceiling of this measurement; the gain varies with camera angle and does not apply to the whole 39-second ending. At 25 seconds, drawing-time ranges overlap and the frame interval is close to a refresh boundary, so that row is not a reliable gain.
+
+## Sky gradient crop follow-up
+
+To compare only the later sky-gradient change, rebuild the baseline from `a44a7ee` with `node scripts/prepare-orbit-benchmark.mjs a44a7ee`. At 25 seconds, the sky gradient used to fill the entire canvas even though opaque Earth covered almost all of it. Its path now stops below the visible horizon while retaining the original gradient coordinates. The half-second pixel sweep from 14 through 38 seconds found zero differences on both software and WebGL renderers against `a44a7ee`.
+
+Three separate five-pair software-renderer comparisons at 25 seconds gave baseline drawing-time medians of 17.65–17.86 ms and current medians of 16.38–16.59 ms. Current frame-interval medians reached 16.66–16.67 ms in all three comparisons; baseline medians ranged from 16.66 to 19.06 ms. This reduces render work by about 1–1.5 ms but does not guarantee a higher displayed FPS on every run near the 60 Hz boundary.
