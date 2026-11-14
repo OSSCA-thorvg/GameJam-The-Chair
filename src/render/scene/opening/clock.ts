@@ -15,6 +15,54 @@ function handShape(length: number, width: number, tail: number): Vector[] {
     return [[-width * .6, tail], [-width, 0], [-width * .35, -length * .92], [0, -length], [width * .35, -length * .92], [width, 0], [width * .6, tail]];
 }
 
+type Pane = { x: number; y: number; w: number; h: number };
+type Roof = 'flat' | 'antenna' | 'setback' | 'tank' | 'slant';
+/** A building in the window: left edge and width as fractions of the pane, height as a fraction of its height. */
+type Tower = { x: number; w: number; h: number; roof: Roof };
+
+// Two rows of towers behind the window, so the view reads as a city rather than a bar chart: a hazier back row
+// and a darker front row, each with its own widths, gaps, roof shapes and window grid.
+const BACK_ROW: Tower[] = [
+    { x: -.04, w: .2, h: .62, roof: 'slant' }, { x: .17, w: .14, h: .8, roof: 'antenna' }, { x: .33, w: .2, h: .56, roof: 'flat' },
+    { x: .55, w: .13, h: .72, roof: 'setback' }, { x: .7, w: .2, h: .5, roof: 'tank' }, { x: .88, w: .18, h: .66, roof: 'flat' },
+];
+const FRONT_ROW: Tower[] = [
+    { x: -.02, w: .21, h: .36, roof: 'tank' }, { x: .23, w: .17, h: .5, roof: 'setback' }, { x: .43, w: .23, h: .3, roof: 'flat' },
+    { x: .69, w: .15, h: .44, roof: 'antenna' }, { x: .86, w: .19, h: .32, roof: 'slant' },
+];
+
+/** One tower: its body, its roof detail and a grid of windows, lit more and more as the evening darkens. */
+function tower(ctx: RenderCtx, pane: Pane, t: Tower, body: string, glass: string, dusk: number, seed: number) {
+    const left = pane.x + t.x * pane.w, width = t.w * pane.w, base = pane.y + pane.h, top = base - t.h * pane.h;
+    const right = left + width;
+    const roofY = t.roof === 'slant' ? top + width * .25 : top;
+    polygon(ctx, [[left, t.roof === 'slant' ? top : roofY], [right, roofY], [right, base], [left, base]], body);
+    if (t.roof === 'setback') polygon(ctx, [[left + width * .2, top - width * .3], [right - width * .2, top - width * .3], [right - width * .2, top], [left + width * .2, top]], body);
+    if (t.roof === 'antenna') polygon(ctx, [[left + width * .48, top - width * .7], [left + width * .54, top - width * .7], [left + width * .54, top], [left + width * .48, top]], body);
+    if (t.roof === 'tank') {
+        polygon(ctx, [[left + width * .55, top - width * .32], [left + width * .85, top - width * .32], [left + width * .85, top], [left + width * .55, top]], body);
+        polygon(ctx, [[left + width * .5, top - width * .38], [left + width * .9, top - width * .38], [left + width * .7, top - width * .48]], body);
+    }
+    const size = Math.max(2, width * .09), gapX = size * 1.9, gapY = size * 2.3;
+    const cols = Math.max(1, Math.floor((width - size) / gapX)), margin = (width - (cols - 1) * gapX - size) / 2;
+    for (let row = 0; roofY + size * 1.4 + row * gapY + size < base - size; row++) {
+        for (let col = 0; col < cols; col++) {
+            const x = left + margin + col * gapX, y = roofY + size * 1.4 + row * gapY;
+            const lit = ((seed * 7 + row * 13 + col * 5) % 9) < 4;
+            const color = lit ? mix(glass, '#f6d48b', dusk) : glass;
+            polygon(ctx, [[x, y], [x + size, y], [x + size, y + size * 1.2], [x, y + size * 1.2]], color);
+        }
+    }
+}
+
+/** The city through the window: a hazy back row, then a darker front row in front of it. */
+function windowSkyline(ctx: RenderCtx, pane: Pane, dusk: number) {
+    const backBody = mix('#c99b7e', '#262d4a', dusk), backGlass = mix('#d9b394', '#20263f', dusk);
+    BACK_ROW.forEach((t, i) => tower(ctx, pane, t, backBody, backGlass, dusk * .7, i + 3));
+    const frontBody = mix('#9a6853', '#131a2b', dusk), frontGlass = mix('#b48168', '#1b2238', dusk);
+    FRONT_ROW.forEach((t, i) => tower(ctx, pane, t, frontBody, frontGlass, dusk, i));
+}
+
 export function drawClock(ctx: RenderCtx, frame: OpeningFrame) {
     const { cx, cy, R } = clockLayout(ctx, frame);
     const dusk = frame.dusk;
@@ -46,16 +94,7 @@ export function drawClock(ctx: RenderCtx, frame: OpeningFrame) {
         linear(ctx, [0, wy], [0, wy + wh], [[0, mix('#f3a467', '#0f1530', dusk)], [.7, mix('#f8d48c', '#26305a', dusk)], [1, mix('#fbe3a7', '#33406b', dusk)]]));
     const sunY = wy + wh * (.55 + dusk * .7);
     push(ctx, circle(wx + ww * .55, sunY, R * .2).command(radial(ctx, wx + ww * .55, sunY, R * .2, [[0, '#fff2c9'], [1, '#f39a5a']], 1 - dusk)));
-    for (let i = 0; i < 5; i++) {
-        const bx = wx + i * ww / 5, bh = wh * (.2 + ((i * 37) % 23) / 60);
-        polygon(ctx, [[bx, wy + wh - bh], [bx + ww / 5 - 2, wy + wh - bh], [bx + ww / 5 - 2, wy + wh], [bx, wy + wh]], mix('#b07a62', '#141a2c', dusk));
-        if (dusk > .3) {
-            for (let k = 0; k < 3; k++) {
-                const lx = bx + 4 + (k * 7) % (ww / 5 - 8), ly = wy + wh - bh + 6 + k * 10;
-                if (ly < wy + wh - 4) polygon(ctx, [[lx, ly], [lx + 3, ly], [lx + 3, ly + 4], [lx, ly + 4]], ctx.tint('#f6d48b', dusk));
-            }
-        }
-    }
+    windowSkyline(ctx, { x: wx, y: wy, w: ww, h: wh }, dusk);
     ctx.endLayer();
     layer('mullion');
     polygon(ctx, [[wx + ww / 2 - 2, wy], [wx + ww / 2 + 2, wy], [wx + ww / 2 + 2, wy + wh], [wx + ww / 2 - 2, wy + wh]], mix('#8a6a58', '#232a3d', dusk));
