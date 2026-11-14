@@ -80,8 +80,9 @@ export function desk(ctx: RenderCtx, x: number) {
         ctx.gradientFill(x + 71, F - 160, x + 71, F - 108, [[0, glowColor], [1, glowColor + '00']], flicker * (phase?.active ? .55 : .3))
     );
     ctx.rect(x + 52, F - 158, 39, 2, ctx.tint('#ffffff', flicker * .35));
-    ctx.rod(x + 70, F - 125, x + 70, F - 105, 5, C.steel);
-    ctx.rect(x + 40, F - 112, 63, 5, '#526274');
+    ctx.rod(x + 70, F - 125, x + 70, F - 110, 5, C.steel);
+    // The monitor's foot rests right on the desktop (F - 105) instead of hovering a little above it.
+    ctx.rect(x + 40, F - 110, 63, 5, '#526274');
 }
 
 export function binBack(ctx: RenderCtx) {
