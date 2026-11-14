@@ -1,10 +1,11 @@
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
 import type { OrbitState } from '../../game/stages/orbit/data';
-import type { Point3, SkyProjection } from './sky-projection';
+import type { SkyProjection } from './sky-projection';
 import { LABEL_FONT, SPEECH_FONT } from '../fonts';
 import { translate } from '../../i18n';
 import { panoramaX } from './orbit-heights';
+import { laptopScreenPoint } from './sky-ending-art';
 
 // The ending, played while the chair is parked in the Earth's shadow, starting from the frame 5-3 ended on:
 // the spray dies down and the extinguisher floats away while the camera leans in over the rider's shoulder to the
@@ -139,22 +140,16 @@ export function endingSignal(ctx: RenderCtx, head: Vector, e: OrbitEndingState) 
     }
 }
 
-/** A point on the laptop screen: `u` across (0 left to 1 right), `v` up, lifted just off the lid towards the rider. */
-function screenPoint(u: number, v: number, lift = .7): Point3 {
-    // The screen on the laptop lid faces the rider: from just above the hinge (47, 1) up to (53.6, 25), 40 wide.
-    // `lift` raises a layer off the glass, so the window sits clearly in front of the sheet behind it.
-    return [47 + 6.6 * v - .96 * lift, 1 + 24 * v + .26 * lift, -20 + 40 * u];
-}
-
 /**
  * The laptop screen, built onto the lid as faces of the chair drawing so the rider's head hides it where it should:
  * the spreadsheet he is still typing into, the 'Network connection lost.' window over it, and nothing once the laptop
  * goes dark. Its words go on top afterwards (`endingLaptopText`).
  */
-export function endingLaptopScreen(chair: SkyProjection, e: OrbitEndingState) {
+export function endingLaptopScreen(chair: SkyProjection, e: OrbitEndingState, bob: number) {
     if (!e.parked) return;
     const quad = (u0: number, v0: number, u1: number, v1: number, color: string, lift = .7) =>
-        chair.polygon([screenPoint(u0, v0, lift), screenPoint(u1, v0, lift), screenPoint(u1, v1, lift), screenPoint(u0, v1, lift)], color + 'ff');
+        chair.polygon([laptopScreenPoint(u0, v0, bob, lift), laptopScreenPoint(u1, v0, bob, lift),
+            laptopScreenPoint(u1, v1, bob, lift), laptopScreenPoint(u0, v1, bob, lift)], color);
     if (e.lightsOut >= 1) return quad(.04, .06, .96, .94, '#1b1f27');
     quad(.04, .06, .96, .94, e.lightsOut > .5 ? '#1b1f27' : '#dce8f2');
     if (e.lightsOut > .5) return;
@@ -180,11 +175,11 @@ function twoLines(text: string): string[] {
 }
 
 /** The connection-lost message on the laptop screen, in two large lines, written after the chair so it sits on the window. */
-export function endingLaptopText(ctx: RenderCtx, chair: SkyProjection, e: OrbitEndingState) {
+export function endingLaptopText(ctx: RenderCtx, chair: SkyProjection, e: OrbitEndingState, bob: number) {
     if (!e.parked || e.message <= 0 || e.lightsOut > .5) return;
     // The text keeps to the left part of the window: over the shoulder, the rider's head hides its right edge.
-    const left = chair.project(screenPoint(.18, .48)), right = chair.project(screenPoint(.74, .48));
-    const top = chair.project(screenPoint(.46, .76)), bottom = chair.project(screenPoint(.46, .18));
+    const left = chair.project(laptopScreenPoint(.18, .48, bob)), right = chair.project(laptopScreenPoint(.74, .48, bob));
+    const top = chair.project(laptopScreenPoint(.46, .76, bob)), bottom = chair.project(laptopScreenPoint(.46, .18, bob));
     // Seen from the back of the lid, the screen faces away: nothing to read.
     const facing = (right[0] - left[0]) * (top[1] - left[1]) - (right[1] - left[1]) * (top[0] - left[0]);
     if (facing >= 0) return;
@@ -197,7 +192,7 @@ export function endingLaptopText(ctx: RenderCtx, chair: SkyProjection, e: OrbitE
     lines.forEach((line, i) => {
         // Lines stack down the screen from above its middle.
         const v = .48 + (((lines.length - 1) / 2) - i) * .58 / lines.length;
-        const at = chair.project(screenPoint(.46, v));
+        const at = chair.project(laptopScreenPoint(.46, v, bob));
         ctx.screenText(line, at[0], at[1], size, '#20242c', { font: SPEECH_FONT, opacity: e.message, rotation });
     });
 }

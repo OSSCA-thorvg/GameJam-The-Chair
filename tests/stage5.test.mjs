@@ -324,7 +324,7 @@ test('the rider works on a laptop, not a monitor: a keyboard base under his hand
     const rgb = color => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
     const near = (color, target) => typeof color === 'string' && color.length >= 7
         && rgb(color).every((channel, i) => Math.abs(channel - rgb(target)[i]) <= 8);
-    for (const [color, part] of [['#3c4350', 'keyboard'], ['#6b7486', 'trackpad'], ['#a8b9c3', 'screen']]) {
+    for (const [color, part] of [['#222c39', 'keyboard'], ['#465362', 'trackpad'], ['#9caaba', 'screen rim']]) {
         assert.ok(over.commands.some(command => near(command.c, color)), `the ${part} shows over his shoulder`);
     }
 });

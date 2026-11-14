@@ -214,8 +214,8 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     // The light the chair is catching shows on the chair itself: warming as it nears a beam, glowing inside one.
     const light = since >= 0 && wide <= 0 ? satelliteLightWarmth(shot.aims ?? NO_AIMS, p, travel) : { warmth: 0, toward: { x: 0, y: 0 } };
     const pulse = Math.sin(ctx.t * 9) * .5 + .5;
-    endingChair(satelliteLitChair(chair, light.warmth >= 1 ? .62 + .18 * pulse : light.warmth * .7), shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest, shot.rocket);
-    endingLaptopScreen(chair, ending);
+    const laptopBob = endingChair(satelliteLitChair(chair, light.warmth >= 1 ? .62 + .18 * pulse : light.warmth * .7), shot.clock, shot.spray * (1 + .8 * rush * push), shot.arrival, ending.loose, ending.rest, shot.rocket);
+    endingLaptopScreen(chair, ending, laptopBob);
     orbitEdgePuffs(chair, edge, over, ctx.t);
     satelliteChairGlow(ctx, chair, light, pulse);
     ctx.commands.push(...view.commands({ ...split, part: 'near' }));
@@ -225,7 +225,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     orbitViewfinder(ctx, plane, light.warmth >= 1 ? 1 : 0, lightShown * blend * (1 - heights.shadow), shot.hitStop ?? 0);
     // Caught: a white camera flash over everything, fading through the stop.
     if (shot.hitStop) ctx.commands.push({ v: screen(ctx), c: '#ffffff' + Math.round(.32 * shot.hitStop * shot.hitStop * 255).toString(16).padStart(2, '0'), layer: { key: 'orbit-shutter' } });
-    endingLaptopText(ctx, chair, ending);
+    endingLaptopText(ctx, chair, ending, laptopBob);
     endingChairLights(ctx, chair, ending);
     const head = chair.project([4, 70, 0]);
     // The laptop answers the cameras just before stage five and the bubble stays up into its first moments;
