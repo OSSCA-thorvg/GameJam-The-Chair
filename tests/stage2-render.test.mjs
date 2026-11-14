@@ -97,7 +97,7 @@ test('the two meeting doors have distinct titles and chair complaints come from 
     const hall = render(base, 'ko', 1000).labels.map(label => label.text);
     assert.ok(hall.includes('퇴근 시각 협의회'));
     assert.ok(hall.includes('회의 종료 심의회'));
-    for (const [age, complaint] of [[1.8, '사람이 안 일어나...'], [2.8, '다리는 진작 퇴근했어...'], [3.9, '내 위에 야근이 앉아 있어...']]) {
+    for (const [age, complaint] of [[1.8, '엉덩이님, 저 퇴근 좀요.'], [2.8, '한 번만 일어나 봐. 나 튄다.'], [3.9, '나사 하나 풀고 병가 낼까...']]) {
         const state = { ...base, mode: 'play', time: age,
             player: { ...base.player, x: 520 },
             corridor: { ...base.corridor, room: { kind: 'meeting', age, returnX: 620 } },
