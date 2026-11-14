@@ -73,8 +73,9 @@ export type OrbitEndingState = ReturnType<typeof orbitEnding>;
 const alpha = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0');
 
 /** A soft violet and rose nebula in the upper right, as in the storyboard; it swings past as the camera circles. */
-export function endingNebula(ctx: RenderCtx, strength: number, spin = 0) {
+export function endingNebula(ctx: RenderCtx, strength: number, spin = 0, bottom = ctx.H) {
     if (strength <= 0) return;
+    // Opaque Earth is painted after this scene and covers everything below the lowest visible horizon.
     const layer = { key: 'orbit-nebula', blend: 'screen' as const };
     const clouds: [number, number, number, string, number][] = [
         [.68, .2, .34, '#5b3fb0', .55], [.8, .14, .22, '#c25a86', .5], [.55, .3, .26, '#3d2f8a', .45],
@@ -84,11 +85,14 @@ export function endingNebula(ctx: RenderCtx, strength: number, spin = 0) {
         const x = panoramaX(px, spin);
         if (x < -r - .2 || x > 1 + r + .2) continue;
         const cx = x * ctx.W, cy = y * ctx.H, radius = r * ctx.W;
-        ctx.commands.push({ v: [[cx - radius, cy - radius], [cx + radius, cy - radius], [cx + radius, cy + radius], [cx - radius, cy + radius]],
+        if (cy - radius >= bottom) continue;
+        const lower = Math.min(cy + radius, bottom);
+        ctx.commands.push({ v: [[cx - radius, cy - radius], [cx + radius, cy - radius], [cx + radius, lower], [cx - radius, lower]],
             c: { from: [cx, cy], to: [cx + radius, cy], radius, stops: [[0, ctx.rgba(color, opacity * strength)], [1, ctx.rgba(color, 0)]] }, layer });
     }
     for (const [px, y] of [[.82, .12], [.62, .08], [.9, .34], [.45, .18]]) {
         const cx = panoramaX(px, spin) * ctx.W, cy = y * ctx.H, ray = ctx.W * .008;
+        if (cy - ray >= bottom) continue;
         const c = '#ffffff' + alpha(.9 * strength);
         ctx.commands.push({ v: [[cx - ray, cy], [cx, cy - ray * .12], [cx + ray, cy], [cx, cy + ray * .12]], c, layer });
         ctx.commands.push({ v: [[cx, cy - ray], [cx + ray * .12, cy], [cx, cy + ray], [cx - ray * .12, cy]], c, layer });

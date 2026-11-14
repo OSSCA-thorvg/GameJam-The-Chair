@@ -116,11 +116,16 @@ test('the orbit preview reaches the Earth shadow, seeks backwards, and renders f
         const before = structuredClone(frame.state);
         drawOrbit(ctx);
         assert.deepEqual(frame.state, before);
-        assert.ok(ctx.commands.length > 200);
-        assert.ok(ctx.commands.reduce((n,c) => n+(c.curves?.length ?? 0), 0) <= 5000, 'cloud entry stays within its curve budget');
-        assert.ok(ctx.commands.filter(c => c.c && typeof c.c === 'object').length <= 140, 'cloud entry stays within its gradient budget');
         const commands = ctx.commands;
-        assert.ok(commands.some(cmd => cmd.curves), 'clouds use vector curves');
+        if (frame.state.orbit.phase === 'parked' && orbitEnding(frame.state.orbit).dark >= 1) {
+            assert.ok(commands.some(cmd => cmd.layer?.key === 'orbit-ending-black'), 'the opaque ending card remains visible');
+            assert.ok(commands.some(cmd => cmd.text?.content === 'THE END'), 'the ending title remains visible');
+        } else {
+            assert.ok(commands.length > 200);
+            assert.ok(commands.reduce((n,c) => n+(c.curves?.length ?? 0), 0) <= 5000, 'cloud entry stays within its curve budget');
+            assert.ok(commands.filter(c => c.c && typeof c.c === 'object').length <= 140, 'cloud entry stays within its gradient budget');
+            assert.ok(commands.some(cmd => cmd.curves), 'clouds use vector curves');
+        }
         assert.ok(!commands.some(cmd => cmd.stroke?.color === '#bff5bd'), 'no green hoops');
         assert.ok(commands.every(cmd => !cmd.layer?.blur && !cmd.layer?.motionBlur), 'the cloud entry uses no blur');
         for (const cmd of commands) for (const point of [...cmd.v, ...(cmd.curves ?? [])]) assert.ok(point.every(Number.isFinite));

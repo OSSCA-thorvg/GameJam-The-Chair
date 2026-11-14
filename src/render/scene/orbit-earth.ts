@@ -242,3 +242,18 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
 export function earthHorizonAhead(travel: number, camera: EarthCamera, yaw: number, spin = 0) {
     return earthView(travel, yaw, camera, spin).middle;
 }
+
+/** The last screen row where sky artwork can remain visible above opaque Earth. */
+export function earthSkyBottom(travel: number, camera: EarthCamera, yaw: number, width: number, height: number, spin = 0) {
+    const horizon = earthView(travel, yaw, camera, spin).horizon;
+    const skyY: number[] = [];
+    for (let i = 0; i < horizon.length - 1; i++) {
+        const a = horizon[i], b = horizon[i + 1];
+        if (a[0] >= 0 && a[0] <= width) skyY.push(a[1]);
+        for (const x of [0, width]) if ((a[0] < x && b[0] > x) || (a[0] > x && b[0] < x))
+            skyY.push(a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]));
+    }
+    const last = horizon[horizon.length - 1];
+    if (last[0] >= 0 && last[0] <= width) skyY.push(last[1]);
+    return skyY.length ? Math.min(height, Math.max(...skyY) + 16) : height;
+}

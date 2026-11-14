@@ -1,6 +1,6 @@
 import type { RenderCtx } from '../context';
 import { REVEAL_DURATION } from './sky-camera';
-import { orbitEnding } from './orbit-ending';
+import { endingFade, orbitEnding } from './orbit-ending';
 import { drawOrbitShot } from './orbit-shot';
 
 /** Seconds the chair framing takes to pull back from the reveal's close-up once stage five starts. */
@@ -13,6 +13,11 @@ export function drawOrbit(ctx: RenderCtx) {
     const { orbit, player: p } = ctx.state;
     if (!orbit) return;
     const ending = orbitEnding(orbit);
+    // Once the black card rounds to full alpha it hides everything under it.
+    if (Math.round(ending.dark * 255) >= 255) {
+        endingFade(ctx, ending);
+        return;
+    }
     drawOrbitShot(ctx, {
         since: orbit.age, travel: orbit.z, p, turn: 1, speed: orbit.speed, push: ctx.state.spray.burst / .24,
         // The rider's clock carries on from the reveal; once the laptop is dark the rider stops moving altogether.
