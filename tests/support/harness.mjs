@@ -80,16 +80,32 @@ export function balancePolicy(state, game) {
     if (state.mode === 'dead' || state.mode === 'won') game.reset();
 }
 
-const EXPRESS = { bump: 2480, pit: { left: 3080, right: 3420 } };
-// Rides the express convoy through the rush-hour corridor: hops the speed bump (a jump without pushing on
-// lands back on the chairs), jumps from the launch ramp, then jumps off the convoy again with a push
-// before the lift. With `stayAboard` it stays on the chairs and gets swept into the lift.
+const EXPRESS = { bump: 10130, pit: { left: 10730, right: 11070 } };
+// The orientation obstacles before the express (the robot vacuum drives left at 60 px/s).
+const ORIENTATION = [
+    { x: 4050 }, { x: 5370 }, { x: 6250 }, { robot: true, speed: 60 }, { x: 8450 }, { x: 8620 },
+];
+// Whether to hop now: the jump peaks over the nearest obstacle ahead.
+export function orientationHop(state) {
+    const p = state.player;
+    if (!state.ground) return false;
+    return ORIENTATION.some(obstacle => {
+        const x = obstacle.robot ? state.corridor.robot : obstacle.x;
+        const closing = p.vx + (obstacle.robot ? obstacle.speed : 0);
+        const time = (x - p.x) / Math.max(1, closing);
+        return time > .36 && time < .44;
+    });
+}
+// Rides the orientation convoy, hopping each obstacle, then the express convoy through the rush-hour corridor:
+// hops the speed bump (a jump without pushing on lands back on the chairs), jumps from the launch ramp,
+// then jumps off the convoy again with a push before the lift. With `stayAboard` it stays on the chairs and gets swept into the lift.
 // Returns the keys to hold this tick, or null when the convoy is not involved.
 export function createExpressRider(stayAboard = false) {
     let off = false;
     return (state, game) => {
         const p = state.player, { convoy, pace } = state.corridor;
         if (off) return ['right'];
+        if (pace !== 'express' && state.stage === 2 && orientationHop(state)) game.jump();
         if (pace !== 'express' || convoy === 'free') return null;
         if (convoy !== 'carried' || !state.ground) return [];
         const toBump = EXPRESS.bump - p.x;

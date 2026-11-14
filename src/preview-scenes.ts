@@ -449,13 +449,53 @@ function shaftHazards(id: string, label: string, at: { x: number; y: number }, s
     return recordedScene(id, label, at.x, markers, frames);
 }
 
-function expressRun(id: string, label: string, hop: boolean, markers: PreviewScene['markers'], rampJump = hop): PreviewScene {
+// A stage two game with the rider carried in the convoy at `x`, about to say orientation `line`.
+function convoyRide(x: number, line: number, said = false): Game {
     const game = createGame();
     game.startStage(2);
     const saved = JSON.parse(game.serialize());
+    const cruise = STAGE_TWO.orientation.cruise;
     saved.checkpoint = 2;
+    saved.lessons = { moved: true, jumped: true };
+    saved.p = { ...saved.p, x, y: 392, vx: cruise, vy: 0, a: 0, w: 0 };
+    saved.ground = true;
+    saved.building.furniture = saved.building.furniture.map((chair: object, i: number) => ({ ...chair, x: x + 90 - i * 130, vx: cruise, released: true, cheer: 0 }));
+    Object.assign(saved.building.corridor, {
+        dispatchStarted: true, dispatchAge: 10, convoy: 'carried', lesson: line,
+        chat: { kind: 'orientation', age: said ? 9 : -1, line },
+    });
     game.restore(JSON.stringify(saved));
-    game.reset();
+    return game;
+}
+
+// Hop when the jump will peak over the next orientation obstacle (the robot vacuum closes in).
+function orientationHop(state: GameState) {
+    if (!state.ground) return false;
+    const p = state.player;
+    return STAGE_TWO.orientation.obstacles.some(obstacle => {
+        const robot = obstacle.kind === 'robot';
+        const time = ((robot ? state.corridor.robot : obstacle.x) - p.x) / Math.max(1, p.vx + (robot ? STAGE_TWO.orientation.robot.speed : 0));
+        return time > .36 && time < .44;
+    });
+}
+
+function orientationRun(id: string, label: string, line: number, hop: boolean, frameCount: number, markers: PreviewScene['markers']): PreviewScene {
+    const x = STAGE_TWO.orientation.lines[line].at - 80;
+    const game = convoyRide(x, line);
+    const effects = createEffects();
+    const frames = [capture(game, effects)];
+    for (let i = 0; i < frameCount; i++) {
+        const state = game.getSnapshot();
+        if (hop && orientationHop(state)) game.jump();
+        game.setInput(...(state.corridor.convoy === 'carried' ? [] : ['right'] satisfies Input[]));
+        stepGame(game, effects);
+        frames.push(capture(game, effects));
+    }
+    return { ...recordedScene(id, label, x, markers, frames), follow: true };
+}
+
+function expressRun(id: string, label: string, hop: boolean, markers: PreviewScene['markers'], rampJump = hop): PreviewScene {
+    const game = convoyRide(STAGE_TWO.express.start - 10, STAGE_TWO.orientation.lines.length - 1, true);
     const { bump, pit } = STAGE_TWO.express;
     const effects = createEffects();
     const frames = [capture(game, effects)];
@@ -474,7 +514,7 @@ function expressRun(id: string, label: string, hop: boolean, markers: PreviewSce
         frames.push(capture(game, effects));
         if (game.getSnapshot().deaths > 0) break;
     }
-    return { ...recordedScene(id, label, 2600, markers, frames), follow: true };
+    return { ...recordedScene(id, label, STAGE_TWO.express.bump, markers, frames), follow: true };
 }
 
 function urgentCopier(volley: number, id: string, label: string): PreviewScene {
@@ -1017,6 +1057,18 @@ export const previewScenes: readonly PreviewScene[] = [
         [{ at: 1.6, label: 'Vent hiss' }, { at: 2.4, label: 'Vent blast' }, { at: 3.45, label: 'Duct inhale' }, { at: 4.05, label: 'Duct gust' }]),
     shaftHazards('rooftop-shaft-high', 'Rooftop · Shaft vent & ceiling downdraft', { x: 1400, y: -262 }, 1.2,
         [{ at: .3, label: 'Downdraft' }, { at: 1.5, label: 'Wall vent hiss' }, { at: 2.25, label: 'Wall vent blast' }, { at: 2.65, label: 'Ceiling hiss' }, { at: 3.4, label: 'Downdraft' }]),
+    orientationRun('orientation-cable', 'Building · Orientation: hop the cable', 0, true, 300,
+        [{ at: 0, label: 'Rule one' }, { at: 1.4, label: 'Chairs hop first' }, { at: 2, label: 'Rookie hops' }]),
+    orientationRun('orientation-sign', 'Building · Orientation: wet floor sign', 3, true, 300,
+        [{ at: 0, label: 'Rule two' }, { at: 2, label: 'Hop the sign' }]),
+    orientationRun('orientation-sleeper', 'Building · Orientation: overtime sleeper', 5, true, 420,
+        [{ at: 0, label: 'Shh' }, { at: 2, label: 'Hop the sleeping bag' }, { at: 4, label: 'Chair clocked out first' }]),
+    orientationRun('orientation-robot', 'Building · Orientation: robot vacuum', 8, true, 300,
+        [{ at: 0, label: 'Robot vacuum!' }, { at: 1.9, label: 'Hop the robot' }]),
+    orientationRun('orientation-strips', 'Building · Orientation: two power strips', 10, true, 360,
+        [{ at: 0, label: 'Rule three' }, { at: 2, label: 'Double hop' }]),
+    orientationRun('orientation-trip', 'Building · Orientation: rookie trips', 0, false, 480,
+        [{ at: 2, label: 'Trip on the cable' }, { at: 2.2, label: 'Rookie down!' }, { at: 3.7, label: 'Chairs wait' }]),
     expressRun('express-ramp', 'Building · Express: jump from the ramp', true,
         [{ at: .7, label: 'Front chair bounces' }, { at: .8, label: 'Hop' }, { at: 1.8, label: 'Ramp shout' }, { at: 2.3, label: 'Jump at the lip' }]),
     expressRun('express-ramp-miss', 'Building · Express: miss the ramp jump', true,

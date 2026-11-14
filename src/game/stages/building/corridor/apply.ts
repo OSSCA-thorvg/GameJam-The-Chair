@@ -2,6 +2,7 @@ import { setPlayer, type GameState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { applyFocusHit } from '../../../systems/focus/apply';
 import { STAGES } from '../../index';
+import { STAGE_TWO } from '../data';
 import { canEnterMeeting, convoyLanding, corridorStep, liftRide, meetingExit, meetingStep } from './decide';
 export function applyConvoyLanding(s: GameState) {
     const r = convoyLanding(s.building.corridor, s.building.furniture, s.p, s.ground);
@@ -50,6 +51,9 @@ export function applyCorridor(s: GameState, out: GameEvent[], dt: number, previo
     if (r.kick === 'bump') {
         out.push({ type: 'cue', id: 'convoy-bump' });
         applyFocusHit(s, out, { kind: 'bump', id: 0, damage: 10 });
+    } else if (r.kick === 'trip') {
+        out.push({ type: 'cue', id: 'convoy-bump' });
+        applyFocusHit(s, out, { kind: 'bump', id: 1 + r.tripped, damage: STAGE_TWO.orientation.damage });
     }
 }
 

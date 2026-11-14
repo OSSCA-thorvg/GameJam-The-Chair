@@ -14,7 +14,7 @@ function geyserBursting(g, t) {
 function drive(game, stop = state => state.mode !== 'play', options = {}) {
     const seen = { checkpoints: new Set(), express: false, bumps: 0, chats: new Set() };
     const express = createExpressRider(options.stayAboard);
-    for (let i = 0; i < 120 * 60; i++) {
+    for (let i = 0; i < 120 * 120; i++) {
         const state = game.getSnapshot(), p = state.player;
         const simT = state.time;
         seen.checkpoints.add(state.checkpoint);
@@ -36,7 +36,7 @@ function drive(game, stop = state => state.mode !== 'play', options = {}) {
         game.step(dt);
         for (const event of game.drainEvents()) if (event.type === 'cue' && event.id === 'convoy-bump') seen.bumps++;
     }
-    assert.fail('Route did not finish within 60 simulated seconds');
+    assert.fail('Route did not finish within 120 simulated seconds');
 }
 
 test('stage2 completes through chair dispatch and the clock-out lift', () => {
@@ -45,8 +45,8 @@ test('stage2 completes through chair dispatch and the clock-out lift', () => {
     assert.equal(state.mode, 'won');
     assert.equal(state.completedStage, 2);
     assert.equal(state.deaths, 0);
-    assert.equal(state.checkpoint, 3);
-    assert.deepEqual([...seen.checkpoints], [0, 1, 2, 3]);
+    assert.equal(state.checkpoint, 4);
+    assert.deepEqual([...seen.checkpoints], [0, 1, 2, 3, 4]);
     assert.ok(state.furniture.every(chair => chair.released));
     assert.ok(seen.express, 'the convoy speeds up before the lift');
     assert.equal(seen.bumps, 0, 'the speed bump was hopped');
@@ -66,7 +66,7 @@ test('staying aboard the express convoy ends in a forced clock-out', () => {
     assert.equal(state.corridor.departure.kind, 'lost');
     game.reset();
     assert.equal(game.getSnapshot().mode, 'play');
-    assert.equal(game.getSnapshot().checkpoint, 2, 'retry starts from the last flag before the lift');
+    assert.equal(game.getSnapshot().checkpoint, 3, 'retry starts from the last flag before the lift');
 });
 
 test('hopping the bump and flying off the ramp with the convoy reaches the exit without losing focus', () => {
@@ -81,13 +81,13 @@ test('hopping the bump and flying off the ramp with the convoy reaches the exit 
 test('the express convoy does not carry a rider across the pit without a ramp jump', () => {
     const game = createGame(); game.startStage(2);
     drive(game, state => state.corridor.pace === 'express' && state.corridor.convoy === 'carried'
-        && state.player.x >= 3000);
+        && state.player.x >= 10650);
     game.clearInput();
     let crossed = false;
     for (let i = 0; i < 120 * 4 && game.getSnapshot().deaths === 0; i++) {
         game.step(dt);
         const state = game.getSnapshot();
-        crossed ||= state.player.x > 3420;
+        crossed ||= state.player.x > 11070;
     }
     const state = game.getSnapshot();
     assert.equal(crossed, false, 'rolling with the chairs cannot clear the construction hole');
@@ -97,13 +97,13 @@ test('the express convoy does not carry a rider across the pit without a ramp ju
 test('jumping at the start of the ramp falls short of the far side', () => {
     const game = createGame(); game.startStage(2);
     drive(game, state => state.corridor.pace === 'express' && state.corridor.convoy === 'carried'
-        && state.player.x >= 2930);
+        && state.player.x >= 10580);
     game.jump();
     game.clearInput();
     let crossed = false;
     for (let i = 0; i < 120 * 4 && game.getSnapshot().deaths === 0; i++) {
         game.step(dt);
-        crossed ||= game.getSnapshot().player.x > 3420;
+        crossed ||= game.getSnapshot().player.x > 11070;
     }
     assert.equal(crossed, false);
     assert.equal(game.getSnapshot().deaths, 1);
@@ -129,19 +129,19 @@ test('riding the express without hopping: the bump throws the rookie off and on 
     assert.equal(kicked.focus, 90);
     const state = game.getSnapshot();
     assert.equal(state.deaths, 1, 'left behind, the rider rolls off the ramp into the construction hole');
-    assert.equal(state.checkpoint, 2);
-    assert.equal(state.player.x, 2200, 'the retry starts at the flag before the rush');
+    assert.equal(state.checkpoint, 3);
+    assert.equal(state.player.x, 6950, 'the retry starts at the flag before the rush');
 });
 
 test('restart resumes at the last reached checkpoint and stage selection starts fresh', () => {
     const game = createGame();
     game.startStage(2);
-    drive(game, state => state.checkpoint === 3);
+    drive(game, state => state.checkpoint === 4);
     game.restart();
     const saved = game.getSnapshot();
     assert.equal(saved.stage, 2);
-    assert.equal(saved.checkpoint, 3);
-    assert.equal(saved.player.x, 4200);
+    assert.equal(saved.checkpoint, 4);
+    assert.equal(saved.player.x, 11850);
     assert.equal(saved.deaths, 1);
     assert.equal(saved.corridor.departure.kind, 'gone');
     assert.equal(saved.corridor.room.kind, 'corridor');

@@ -1,9 +1,10 @@
 import { ceilingCctvs } from './ceiling-cctv';
 import type { Message } from '../../i18n';
-import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES, chairChatLine } from '../../game/stages/building/data';
+import { STAGE_TWO, TYPING_SOUNDS, CHAIR_CHAT_INTERVAL, CHAIR_DEPARTURE, CHAIR_DEPARTURE_LINES, CHAIR_CHAT, chairChatLine, chairChatOnce } from '../../game/stages/building/data';
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
 import { chairLift, expressFloor } from './express';
+import { obstacleHop, orientationFloor } from './orientation';
 import { practiceFloor, checkpointFlag, chairPictogram } from './decor';
 import { player } from './player';
 import { bubble, chairBubble } from './building-bubble';
@@ -163,12 +164,16 @@ function chairSpeech(ctx: RenderCtx) {
         const interval = CHAIR_CHAT_INTERVAL[c.chat.kind];
         const line = chairChatLine(c.chat, c.appearanceSeed);
         const speaker = state.furniture[line.speaker];
-        const localAge = c.chat.age % interval;
-        if (localAge < interval - .35) {
+        const once = chairChatOnce(c.chat.kind);
+        const localAge = once ? c.chat.age : c.chat.age % interval;
+        const said = c.chat.kind !== 'trip' || c.chat.age < interval * CHAIR_CHAT.trip.length;
+        const shown = c.chat.kind === 'orientation' ? localAge >= 0 && localAge < interval - .35 : said && localAge % interval < interval - .35;
+        if (shown) {
             const left = ctx.cam + 180, right = ctx.cam + ctx.VW - 180;
             const x = Math.max(left, Math.min(right, speaker.x));
             if (c.chat.kind === 'dismissed' || (speaker.x > ctx.cam - 60 && speaker.x < ctx.cam + ctx.VW + 60)) {
-                chairBubble(ctx, line.text, x, 242, 350, { spiky: c.chat.kind === 'wary' || c.chat.kind === 'rush', alpha: Math.min(1, localAge * 6, (interval - .35 - localAge) * 5) });
+                const lineAge = localAge % interval;
+                chairBubble(ctx, line.text, x, 224, 350, { spiky: c.chat.kind === 'wary' || c.chat.kind === 'rush' || c.chat.kind === 'trip', alpha: Math.min(1, lineAge * 6, (interval - .35 - lineAge) * 5) });
             }
         }
     }
@@ -187,7 +192,7 @@ function chairActors(ctx: RenderCtx) {
         if (!item.released || departure.kind === 'gone' || departure.kind === 'lost') return;
         const reacting = c.chat.kind === 'wary' || c.chat.kind === 'realizing' || c.chat.kind === 'welcoming';
         const bob = departure.kind === 'boarding' ? Math.sin(departure.age * 9 + i) * 2 : reacting ? Math.sin(c.chat.age * 7 + i) * 2 : Math.sin(ctx.t * 5 + i) * .7;
-        chair(ctx, item.x, item.y + drop + bob - chairLift(item.x));
+        chair(ctx, item.x, item.y + drop + bob - chairLift(item.x) - obstacleHop(item.x, c.robot));
     });
     if (departure.kind !== 'lost') {
         const actorStart = ctx.commands.length;
@@ -200,6 +205,7 @@ export function drawBuilding(ctx: RenderCtx) {
     buildingBackdrop(ctx);
     if (ctx.state.corridor.room.kind === 'meeting') { meetingRoom(ctx); return; }
     expressFloor(ctx);
+    orientationFloor(ctx);
     officeWindows(ctx);
     meetingDoor(ctx);
     dispatchRoom(ctx);

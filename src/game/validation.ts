@@ -1,4 +1,5 @@
 import type { GameState } from './state';
+import { STAGE_TWO } from './stages/building/data';
 
 type Data = Record<string, unknown>;
 
@@ -132,9 +133,10 @@ function room(value: unknown, path: string) {
 
 function chat(value: unknown, path: string) {
     const data = record(value, path);
-    const kind = choice(data.kind, ['waiting', 'gossip', 'wary', 'dismissed', 'realizing', 'welcoming', 'companions', 'rush', 'ramp'], `${path}.kind`);
-    exact(data, kind === 'waiting' ? ['kind'] : ['kind', 'age'], path);
+    const kind = choice(data.kind, ['waiting', 'gossip', 'wary', 'dismissed', 'realizing', 'welcoming', 'orientation', 'trip', 'rush', 'ramp'], `${path}.kind`);
+    exact(data, kind === 'waiting' ? ['kind'] : kind === 'orientation' ? ['kind', 'age', 'line'] : ['kind', 'age'], path);
     if (kind !== 'waiting') finite(data.age, `${path}.age`);
+    if (kind === 'orientation') integer(data.line, `${path}.line`, 0, STAGE_TWO.orientation.lines.length - 1);
 }
 
 function departure(value: unknown, path: string) {
@@ -165,7 +167,7 @@ function building(value: unknown, path: string) {
         boolean(chair.released, `${path}.furniture[${index}].released`);
     });
     const corridor = record(data.corridor, `${path}.corridor`);
-    exact(corridor, ['appearanceSeed', 'room', 'meetingVisited', 'dispatchAge', 'dispatchStarted', 'chat', 'convoy', 'pace', 'departure',
+    exact(corridor, ['appearanceSeed', 'room', 'meetingVisited', 'dispatchAge', 'dispatchStarted', 'chat', 'lesson', 'robot', 'tripped', 'convoy', 'pace', 'departure',
         'lift', 'typingCooldown', 'offices'], `${path}.corridor`);
     integer(corridor.appearanceSeed, `${path}.corridor.appearanceSeed`, 0, 0xffffffff);
     room(corridor.room, `${path}.corridor.room`);
@@ -173,6 +175,9 @@ function building(value: unknown, path: string) {
     finite(corridor.dispatchAge, `${path}.corridor.dispatchAge`);
     boolean(corridor.dispatchStarted, `${path}.corridor.dispatchStarted`);
     chat(corridor.chat, `${path}.corridor.chat`);
+    integer(corridor.lesson, `${path}.corridor.lesson`, -1, STAGE_TWO.orientation.lines.length);
+    finite(corridor.robot, `${path}.corridor.robot`);
+    integer(corridor.tripped, `${path}.corridor.tripped`, -1, STAGE_TWO.orientation.obstacles.length - 1);
     choice(corridor.convoy, ['free', 'carried', 'leading', 'airborne', 'leading-airborne', 'dropped'], `${path}.corridor.convoy`);
     choice(corridor.pace, ['casual', 'express'], `${path}.corridor.pace`);
     departure(corridor.departure, `${path}.corridor.departure`);
