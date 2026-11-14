@@ -1,4 +1,4 @@
-import { isMessage, resolveLocale, translate, type Locale } from './i18n';
+import { browserLocale, isMessage, LOCALE_STORAGE_KEY, translate, type Locale } from './i18n';
 import { createGame } from './game/game';
 import { createEffects } from './render/effects';
 import { createRenderer } from './render/renderer';
@@ -24,11 +24,7 @@ if (!app) {
 }
 app.innerHTML = markup;
 const root = document.getElementById('chair-office-one')!;
-let locale: Locale = resolveLocale(navigator.languages);
-try {
-    const savedLocale = localStorage.getItem('the-chair-locale');
-    if (savedLocale === 'en' || savedLocale === 'ko') locale = savedLocale;
-} catch {}
+let locale: Locale = browserLocale();
 function applyLocale() {
     document.documentElement.lang = locale;
     root.lang = locale;
@@ -59,7 +55,14 @@ for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) 
         const selected = button.dataset.locale;
         if (selected !== 'en' && selected !== 'ko') return;
         locale = selected;
-        try { localStorage.setItem('the-chair-locale', locale); } catch {}
+        try { localStorage.setItem(LOCALE_STORAGE_KEY, locale); } catch {}
+        // A `?lang=` in the address would undo this choice on reload, so it follows the menu.
+        const url = new URL(location.href);
+        if (url.searchParams.has('lang') || url.searchParams.has('locale')) {
+            url.searchParams.delete('locale');
+            url.searchParams.set('lang', locale);
+            history.replaceState(history.state, '', url);
+        }
         applyLocale();
     });
 }

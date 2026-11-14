@@ -281,6 +281,38 @@ export function resolveLocale(languages: readonly string[]): Locale {
     return 'en';
 }
 
+/** Where the game keeps the language chosen in its pause menu. */
+export const LOCALE_STORAGE_KEY = 'the-chair-locale';
+
+const asLocale = (value: string | null | undefined): Locale | null => value === 'en' || value === 'ko' ? value : null;
+
+/**
+ * The language a page opens in: `?lang=en|ko` on any page wins (`?locale=` is the older spelling), then the
+ * language last chosen in the game, then the browser's.
+ */
+export function pageLocale(search: string, languages: readonly string[], saved: string | null): Locale {
+    const params = new URLSearchParams(search);
+    return asLocale(params.get('lang')) ?? asLocale(params.get('locale')) ?? asLocale(saved) ?? resolveLocale(languages);
+}
+
+/** The language this browser page opens in; see `pageLocale`. */
+export function browserLocale(): Locale {
+    let saved: string | null = null;
+    try { saved = localStorage.getItem(LOCALE_STORAGE_KEY); } catch {}
+    return pageLocale(location.search, navigator.languages, saved);
+}
+
+/** Carries an explicit `?lang=` on to the links between the game, the preview and the replay tool. */
+export function keepLangOnLinks(root: ParentNode = document) {
+    const lang = asLocale(new URLSearchParams(location.search).get('lang'));
+    if (!lang) return;
+    for (const link of root.querySelectorAll<HTMLAnchorElement>('a[href^="/"]')) {
+        const url = new URL(link.href, location.origin);
+        url.searchParams.set('lang', lang);
+        link.href = url.pathname + url.search + url.hash;
+    }
+}
+
 export function isMessage(value: string): value is Message {
     return Object.hasOwn(messages, value);
 }

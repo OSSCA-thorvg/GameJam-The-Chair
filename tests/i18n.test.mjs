@@ -3,7 +3,7 @@ import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { load } from './support/load.mjs';
 
-const { resolveLocale, translate, isMessage } = await load('src/i18n.ts');
+const { resolveLocale, pageLocale, translate, isMessage } = await load('src/i18n.ts');
 const { createFeedback } = await load('src/ui/feedback.ts');
 const { createGame } = await load('src/game/game.ts');
 const { CHAIR_CHAT, CHAIR_DEPARTURE_LINES } = await load('src/game/stages/building/data.ts');
@@ -14,6 +14,15 @@ test('language detection respects supported browser preferences and falls back t
     assert.equal(resolveLocale(['fr-FR', 'ko-KR']), 'ko');
     assert.equal(resolveLocale(['fr-FR']), 'en');
     assert.equal(resolveLocale([]), 'en');
+});
+
+test('a page opens in ?lang= first, then the saved choice, then the browser language', () => {
+    assert.equal(pageLocale('?lang=en', ['ko-KR'], 'ko'), 'en');
+    assert.equal(pageLocale('?file=a&lang=ko', ['en-US'], 'en'), 'ko');
+    assert.equal(pageLocale('?locale=ko', ['en-US'], null), 'ko');
+    assert.equal(pageLocale('?lang=fr', ['en-US'], 'ko'), 'ko');
+    assert.equal(pageLocale('', ['ko-KR'], null), 'ko');
+    assert.equal(pageLocale('', ['ko-KR'], 'en'), 'en');
 });
 
 test('switching language translates an active conversation without restarting or extending it', () => {
