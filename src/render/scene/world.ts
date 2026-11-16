@@ -140,7 +140,7 @@ function windowCity(
     });
 }
 
-export function drawWorld(ctx: RenderCtx) {
+function drawOfficeBackground(ctx: RenderCtx) {
     const F = ctx.F;
     const C = ctx.C;
     const VW = ctx.VW;
@@ -148,21 +148,12 @@ export function drawWorld(ctx: RenderCtx) {
     const scale = ctx.scale;
     const cam = ctx.cam;
     const vertical = ctx.vertical;
-    const state = ctx.state;
     const solids = ctx.solids;
-    const people = ctx.people;
     const cleaning = ctx.cleaning;
     const bin = ctx.bin;
-    const copier = ctx.copier;
-    const papers = ctx.papers;
-    const p = ctx.player;
-    const t = ctx.t;
     const GOAL = ctx.GOAL;
-
-    ctx.commands = [];
-    ctx.ox = ctx.oy = ctx.rotation = 0;
-    const left = cam - 100;
-    const right = cam + VW + 100;
+    const left = ctx.cam - 100;
+    const right = ctx.cam + ctx.VW + 100;
     ctx.rect(cam, -vertical, VW, H / scale, '#a9afbc');
     ctx.rect(cam, -vertical, VW, 57 + vertical, '#747d91');
     ctx.rod(cam, 57, cam + VW, 57, 4, '#d1d1c6');
@@ -229,6 +220,12 @@ export function drawWorld(ctx: RenderCtx) {
             plant(ctx, potX);
         }
     }
+}
+
+function drawOfficePeople(ctx: RenderCtx) {
+    const people = ctx.people;
+    const left = ctx.cam - 100;
+    const right = ctx.cam + ctx.VW + 100;
     let cleaner: DeepReadonly<Person> | undefined;
     for (const n of people) {
         if (n.x > left && n.x < right) {
@@ -240,6 +237,12 @@ export function drawWorld(ctx: RenderCtx) {
         }
     }
     cleaningDraw(ctx, cleaner);
+}
+
+function drawOfficeCopier(ctx: RenderCtx) {
+    const F = ctx.F;
+    const copier = ctx.copier;
+    const t = ctx.t;
     const x = copier.x;
     ctx.ellipse(x + 3, F - 20, 61, 4.2, '#515c6d56');
     ctx.rect(x - 56, F - 108, 112, 88, '#c6c9bf');
@@ -285,6 +288,11 @@ export function drawWorld(ctx: RenderCtx) {
         ctx.rect(x - 37, F - 70 + j * 11, 22, 3, '#737f87');
     }
     urgentCopierDraw(ctx);
+}
+
+function drawOfficePapers(ctx: RenderCtx) {
+    const C = ctx.C;
+    const papers = ctx.papers;
     for (const z of papers) {
         if (z.volley >= URGENT_VOLLEY_ID) continue;
         ctx.withTransform({ ox: z.x, oy: z.y, rotation: z.a }, () => {
@@ -294,7 +302,13 @@ export function drawWorld(ctx: RenderCtx) {
         });
     }
     urgentPapersDraw(ctx, papers);
-    monitorDraw(ctx);
+}
+
+function drawOfficeGeysers(ctx: RenderCtx) {
+    const F = ctx.F;
+    const t = ctx.t;
+    const left = ctx.cam - 100;
+    const right = ctx.cam + ctx.VW + 100;
     for (const g of LEVEL.geysers) {
         if (g.x < left - 80 || g.x > right + 80) continue;
         const phase = geyserPhase(g, t);
@@ -373,6 +387,12 @@ export function drawWorld(ctx: RenderCtx) {
             );
         }
     }
+}
+
+function drawOfficeForeground(ctx: RenderCtx) {
+    const F = ctx.F;
+    const state = ctx.state;
+    const p = ctx.player;
     practiceFloor(ctx);
     checkpointFlag(ctx, 1400, F, state.officeCheckpoint);
     for (let x = 1490; x < 1545; x += 18) {
@@ -398,6 +418,18 @@ export function drawWorld(ctx: RenderCtx) {
             ctx.rect(-3, -2, 7, 4, z.color);
         });
     }
+}
+
+function drawOfficeOverlays(ctx: RenderCtx) {
+    const F = ctx.F;
+    const C = ctx.C;
+    const VW = ctx.VW;
+    const H = ctx.H;
+    const scale = ctx.scale;
+    const cam = ctx.cam;
+    const vertical = ctx.vertical;
+    const copier = ctx.copier;
+    const x = ctx.copier.x;
     if (ctx.glare > 0) {
         ctx.rect(
             cam,
@@ -442,4 +474,17 @@ export function drawWorld(ctx: RenderCtx) {
         );
         ctx.label(line, x, y + 6, 18, C.ink, SIGN_FONT);
     }
+}
+
+export function drawWorld(ctx: RenderCtx) {
+    ctx.commands = [];
+    ctx.ox = ctx.oy = ctx.rotation = 0;
+    drawOfficeBackground(ctx);
+    drawOfficePeople(ctx);
+    drawOfficeCopier(ctx);
+    drawOfficePapers(ctx);
+    monitorDraw(ctx);
+    drawOfficeGeysers(ctx);
+    drawOfficeForeground(ctx);
+    drawOfficeOverlays(ctx);
 }
