@@ -106,7 +106,7 @@ function meetingEntryStep(room: Exclude<Corridor['room'], { kind: 'corridor' }>,
     return { room: { ...room, age }, x: room.returnX + (STAGE_TWO.meeting - room.returnX) * glide, leave: false };
 }
 
-export type CorridorInput = { corridor: Readonly<Corridor>; furniture: readonly Readonly<Furniture>[]; p: Readonly<Player>; ground: boolean; steering: boolean; rng: number; length: number };
+export type CorridorInput = { corridor: Readonly<Corridor>; furniture: readonly Readonly<Furniture>[]; p: Readonly<Player>; ground: boolean; steering: boolean; steer: number; rng: number; length: number };
 export type CorridorResult = { corridor: Corridor; furniture: Furniture[]; p: Player; rng: number; stopRider: boolean; kick: 'trip' | null; tripped: number };
 
 // The building corridor: typing bubbles, the chair convoy, its chatter and the lift ride.
@@ -201,11 +201,18 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     }
     const followsBoarding = captiveBoarding && c.convoy === 'airborne' && !input.steering;
     if (isJoinedConvoy(c.convoy) || followsBoarding) {
-        const nextX = previousX + front.x - frontX;
-        p.x = c.convoy === 'leading'
-            ? Math.max(front.x + 29, Math.min(front.x + 239, nextX))
-            : Math.max(back.x + 29, Math.min(front.x - 29, nextX));
-        p.vx = front.vx;
+        const shuffle = isJoinedConvoy(c.convoy) && ground ? input.steer * STAGE_TWO.shuffle : 0;
+        const nextX = previousX + front.x - frontX + shuffle * dt;
+        const low = c.convoy === 'leading' ? front.x + 29 : back.x + 29;
+        const high = c.convoy === 'leading' ? front.x + 239 : front.x - 29;
+        p.x = Math.max(low, Math.min(high, nextX));
+        p.vx = front.vx + (p.x === nextX ? shuffle : 0);
+        // Rolling past either end steps off; the express convoy outruns a rider, so only its back lets go.
+        const out = nextX < low ? c.convoy === 'carried' : nextX > high && c.pace === 'casual';
+        if (shuffle && out) {
+            c.convoy = 'free';
+            p.x = nextX;
+        }
     }
     if (isJoinedConvoy(c.convoy) && c.pace === 'express' && (overPit(p.x) || (previousX < STAGE_TWO.express.pit.left && p.x >= STAGE_TWO.express.pit.left))) {
         c.convoy = 'free';

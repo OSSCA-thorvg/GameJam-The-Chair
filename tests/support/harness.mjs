@@ -102,7 +102,9 @@ export function createExpressRider(stayAboard = false) {
         const p = state.player, { convoy, pace } = state.corridor;
         if (off) return ['right'];
         if (pace !== 'express' && state.stage === 2 && orientationHop(state)) game.jump();
-        if (pace !== 'express' || convoy === 'free') return null;
+        if (convoy === 'free') return null;
+        // Aboard, left and right roll between the chairs, so a rider who wants to stay lets go.
+        if (pace !== 'express') return [];
         if (convoy !== 'carried' || !state.ground) return [];
         const toLip = EXPRESS.pit.left - p.x;
         if (toLip > 0 && toLip < 35) game.jump();

@@ -116,7 +116,8 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     const expressJump = tweak.expressJump ?? false;
     const slip = tweak.slip ?? false;
     const balancing = s.keys.includes('q') || s.keys.includes('e');
-    const tilt = (s.keys.includes('e') ? 1 : 0) - (s.keys.includes('q') ? 1 : 0) + (was || balancing ? 0 : dir);
+    // Air steering follows the held direction even when a stage overrides wheel drive (a hop off the chair convoy).
+    const tilt = (s.keys.includes('e') ? 1 : 0) - (s.keys.includes('q') ? 1 : 0) + (was || balancing ? 0 : inputDir);
     setPlayer(s, drivePlayer(p, { grounded: was, slip, dir, tilt, upright: p.x < PHYSICS.upright.tutorialUntilX || stage.alwaysUpright, convoyJump, expressJump }, dt));
     if (hooks.afterMove?.(s, out, dt, prev)) return;
     const hit = collide(p, stageSolids(s));

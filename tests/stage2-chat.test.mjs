@@ -37,6 +37,46 @@ test('unaccompanied chairs trade gossip and roll ahead without waiting for the p
     assert.ok(s.building.furniture.every((chair, i) => chair.x > start[i] + 500));
 });
 
+function aboard() {
+    const s = crowd();
+    s.lessons.jumped = true;
+    s.building.furniture.forEach((chair, i) => Object.assign(chair, { x: 4000 - i * 130, vx: 220 }));
+    Object.assign(s.p, { x: 4000 - 65, vx: 220 });
+    s.building.corridor.convoy = 'carried';
+    const game = createGame({ seed: 0 });
+    game.restore(JSON.stringify(s));
+    return game;
+}
+
+test('a rider wedged between the chairs rolls along them with left and right and off either end', () => {
+    for (const [key, side] of [['left', -1], ['right', 1]]) {
+        const game = aboard();
+        const offset = () => game.getSnapshot().player.x - game.getSnapshot().furniture[0].x;
+        const before = offset();
+        game.setInput(key);
+        for (let i = 0; i < 30; i++) game.step(dt);
+        assert.equal(game.getSnapshot().corridor.convoy, 'carried');
+        assert.ok(side * (offset() - before) > 20, `${key} rolls between the chairs`);
+        let off = false;
+        for (let i = 0; i < 240 && !off; i++) { game.step(dt); off = game.getSnapshot().corridor.convoy !== 'carried'; }
+        assert.ok(off, `holding ${key} rolls off the convoy`);
+    }
+});
+
+test('a hop off the orientation convoy still tilts with left and right', () => {
+    const tilt = keys => {
+        const game = aboard();
+        game.jump();
+        game.setInput(...keys);
+        for (let i = 0; i < 48; i++) game.step(dt);
+        assert.equal(game.getSnapshot().corridor.convoy, 'airborne');
+        return game.getSnapshot().player.a;
+    };
+    const level = tilt([]);
+    assert.ok(tilt(['right']) - level > .2);
+    assert.ok(tilt(['left']) - level < -.2);
+});
+
 test('a rider leading the nearby convoy joins its express run and clears the construction pit', () => {
     const s = crowd();
     s.lessons.jumped = true;
@@ -102,7 +142,7 @@ function rideOrientation(game, hop, until) {
         const state = game.getSnapshot(), p = state.player, chat = state.corridor.chat;
         if (chat.kind === 'orientation' && chat.age >= 0 && lines.at(-1)?.line !== chat.line) lines.push({ line: chat.line, x: p.x });
         if (until(state)) return { state, lines };
-        const keys = ['right'];
+        const keys = state.corridor.convoy === 'free' ? ['right'] : [];
         const correction = -p.a * 12 - p.w * 4;
         if (correction < -.4) keys.push('q');
         if (correction > .4) keys.push('e');
