@@ -1,5 +1,7 @@
 # GameJam-The-Chair
 
+[English](README.md) | [한국어](README-ko.md)
+
 A physics action game about an office chair escaping the company—with an employee who refuses to stop working still sitting on it.
 Roll, jump, and use fire-extinguisher recoil to escape through five stages: office, meeting rooms and corridors, rooftop, sky, and space.
 **The chair wants to clock out. The employee keeps typing.**
