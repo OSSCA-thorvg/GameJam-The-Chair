@@ -25,9 +25,12 @@ function firstTime(vent, kind) {
 }
 
 test('the shaft has no open column: holding spray straight up never gets past the lower ledges', () => {
+    const route = createGame({ seed: 1 }); route.startStage(3);
+    driveStageThree(route, state => state.checkpoint === 2 && state.ground && state.player.x > 1100);
+    const start = route.serialize();
     for (const x of [1270, 1350, 1450, 1510, 1600, 1700]) {
-        const game = createGame({ seed: 1 }); game.startStage(3);
-        driveStageThree(game, state => state.checkpoint === 2 && state.ground && state.player.x > 1100);
+        const game = createGame({ seed: 1 });
+        game.restore(start);
         for (let i = 0; i < 1200; i++) {
             const s = game.getSnapshot();
             if (Math.abs(s.player.x - x) < 15 && s.ground) break;

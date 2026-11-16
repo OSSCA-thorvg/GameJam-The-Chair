@@ -1,3 +1,4 @@
+import { installInputEnvironment, inputButton } from './support/input.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { bundled } from './support/load.mjs';
@@ -7,25 +8,13 @@ const { createGame, bindInput } = await bundled({ stdin: {
     resolveDir: process.cwd(),
 }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
-test('stage2 uses Down for meeting entry and exit, keeps Up for jumping, and supports touch', async () => {
-    const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];
-    /** @type {any[]} */
-    const saved = names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
-    const window = /** @type {any} */ (new EventTarget()), document = /** @type {any} */ (new EventTarget());
-    class Element {}
-    const downButton = /** @type {any} */ (new EventTarget());
-    Object.assign(globalThis, { window, document, Element, HTMLElement: Element,
-        MutationObserver: class { observe() {} disconnect() {} },
-    });
+test('stage2 uses Down for meeting entry and exit, keeps Up for jumping, and supports touch', async t => {
+    const { key: dispatchKey } = installInputEnvironment(t);
+    const downButton = inputButton();
     const game = createGame(); game.startStage(2);
     const root = { isConnected: true, querySelector: selector => selector === '[data-interact]' ? downButton : null, querySelectorAll: () => [] };
     const unbind = bindInput(root, game);
-    const key = (name, repeat = false) => {
-        const event = new Event('keydown', { cancelable: true });
-        Object.assign(event, { key: name, code: name, repeat });
-        window.dispatchEvent(event);
-        return event;
-    };
+    const key = (name, repeat = false) => dispatchKey('keydown', name, name, repeat);
     try {
         key('ArrowDown');
         assert.equal(game.getSnapshot().corridor.room.kind, 'corridor', 'Down outside the door does nothing');
@@ -56,9 +45,5 @@ test('stage2 uses Down for meeting entry and exit, keeps Up for jumping, and sup
         await Promise.resolve();
     } finally {
         unbind();
-        for (const [name, descriptor] of saved) {
-            if (descriptor) Object.defineProperty(globalThis, name, descriptor);
-            else delete globalThis[name];
-        }
     }
 });

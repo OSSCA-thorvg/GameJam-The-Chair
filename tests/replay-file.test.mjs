@@ -1,3 +1,4 @@
+import { runUntil } from './support/until.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
@@ -58,7 +59,7 @@ test('a recorded attempt replays to the same state with matching hashes and mark
     // Seeking anywhere matches running straight through.
     const mid = Math.floor((timeline.startTick + timeline.endTick) / 2);
     const straight = R.createCursor(timeline.file);
-    while (straight.state.tick < mid) straight.next();
+    runUntil(() => straight.state.tick >= mid, () => { straight.next(); }, { maxSteps: 120 * 120, message: 'Replay cursor did not reach the seek target' });
     assert.equal(JSON.stringify(R.seekTimeline(timeline, mid).state), JSON.stringify(straight.state));
 });
 

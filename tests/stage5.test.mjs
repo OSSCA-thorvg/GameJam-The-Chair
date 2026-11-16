@@ -1,3 +1,4 @@
+import { runUntil } from './support/until.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
@@ -415,13 +416,13 @@ test('a satellite follows the chair, locks on a second ahead, and moving away in
     const beam = STAGE_FIVE.satelliteLight.beams[0], { warn, chairRadius } = STAGE_FIVE.satelliteLight, top = STAGE_FIVE.gears[0].maxSpeed, lock = gearAt(beam.from).lock;
     const fly = keysAt => {
         let state = { orbit: cruisingAt(beam.from - top * (warn + .5), { speed: top }), p: still(-150, 0) }, lockedAt = null, lit = false;
-        while (state.orbit.z < beam.from + 100) {
+        runUntil(() => state.orbit.z >= beam.from + 100, () => {
             const arrival = (beam.from - state.orbit.z) / state.orbit.speed;
             state = orbitStep(state.orbit, state.p, keysAt(arrival), 1 / 120);
             if (arrival <= lock && !lockedAt) lockedAt = { ...state.orbit.aims[0] };
             if (lockedAt && arrival > 0) assert.deepEqual(state.orbit.aims[0], lockedAt, 'once locked it holds still');
             lit ||= satelliteLightOn(state.orbit, state.p, state.orbit.z) === beam;
-        }
+        }, { maxSteps: 120 * 120, message: 'Chair did not pass the satellite beam' });
         return { state, lockedAt, lit };
     };
     const still_ = fly(() => []);
@@ -618,10 +619,10 @@ test('the instant a beam catches the chair, the whole flight stops for a moment,
     const beam = STAGE_FIVE.satelliteLight.beams[0], { freeze } = STAGE_FIVE.satelliteLight, top = STAGE_FIVE.gears[0].maxSpeed, lock = gearAt(beam.from).lock;
     // Holding still under the lock: it locks without a stop, then catches the chair and stops.
     let state = { orbit: cruisingAt(beam.from - top * (lock + .3), { speed: top }), p: still() }, lockedAt = null;
-    while (state.orbit.freeze === 0) {
+    runUntil(() => state.orbit.freeze > 0, () => {
         state = orbitStep(state.orbit, state.p, [], 1 / 120);
         if (!lockedAt && (beam.from - state.orbit.z) / state.orbit.speed <= lock) lockedAt = state.orbit.z;
-    }
+    }, { maxSteps: 120 * 120, message: 'Satellite hit never froze the flight' });
     assert.ok(lockedAt !== null && state.orbit.z >= beam.from, 'no stop at the lock, only once inside the beam');
     assert.ok(Math.abs(state.orbit.freeze - freeze) < 1e-9, 'the stop starts as it hits');
     const stopped = state;
@@ -633,10 +634,10 @@ test('the instant a beam catches the chair, the whole flight stops for a moment,
     assert.equal(after.orbit.freeze, 0, 'staying in the same beam does not stop it again');
     // Dodged in time, nothing stops at all.
     let dodged = { orbit: cruisingAt(beam.from - top * (lock + .3), { speed: top }), p: still() }, stops = 0;
-    while (dodged.orbit.z < beam.to) {
+    runUntil(() => dodged.orbit.z >= beam.to, () => {
         dodged = orbitStep(dodged.orbit, dodged.p, (beam.from - dodged.orbit.z) / dodged.orbit.speed <= lock ? ['right'] : [], 1 / 120);
         if (dodged.orbit.freeze > 0) stops++;
-    }
+    }, { maxSteps: 120 * 120, message: 'Chair did not leave the dodged beam' });
     assert.equal(stops, 0, 'no stop without a hit');
     // The hit shows as a white flash over the picture.
     const flash = flightFrame(s => Object.assign(s.orbit, { freeze: freeze * .9 })).some(command => command.layer?.key === 'orbit-shutter');
@@ -647,14 +648,14 @@ test('a leading satellite aims where the chair is heading, and two in a row lock
     const beams = STAGE_FIVE.satelliteLight.beams, { warn } = STAGE_FIVE.satelliteLight, lockOf = i => gearAt(beams[i].from).lock;
     const leading = beams.findIndex(beam => beam.lead), top = STAGE_FIVE.gears[2].maxSpeed;
     let state = { orbit: cruisingAt(beams[leading].from - top * (warn - .1), { speed: top }), p: still(-200, 0) };
-    while ((beams[leading].from - state.orbit.z) / state.orbit.speed > lockOf(leading)) state = orbitStep(state.orbit, state.p, ['right'], 1 / 120);
+    runUntil(() => (beams[leading].from - state.orbit.z) / state.orbit.speed <= lockOf(leading), () => { state = orbitStep(state.orbit, state.p, ['right'], 1 / 120); }, { maxSteps: 120 * 120, message: 'Leading satellite never locked' });
     assert.ok(state.orbit.aims[leading].x > state.p.x + 40, `aimed ahead of the chair (${state.orbit.aims[leading].x.toFixed(0)} vs ${state.p.x.toFixed(0)})`);
     // The pair in 5-2: the second keeps following after the first has locked, so it catches up with the chair.
     const pair = beams.findIndex((beam, i) => i > 0 && beam.from - beams[i - 1].from < 200 && !beam.lead && !beam.shape);
     assert.ok(pair > 0, 'there is a pair');
     const speed = STAGE_FIVE.gears[1].maxSpeed;
     state = { orbit: cruisingAt(beams[pair - 1].from - speed * (warn - .1), { speed }), p: still() };
-    while ((beams[pair].from - state.orbit.z) / state.orbit.speed > lockOf(pair)) state = orbitStep(state.orbit, state.p, ['right'], 1 / 120);
+    runUntil(() => (beams[pair].from - state.orbit.z) / state.orbit.speed <= lockOf(pair), () => { state = orbitStep(state.orbit, state.p, ['right'], 1 / 120); }, { maxSteps: 120 * 120, message: 'Second satellite never locked' });
     assert.ok(state.orbit.aims[pair].x > state.orbit.aims[pair - 1].x + 40, 'the second locked where the chair had got to');
 });
 

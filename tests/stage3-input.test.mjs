@@ -1,29 +1,19 @@
+import { installInputEnvironment, inputButton } from './support/input.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { driveStageThree } from './support/stage3-route.mjs';
 import { bundled } from './support/load.mjs';
 const { createGame, bindInput } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { bindInput } from './src/ui/input';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
-test('Space holds spray in stage three, releases on keyup/blur, and touch controls release', async () => {
-    const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];
-    /** @type {any[]} */
-    const saved = names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
-    const window = /** @type {any} */ (new EventTarget()), document = /** @type {any} */ (new EventTarget());
-    class Element {}
-    const spray = /** @type {any} */ (new EventTarget()); spray.setPointerCapture = () => {};
-    const leanLeft = /** @type {any} */ (new EventTarget()), leanRight = /** @type {any} */ (new EventTarget());
-    leanLeft.dataset = { lean: 'left' };
-    leanRight.dataset = { lean: 'right' };
-    Object.assign(globalThis, { window, document, Element, HTMLElement: Element, MutationObserver: class { observe() {} disconnect() {} } });
+test('Space holds spray in stage three, releases on keyup/blur, and touch controls release', async t => {
+    const { window, key } = installInputEnvironment(t);
+    const spray = inputButton();
+    const leanLeft = inputButton({ lean: 'left' }), leanRight = inputButton({ lean: 'right' });
     const game = createGame(); game.startStage(3);
     driveStageThree(game, state => state.hasExtinguisher);
     const root = { isConnected: true, querySelector: selector => selector === '[data-spray]' ? spray : null,
         querySelectorAll: selector => selector === '[data-lean]' ? [leanLeft, leanRight] : [] };
     const unbind = bindInput(root, game);
-    function key(type, name, code = name) {
-        const event = new Event(type, { cancelable: true });
-        Object.assign(event, { key: name, code, repeat: false }); window.dispatchEvent(event);
-    }
     const settle = () => { game.restart(); for (let i = 0; i < 20; i++) game.step(1 / 120); game.drainEvents(); };
     const advance = () => { for (let i = 0; i < 60; i++) game.step(1 / 120); };
     try {
@@ -47,7 +37,7 @@ test('Space holds spray in stage three, releases on keyup/blur, and touch contro
         for (let i = 0; i < 20; i++) game.step(1 / 120);
         key('keydown', 'ArrowUp'); game.step(1 / 120);
         assert.ok(game.getSnapshot().player.vy < -300, 'Up jumps in the office');
-        for (const [button, input] of [[leanLeft, 'q'], [leanRight, 'e']]) {
+        for (const [button, input] of /** @type {const} */ ([[leanLeft, 'q'], [leanRight, 'e']])) {
             button.dispatchEvent(new Event('pointerdown', { cancelable: true }));
             assert.ok(JSON.parse(game.serialize()).keys.includes(input), `touch ${input} presses balance`);
             button.dispatchEvent(new Event('pointerup'));
@@ -56,6 +46,5 @@ test('Space holds spray in stage three, releases on keyup/blur, and touch contro
         await Promise.resolve();
     } finally {
         unbind();
-        for (const [name, descriptor] of saved) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; }
     }
 });

@@ -1,25 +1,19 @@
+import { installInputEnvironment, inputButton } from './support/input.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { driveStageFour } from './support/stage4-route.mjs';
 import { bundled } from './support/load.mjs';
 const { createGame, bindInput } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { bindInput } from './src/ui/input';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
-test('stage 4 ending completes automatically and gameplay buttons do not change its depth', async () => {
-    const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];
-    /** @type {any[]} */
-    const saved = names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
-    const window = /** @type {any} */ (new EventTarget()), document = /** @type {any} */ (new EventTarget());
-    class Element {}
-    const jumpButton = /** @type {any} */ (new EventTarget()), backButton = /** @type {any} */ (new EventTarget());
-    jumpButton.setPointerCapture = backButton.setPointerCapture = () => {};
-    Object.assign(globalThis, { window, document, Element, HTMLElement: Element, MutationObserver: class { observe() {} disconnect() {} } });
+test('stage 4 ending completes automatically and gameplay buttons do not change its depth', async t => {
+    const { key } = installInputEnvironment(t);
+    const jumpButton = inputButton(), backButton = inputButton();
     const game = createGame(); game.startStage(4);
     const reached = {};
     try { driveStageFour(game, state => { if (state.sky.phase === 'depth') throw reached; }); } catch (e) { if (e !== reached) throw e; }
     game.clearInput();
     const root = { isConnected: true, querySelector: s => s === '[data-jump]' ? jumpButton : s === '[data-interact]' ? backButton : null, querySelectorAll: () => [] };
     const unbind = bindInput(root, game);
-    const key = (type, name) => { const e = new Event(type, { cancelable: true }); Object.assign(e, { key: name, code: name, repeat: false }); window.dispatchEvent(e); return e; };
     const depthAfter = (frames = 30) => { const before = game.getSnapshot().sky.depth; for (let i = 0; i < frames; i++) game.step(1 / 120); return game.getSnapshot().sky.depth - before; };
     try {
         assert.equal(game.getSnapshot().sky.phase, 'depth');
@@ -41,6 +35,5 @@ test('stage 4 ending completes automatically and gameplay buttons do not change 
         await Promise.resolve();
     } finally {
         unbind();
-        for (const [name, descriptor] of saved) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; }
     }
 });

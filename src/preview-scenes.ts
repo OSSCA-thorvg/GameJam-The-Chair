@@ -1,3 +1,4 @@
+import { cachePreviewRegistration } from './preview/registration';
 import { createGame } from './game/game';
 import { createEffects } from './render/effects';
 import { SPLASH_DURATION } from './ui/splash-meta';
@@ -7,12 +8,12 @@ import { orientationRun, expressRun, meetingVisit, chairDispatch, officeTyping }
 import { cloudEntry, skyGustCycle, skyOfficeFacade, skyOfficeGear, skyWindFeedback, skyParrots, skyRobotParrot, skySignDepth, skyPromotionCake, skyEnding, skyToOrbit } from './preview/sky';
 import { orbitRoute, orbitEndingScene, orbitSatelliteLightScene, orbitSatelliteLightLitScene } from './preview/orbit';
 import { sceneTalk, opening, titleScreen } from './preview/intro';
-import type { PreviewScene } from './preview/types';
+import type { PreviewRegistration } from './preview/registration';
 export type { PreviewScene } from './preview/types';
 
-export type PreviewRegistration = Pick<PreviewScene, 'id' | 'label'> & { create(): PreviewScene };
+export type { PreviewRegistration } from './preview/registration';
 
-export const previewScenes: readonly PreviewRegistration[] = [
+export const previewScenes: readonly PreviewRegistration[] = ([
     { id: "startup-splash", label: "Intro · ThorVG splash", create: () => ({
         id: 'startup-splash', label: 'Intro · ThorVG splash', duration: SPLASH_DURATION,
         focusX: 400,
@@ -79,4 +80,4 @@ export const previewScenes: readonly PreviewRegistration[] = [
     { id: "building-meeting-3", label: "Building · The chairs cannot clock out (visit 3)", create: () => (meetingVisit(3)) },
     { id: "building-dispatch", label: "Building · Chairs leave after the first flag", create: () => (chairDispatch()) },
     { id: "office-typing", label: "Office · Window typing", create: () => (officeTyping()) }
-];
+] satisfies PreviewRegistration[]).map(cachePreviewRegistration);
