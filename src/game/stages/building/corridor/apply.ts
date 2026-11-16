@@ -36,6 +36,7 @@ export function applyCorridor(s: GameState, out: GameEvent[], dt: number, previo
     const r = corridorStep({
         corridor: s.building.corridor, furniture: s.building.furniture, p: s.p, ground: s.ground,
         steering: s.keys.includes('left') || s.keys.includes('right'),
+        steer: (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0),
         rng: s.rng.cosmetic, length: STAGES[s.stage].length,
     }, dt, previousX);
     s.building.corridor = r.corridor;

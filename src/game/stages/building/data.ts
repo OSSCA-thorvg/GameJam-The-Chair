@@ -58,6 +58,10 @@ export const STAGE_TWO = deepFreeze({
     length: 12420, goal: 12170,
     meeting: 620,
     meetingEntry: .65,
+    // How fast a rider aboard the convoy rolls between the chairs with left or right.
+    shuffle: 110,
+    // Sideways speed a hop off the orientation convoy takes from the held direction: enough to clear one chair.
+    hopShift: 150,
     dispatch: { room: 1840, trigger: 1320 },
     lift: 11620,
     offices: [220, 1030, 1560, 2370],

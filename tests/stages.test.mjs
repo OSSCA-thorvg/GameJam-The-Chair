@@ -117,7 +117,7 @@ test('tripping on the orientation obstacles costs focus until the rookie loses i
     let trips = 0;
     for (let i = 0; i < 120 * 40 && game.getSnapshot().mode === 'play'; i++) {
         const p = game.getSnapshot().player;
-        const keys = ['right'];
+        const keys = game.getSnapshot().corridor.convoy === 'free' ? ['right'] : [];
         if (-p.a * 12 - p.w * 4 < -.4) keys.push('q');
         if (-p.a * 12 - p.w * 4 > .4) keys.push('e');
         game.setInput(...keys);

@@ -75,7 +75,7 @@ test('corridor and meeting render finite vector paths in both languages and narr
         assert.equal(state.mode, 'play');
         const waitingForMeeting = !visited && state.player.x > 510;
         const correction = -state.player.a * 12 - state.player.w * 4;
-        game.setInput(...(waitingForMeeting ? (state.player.vx > 10 ? ['left'] : state.player.vx < -10 ? ['right'] : []) : ['right']), ...(correction < -.4 ? ['q'] : correction > .4 ? ['e'] : []));
+        game.setInput(...(waitingForMeeting ? (state.player.vx > 10 ? ['left'] : state.player.vx < -10 ? ['right'] : []) : state.corridor.convoy === 'free' ? ['right'] : []), ...(correction < -.4 ? ['q'] : correction > .4 ? ['e'] : []));
         if (orientationHop(state)) game.jump();
         game.step(1/120); game.drainEvents();
     }
