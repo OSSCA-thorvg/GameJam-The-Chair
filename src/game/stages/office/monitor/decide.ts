@@ -4,18 +4,32 @@ import type { FocusHit } from '../../../systems/focus/decide';
 
 export type MonitorSpec = { wall: number; period: number; offset: number };
 export function monitorPhase(m: MonitorSpec, t: number) {
-    const phase = ((t + m.offset) % m.period + m.period) % m.period;
+    const phase = (((t + m.offset) % m.period) + m.period) % m.period;
     return {
         phase,
-        warning: phase < .8,
-        active: phase >= .8 && phase < 2.1,
-        remaining: phase < .8 ? .8 - phase : phase < 2.1 ? 2.1 - phase : m.period - phase,
+        warning: phase < 0.8,
+        active: phase >= 0.8 && phase < 2.1,
+        remaining:
+            phase < 0.8
+                ? 0.8 - phase
+                : phase < 2.1
+                  ? 2.1 - phase
+                  : m.period - phase,
     };
 }
 
-export type MonitorContact = { index: number; x: number; vx: number; focus: FocusHit };
+export type MonitorContact = {
+    index: number;
+    x: number;
+    vx: number;
+    focus: FocusHit;
+};
 
-export function monitorContact(p: Readonly<Point>, previousX: number, time: number): MonitorContact | null {
+export function monitorContact(
+    p: Readonly<Point>,
+    previousX: number,
+    time: number,
+): MonitorContact | null {
     if (p.y + 28 < 300) return null;
     for (let i = 0; i < LEVEL.monitors.length; i++) {
         const spec = LEVEL.monitors[i];
@@ -26,7 +40,11 @@ export function monitorContact(p: Readonly<Point>, previousX: number, time: numb
                 index: i,
                 x: side < 0 ? spec.wall - 45 : spec.wall + 65,
                 vx: side * 65,
-                focus: { kind: 'light', id: i * 1000 + Math.floor(time / spec.period), damage: FOCUS_DAMAGE.light },
+                focus: {
+                    kind: 'light',
+                    id: i * 1000 + Math.floor(time / spec.period),
+                    damage: FOCUS_DAMAGE.light,
+                },
             };
         }
     }

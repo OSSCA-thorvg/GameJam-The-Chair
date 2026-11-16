@@ -1,11 +1,19 @@
 import type { Canvas, ThorVGNamespace } from '@thorvg/webcanvas';
 import type { RenderCtx } from './context';
-import { applyLayerOverrides, type LayerOverrides, type RenderStats } from './perf';
+import {
+    applyLayerOverrides,
+    type LayerOverrides,
+    type RenderStats,
+} from './perf';
 import { collect } from './paint/commands';
 import { paintCanvas } from './paint/canvas';
 import { paintThorvg, type PaintPool } from './paint/thorvg';
 
-export { createPaintPool, thorvgTextWidth, type PaintPool } from './paint/thorvg';
+export {
+    createPaintPool,
+    thorvgTextWidth,
+    type PaintPool,
+} from './paint/thorvg';
 
 export function paint(
     ctx: RenderCtx,

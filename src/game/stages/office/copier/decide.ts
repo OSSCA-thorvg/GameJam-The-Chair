@@ -3,18 +3,41 @@ import type { Paper, Point } from '../../../types';
 import type { FocusHit } from '../../../systems/focus/decide';
 import * as Det from '../../../math';
 
-export type Copier = { x: number; cool: number; burst: number; next: number; dir: number; volley: number; bursts: number };
+export type Copier = {
+    x: number;
+    cool: number;
+    burst: number;
+    next: number;
+    dir: number;
+    volley: number;
+    bursts: number;
+};
 export type CopierResult = { copier: Copier; fire: boolean };
-export type PaperHit = { index: number; vx: number; heavy: boolean; focus: FocusHit };
+export type PaperHit = {
+    index: number;
+    vx: number;
+    heavy: boolean;
+    focus: FocusHit;
+};
 
-export function copierStep(copier: Readonly<Copier>, playerX: number, office: boolean, dt: number): CopierResult {
+export function copierStep(
+    copier: Readonly<Copier>,
+    playerX: number,
+    office: boolean,
+    dt: number,
+): CopierResult {
     const next = { ...copier };
     let fire = false;
-    if (office && (next.volley > 0 || Math.abs(playerX - next.x) < 350) && next.cool === 0 && next.burst === 0) {
+    if (
+        office &&
+        (next.volley > 0 || Math.abs(playerX - next.x) < 350) &&
+        next.cool === 0 &&
+        next.burst === 0
+    ) {
         next.dir = playerX < next.x ? -1 : 1;
         next.volley++;
         next.burst = 4;
-        next.next = .75;
+        next.next = 0.75;
         next.cool = 1.45;
     }
     if (next.burst > 0) {
@@ -22,7 +45,7 @@ export function copierStep(copier: Readonly<Copier>, playerX: number, office: bo
         if (next.next <= 0) {
             fire = true;
             next.burst--;
-            next.next = .19;
+            next.next = 0.19;
         }
     }
     return { copier: next, fire };
@@ -31,12 +54,12 @@ export function copierStep(copier: Readonly<Copier>, playerX: number, office: bo
 export function paperShot(copier: Readonly<Copier>): Paper[] {
     const F = LEVEL.floor;
     const dir = copier.dir;
-    return [0, 1, 2, 3].map(i => ({
+    return [0, 1, 2, 3].map((i) => ({
         x: copier.x + dir * 48,
         y: F - 90 - i * 4,
         vx: dir * (200 + i * 24),
         vy: -60 - i * 27,
-        a: i * .8,
+        a: i * 0.8,
         w: dir * (3 + i),
         life: 5,
         hit: false,
@@ -47,26 +70,63 @@ export function paperShot(copier: Readonly<Copier>): Paper[] {
     }));
 }
 
-export type UrgentCopier = { x: number; scan: number; cool: number; burst: number; next: number; dir: number; volley: number };
+export type UrgentCopier = {
+    x: number;
+    scan: number;
+    cool: number;
+    burst: number;
+    next: number;
+    dir: number;
+    volley: number;
+};
 export type UrgentPattern = 'low' | 'lob' | 'fan' | 'bundle';
-export type UrgentResult = { copier: UrgentCopier; fire: boolean; started: boolean };
+export type UrgentResult = {
+    copier: UrgentCopier;
+    fire: boolean;
+    started: boolean;
+};
 
 export function urgentPattern(volley: number): UrgentPattern {
     const order: UrgentPattern[] = ['low', 'lob', 'fan', 'bundle'];
-    return volley <= order.length ? order[Math.max(0, volley - 1)] : order[2 + (volley - order.length - 1) % 2];
+    return volley <= order.length
+        ? order[Math.max(0, volley - 1)]
+        : order[2 + ((volley - order.length - 1) % 2)];
 }
-const URGENT_SHOTS: Record<UrgentPattern, number> = { low: 5, lob: 4, fan: 5, bundle: 4 };
+const URGENT_SHOTS: Record<UrgentPattern, number> = {
+    low: 5,
+    lob: 4,
+    fan: 5,
+    bundle: 4,
+};
 export const URGENT_VOLLEY_ID = 1000;
 
 export function createUrgentCopier(): UrgentCopier {
-    return { x: LEVEL.urgentCopier.x, scan: 0, cool: 0, burst: 0, next: 0, dir: -1, volley: 0 };
+    return {
+        x: LEVEL.urgentCopier.x,
+        scan: 0,
+        cool: 0,
+        burst: 0,
+        next: 0,
+        dir: -1,
+        volley: 0,
+    };
 }
 
-export function urgentCopierStep(copier: Readonly<UrgentCopier>, playerX: number, dt: number): UrgentResult {
+export function urgentCopierStep(
+    copier: Readonly<UrgentCopier>,
+    playerX: number,
+    dt: number,
+): UrgentResult {
     const spec = LEVEL.urgentCopier;
     const next = { ...copier, cool: Math.max(0, copier.cool - dt) };
-    let fire = false, started = false;
-    if (next.scan === 0 && next.burst === 0 && next.cool === 0 && Math.abs(playerX - next.x) < spec.wake) {
+    let fire = false,
+        started = false;
+    if (
+        next.scan === 0 &&
+        next.burst === 0 &&
+        next.cool === 0 &&
+        Math.abs(playerX - next.x) < spec.wake
+    ) {
         next.dir = playerX < next.x ? -1 : 1;
         next.volley++;
         next.scan = spec.scan;
@@ -95,20 +155,51 @@ export function urgentShot(copier: Readonly<UrgentCopier>): Paper[] {
     const dir = copier.dir;
     const pattern = urgentPattern(copier.volley);
     const shot = URGENT_SHOTS[pattern] - 1 - copier.burst;
-    const sheet = (y: number, vx: number, vy: number, i: number, kind: Paper['kind'] = 'sheet'): Paper => ({
-        x: copier.x + dir * 60, y, vx: dir * vx, vy, a: i * .7, w: dir * (kind === 'bundle' ? 1.5 : 4 + i),
-        life: LEVEL.urgentCopier.life, hit: false, landed: false, safe: false, kind,
+    const sheet = (
+        y: number,
+        vx: number,
+        vy: number,
+        i: number,
+        kind: Paper['kind'] = 'sheet',
+    ): Paper => ({
+        x: copier.x + dir * 60,
+        y,
+        vx: dir * vx,
+        vy,
+        a: i * 0.7,
+        w: dir * (kind === 'bundle' ? 1.5 : 4 + i),
+        life: LEVEL.urgentCopier.life,
+        hit: false,
+        landed: false,
+        safe: false,
+        kind,
         volley: URGENT_VOLLEY_ID + copier.volley * 100 + shot * 10 + i,
     });
-    const low = () => [0, 1, 2, 3].map(i => sheet(F - 38 - i * 3, 285 + i * 22 + (shot % 3) * 15, -70 - i * 6, i));
-    const lob = (count: number) => Array.from({ length: count }, (_, i) => sheet(F - 120, 130 + i * 40 + (shot % 3) * 25, -230 - i * 18, i));
+    const low = () =>
+        [0, 1, 2, 3].map((i) =>
+            sheet(
+                F - 38 - i * 3,
+                285 + i * 22 + (shot % 3) * 15,
+                -70 - i * 6,
+                i,
+            ),
+        );
+    const lob = (count: number) =>
+        Array.from({ length: count }, (_, i) =>
+            sheet(F - 120, 130 + i * 40 + (shot % 3) * 25, -230 - i * 18, i),
+        );
     if (pattern === 'low') return low();
     if (pattern === 'lob') return lob(5);
     if (pattern === 'fan') return shot % 2 === 1 ? lob(4) : low();
     return shot === 0 ? [sheet(F - 55, 230, -90, 0, 'bundle')] : lob(4);
 }
 
-export function papersStep(papers: readonly Readonly<Paper>[], p: Readonly<Point>, inBin: boolean, dt: number): { papers: Paper[]; hits: PaperHit[] } {
+export function papersStep(
+    papers: ReadonlyArray<Readonly<Paper>>,
+    p: Readonly<Point>,
+    inBin: boolean,
+    dt: number,
+): { papers: Paper[]; hits: PaperHit[] } {
     const F = LEVEL.floor;
     const hits: PaperHit[] = [];
     const moved = papers.map((paper, index) => {
@@ -116,7 +207,7 @@ export function papersStep(papers: readonly Readonly<Paper>[], p: Readonly<Point
         z.life -= dt;
         z.x += z.vx * dt;
         z.y += z.vy * dt;
-        z.vx *= Det.exp(-.8 * dt);
+        z.vx *= Det.exp(-0.8 * dt);
         z.vy += 210 * dt;
         z.a += z.w * dt;
         const pit = z.x > LEVEL.bin.a && z.x < LEVEL.bin.b;
@@ -124,14 +215,29 @@ export function papersStep(papers: readonly Readonly<Paper>[], p: Readonly<Point
             z.y = F - 4;
             z.vy = 0;
             z.vx *= Det.exp(-4 * dt);
-            z.w *= .9;
+            z.w *= 0.9;
             z.landed = true;
         }
         const heavy = z.kind === 'bundle';
-        if (!z.safe && !z.hit && !z.landed && !inBin && Det.hypot(z.x - p.x, z.y - (p.y - 50)) < (heavy ? 60 : 48)) {
+        if (
+            !z.safe &&
+            !z.hit &&
+            !z.landed &&
+            !inBin &&
+            Det.hypot(z.x - p.x, z.y - (p.y - 50)) < (heavy ? 60 : 48)
+        ) {
             z.hit = true;
-            const damage = heavy ? FOCUS_DAMAGE.bundle : z.volley >= URGENT_VOLLEY_ID ? FOCUS_DAMAGE.urgentSheet : FOCUS_DAMAGE.copier;
-            hits.push({ index, vx: z.vx, heavy, focus: { kind: 'paper', id: z.volley, damage } });
+            const damage = heavy
+                ? FOCUS_DAMAGE.bundle
+                : z.volley >= URGENT_VOLLEY_ID
+                  ? FOCUS_DAMAGE.urgentSheet
+                  : FOCUS_DAMAGE.copier;
+            hits.push({
+                index,
+                vx: z.vx,
+                heavy,
+                focus: { kind: 'paper', id: z.volley, damage },
+            });
         }
         return z;
     });
@@ -139,5 +245,5 @@ export function papersStep(papers: readonly Readonly<Paper>[], p: Readonly<Point
 }
 
 export function trimPapers(papers: readonly Paper[]) {
-    return papers.filter(z => z.life > 0).slice(-60);
+    return papers.filter((z) => z.life > 0).slice(-60);
 }

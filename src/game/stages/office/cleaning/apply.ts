@@ -2,11 +2,20 @@ import type { CoreState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { applyFocusHit } from '../../../systems/focus/apply';
 import type { CleaningResult } from './decide';
-export function applyCleaning(s: CoreState, out: GameEvent[], result: CleaningResult, dt: number) {
+export function applyCleaning(
+    s: CoreState,
+    out: GameEvent[],
+    result: CleaningResult,
+    dt: number,
+) {
     s.office.cleaning = result.cleaning;
     s.office.bucket = result.bucket;
     if (result.splash) {
-        out.push({ type: 'water-splash', x: s.office.cleaning.x, side: s.office.cleaning.splashDir });
+        out.push({
+            type: 'water-splash',
+            x: s.office.cleaning.x,
+            side: s.office.cleaning.splashDir,
+        });
         out.push({ type: 'cue', id: 'water-spilled' });
         out.push({ type: 'cue', id: 'water-comment' });
     }

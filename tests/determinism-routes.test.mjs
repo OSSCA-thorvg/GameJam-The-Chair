@@ -1,12 +1,23 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { balancePolicy, begin, play, recordCommands, runWith } from './support/harness.mjs';
+import {
+    balancePolicy,
+    begin,
+    play,
+    recordCommands,
+    runWith,
+} from './support/harness.mjs';
 import { determinismTests } from './support/determinism.mjs';
 
 const OFFICE_TICKS = 120 * 45;
 const office = recordCommands(31, { stage: 1 }, OFFICE_TICKS, balancePolicy);
 const BUILDING_TICKS = 120 * 30;
-const building = recordCommands(31, { stage: 2 }, BUILDING_TICKS, balancePolicy);
+const building = recordCommands(
+    31,
+    { stage: 2 },
+    BUILDING_TICKS,
+    balancePolicy,
+);
 
 determinismTests('office route', { stage: 1 }, office, OFFICE_TICKS);
 determinismTests('building route', { stage: 2 }, building, BUILDING_TICKS);
@@ -23,6 +34,13 @@ test('the office route reaches the geysers and replays them exactly', () => {
 });
 
 test('different seeds change physics randomness', () => {
-    const player = seed => JSON.stringify(runWith(seed, { stage: 1 }, office, 1790).getSnapshot().player);
-    assert.notEqual(player(31), player(32), 'geyser spin depends on the physics stream');
+    const player = (seed) =>
+        JSON.stringify(
+            runWith(seed, { stage: 1 }, office, 1790).getSnapshot().player,
+        );
+    assert.notEqual(
+        player(31),
+        player(32),
+        'geyser spin depends on the physics stream',
+    );
 });

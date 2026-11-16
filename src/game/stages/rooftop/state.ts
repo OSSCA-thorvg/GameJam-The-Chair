@@ -1,4 +1,8 @@
-import type { DuctReaction, FirstFlight, RooftopEntrance } from './course/decide';
+import type {
+    DuctReaction,
+    FirstFlight,
+    RooftopEntrance,
+} from './course/decide';
 
 export type RooftopState = {
     entrance: RooftopEntrance;
@@ -8,5 +12,10 @@ export type RooftopState = {
 };
 
 export function createRooftopState(): RooftopState {
-    return { entrance: { kind: 'ready' }, duct: { kind: 'idle', rest: 0 }, flight: { kind: 'course' }, airSprays: 0 };
+    return {
+        entrance: { kind: 'ready' },
+        duct: { kind: 'idle', rest: 0 },
+        flight: { kind: 'course' },
+        airSprays: 0,
+    };
 }

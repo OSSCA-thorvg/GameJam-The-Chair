@@ -2,7 +2,14 @@ import { FIXED_STEP, LEVEL, PHYSICS } from './level';
 import type { Input, DeepReadonly, GameEvent, Mode, StageId } from './types';
 import type { SkyState } from './stages/sky/data';
 import { clonePlain } from './data';
-import { cloneState, createCore, parseState, serializeState, type CoreState, type Progress } from './state';
+import {
+    cloneState,
+    createCore,
+    parseState,
+    serializeState,
+    type CoreState,
+    type Progress,
+} from './state';
 import type { Command } from './commands';
 import { SIMULATED, applyCommand, stageSolids, stepGame } from './step';
 import { STAGES } from './stages/index';
@@ -12,7 +19,13 @@ import { stageHooks } from './stages/hooks';
 import { monitorsView } from './stages/view';
 
 export type { Command } from './commands';
-export { stepGame, applyCommand, replayCommands, type CommandLog, type StepResult } from './step';
+export {
+    stepGame,
+    applyCommand,
+    replayCommands,
+    type CommandLog,
+    type StepResult,
+} from './step';
 export { createCore, parseState, type CoreState } from './state';
 export { CONFIG_VERSION } from './stages/index';
 
@@ -25,43 +38,78 @@ export type GameOptions = {
     onError?: (error: GameError, cause: unknown) => void;
 };
 
-export type GameStatus = { mode: Mode; stage: StageId; completedStage: 0 | StageId; skyPhase: SkyState['phase'] };
+export type GameStatus = {
+    mode: Mode;
+    stage: StageId;
+    completedStage: 0 | StageId;
+    skyPhase: SkyState['phase'];
+};
 
 export type AdvanceResult = { ticks: number; dropped: number };
 
-export type GameError = { tick: number; at: 'step' | 'command'; message: string; stack?: string; command?: Command };
+export type GameError = {
+    tick: number;
+    at: 'step' | 'command';
+    message: string;
+    stack?: string;
+    command?: Command;
+};
 
 function describe(error: unknown) {
-    return error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    return error instanceof Error
+        ? { message: error.message, stack: error.stack }
+        : { message: String(error) };
 }
 
 export function createGame(options: GameOptions = {}) {
-    let s: CoreState = createCore({ seed: options.seed ?? 0, deaths: options.progress?.deaths, completedStage: options.progress?.completedStage });
+    let s: CoreState = createCore({
+        seed: options.seed ?? 0,
+        deaths: options.progress?.deaths,
+        completedStage: options.progress?.completedStage,
+    });
     let acc = 0;
     const pending: GameEvent[] = [];
 
     function emit(events: readonly GameEvent[]) {
         pending.push(...events);
-        if (events.some(event => event.type === 'reset')) options.onAttemptStart?.(serializeState(s));
+        if (events.some((event) => event.type === 'reset')) {
+            options.onAttemptStart?.(serializeState(s));
+        }
     }
 
     function send(command: Command) {
-        // Record before applying so a reset's new attempt starts after the command that caused it.
+        // Record before applying so a reset's new attempt starts after the
+        // command that caused it.
         options.onCommand?.(s.tick, command);
         let result;
         try {
             result = applyCommand(s, command);
         } catch (error) {
-            options.onError?.({ tick: s.tick, at: 'command', command, ...describe(error) }, error);
+            options.onError?.(
+                { tick: s.tick, at: 'command', command, ...describe(error) },
+                error,
+            );
             throw error;
         }
         s = result.state;
-        if (command.type === 'pause' || command.type === 'reset' || command.type === 'restart' || command.type === 'startStage') acc = 0;
+        if (
+            command.type === 'pause' ||
+            command.type === 'reset' ||
+            command.type === 'restart' ||
+            command.type === 'startStage'
+        ) {
+            acc = 0;
+        }
         emit(result.events);
     }
 
     function setKeys(keys: Input[]) {
-        if (keys.length === s.keys.length && keys.every((key, i) => key === s.keys[i])) return;
+        if (
+            keys.length === s.keys.length &&
+            keys.every((key, i) => key === s.keys[i])
+        ) {
+            return;
+        }
         send({ type: 'keys', keys });
     }
 
@@ -70,7 +118,10 @@ export function createGame(options: GameOptions = {}) {
         try {
             result = stepGame(s);
         } catch (error) {
-            options.onError?.({ tick: s.tick, at: 'step', ...describe(error) }, error);
+            options.onError?.(
+                { tick: s.tick, at: 'step', ...describe(error) },
+                error,
+            );
             throw error;
         }
         s = result.state;
@@ -87,7 +138,12 @@ export function createGame(options: GameOptions = {}) {
     }
 
     function status(): GameStatus {
-        return { mode: s.mode, stage: s.stage, completedStage: s.completedStage, skyPhase: s.sky.phase };
+        return {
+            mode: s.mode,
+            stage: s.stage,
+            completedStage: s.completedStage,
+            skyPhase: s.sky.phase,
+        };
     }
 
     // Returns a detached copy that callers may edit.
@@ -133,23 +189,31 @@ export function createGame(options: GameOptions = {}) {
         pause: () => send({ type: 'pause' }),
         setInput: (...input: Input[]) => setKeys([...new Set(input)]),
         press(input: Input) {
-            if (s.mode === 'play' && !s.keys.includes(input)) setKeys([...s.keys, input]);
+            if (s.mode === 'play' && !s.keys.includes(input)) {
+                setKeys([...s.keys, input]);
+            }
         },
         release(input: Input) {
-            if (s.keys.includes(input)) setKeys(s.keys.filter(key => key !== input));
+            if (s.keys.includes(input)) {
+                setKeys(s.keys.filter((key) => key !== input));
+            }
         },
         clearInput: () => setKeys([]),
         step: (_dt?: number) => tick(),
         advance,
-        advanceImpact: (dt: number) => preview((next, out) => applyImpact(next, out, dt)),
-        advanceFocusLoss: (dt: number) => preview((next, out) => applyFocusLoss(next, out, dt)),
+        advanceImpact: (dt: number) =>
+            preview((next, out) => applyImpact(next, out, dt)),
+        advanceFocusLoss: (dt: number) =>
+            preview((next, out) => applyFocusLoss(next, out, dt)),
         serialize: () => serializeState(s),
         restore(json: string) {
             s = parseState(json);
             acc = 0;
         },
         status,
-        getSnapshot: getSnapshot as () => DeepReadonly<ReturnType<typeof viewState>>,
+        getSnapshot: getSnapshot as () => DeepReadonly<
+            ReturnType<typeof viewState>
+        >,
         drainEvents() {
             return pending.splice(0);
         },
@@ -159,12 +223,17 @@ export function createGame(options: GameOptions = {}) {
 export function viewState(s: Readonly<CoreState>) {
     return clonePlain({
         game: STAGES[s.stage].name,
-        spray: { burst: s.extinguisher.burst, cooldown: s.extinguisher.cooldown, dir: s.extinguisher.direction },
+        spray: {
+            burst: s.extinguisher.burst,
+            cooldown: s.extinguisher.cooldown,
+            dir: s.extinguisher.direction,
+        },
         lessons: s.lessons,
         officeCheckpoint: s.stage === 1 && s.checkpoint > 0,
         skylineSeed: s.skylineSeed,
         actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
-        tutorialAssist: s.mode === 'play' && s.p.x < PHYSICS.upright.tutorialUntilX,
+        tutorialAssist:
+            s.mode === 'play' && s.p.x < PHYSICS.upright.tutorialUntilX,
         stage: s.stage,
         sky: s.sky,
         orbit: s.stage === 5 ? s.orbit : undefined,
@@ -208,8 +277,14 @@ export function viewState(s: Readonly<CoreState>) {
         monitors: monitorsView(s.time),
         papers: s.office.papers,
         people: s.people,
-        solids: stageSolids(s).map(p => ({ p })),
-        copier: { x: s.office.copier.x, cool: s.office.copier.cool, burst: s.office.copier.burst, next: s.office.copier.next, dir: s.office.copier.dir },
+        solids: stageSolids(s).map((p) => ({ p })),
+        copier: {
+            x: s.office.copier.x,
+            cool: s.office.copier.cool,
+            burst: s.office.copier.burst,
+            next: s.office.copier.next,
+            dir: s.office.copier.dir,
+        },
         urgentCopier: s.office.urgent,
         bin: LEVEL.bin,
         focusBlocked: focusBlockedIn(s),

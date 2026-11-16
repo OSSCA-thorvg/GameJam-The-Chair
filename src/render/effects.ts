@@ -83,7 +83,9 @@ export function createEffects() {
         if (event.type === 'volley') {
             copierFlash = EFFECT_STYLE.copierFlashDuration;
         }
-        if (event.type === 'cue' && event.id === 'practice-cleared') practiceBurst = 1.3;
+        if (event.type === 'cue' && event.id === 'practice-cleared') {
+            practiceBurst = 1.3;
+        }
         if (event.type === 'cue' && event.id === 'checkpoint') saveFlash = 1.5;
         if (event.type === 'tick') {
             practiceBurst = Math.max(0, practiceBurst - event.dt);
@@ -107,22 +109,38 @@ export function createEffects() {
                 z.vy += 300 * dt;
                 z.a += dt * 3;
             }
-            specks = specks.filter(z => z.life > 0).slice(-60);
+            specks = specks.filter((z) => z.life > 0).slice(-60);
         }
         if (event.type === 'water-splash') {
-            waterPour = { x: event.x, side: event.side, age: 0, chain: 0, flowing: false, emit: 0, seed: 0x9e3779b9 ^ Math.round(event.x) };
+            waterPour = {
+                x: event.x,
+                side: event.side,
+                age: 0,
+                chain: 0,
+                flowing: false,
+                emit: 0,
+                seed: 0x9e3779b9 ^ Math.round(event.x),
+            };
             waterPuddle = null;
         }
         if (event.type === 'water-step') {
             stepWater(event.dt);
         }
         if (event.type === 'speck') {
-            specks.push({ x: event.x, y: F - 2, vx: event.vx, vy: -45, a: 0, life: .35, color: EFFECT_STYLE.speckColor });
+            specks.push({
+                x: event.x,
+                y: F - 2,
+                vx: event.vx,
+                vy: -45,
+                a: 0,
+                life: 0.35,
+                color: EFFECT_STYLE.speckColor,
+            });
         }
     }
     function random() {
-        if (!waterPour) return .5;
-        let t = waterPour.seed = (waterPour.seed + 0x6d2b79f5) | 0;
+        if (!waterPour) return 0.5;
+        let t = (waterPour.seed = (waterPour.seed + 0x6d2b79f5) | 0);
         t = Math.imul(t ^ (t >>> 15), t | 1);
         t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
@@ -141,8 +159,8 @@ export function createEffects() {
         const spillSpeed = Math.hypot(spill.vx, spill.vy) || 1;
         const ox = spill.vx / spillSpeed;
         const oy = spill.vy / spillSpeed;
-        const opening = .08 + .2 * q;
-        if (q > .16) {
+        const opening = 0.08 + 0.2 * q;
+        if (q > 0.16) {
             if (!pour.flowing) pour.chain++;
             pour.flowing = true;
             pour.emit += dt * 110;
@@ -150,31 +168,48 @@ export function createEffects() {
                 pour.emit--;
                 const launch = pourLaunch(pour.x, F, pour.side, pour.age);
                 waterDrops.push({
-                    kind: 'stream', chain: pour.chain,
-                    x: launch.x, y: launch.y, vx: launch.vx, vy: launch.vy,
-                    life: 2, r: 1.6 + Math.hypot(ax, ay) * opening * .42, floor: F + 3,
+                    kind: 'stream',
+                    chain: pour.chain,
+                    x: launch.x,
+                    y: launch.y,
+                    vx: launch.vx,
+                    vy: launch.vy,
+                    life: 2,
+                    r: 1.6 + Math.hypot(ax, ay) * opening * 0.42,
+                    floor: F + 3,
                 });
             }
         } else {
             pour.flowing = false;
         }
         if (random() < q * dt * 45) {
-            const spin = (random() - .5) * .9;
-            const speed = (50 + 140 * q) * (.7 + random() * .6);
+            const spin = (random() - 0.5) * 0.9;
+            const speed = (50 + 140 * q) * (0.7 + random() * 0.6);
             const at = opening * random();
             waterDrops.push({
-                kind: 'drop', chain: 0,
-                x: lx + ax * at, y: ly + ay * at,
+                kind: 'drop',
+                chain: 0,
+                x: lx + ax * at,
+                y: ly + ay * at,
                 vx: (ox * Math.cos(spin) - oy * Math.sin(spin)) * speed,
                 vy: (ox * Math.sin(spin) + oy * Math.cos(spin)) * speed,
-                life: 2, r: 1.3 + random() * 2.2, floor: F - 2 + random() * 11,
+                life: 2,
+                r: 1.3 + random() * 2.2,
+                floor: F - 2 + random() * 11,
             });
         }
-        const dribble = (pour.age - .95) / 1.2;
+        const dribble = (pour.age - 0.95) / 1.2;
         if (dribble > 0 && dribble < 1 && random() < dt * 9 * (1 - dribble)) {
             waterDrops.push({
-                kind: 'drop', chain: 0, x: lx + pour.side * random() * 3, y: ly,
-                vx: pour.side * (8 + random() * 20), vy: 10, life: 1.5, r: 1.2 + random() * 1.6, floor: F + random() * 6,
+                kind: 'drop',
+                chain: 0,
+                x: lx + pour.side * random() * 3,
+                y: ly,
+                vx: pour.side * (8 + random() * 20),
+                vy: 10,
+                life: 1.5,
+                r: 1.2 + random() * 1.6,
+                floor: F + random() * 6,
             });
         }
         if (pour.age > 2.3) waterPour = null;
@@ -182,26 +217,65 @@ export function createEffects() {
 
     function land(z: WaterDrop) {
         const speed = Math.hypot(z.vx, z.vy);
-        const puddle = waterPuddle ??= { left: z.x - 6, right: z.x + 6, reachLeft: z.x - 6, reachRight: z.x + 6, wet: 0 };
+        const puddle = (waterPuddle ??= {
+            left: z.x - 6,
+            right: z.x + 6,
+            reachLeft: z.x - 6,
+            reachRight: z.x + 6,
+            wet: 0,
+        });
         puddle.reachLeft = Math.min(puddle.reachLeft, z.x - 8 - z.r * 2);
         puddle.reachRight = Math.max(puddle.reachRight, z.x + 8 + z.r * 2);
-        puddle.wet = Math.min(1, puddle.wet + z.r * (z.kind === 'stream' ? .0035 : .002));
+        puddle.wet = Math.min(
+            1,
+            puddle.wet + z.r * (z.kind === 'stream' ? 0.0035 : 0.002),
+        );
         if (z.kind === 'spray') {
-            if (random() < .25) waterRipples.push({ x: z.x, y: z.floor, age: 0, life: .3, r: z.r, crown: false });
+            if (random() < 0.25) {
+                waterRipples.push({
+                    x: z.x,
+                    y: z.floor,
+                    age: 0,
+                    life: 0.3,
+                    r: z.r,
+                    crown: false,
+                });
+            }
             return;
         }
-        const ring = z.kind === 'drop' ? random() < .2 : random() < .08;
-        const crown = z.kind === 'stream' && z.r > 5.5 && random() < .07;
+        const ring = z.kind === 'drop' ? random() < 0.2 : random() < 0.08;
+        const crown = z.kind === 'stream' && z.r > 5.5 && random() < 0.07;
         if (ring || crown) {
-            waterRipples.push({ x: z.x, y: z.floor, age: 0, life: crown ? .38 : .45 + z.r * .04, r: z.r, crown });
+            waterRipples.push({
+                x: z.x,
+                y: z.floor,
+                age: 0,
+                life: crown ? 0.38 : 0.45 + z.r * 0.04,
+                r: z.r,
+                crown,
+            });
         }
-        const splashes = speed < 170 ? 0 : z.kind === 'stream' ? (random() < .55 ? 1 : 0) + (z.r > 6 && random() < .4 ? 1 : 0) : (random() < .4 ? 1 : 0);
+        const splashes =
+            speed < 170
+                ? 0
+                : z.kind === 'stream'
+                  ? (random() < 0.55 ? 1 : 0) +
+                    (z.r > 6 && random() < 0.4 ? 1 : 0)
+                  : random() < 0.4
+                    ? 1
+                    : 0;
         for (let i = 0; i < splashes; i++) {
             const kick = Math.min(1, speed / 380);
             waterDrops.push({
-                kind: 'spray', chain: 0, x: z.x, y: z.floor - 1,
-                vx: z.vx * .3 + (random() - .5) * 150, vy: -(70 + random() * 170) * kick,
-                life: 1, r: .8 + random() * 1.4, floor: z.floor + random() * 4,
+                kind: 'spray',
+                chain: 0,
+                x: z.x,
+                y: z.floor - 1,
+                vx: z.vx * 0.3 + (random() - 0.5) * 150,
+                vy: -(70 + random() * 170) * kick,
+                life: 1,
+                r: 0.8 + random() * 1.4,
+                floor: z.floor + random() * 4,
             });
         }
     }
@@ -209,12 +283,12 @@ export function createEffects() {
     function stepWater(dt: number) {
         emitWater(dt);
         for (const r of waterRipples) r.age += dt;
-        waterRipples = waterRipples.filter(r => r.age < r.life);
+        waterRipples = waterRipples.filter((r) => r.age < r.life);
         const alive: WaterDrop[] = [];
         for (const z of waterDrops) {
             z.life -= dt;
             z.vy += WATER_GRAVITY * dt;
-            if (z.kind !== 'stream') z.vx *= Math.exp(-.5 * dt);
+            if (z.kind !== 'stream') z.vx *= Math.exp(-0.5 * dt);
             z.x += z.vx * dt;
             z.y += z.vy * dt;
             if (z.y >= z.floor) {
@@ -229,21 +303,53 @@ export function createEffects() {
             const p = waterPuddle;
             p.reachLeft -= dt * 4;
             p.reachRight += dt * 4;
-            p.left -= Math.min(p.left - p.reachLeft, dt * (40 + (p.left - p.reachLeft) * 4));
-            p.right += Math.min(p.reachRight - p.right, dt * (40 + (p.reachRight - p.right) * 4));
+            p.left -= Math.min(
+                p.left - p.reachLeft,
+                dt * (40 + (p.left - p.reachLeft) * 4),
+            );
+            p.right += Math.min(
+                p.reachRight - p.right,
+                dt * (40 + (p.reachRight - p.right) * 4),
+            );
         }
     }
 
-    function observe(input: Parameters<typeof personalBox.observe>[0] & Partial<Parameters<typeof meetingVisits.observe>[0]> & { mode?: string }) {
+    function observe(
+        input: Parameters<typeof personalBox.observe>[0] &
+            Partial<Parameters<typeof meetingVisits.observe>[0]> & {
+                mode?: string;
+            },
+    ) {
         keyHints.observe(input);
         meetingVisits.observe(input);
         deathShot.observe(input);
         personalBox.observe(input);
     }
 
-    return { receive, observe, restorePersonalBox: personalBox.restore, pressKey: keyHints.press, advance: deathShot.advance,
-        snapshot: () => ({ specks, waterDrops, waterRipples, waterPour, waterPuddle, paperFace, glare, copierFlash, practiceBurst, saveFlash,
-            personalBox: personalBox.snapshot(), keysTried: keyHints.snapshot(), meetingVisit: meetingVisits.snapshot(), deathShot: deathShot.snapshot() }),
+    return {
+        receive,
+        observe,
+        restorePersonalBox: personalBox.restore,
+        pressKey: keyHints.press,
+        advance: deathShot.advance,
+        snapshot: () => ({
+            specks,
+            waterDrops,
+            waterRipples,
+            waterPour,
+            waterPuddle,
+            paperFace,
+            glare,
+            copierFlash,
+            practiceBurst,
+            saveFlash,
+            personalBox: personalBox.snapshot(),
+            keysTried: keyHints.snapshot(),
+            meetingVisit: meetingVisits.snapshot(),
+            deathShot: deathShot.snapshot(),
+        }),
     };
 }
-export type EffectsState = ReturnType<ReturnType<typeof createEffects>['snapshot']>;
+export type EffectsState = ReturnType<
+    ReturnType<typeof createEffects>['snapshot']
+>;

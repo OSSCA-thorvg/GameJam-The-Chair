@@ -1,7 +1,12 @@
 export type HintKey = 'left' | 'right' | 'jump' | 'spray';
 export type KeysTried = Readonly<Record<HintKey, boolean>>;
 
-const NONE: KeysTried = { left: false, right: false, jump: false, spray: false };
+const NONE: KeysTried = {
+    left: false,
+    right: false,
+    jump: false,
+    spray: false,
+};
 
 export function createKeyHints() {
     let tried = NONE;

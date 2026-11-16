@@ -6,7 +6,11 @@ import { loadThorvg, thorvgRenderer } from './thorvg';
 import { createGpuTimer, type GpuTimer } from './gpu-timer';
 import type { GameSnapshot } from '../game/game';
 import type { EffectsState } from './effects';
-import { createRenderCtx, createRenderResources, type RenderCtx } from './context';
+import {
+    createRenderCtx,
+    createRenderResources,
+    type RenderCtx,
+} from './context';
 import { drawOrbit } from './scene/orbit';
 import { drawWorld } from './scene/world';
 import { drawBuilding } from './scene/building';
@@ -18,9 +22,18 @@ import type { SceneTalk } from './types';
 import { createPaintPool, paint, thorvgTextWidth } from './paint';
 import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
 import { drawTitle } from './scene/title';
-import { deathShotBurst, deathShotCloseness, DEATH_SHOT, type DeathShot } from './death-shot';
+import {
+    deathShotBurst,
+    deathShotCloseness,
+    DEATH_SHOT,
+    type DeathShot,
+} from './death-shot';
 import { deathBurst } from './scene/death-burst';
-import { resetRenderStats, type LayerOverrides, type RenderStats } from './perf';
+import {
+    resetRenderStats,
+    type LayerOverrides,
+    type RenderStats,
+} from './perf';
 
 export const VIEW_WIDTH = 1000;
 export const VIEW_HEIGHT = 510;
@@ -28,7 +41,10 @@ export const VIEW_HEIGHT = 510;
 const HEAD: [number, number] = [4, -74];
 const EYES: [number, number] = [9, -83];
 
-export function createRenderer(root: HTMLElement, getLocale: () => Locale = () => 'en') {
+export function createRenderer(
+    root: HTMLElement,
+    getLocale: () => Locale = () => 'en',
+) {
     const base = root.querySelector<HTMLCanvasElement>('[data-base]');
     const cn = root.querySelector<HTMLCanvasElement>('[data-tvg]');
     const bg = base?.getContext('2d');
@@ -47,7 +63,14 @@ function setup(
 ) {
     const resources = createRenderResources(bg);
     let ctx: RenderCtx;
-    const viewport = { W: 800, H: 510, VW: VIEW_WIDTH, scale: 1, vertical: 0, dpr: 1 };
+    const viewport = {
+        W: 800,
+        H: 510,
+        VW: VIEW_WIDTH,
+        scale: 1,
+        vertical: 0,
+        dpr: 1,
+    };
     let cameraState = { cam: 0, wheel: 0 };
     let soaks = 0;
     let lastTime = 0;
@@ -69,7 +92,8 @@ function setup(
         viewport.H = base.clientHeight || VIEW_HEIGHT;
         viewport.VW = VIEW_WIDTH;
         viewport.scale = viewport.W / viewport.VW;
-        viewport.vertical = Math.max(0, viewport.H / viewport.scale - VIEW_HEIGHT) * .7;
+        viewport.vertical =
+            Math.max(0, viewport.H / viewport.scale - VIEW_HEIGHT) * 0.7;
         viewport.dpr = Math.min(devicePixelRatio || 1, 2);
         base.width = Math.round(viewport.W * viewport.dpr);
         base.height = Math.round(viewport.H * viewport.dpr);
@@ -80,11 +104,19 @@ function setup(
     size();
 
     let lastWaterLife = 0;
-    function draw(next: GameSnapshot, effects: EffectsState, camera?: number, opening?: OpeningFrame, talk?: SceneTalk, titleTime?: number) {
+    function draw(
+        next: GameSnapshot,
+        effects: EffectsState,
+        camera?: number,
+        opening?: OpeningFrame,
+        talk?: SceneTalk,
+        titleTime?: number,
+    ) {
         ctx = createRenderCtx(resources, next, effects);
         Object.assign(ctx, viewport, cameraState);
         ctx.locale = getLocale();
-        const water = next.focusNotice?.kind === 'water' ? next.focusNotice.life : 0;
+        const water =
+            next.focusNotice?.kind === 'water' ? next.focusNotice.life : 0;
         if (!next.soaked) soaks = 0;
         else if (water > lastWaterLife) soaks++;
         ctx.soaks = soaks;
@@ -100,18 +132,31 @@ function setup(
         lastStage = next.stage;
         lastTime = t;
         const buildStart = stats ? performance.now() : 0;
-        const title = !opening && (titleTime !== undefined || (next.mode === 'intro' && next.stage === 1));
+        const title =
+            !opening &&
+            (titleTime !== undefined ||
+                (next.mode === 'intro' && next.stage === 1));
         if (opening) {
             drawOpening(ctx, opening);
         } else if (title) {
             drawTitle(ctx, titleTime ?? performance.now() / 1000);
         } else {
-            const scenes = { office: drawWorld, building: drawBuilding, rooftop: drawRooftop, sky: drawCloudStart, orbit: drawOrbit };
+            const scenes = {
+                office: drawWorld,
+                building: drawBuilding,
+                rooftop: drawRooftop,
+                sky: drawCloudStart,
+                orbit: drawOrbit,
+            };
             scenes[STAGE_PRESENTATION[next.stage].scene](ctx);
         }
         if (!opening && !title) {
-            const burst = effects.deathShot ? deathShotBurst(effects.deathShot) : null;
-            if (burst !== null) deathBurst(ctx, ctx.screenPoint(...riderPoint(HEAD)), burst);
+            const burst = effects.deathShot
+                ? deathShotBurst(effects.deathShot)
+                : null;
+            if (burst !== null) {
+                deathBurst(ctx, ctx.screenPoint(...riderPoint(HEAD)), burst);
+            }
             focusVignette(ctx);
             if (talk) drawTalk(ctx, talk);
             drawStageTitle(ctx);
@@ -123,40 +168,68 @@ function setup(
         const timing = stats ? gpuTiming() : null;
         const timed = timing?.begin() ?? false;
         try {
-            paint(ctx, TVG, tvg, pool, stats ?? undefined, overrides ?? undefined);
+            paint(
+                ctx,
+                TVG,
+                tvg,
+                pool,
+                stats ?? undefined,
+                overrides ?? undefined,
+            );
         } finally {
             if (timed) timing!.end();
         }
         if (stats && timing) stats.gpuMs = timing.collect();
-        return { cam: ctx.cam, scale: ctx.scale, vertical: ctx.vertical, width: ctx.W };
+        return {
+            cam: ctx.cam,
+            scale: ctx.scale,
+            vertical: ctx.vertical,
+            width: ctx.W,
+        };
     }
 
-    function openingCamera(frame: OpeningFrame, baseWidth: number, baseVertical: number) {
+    function openingCamera(
+        frame: OpeningFrame,
+        baseWidth: number,
+        baseVertical: number,
+    ) {
         const width = baseWidth / frame.zoom;
         const scale = ctx.W / width;
         const cam = ctx.player.x - width / 2;
-        const vertical = ctx.H / (2 * scale) - openingFocusY(frame, ctx.player.y);
-        const playCam = ctx.clamp(ctx.player.x - baseWidth * .35, 0, Math.max(0, ctx.LEN - baseWidth));
+        const vertical =
+            ctx.H / (2 * scale) - openingFocusY(frame, ctx.player.y);
+        const playCam = ctx.clamp(
+            ctx.player.x - baseWidth * 0.35,
+            0,
+            Math.max(0, ctx.LEN - baseWidth),
+        );
         const u = frame.handoff;
         ctx.VW = width + (baseWidth - width) * u;
         ctx.scale = ctx.W / ctx.VW;
         ctx.cam = cam + (playCam - cam) * u + frame.shake[0] / ctx.scale;
-        ctx.vertical = vertical + (baseVertical - vertical) * u + frame.shake[1] / ctx.scale;
+        ctx.vertical =
+            vertical +
+            (baseVertical - vertical) * u +
+            frame.shake[1] / ctx.scale;
         ctx.wheel = 0;
     }
 
     function riderPoint([lx, ly]: [number, number]): [number, number] {
-        const c = Math.cos(ctx.player.a), s = Math.sin(ctx.player.a);
+        const c = Math.cos(ctx.player.a),
+            s = Math.sin(ctx.player.a);
         return [ctx.player.x + lx * c - ly * s, ctx.player.y + lx * s + ly * c];
     }
 
     function deathCamera(shot: DeathShot) {
-        if (!closeUpFrom || shot.age < closeUpAge) closeUpFrom = { cam: ctx.cam };
+        if (!closeUpFrom || shot.age < closeUpAge) {
+            closeUpFrom = { cam: ctx.cam };
+        }
         closeUpAge = shot.age;
         const u = deathShotCloseness(shot);
         ctx.cam = closeUpFrom.cam;
         if (u <= 0) return;
-        const width0 = ctx.VW, scale0 = ctx.scale;
+        const width0 = ctx.VW,
+            scale0 = ctx.scale;
         const restX = closeUpFrom.cam + width0 / 2;
         const restY = ctx.H / (2 * scale0) - ctx.vertical;
         const [fx, fy] = riderPoint(shot.kind === 'focus' ? EYES : HEAD);
@@ -202,7 +275,11 @@ function setup(
             closeUpAge = -1;
         },
         ready,
-        info: () => ({ renderer, renderError, commands: ctx?.commands.length ?? 0 }),
+        info: () => ({
+            renderer,
+            renderError,
+            commands: ctx?.commands.length ?? 0,
+        }),
         profile(next: RenderStats | null) {
             stats = next;
             if (!next) {
@@ -217,12 +294,21 @@ function setup(
         surface: () => ({
             backend: tvg ? `thorvg-${tvg.renderer}` : renderer,
             requested: `thorvg-${thorvgRenderer()}`,
-            gpuTimer: !tvg || tvg.renderer !== 'gl' ? 'n/a' as const : gpuTimer ? 'on' as const : gpuTimerTried ? 'unsupported' as const : 'idle' as const,
+            gpuTimer:
+                !tvg || tvg.renderer !== 'gl'
+                    ? ('n/a' as const)
+                    : gpuTimer
+                      ? ('on' as const)
+                      : gpuTimerTried
+                        ? ('unsupported' as const)
+                        : ('idle' as const),
             renderError,
             width: viewport.W,
             height: viewport.H,
             dpr: viewport.dpr,
-            raster: tvg ? { width: cn.width, height: cn.height, dpr: tvg.dpr } : { width: base.width, height: base.height, dpr: viewport.dpr },
+            raster: tvg
+                ? { width: cn.width, height: cn.height, dpr: tvg.dpr }
+                : { width: base.width, height: base.height, dpr: viewport.dpr },
         }),
         destroy() {
             observer.disconnect();

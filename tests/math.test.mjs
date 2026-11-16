@@ -4,9 +4,11 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadSource } from './support/load.mjs';
 
-const Det = await loadSource(`export * as Det from './src/game/math';`).then(module => module.Det);
+const Det = await loadSource(`export * as Det from './src/game/math';`).then(
+    (module) => module.Det,
+);
 
-const bits = x => {
+const bits = (x) => {
     const view = new DataView(new ArrayBuffer(8));
     view.setFloat64(0, x);
     return view.getBigUint64(0).toString(16).padStart(16, '0');
@@ -16,7 +18,11 @@ const ulps = (a, b) => {
     const view = new DataView(new ArrayBuffer(16));
     view.setFloat64(0, a);
     view.setFloat64(8, b);
-    return Number(view.getBigInt64(0) - view.getBigInt64(8) < 0n ? view.getBigInt64(8) - view.getBigInt64(0) : view.getBigInt64(0) - view.getBigInt64(8));
+    return Number(
+        view.getBigInt64(0) - view.getBigInt64(8) < 0n
+            ? view.getBigInt64(8) - view.getBigInt64(0)
+            : view.getBigInt64(0) - view.getBigInt64(8),
+    );
 };
 
 test('results are pinned bit for bit, so any engine replays the same physics', () => {
@@ -35,25 +41,45 @@ test('results are pinned bit for bit, so any engine replays the same physics', (
         ['hypot', [3.1, 4.7], '40168566e3aa6849'],
         ['hypot', [0.001, 250], '406f4000000112e1'],
     ];
-    for (const [name, args, expected] of pinned) assert.equal(bits(Det[name](...args)), expected, `${name}(${args})`);
+    for (const [name, args, expected] of pinned) {
+        assert.equal(bits(Det[name](...args)), expected, `${name}(${args})`);
+    }
 });
 
 test('accuracy stays within a couple of ulps of the engine over the ranges the game uses', () => {
     const worst = { sin: 0, cos: 0, tan: 0, exp: 0, atan2: 0, hypot: 0 };
     for (let i = 0; i < 20000; i++) {
         const u = ((i * 2654435761) % 1000003) / 1000003;
-        const angle = (u - .5) * 40;
-        const v = (((i * 40503) % 65521) / 65521 - .5) * 600;
-        worst.sin = Math.max(worst.sin, Math.abs(Math.sin(angle)) > 1e-3 ? ulps(Det.sin(angle), Math.sin(angle)) : 0);
-        worst.cos = Math.max(worst.cos, Math.abs(Math.cos(angle)) > 1e-3 ? ulps(Det.cos(angle), Math.cos(angle)) : 0);
-        const small = (u - .5) * 3;
+        const angle = (u - 0.5) * 40;
+        const v = (((i * 40503) % 65521) / 65521 - 0.5) * 600;
+        worst.sin = Math.max(
+            worst.sin,
+            Math.abs(Math.sin(angle)) > 1e-3
+                ? ulps(Det.sin(angle), Math.sin(angle))
+                : 0,
+        );
+        worst.cos = Math.max(
+            worst.cos,
+            Math.abs(Math.cos(angle)) > 1e-3
+                ? ulps(Det.cos(angle), Math.cos(angle))
+                : 0,
+        );
+        const small = (u - 0.5) * 3;
         worst.tan = Math.max(worst.tan, ulps(Det.tan(small), Math.tan(small)));
-        const e = (u - .9) * 40;
+        const e = (u - 0.9) * 40;
         worst.exp = Math.max(worst.exp, ulps(Det.exp(e), Math.exp(e)));
-        worst.atan2 = Math.max(worst.atan2, ulps(Det.atan2(v, angle * 7 + .1), Math.atan2(v, angle * 7 + .1)));
-        worst.hypot = Math.max(worst.hypot, ulps(Det.hypot(v, angle), Math.hypot(v, angle)));
+        worst.atan2 = Math.max(
+            worst.atan2,
+            ulps(Det.atan2(v, angle * 7 + 0.1), Math.atan2(v, angle * 7 + 0.1)),
+        );
+        worst.hypot = Math.max(
+            worst.hypot,
+            ulps(Det.hypot(v, angle), Math.hypot(v, angle)),
+        );
     }
-    for (const [name, value] of Object.entries(worst)) assert.ok(value <= 3, `${name} is ${value} ulps from Math.${name}`);
+    for (const [name, value] of Object.entries(worst)) {
+        assert.ok(value <= 3, `${name} is ${value} ulps from Math.${name}`);
+    }
 });
 
 test('special values follow Math', () => {
@@ -81,14 +107,26 @@ test('special values follow Math', () => {
 });
 
 test('the core never calls engine-approximated Math functions', () => {
-    const files = dir => readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
-        const path = join(dir, entry.name);
-        return entry.isDirectory() ? files(path) : path.endsWith('.ts') ? [path] : [];
-    });
-    const banned = /\bMath\.(sin|cos|tan|asin|acos|atan2?|sinh|cosh|tanh|asinh|acosh|atanh|exp|expm1|log(1p|2|10)?|pow|cbrt|hypot)\s*\(/;
+    const files = (dir) =>
+        readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+            const path = join(dir, entry.name);
+            return entry.isDirectory()
+                ? files(path)
+                : path.endsWith('.ts')
+                  ? [path]
+                  : [];
+        });
+    const banned =
+        /\bMath\.(sin|cos|tan|asin|acos|atan2?|sinh|cosh|tanh|asinh|acosh|atanh|exp|expm1|log(1p|2|10)?|pow|cbrt|hypot)\s*\(/;
     for (const path of files('src/game')) {
         if (path === join('src', 'game', 'math.ts')) continue;
-        const code = readFileSync(path, 'utf8').replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-        assert.doesNotMatch(code, banned, `${path} uses an engine-approximated Math function`);
+        const code = readFileSync(path, 'utf8')
+            .replace(/\/\/.*$/gm, '')
+            .replace(/\/\*[\s\S]*?\*\//g, '');
+        assert.doesNotMatch(
+            code,
+            banned,
+            `${path} uses an engine-approximated Math function`,
+        );
     }
 });

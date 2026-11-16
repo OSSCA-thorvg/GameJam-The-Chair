@@ -1,6 +1,10 @@
 import { LEVEL, RULES } from '../../level';
 import type { Paper } from '../../types';
-import { createUrgentCopier, type Copier, type UrgentCopier } from './copier/decide';
+import {
+    createUrgentCopier,
+    type Copier,
+    type UrgentCopier,
+} from './copier/decide';
 import type { Bucket, Cleaning } from './cleaning/decide';
 
 export type OfficeState = {
@@ -28,12 +32,26 @@ export type OfficeState = {
 
 export function createOfficeState(): OfficeState {
     return {
-        copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1, volley: 0, bursts: 0 },
+        copier: {
+            ...LEVEL.copier,
+            cool: 0,
+            burst: 0,
+            next: 0,
+            dir: -1,
+            volley: 0,
+            bursts: 0,
+        },
         urgent: createUrgentCopier(),
         papers: [],
         paperHits: 0,
         paperPenaltyRemaining: 0,
-        cleaning: { ...LEVEL.cleaning, spilled: false, age: 0, followup: false, splashDir: 0 },
+        cleaning: {
+            ...LEVEL.cleaning,
+            spilled: false,
+            age: 0,
+            followup: false,
+            splashDir: 0,
+        },
         bucket: { age: RULES.bucketReset, armed: true, spills: 0 },
         soakedOnSpill: 0,
         slip: false,

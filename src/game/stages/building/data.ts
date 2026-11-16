@@ -2,12 +2,37 @@ import type { Point } from '../../types';
 import type { Message } from '../../../i18n';
 import { deepFreeze } from '../../data';
 
-export const TYPING_SOUNDS = deepFreeze(['typing.1', 'typing.2', 'typing.3', 'typing.4', 'typing.5'] satisfies Message[]);
+export const TYPING_SOUNDS = deepFreeze([
+    'typing.1',
+    'typing.2',
+    'typing.3',
+    'typing.4',
+    'typing.5',
+] satisfies Message[]);
 export type { StageId } from '../../types';
-export type Furniture = { kind: 'chair'; x: number; y: number; width: number; height: number; vx: number; released: boolean; cheer: number };
-export type Obstacle = { kind: 'cable' | 'sleeper'; x: number; width: number; height: number };
+export type Furniture = {
+    kind: 'chair';
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    vx: number;
+    released: boolean;
+    cheer: number;
+};
+export type Obstacle = {
+    kind: 'cable' | 'sleeper';
+    x: number;
+    width: number;
+    height: number;
+};
 const ORIENTATION = {
-    cruise: 220, wait: 120, kick: 200, drag: .4, spin: .4, damage: 20,
+    cruise: 220,
+    wait: 120,
+    kick: 200,
+    drag: 0.4,
+    spin: 0.4,
+    damage: 20,
     obstacles: [
         { kind: 'cable', x: 4050, width: 40, height: 12 },
         { kind: 'cable', x: 4400, width: 40, height: 12 },
@@ -36,7 +61,7 @@ const ORIENTATION = {
         { at: 5410, speaker: 1, text: 'chair.orientation.5' },
         { at: 5850, speaker: 2, text: 'chair.orientation.6' },
         { at: 9150, speaker: 1, text: 'chair.orientation.7' },
-    ] satisfies { at: number; speaker: 0 | 1 | 2; text: Message }[],
+    ] satisfies Array<{ at: number; speaker: 0 | 1 | 2; text: Message }>,
 };
 const EXPRESS = {
     start: 9600,
@@ -45,28 +70,57 @@ const EXPRESS = {
     launch: 500,
 };
 export const STAGE_TWO = deepFreeze({
-    length: 12420, goal: 12170,
+    length: 12420,
+    goal: 12170,
     meeting: 620,
-    meetingEntry: .65,
+    meetingEntry: 0.65,
     shuffle: 110,
     hopShift: 150,
     dispatch: { room: 1840, trigger: 1320 },
     lift: 11620,
     offices: [220, 1030, 1560, 2370],
-    checkpoints: [{ x: 100, y: 392 }, { x: 1300, y: 392 }, { x: 2200, y: 392 }, { x: 6150, y: 392 }, { x: 11080, y: 392 }],
+    checkpoints: [
+        { x: 100, y: 392 },
+        { x: 1300, y: 392 },
+        { x: 2200, y: 392 },
+        { x: 6150, y: 392 },
+        { x: 11080, y: 392 },
+    ],
     orientation: ORIENTATION,
     express: EXPRESS,
     terrain: [
-        [{ x: -400, y: 420 }, { x: EXPRESS.ramp.start, y: 420 }, { x: EXPRESS.pit.left, y: 420 - EXPRESS.ramp.rise },
-            { x: EXPRESS.pit.left, y: 800 }, { x: -400, y: 800 }],
-        [{ x: EXPRESS.pit.right, y: 420 }, { x: 12870, y: 420 }, { x: 12870, y: 800 }, { x: EXPRESS.pit.right, y: 800 }],
+        [
+            { x: -400, y: 420 },
+            { x: EXPRESS.ramp.start, y: 420 },
+            { x: EXPRESS.pit.left, y: 420 - EXPRESS.ramp.rise },
+            { x: EXPRESS.pit.left, y: 800 },
+            { x: -400, y: 800 },
+        ],
+        [
+            { x: EXPRESS.pit.right, y: 420 },
+            { x: 12870, y: 420 },
+            { x: 12870, y: 800 },
+            { x: EXPRESS.pit.right, y: 800 },
+        ],
     ] satisfies Point[][],
 });
 export function overPit(x: number) {
     return x > STAGE_TWO.express.pit.left && x < STAGE_TWO.express.pit.right;
 }
-export type ChairChat = { kind: 'waiting' }
-    | { kind: 'gossip' | 'wary' | 'dismissed' | 'realizing' | 'welcoming' | 'trip' | 'rush' | 'ramp'; age: number }
+export type ChairChat =
+    | { kind: 'waiting' }
+    | {
+          kind:
+              | 'gossip'
+              | 'wary'
+              | 'dismissed'
+              | 'realizing'
+              | 'welcoming'
+              | 'trip'
+              | 'rush'
+              | 'ramp';
+          age: number;
+      }
     | { kind: 'orientation'; age: number; line: number };
 export const CHAIR_CHAT = deepFreeze({
     rush: [
@@ -110,26 +164,56 @@ export const CHAIR_CHAT = deepFreeze({
         { speaker: 2, text: 'chair.trip.1' },
         { speaker: 0, text: 'chair.trip.2' },
     ],
-} satisfies Record<Exclude<ChairChat['kind'], 'waiting' | 'orientation'>, { speaker: 0 | 1 | 2; text: Message }[]>);
-export const CHAIR_CHAT_INTERVAL = deepFreeze({ gossip: 3.2, wary: 4, dismissed: 1.9, realizing: 4, welcoming: 4, orientation: 2, trip: 1.5, rush: 1.6, ramp: 1 });
-export function chairChatLine(chat: Exclude<ChairChat, { kind: 'waiting' }>, seed: number) {
+} satisfies Record<
+    Exclude<ChairChat['kind'], 'waiting' | 'orientation'>,
+    Array<{ speaker: 0 | 1 | 2; text: Message }>
+>);
+export const CHAIR_CHAT_INTERVAL = deepFreeze({
+    gossip: 3.2,
+    wary: 4,
+    dismissed: 1.9,
+    realizing: 4,
+    welcoming: 4,
+    orientation: 2,
+    trip: 1.5,
+    rush: 1.6,
+    ramp: 1,
+});
+export function chairChatLine(
+    chat: Exclude<ChairChat, { kind: 'waiting' }>,
+    seed: number,
+) {
     if (chat.kind === 'orientation') return ORIENTATION.lines[chat.line];
     const lines = CHAIR_CHAT[chat.kind];
     const topic = chat.kind === 'gossip' ? seed % (lines.length / 3) : 0;
-    return lines[(topic * 3 + Math.floor(chat.age / CHAIR_CHAT_INTERVAL[chat.kind])) % lines.length];
+    return lines[
+        (topic * 3 + Math.floor(chat.age / CHAIR_CHAT_INTERVAL[chat.kind])) %
+            lines.length
+    ];
 }
 export function chairChatOnce(kind: ChairChat['kind']) {
     return kind === 'orientation' || kind === 'trip';
 }
 export type ChairDepartureReason = 'companions' | 'clock-out' | 'abduction';
-export type ChairDeparture = { kind: 'none' } | { kind: 'boarding' | 'descending'; age: number; reason: ChairDepartureReason } | { kind: 'gone' | 'lost' };
-export const CHAIR_DEPARTURE = deepFreeze({ boarding: 5, descending: 2, slots: [58, 0, -58] });
+export type ChairDeparture =
+    | { kind: 'none' }
+    | {
+          kind: 'boarding' | 'descending';
+          age: number;
+          reason: ChairDepartureReason;
+      }
+    | { kind: 'gone' | 'lost' };
+export const CHAIR_DEPARTURE = deepFreeze({
+    boarding: 5,
+    descending: 2,
+    slots: [58, 0, -58],
+});
 export const CHAIR_FAREWELL = deepFreeze([
     { speaker: 2, text: 'chair.farewell.1' },
     { speaker: 1, text: 'chair.farewell.2' },
     { speaker: 0, text: 'chair.farewell.3' },
     { speaker: 2, text: 'chair.farewell.4' },
-] satisfies { speaker: 0 | 1 | 2; text: Message }[]);
+] satisfies Array<{ speaker: 0 | 1 | 2; text: Message }>);
 export const CHAIR_DEPARTURE_LINES = deepFreeze({
     abduction: [
         { speaker: 2, text: 'chair.abduction.1' },
@@ -144,10 +228,15 @@ export const CHAIR_DEPARTURE_LINES = deepFreeze({
         { speaker: 0, text: 'chair.clockOut.3' },
         { speaker: 2, text: 'chair.clockOut.4' },
     ],
-} satisfies Record<ChairDepartureReason, readonly { readonly speaker: 0 | 1 | 2; readonly text: Message }[]>);
+} satisfies Record<
+    ChairDepartureReason,
+    ReadonlyArray<{ readonly speaker: 0 | 1 | 2; readonly text: Message }>
+>);
 export type Corridor = {
     appearanceSeed: number;
-    room: { kind: 'corridor' } | { kind: 'entering' | 'meeting'; age: number; returnX: number };
+    room:
+        | { kind: 'corridor' }
+        | { kind: 'entering' | 'meeting'; age: number; returnX: number };
     meetingVisited: boolean;
     dispatchAge: number;
     dispatchStarted: boolean;
@@ -157,30 +246,71 @@ export type Corridor = {
     convoy: 'free' | 'carried' | 'leading' | 'airborne' | 'leading-airborne';
     pace: 'casual' | 'express';
     departure: ChairDeparture;
-    lift: { kind: 'waiting' } | { kind: 'arriving'; age: number } | { kind: 'open'; age: number } | { kind: 'departed' };
+    lift:
+        | { kind: 'waiting' }
+        | { kind: 'arriving'; age: number }
+        | { kind: 'open'; age: number }
+        | { kind: 'departed' };
     typingCooldown: number;
-    offices: { x: number; life: number; cooldown: number; nearby: boolean; phrase: number; offset: Point }[];
+    offices: Array<{
+        x: number;
+        life: number;
+        cooldown: number;
+        nearby: boolean;
+        phrase: number;
+        offset: Point;
+    }>;
 };
-export function createCorridor(checkpoint: number, appearanceSeed: number): Corridor {
+export function createCorridor(
+    checkpoint: number,
+    appearanceSeed: number,
+): Corridor {
     return {
         appearanceSeed,
-        room: { kind: 'corridor' }, meetingVisited: false,
-        dispatchStarted: checkpoint >= 2, dispatchAge: checkpoint >= 2 ? 10 : 0,
+        room: { kind: 'corridor' },
+        meetingVisited: false,
+        dispatchStarted: checkpoint >= 2,
+        dispatchAge: checkpoint >= 2 ? 10 : 0,
         chat: { kind: 'waiting' },
-        lesson: checkpoint >= 3 ? ORIENTATION.lines.findIndex(line => line.at >= STAGE_TWO.checkpoints[3].x) : -1,
+        lesson:
+            checkpoint >= 3
+                ? ORIENTATION.lines.findIndex(
+                      (line) => line.at >= STAGE_TWO.checkpoints[3].x,
+                  )
+                : -1,
         tripped: -1,
         convoy: 'free',
         pace: 'casual',
         departure: { kind: checkpoint >= 4 ? 'gone' : 'none' },
         lift: { kind: checkpoint >= 4 ? 'departed' : 'waiting' },
         typingCooldown: 0,
-        offices: STAGE_TWO.offices.map(x => ({ x, life: 0, cooldown: 0, nearby: false, phrase: 0, offset: { x: 0, y: 0 } })),
+        offices: STAGE_TWO.offices.map((x) => ({
+            x,
+            life: 0,
+            cooldown: 0,
+            nearby: false,
+            phrase: 0,
+            offset: { x: 0, y: 0 },
+        })),
     };
 }
 export function createFurniture(checkpoint = 0): Furniture[] {
-    const front = checkpoint >= 2 ? STAGE_TWO.checkpoints[checkpoint].x + (checkpoint === 3 ? 90 : 190) : STAGE_TWO.dispatch.room + 12;
-    return [0, 1, 2].map(i => {
+    const front =
+        checkpoint >= 2
+            ? STAGE_TWO.checkpoints[checkpoint].x +
+              (checkpoint === 3 ? 90 : 190)
+            : STAGE_TWO.dispatch.room + 12;
+    return [0, 1, 2].map((i) => {
         const x = checkpoint >= 2 ? front - i * 130 : front;
-        return { kind: 'chair', x, y: 420, width: 48, height: 40, vx: checkpoint >= 2 ? STAGE_TWO.orientation.cruise : 0, released: checkpoint >= 2, cheer: 0 };
+        return {
+            kind: 'chair',
+            x,
+            y: 420,
+            width: 48,
+            height: 40,
+            vx: checkpoint >= 2 ? STAGE_TWO.orientation.cruise : 0,
+            released: checkpoint >= 2,
+            cheer: 0,
+        };
     });
 }

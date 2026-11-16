@@ -1,30 +1,49 @@
 import { createHash } from 'node:crypto';
-import { balancePolicy, corridorPolicy, createGame, sampleCommands } from './harness.mjs';
+import {
+    balancePolicy,
+    corridorPolicy,
+    createGame,
+    sampleCommands,
+} from './harness.mjs';
 import { driveStageThree } from './stage3-route.mjs';
 
 function traced(game) {
     const hash = createHash('sha256');
-    let held = [];
+    const held = [];
     const wrapper = new Proxy(game, {
         get(target, key) {
-            if (key === 'step') return () => {
-                target.step();
-                const events = target.drainEvents();
-                held.push(...events);
-                const s = target.getSnapshot();
-                hash.update(JSON.stringify([s.mode, s.player, s.focus, events]));
-            };
+            if (key === 'step') {
+                return () => {
+                    target.step();
+                    const events = target.drainEvents();
+                    held.push(...events);
+                    const s = target.getSnapshot();
+                    hash.update(
+                        JSON.stringify([s.mode, s.player, s.focus, events]),
+                    );
+                };
+            }
             if (key === 'drainEvents') return () => held.splice(0);
             return target[key];
         },
     });
-    return { game: wrapper, digest: () => hash.update(JSON.stringify(game.getSnapshot())).digest('hex').slice(0, 16) };
+    return {
+        game: wrapper,
+        digest: () =>
+            hash
+                .update(JSON.stringify(game.getSnapshot()))
+                .digest('hex')
+                .slice(0, 16),
+    };
 }
 
 function runPolicy(seed, stage, ticks, policy) {
     const { game, digest } = traced(createGame({ seed }));
     game.startStage(stage);
-    for (let i = 0; i < ticks; i++) { policy(game.getSnapshot(), game); game.step(); }
+    for (let i = 0; i < ticks; i++) {
+        policy(game.getSnapshot(), game);
+        game.step();
+    }
     return digest();
 }
 
@@ -55,5 +74,6 @@ export const GOLDEN_SCENARIOS = {
         for (let i = 0; i < 600; i++) game.step();
         return digest();
     },
-    'rooftop duct': () => runCommands(5, 3, 120 * 25, sampleCommands(120 * 25, { spray: true })),
+    'rooftop duct': () =>
+        runCommands(5, 3, 120 * 25, sampleCommands(120 * 25, { spray: true })),
 };

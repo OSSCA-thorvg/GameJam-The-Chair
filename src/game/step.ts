@@ -1,6 +1,12 @@
 import { FIXED_STEP, PHYSICS } from './level';
 import type { DeepReadonly, GameEvent, Mode, Point } from './types';
-import { cloneState, resetAttempt, setPlayer, snapshot, type CoreState } from './state';
+import {
+    cloneState,
+    resetAttempt,
+    setPlayer,
+    snapshot,
+    type CoreState,
+} from './state';
 import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages/index';
 import { stageHooks } from './stages/hooks';
 import { runCommand, spray, type Command } from './commands';
@@ -13,7 +19,10 @@ export const SIMULATED: readonly Mode[] = ['play', 'impact', 'focuslost'];
 
 export type StepResult = { state: CoreState; events: GameEvent[] };
 
-export function stepGame(state: Readonly<CoreState>, commands: readonly Command[] = []): StepResult {
+export function stepGame(
+    state: Readonly<CoreState>,
+    commands: readonly Command[] = [],
+): StepResult {
     const s = cloneState(state);
     const events: GameEvent[] = [];
     for (const command of commands) runCommand(s, command, events);
@@ -21,7 +30,10 @@ export function stepGame(state: Readonly<CoreState>, commands: readonly Command[
     return { state: s, events };
 }
 
-export function applyCommand(state: Readonly<CoreState>, command: Command): StepResult {
+export function applyCommand(
+    state: Readonly<CoreState>,
+    command: Command,
+): StepResult {
     const s = cloneState(state);
     const events: GameEvent[] = [];
     runCommand(s, command, events);
@@ -42,22 +54,37 @@ function advanceMode(s: CoreState, out: GameEvent[]) {
             s.tick++;
             applyFocusLoss(s, out, FIXED_STEP);
             return;
-        case 'intro': case 'pause': case 'dead': case 'won':
+        case 'intro':
+        case 'pause':
+        case 'dead':
+        case 'won':
             return;
     }
 }
 
-export type CommandLog = readonly (readonly [tick: number, command: Command])[];
+export type CommandLog = ReadonlyArray<
+    readonly [tick: number, command: Command]
+>;
 
 // The command log must start at the tick of the saved state.
-export function replayCommands(start: Readonly<CoreState>, log: CommandLog, endTick: number): StepResult {
+export function replayCommands(
+    start: Readonly<CoreState>,
+    log: CommandLog,
+    endTick: number,
+): StepResult {
     const s = cloneState(start);
     const events: GameEvent[] = [];
     const advanceTo = (tick: number) => {
-        while (s.tick < tick && SIMULATED.includes(s.mode)) advanceMode(s, events);
+        while (s.tick < tick && SIMULATED.includes(s.mode)) {
+            advanceMode(s, events);
+        }
     };
     for (const [tick, command] of log) {
-        if (tick < s.tick) throw new Error(`Command at tick ${tick} precedes the saved state at tick ${s.tick}.`);
+        if (tick < s.tick) {
+            throw new Error(
+                `Command at tick ${tick} precedes the saved state at tick ${s.tick}.`,
+            );
+        }
         advanceTo(tick);
         runCommand(s, command, events);
     }
@@ -83,7 +110,8 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
 
     const p = s.p;
     const was = s.ground;
-    const inputDir = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
+    const inputDir =
+        (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
     const prev = p.x;
     s.coyote = s.ground ? PHYSICS.jump.coyote : Math.max(0, s.coyote - dt);
     s.jumpQ = Math.max(0, s.jumpQ - dt);
@@ -103,8 +131,27 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
     const expressJump = tweak.expressJump ?? false;
     const slip = tweak.slip ?? false;
     const balancing = s.keys.includes('q') || s.keys.includes('e');
-    const tilt = (s.keys.includes('e') ? 1 : 0) - (s.keys.includes('q') ? 1 : 0) + (was || balancing ? 0 : inputDir);
-    setPlayer(s, drivePlayer(p, { grounded: was, slip, dir, tilt, upright: p.x < PHYSICS.upright.tutorialUntilX || stage.alwaysUpright, convoyJump, expressJump }, dt));
+    const tilt =
+        (s.keys.includes('e') ? 1 : 0) -
+        (s.keys.includes('q') ? 1 : 0) +
+        (was || balancing ? 0 : inputDir);
+    setPlayer(
+        s,
+        drivePlayer(
+            p,
+            {
+                grounded: was,
+                slip,
+                dir,
+                tilt,
+                upright:
+                    p.x < PHYSICS.upright.tutorialUntilX || stage.alwaysUpright,
+                convoyJump,
+                expressJump,
+            },
+            dt,
+        ),
+    );
     if (hooks.afterMove?.(s, out, dt, prev)) return;
     const hit = collide(p, stageSolids(s));
     setPlayer(s, hit.p);
@@ -125,24 +172,36 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
         p.vx = Math.max(0, p.vx);
     }
     s.lessons.moved ||= p.x > 140;
-    if (stage.practicePile && !s.lessons.jumped && s.practiceJump && s.ground && p.x < 330) {
+    if (
+        stage.practicePile &&
+        !s.lessons.jumped &&
+        s.practiceJump &&
+        s.ground &&
+        p.x < 330
+    ) {
         s.lessons.jumped = true;
         out.push({ type: 'cue', id: 'practice-cleared' });
     }
-    s.actualSpeed += (Math.abs(p.x - prev) / dt - s.actualSpeed) * (1 - Det.exp(-dt / .12));
+    s.actualSpeed +=
+        (Math.abs(p.x - prev) / dt - s.actualSpeed) * (1 - Det.exp(-dt / 0.12));
     if (s.ground && dir && Math.abs(p.vx) > 95 && s.rollCooldown === 0) {
         out.push({ type: 'cue', id: 'rolling' });
         s.rollCooldown = 9;
     }
     if (s.people.length > 0 && p.vx < -60 && s.reverseCooldown === 0) {
-        const n = s.people.reduce((a, b) => Math.abs(a.x - p.x) < Math.abs(b.x - p.x) ? a : b);
+        const n = s.people.reduce((a, b) =>
+            Math.abs(a.x - p.x) < Math.abs(b.x - p.x) ? a : b,
+        );
         if (Math.abs(n.x - p.x) < 300) {
             out.push({ type: 'cue', id: 'reverse-comment', person: { ...n } });
             s.reverseCooldown = 7;
         }
     }
     for (const n of s.people) {
-        if (!n.said && Math.min(Math.abs(p.x - n.x), Math.abs(prev - n.x)) < 100) {
+        if (
+            !n.said &&
+            Math.min(Math.abs(p.x - n.x), Math.abs(prev - n.x)) < 100
+        ) {
             n.said = true;
             out.push({ type: 'cue', id: 'person-comment', person: { ...n } });
         }
@@ -163,9 +222,13 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
         out.push({ type: 'cue', id: 'stage-clear' });
     }
 }
-export function stageSolids(s: CoreState): readonly DeepReadonly<Point[]>[] {
+export function stageSolids(
+    s: CoreState,
+): ReadonlyArray<DeepReadonly<Point[]>> {
     const terrain = STAGES[s.stage].terrain;
-    return STAGES[s.stage].practicePile && !s.lessons.jumped ? [...terrain, PRACTICE_PILE] : terrain;
+    return STAGES[s.stage].practicePile && !s.lessons.jumped
+        ? [...terrain, PRACTICE_PILE]
+        : terrain;
 }
 
 function reachCheckpoints(s: CoreState, out: GameEvent[]) {

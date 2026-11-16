@@ -7,6 +7,9 @@ export const skyHooks: StageHooks = {
         applySky(s, out, dt);
         return true;
     },
-    canSpray: s => s.sky.phase === 'course' && s.sky.airSprays < STAGE_FOUR.airSprayLimit,
-    onSpray: s => { s.sky.airSprays++; },
+    canSpray: (s) =>
+        s.sky.phase === 'course' && s.sky.airSprays < STAGE_FOUR.airSprayLimit,
+    onSpray: (s) => {
+        s.sky.airSprays++;
+    },
 };

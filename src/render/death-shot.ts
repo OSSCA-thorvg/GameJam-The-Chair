@@ -1,10 +1,23 @@
-
 export type DeathShotKind = 'head' | 'focus';
 export type DeathShot = { kind: DeathShotKind; age: number; done: boolean };
 
 export const DEATH_SHOT = {
-    head: { hit: 1.4, zoomIn: .3, hold: .55, zoomOut: .95, zoom: 2.6, burst: .75 },
-    focus: { hit: 0, zoomIn: .45, hold: .85, zoomOut: .9, zoom: 3.2, burst: 0 },
+    head: {
+        hit: 1.4,
+        zoomIn: 0.3,
+        hold: 0.55,
+        zoomOut: 0.95,
+        zoom: 2.6,
+        burst: 0.75,
+    },
+    focus: {
+        hit: 0,
+        zoomIn: 0.45,
+        hold: 0.85,
+        zoomOut: 0.9,
+        zoom: 3.2,
+        burst: 0,
+    },
 } as const;
 
 export function deathShotLength(kind: DeathShotKind) {
@@ -39,9 +52,22 @@ export function createDeathShot() {
     return {
         observe(next: ShotInput) {
             if (next.mode === undefined) return;
-            if (next.stage !== stage || next.mode === 'play' || next.mode === 'intro') shot = null;
-            const kind: DeathShotKind | null = next.mode === 'impact' ? 'head' : next.mode === 'focuslost' ? 'focus' : null;
-            if (kind && next.mode !== mode && next.stage !== 5) shot = { kind, age: 0, done: false };
+            if (
+                next.stage !== stage ||
+                next.mode === 'play' ||
+                next.mode === 'intro'
+            ) {
+                shot = null;
+            }
+            const kind: DeathShotKind | null =
+                next.mode === 'impact'
+                    ? 'head'
+                    : next.mode === 'focuslost'
+                      ? 'focus'
+                      : null;
+            if (kind && next.mode !== mode && next.stage !== 5) {
+                shot = { kind, age: 0, done: false };
+            }
             stage = next.stage;
             mode = next.mode;
         },

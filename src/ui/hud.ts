@@ -5,7 +5,10 @@ import type { GameSnapshot } from '../game/game';
 import type { Mode } from '../game/types';
 import type { FeedbackState } from './feedback';
 import type { EffectsState } from '../render/effects';
-export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en') {
+export function createHud(
+    root: HTMLElement,
+    getLocale: () => Locale = () => 'en',
+) {
     const q = (selector: string) => root.querySelector<HTMLElement>(selector);
     const text = (selector: string, value: string) => {
         const el = q(selector);
@@ -15,14 +18,20 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         const el = q(selector);
         if (el) el.hidden = value;
     };
-    const style = (selector: string, key: string, value: string) => q(selector)?.style.setProperty(key, value);
+    const style = (selector: string, key: string, value: string) =>
+        q(selector)?.style.setProperty(key, value);
     let previousMode: Mode = 'intro';
     let lastStage = 1;
     let lastTime = 0;
     let previousFocus = 100;
     let focusIntroduced = false;
     let introduceUntil = 0;
-    function draw(state: GameSnapshot, feedback: FeedbackState, effects: EffectsState, cutscene = false) {
+    function draw(
+        state: GameSnapshot,
+        feedback: FeedbackState,
+        effects: EffectsState,
+        cutscene = false,
+    ) {
         const t = (message: Message) => translate(message, getLocale());
         const { mode, focus } = state;
         const active = mode === 'play' && !cutscene;
@@ -46,13 +55,29 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         hidden('[data-pause]', !active && !paused);
         hidden('[data-pause-menu]', !paused);
         q('[data-pause]')?.setAttribute('aria-expanded', String(paused));
-        hidden('[data-focus-intro]', !active || !focusIntroduced || state.time > introduceUntil);
+        hidden(
+            '[data-focus-intro]',
+            !active || !focusIntroduced || state.time > introduceUntil,
+        );
         style('[data-focus-fill]', 'width', focus + '%');
         style('[data-focus-trail]', 'width', focus + '%');
-        style('[data-focus-fill]', 'background', focus <= 20 ? '#d88e7e' : '#d2b783');
-        hidden('[data-focus-alert]', !(active && policy.hud.focusAlert && state.focusNotice));
-        q('[data-play-hud]')?.classList.toggle('critical', active && focus <= 20);
-        q('[data-play-hud]')?.classList.toggle('hit', active && !!state.focusNotice && state.focusNotice.life > 1.25);
+        style(
+            '[data-focus-fill]',
+            'background',
+            focus <= 20 ? '#d88e7e' : '#d2b783',
+        );
+        hidden(
+            '[data-focus-alert]',
+            !(active && policy.hud.focusAlert && state.focusNotice),
+        );
+        q('[data-play-hud]')?.classList.toggle(
+            'critical',
+            active && focus <= 20,
+        );
+        q('[data-play-hud]')?.classList.toggle(
+            'hit',
+            active && !!state.focusNotice && state.focusNotice.life > 1.25,
+        );
         q('[data-focus-meter]')?.setAttribute('aria-valuenow', String(focus));
         text('[data-focus]', focus + '%');
         text('[data-status]', feedback.status);
@@ -62,16 +87,31 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         hidden('[data-jump]', !policy.hud.jump);
         hidden('.balance-controls', !policy.hud.balance);
         hidden('[data-meeting-help]', !policy.controls.meeting);
-        hidden('[data-spray-help]', !state.hasExtinguisher || !policy.hud.manualSpray);
-        hidden('[data-spray]', !state.hasExtinguisher || !policy.hud.manualSpray);
+        hidden(
+            '[data-spray-help]',
+            !state.hasExtinguisher || !policy.hud.manualSpray,
+        );
+        hidden(
+            '[data-spray]',
+            !state.hasExtinguisher || !policy.hud.manualSpray,
+        );
         hidden('[data-stage-menu]', state.completedStage === 0);
         for (const stage of [1, 2, 3, 4, 5]) {
-            hidden(`[data-stage="${stage}"]`, !isStageUnlocked(stage, state.completedStage));
+            hidden(
+                `[data-stage="${stage}"]`,
+                !isStageUnlocked(stage, state.completedStage),
+            );
         }
         const panel = feedback.panel;
         const closeUp = !!effects.deathShot && !effects.deathShot.done;
-        hidden('[data-overlay]', cutscene || closeUp || (mode !== 'intro' && !panel));
-        q('[data-overlay]')?.classList.toggle('title-screen', mode === 'intro' && state.stage === 1 && !cutscene);
+        hidden(
+            '[data-overlay]',
+            cutscene || closeUp || (mode !== 'intro' && !panel),
+        );
+        q('[data-overlay]')?.classList.toggle(
+            'title-screen',
+            mode === 'intro' && state.stage === 1 && !cutscene,
+        );
         if (mode === 'intro') {
             text('[data-title]', 'THE CHAIR');
             text('[data-desc]', t('intro.desc'));
@@ -86,12 +126,16 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
             text('[data-start]', panel.button);
         }
         if (mode === 'won' && previousMode !== 'won') {
-            const stats = root.querySelector<HTMLDetailsElement>('[data-stats]');
+            const stats =
+                root.querySelector<HTMLDetailsElement>('[data-stats]');
             if (stats) stats.open = false;
         }
         previousMode = mode;
         hidden('[data-stats]', mode !== 'won');
-        text('[data-stats-text]', `${t('hud.focus')} ${focus}% · ${t('stats.paper')} ${state.paperHits} · ${t('stats.bin')} ${state.binFalls} · ${t('stats.light')} ${state.lightHits}${state.stage === 2 ? '' : ` · ${t('stats.door')} ${state.doorHits}`}`);
+        text(
+            '[data-stats-text]',
+            `${t('hud.focus')} ${focus}% · ${t('stats.paper')} ${state.paperHits} · ${t('stats.bin')} ${state.binFalls} · ${t('stats.light')} ${state.lightHits}${state.stage === 2 ? '' : ` · ${t('stats.door')} ${state.doorHits}`}`,
+        );
         q('.drive-controls')?.toggleAttribute('inert', !active);
     }
     return { draw };

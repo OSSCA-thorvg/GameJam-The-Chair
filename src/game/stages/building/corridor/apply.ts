@@ -3,9 +3,21 @@ import type { GameEvent } from '../../../types';
 import { applyFocusHit } from '../../../systems/focus/apply';
 import { STAGES } from '../../index';
 import { STAGE_TWO } from '../data';
-import { canEnterMeeting, convoyLanding, corridorStep, liftRide, meetingExit, meetingStep } from './decide';
+import {
+    canEnterMeeting,
+    convoyLanding,
+    corridorStep,
+    liftRide,
+    meetingExit,
+    meetingStep,
+} from './decide';
 export function applyConvoyLanding(s: CoreState) {
-    const r = convoyLanding(s.building.corridor, s.building.furniture, s.p, s.ground);
+    const r = convoyLanding(
+        s.building.corridor,
+        s.building.furniture,
+        s.p,
+        s.ground,
+    );
     if (!r) return;
     s.building.corridor.convoy = r.convoy;
     if (r.vx !== null) s.p.vx = r.vx;
@@ -31,13 +43,28 @@ export function applyLiftRide(s: CoreState, out: GameEvent[], dt: number) {
     return true;
 }
 
-export function applyCorridor(s: CoreState, out: GameEvent[], dt: number, previousX: number) {
-    const r = corridorStep({
-        corridor: s.building.corridor, furniture: s.building.furniture, p: s.p, ground: s.ground,
-        steering: s.keys.includes('left') || s.keys.includes('right'),
-        steer: (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0),
-        rng: s.rng.cosmetic, length: STAGES[s.stage].length,
-    }, dt, previousX);
+export function applyCorridor(
+    s: CoreState,
+    out: GameEvent[],
+    dt: number,
+    previousX: number,
+) {
+    const r = corridorStep(
+        {
+            corridor: s.building.corridor,
+            furniture: s.building.furniture,
+            p: s.p,
+            ground: s.ground,
+            steering: s.keys.includes('left') || s.keys.includes('right'),
+            steer:
+                (s.keys.includes('right') ? 1 : 0) -
+                (s.keys.includes('left') ? 1 : 0),
+            rng: s.rng.cosmetic,
+            length: STAGES[s.stage].length,
+        },
+        dt,
+        previousX,
+    );
     s.building.corridor = r.corridor;
     s.building.furniture = r.furniture;
     setPlayer(s, r.p);
@@ -50,7 +77,11 @@ export function applyCorridor(s: CoreState, out: GameEvent[], dt: number, previo
     }
     if (r.kick === 'trip') {
         out.push({ type: 'cue', id: 'convoy-bump' });
-        applyFocusHit(s, out, { kind: 'bump', id: r.tripped, damage: STAGE_TWO.orientation.damage });
+        applyFocusHit(s, out, {
+            kind: 'bump',
+            id: r.tripped,
+            damage: STAGE_TWO.orientation.damage,
+        });
     }
 }
 
@@ -75,12 +106,21 @@ export function applyLeaveMeeting(s: CoreState, pushed = false) {
 }
 
 export function meetingReachable(s: Readonly<CoreState>) {
-    return canEnterMeeting({ stage: s.stage, mode: s.mode, corridor: s.building.corridor, p: s.p, ground: s.ground });
+    return canEnterMeeting({
+        stage: s.stage,
+        mode: s.mode,
+        corridor: s.building.corridor,
+        p: s.p,
+        ground: s.ground,
+    });
 }
 
 export function applyInteract(s: CoreState) {
     if (s.mode !== 'play') return;
-    if (s.building.corridor.room.kind !== 'corridor') { applyLeaveMeeting(s); return; }
+    if (s.building.corridor.room.kind !== 'corridor') {
+        applyLeaveMeeting(s);
+        return;
+    }
     if (!meetingReachable(s)) return;
     s.building.corridor.room = { kind: 'entering', age: 0, returnX: s.p.x };
     s.building.corridor.meetingVisited = true;

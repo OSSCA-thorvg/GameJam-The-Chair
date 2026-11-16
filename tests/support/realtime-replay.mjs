@@ -20,7 +20,7 @@ function playRecorded(seed, stage, frames) {
         },
     });
     game.startStage(stage);
-    const dts = [1 / 60, 1 / 144, 1 / 30, .011, 1 / 90];
+    const dts = [1 / 60, 1 / 144, 1 / 30, 0.011, 1 / 90];
     for (let frame = 0; frame < frames; frame++) {
         balancePolicy(game.getSnapshot(), game);
         if (stage === 3 && frame % 45 === 0) game.spray();
@@ -34,15 +34,27 @@ function playRecorded(seed, stage, frames) {
 
 export function testRealtimeReplay(stage) {
     test(`recorded commands alone reproduce real-time play (stage ${stage})`, () => {
-        const { game, session, attempt } = playRecorded(11 + stage, stage, 120 * 40);
+        const { game, session, attempt } = playRecorded(
+            11 + stage,
+            stage,
+            120 * 40,
+        );
         const final = game.serialize();
         const endTick = JSON.parse(final).tick;
         assert.ok(session.log.length > 10, 'play produced commands');
 
-        const fromStart = replayCommands(JSON.parse(session.start), session.log, endTick).state;
+        const fromStart = replayCommands(
+            JSON.parse(session.start),
+            session.log,
+            endTick,
+        ).state;
         assert.equal(JSON.stringify(fromStart), final, 'whole session');
 
-        const fromAttempt = replayCommands(JSON.parse(attempt.start), attempt.log, endTick).state;
+        const fromAttempt = replayCommands(
+            JSON.parse(attempt.start),
+            attempt.log,
+            endTick,
+        ).state;
         assert.equal(JSON.stringify(fromAttempt), final, 'last attempt');
     });
 }

@@ -8,10 +8,15 @@ import { skyHooks } from './sky/hooks';
 
 export function stageHooks(stage: StageId): StageHooks {
     switch (stage) {
-        case 1: return officeHooks;
-        case 2: return buildingHooks;
-        case 3: return rooftopHooks;
-        case 4: return skyHooks;
-        case 5: return orbitHooks;
+        case 1:
+            return officeHooks;
+        case 2:
+            return buildingHooks;
+        case 3:
+            return rooftopHooks;
+        case 4:
+            return skyHooks;
+        case 5:
+            return orbitHooks;
     }
 }

@@ -14,29 +14,53 @@ export const officeHooks: StageHooks = {
     timers(s, dt) {
         s.office.copier.cool = Math.max(0, s.office.copier.cool - dt);
         s.office.binCooldown = Math.max(0, s.office.binCooldown - dt);
-        s.office.paperPenaltyRemaining = Math.max(0, s.office.paperPenaltyRemaining - dt);
+        s.office.paperPenaltyRemaining = Math.max(
+            0,
+            s.office.paperPenaltyRemaining - dt,
+        );
         s.office.slipCooldown = Math.max(0, s.office.slipCooldown - dt);
-        s.office.lightPenaltyRemaining = Math.max(0, s.office.lightPenaltyRemaining - dt);
+        s.office.lightPenaltyRemaining = Math.max(
+            0,
+            s.office.lightPenaltyRemaining - dt,
+        );
         s.office.lightCooldown = Math.max(0, s.office.lightCooldown - dt);
     },
     hazards(s, out, dt) {
         applyCopier(s, out, copierStep(s.office.copier, s.p.x, true, dt));
         applyUrgentCopier(s, out, urgentCopierStep(s.office.urgent, s.p.x, dt));
-        if (!applyPapers(s, out, papersStep(s.office.papers, s.p, s.office.inBin, dt), dt)) return false;
+        if (
+            !applyPapers(
+                s,
+                out,
+                papersStep(s.office.papers, s.p, s.office.inBin, dt),
+                dt,
+            )
+        ) {
+            return false;
+        }
         const { cleaning, bucket, soakedOnSpill } = s.office;
-        applyCleaning(s, out, cleaningStep({ p: s.p, cleaning, bucket, soakedOnSpill }, dt), dt);
+        applyCleaning(
+            s,
+            out,
+            cleaningStep({ p: s.p, cleaning, bucket, soakedOnSpill }, dt),
+            dt,
+        );
         applyGeyserHits(s, out, geyserHits(s.p, s.time, s.rng.physics));
         return s.mode === 'play';
     },
     beforeDrive(s, out, grounded) {
         s.office.slip = slipping(s.p, s.office.cleaning, grounded);
         if (s.office.slip && !s.office.wetSeen) s.office.wetSeen = true;
-        if (s.office.slip && s.office.slipCooldown === 0 && Math.abs(s.p.vx) > 65) {
+        if (
+            s.office.slip &&
+            s.office.slipCooldown === 0 &&
+            Math.abs(s.p.vx) > 65
+        ) {
             out.push({ type: 'cue', id: 'slipping' });
             s.office.slipCooldown = 7;
         }
     },
-    drive: s => ({ slip: s.office.slip }),
+    drive: (s) => ({ slip: s.office.slip }),
     afterMove(s, out) {
         if (!fallsIntoBin(s.p, s.office.binCooldown)) return false;
         applyBinFall(s, out);
@@ -46,12 +70,18 @@ export const officeHooks: StageHooks = {
         applyMonitorContact(s, out, monitorContact(s.p, previousX, s.time));
     },
     afterScore(s, out, dt) {
-        if (s.office.slip && Math.abs(s.p.vx) > 90 && Math.floor(s.time * 30) !== Math.floor((s.time - dt) * 30)) {
-            out.push({ type: 'speck', x: s.p.x - 15, vx: -s.p.vx * .2 });
+        if (
+            s.office.slip &&
+            Math.abs(s.p.vx) > 90 &&
+            Math.floor(s.time * 30) !== Math.floor((s.time - dt) * 30)
+        ) {
+            out.push({ type: 'speck', x: s.p.x - 15, vx: -s.p.vx * 0.2 });
         }
     },
-    focusBlocked: s => s.office.paperPenaltyRemaining > 0 || s.office.lightPenaltyRemaining > 0
-        || waterExposure(s.office.bucket.age, s.p, s.office.cleaning.x),
+    focusBlocked: (s) =>
+        s.office.paperPenaltyRemaining > 0 ||
+        s.office.lightPenaltyRemaining > 0 ||
+        waterExposure(s.office.bucket.age, s.p, s.office.cleaning.x),
     onFall(s, out) {
         applyBinFall(s, out);
     },

@@ -10,7 +10,14 @@ export const LEVEL = Object.freeze({
         Object.freeze({ wall: 2980, period: 3.5, offset: 1.0 }),
     ]),
     copier: Object.freeze({ x: 750 }),
-    urgentCopier: Object.freeze({ x: 2460, wake: 420, scan: .6, shotGap: .13, rest: 1.1, life: 3.5 }),
+    urgentCopier: Object.freeze({
+        x: 2460,
+        wake: 420,
+        scan: 0.6,
+        shotGap: 0.13,
+        rest: 1.1,
+        life: 3.5,
+    }),
     cleaning: Object.freeze({ x: 1095, a: 1035, b: 1360 }),
     bin: Object.freeze({ x: 1660, a: 1580, b: 1740, rim: 402 }),
     geysers: Object.freeze([
@@ -18,14 +25,39 @@ export const LEVEL = Object.freeze({
         Object.freeze({ x: 2850, period: 3.5, offset: 1.2 }),
         Object.freeze({ x: 3100, period: 3.5, offset: 2.4 }),
     ]),
-    playerContacts: Object.freeze([
-        { x: -26, y: 19, r: 9, wheel: true }, { x: 26, y: 19, r: 9, wheel: true },
-        { x: -21, y: -12, r: 10 }, { x: 21, y: -11, r: 10 }, { x: -20, y: -38, r: 11 },
-        { x: 33, y: -2, r: 8 }, { x: -7, y: -49, r: 12 }, { x: 0, y: -77, r: 12, head: true }
-    ].map(part => Object.freeze(part)))
+    playerContacts: Object.freeze(
+        [
+            { x: -26, y: 19, r: 9, wheel: true },
+            { x: 26, y: 19, r: 9, wheel: true },
+            { x: -21, y: -12, r: 10 },
+            { x: 21, y: -11, r: 10 },
+            { x: -20, y: -38, r: 11 },
+            { x: 33, y: -2, r: 8 },
+            { x: -7, y: -49, r: 12 },
+            { x: 0, y: -77, r: 12, head: true },
+        ].map((part) => Object.freeze(part)),
+    ),
 });
-export const FOCUS_DAMAGE = Object.freeze({ paper: 30, water: 30, light: 30, door: 30, copier: 15, urgentSheet: 2.5, bundle: 20, skyPaper: 15, bird: 20, gear: 10, steam: 15, satelliteLight: 20 });
-export const RULES = Object.freeze({ paperPenalty: 2.4, lightPenalty: 1.65, waterExposure: 1.3, bucketReset: 2.2 });
+export const FOCUS_DAMAGE = Object.freeze({
+    paper: 30,
+    water: 30,
+    light: 30,
+    door: 30,
+    copier: 15,
+    urgentSheet: 2.5,
+    bundle: 20,
+    skyPaper: 15,
+    bird: 20,
+    gear: 10,
+    steam: 15,
+    satelliteLight: 20,
+});
+export const RULES = Object.freeze({
+    paperPenalty: 2.4,
+    lightPenalty: 1.65,
+    waterExposure: 1.3,
+    bucketReset: 2.2,
+});
 export const FIXED_STEP = 1 / 120;
 // Units: px, seconds, radians.
 export const PHYSICS = deepFreeze({
@@ -33,10 +65,25 @@ export const PHYSICS = deepFreeze({
     lean: { ground: 4.3, air: 6.4 },
     upright: { pull: 20, damping: 7, tutorialUntilX: 300 },
     drive: { ground: 305, slip: 110, air: 55, convoy: 1200, express: 1400 },
-    drag: { ground: .55, slip: .015, air: .09 },
-    spinDrag: { ground: 1.8, slip: .9, air: .75 },
-    limits: { vx: 315, convoyVx: 700, expressVx: 760, rise: 500, fall: 850, spin: 5.8 },
-    jump: { speed: 380, spin: .12, coyote: .1, buffer: .14 },
-    contact: { iterations: 5, push: .78, bounce: 1.035, inertia: 2500, wheelGround: -.45, headDown: -.25, headDepth: .05 },
+    drag: { ground: 0.55, slip: 0.015, air: 0.09 },
+    spinDrag: { ground: 1.8, slip: 0.9, air: 0.75 },
+    limits: {
+        vx: 315,
+        convoyVx: 700,
+        expressVx: 760,
+        rise: 500,
+        fall: 850,
+        spin: 5.8,
+    },
+    jump: { speed: 380, spin: 0.12, coyote: 0.1, buffer: 0.14 },
+    contact: {
+        iterations: 5,
+        push: 0.78,
+        bounce: 1.035,
+        inertia: 2500,
+        wheelGround: -0.45,
+        headDown: -0.25,
+        headDepth: 0.05,
+    },
     fallDepth: 250,
 });

@@ -1,13 +1,22 @@
 import { translate, type Locale } from '../i18n';
 import type { LayerInfo, LayerOverrides } from '../render/perf';
 
-
-type Row = { el: HTMLElement; info: HTMLElement; hide: HTMLButtonElement; flat: HTMLButtonElement; text: string; seen: number };
+type Row = {
+    el: HTMLElement;
+    info: HTMLElement;
+    hide: HTMLButtonElement;
+    flat: HTMLButtonElement;
+    text: string;
+    seen: number;
+};
 type Action = 'hide' | 'flat';
 
 const KEEP_MS = 3000;
 
-export function createLayerPanel(getLocale: () => Locale, overrides: LayerOverrides) {
+export function createLayerPanel(
+    getLocale: () => Locale,
+    overrides: LayerOverrides,
+) {
     const root = document.createElement('details');
     root.className = 'perf-layers';
     const summary = document.createElement('summary');
@@ -82,14 +91,26 @@ export function createLayerPanel(getLocale: () => Locale, overrides: LayerOverri
 
     function syncButtons() {
         for (const [key, r] of rows) {
-            r.hide.setAttribute('aria-pressed', String(overrides.hidden.has(key)));
-            r.flat.setAttribute('aria-pressed', String(overrides.flat.has(key)));
-            r.el.classList.toggle('off', overrides.hidden.has(key) || overrides.flat.has(key));
+            r.hide.setAttribute(
+                'aria-pressed',
+                String(overrides.hidden.has(key)),
+            );
+            r.flat.setAttribute(
+                'aria-pressed',
+                String(overrides.flat.has(key)),
+            );
+            r.el.classList.toggle(
+                'off',
+                overrides.hidden.has(key) || overrides.flat.has(key),
+            );
         }
     }
 
-    root.addEventListener('click', event => {
-        const button = event.target instanceof Element ? event.target.closest('button') : null;
+    root.addEventListener('click', (event) => {
+        const button =
+            event.target instanceof Element
+                ? event.target.closest('button')
+                : null;
         if (!button) return;
         button.blur();
         if (button.dataset.perfLayerReset !== undefined) {
@@ -99,13 +120,28 @@ export function createLayerPanel(getLocale: () => Locale, overrides: LayerOverri
         }
         const key = button.closest<HTMLElement>('.perf-layer')?.dataset.key;
         const action = button.dataset.action as Action | undefined;
-        if (key && action) set(key, action, button.getAttribute('aria-pressed') !== 'true');
+        if (key && action) {
+            set(key, action, button.getAttribute('aria-pressed') !== 'true');
+        }
     });
 
-    function update(layers: LayerInfo[], canvasArea: number, renderMs: number, now: number) {
-        const merged = new Map<string, { shapes: number; area: number; effects: Set<string>; uses: number }>();
+    function update(
+        layers: LayerInfo[],
+        canvasArea: number,
+        renderMs: number,
+        now: number,
+    ) {
+        const merged = new Map<
+            string,
+            { shapes: number; area: number; effects: Set<string>; uses: number }
+        >();
         for (const layer of layers) {
-            const m = merged.get(layer.key) ?? { shapes: 0, area: 0, effects: new Set<string>(), uses: 0 };
+            const m = merged.get(layer.key) ?? {
+                shapes: 0,
+                area: 0,
+                effects: new Set<string>(),
+                uses: 0,
+            };
             m.shapes += layer.shapes;
             m.area += layer.area;
             m.uses++;
@@ -115,7 +151,8 @@ export function createLayerPanel(getLocale: () => Locale, overrides: LayerOverri
         for (const [key, m] of merged) {
             const r = row(key);
             r.seen = now;
-            const pct = canvasArea > 0 ? Math.round(m.area / canvasArea * 100) : 0;
+            const pct =
+                canvasArea > 0 ? Math.round((m.area / canvasArea) * 100) : 0;
             const text = `${m.uses > 1 ? `×${m.uses} ` : ''}${m.shapes} shp ${pct}% ${[...m.effects].join(' ')}`;
             if (text !== r.text) {
                 r.text = text;
@@ -123,7 +160,8 @@ export function createLayerPanel(getLocale: () => Locale, overrides: LayerOverri
             }
         }
         for (const [key, r] of rows) {
-            const overridden = overrides.hidden.has(key) || overrides.flat.has(key);
+            const overridden =
+                overrides.hidden.has(key) || overrides.flat.has(key);
             if (overridden && !merged.has(key)) {
                 if (r.text !== '—') r.info.textContent = r.text = '—';
                 continue;
@@ -135,7 +173,8 @@ export function createLayerPanel(getLocale: () => Locale, overrides: LayerOverri
         }
         syncButtons();
         const active = overrides.hidden.size + overrides.flat.size;
-        label.textContent = `${translate('perf.layers', getLocale())} ${merged.size}` +
+        label.textContent =
+            `${translate('perf.layers', getLocale())} ${merged.size}` +
             `${active ? ` · ${active} off` : ''} · render ${renderMs.toFixed(1)} ms`;
     }
 

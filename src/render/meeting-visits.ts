@@ -6,7 +6,10 @@ export function createMeetingVisits() {
     let room: string | null = null;
     return {
         observe(next: MeetingInput) {
-            if (stage !== null && next.stage !== stage) { visits = 0; room = null; }
+            if (stage !== null && next.stage !== stage) {
+                visits = 0;
+                room = null;
+            }
             stage = next.stage;
             if (!next.corridor) return;
             const kind = next.corridor.room.kind;

@@ -9,9 +9,17 @@ import { STAGES, stageSpawn } from './stages/index';
 import { createStageStates, prepareStageAttempt } from './stages/attempt';
 import { clonePlain } from './data';
 import { randomUint32, seedRng, type Rng } from './rng';
-import type { GameEvent, Input, LossReason, Mode, Person, Player, Snapshot, StageId } from './types';
+import type {
+    GameEvent,
+    Input,
+    LossReason,
+    Mode,
+    Person,
+    Player,
+    Snapshot,
+    StageId,
+} from './types';
 import { assertGameState } from './validation';
-
 
 // Survives a restart.
 export type Progress = {
@@ -43,7 +51,7 @@ export type Attempt = {
     keys: Input[];
     ground: boolean;
     coyote: number;
-    /** Remaining jump buffer in seconds; the key is persisted in existing replays. */
+    /** Remaining jump buffer in seconds; persisted in existing replays. */
     jumpQ: number;
     time: number;
     practiceJump: boolean;
@@ -68,7 +76,11 @@ export type Attempt = {
 
 export type CoreState = Progress & Attempt;
 
-function createProgress(skylineSeed: number, deaths = 0, completedStage: 0 | StageId = 0): Progress {
+function createProgress(
+    skylineSeed: number,
+    deaths = 0,
+    completedStage: 0 | StageId = 0,
+): Progress {
     return {
         stage: 1,
         checkpoint: 0,
@@ -80,13 +92,22 @@ function createProgress(skylineSeed: number, deaths = 0, completedStage: 0 | Sta
     };
 }
 
-export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'): Attempt {
+export function createAttempt(
+    progress: Progress,
+    seed: Rng,
+    mode: Mode = 'play',
+): Attempt {
     const { stage, checkpoint } = progress;
     const rng = { ...seed };
     const appearanceSeed = randomUint32(rng, 'cosmetic');
     const attempt: Attempt = {
         rng,
-        extinguisher: { owned: false, cooldown: 0, burst: 0, direction: { x: 0, y: 1 } },
+        extinguisher: {
+            owned: false,
+            cooldown: 0,
+            burst: 0,
+            direction: { x: 0, y: 1 },
+        },
 
         mode,
         p: { ...stageSpawn(stage, checkpoint), vx: 0, vy: 0, a: 0, w: 0 },
@@ -100,11 +121,16 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
         rollCooldown: 0,
         reverseCooldown: 0,
 
-        people: STAGES[stage].people.map(person => ({ ...person })),
+        people: STAGES[stage].people.map((person) => ({ ...person })),
         history: [],
         impact: null,
 
-        focus: { value: 100, recoveryClock: 0, processedEvents: [], notice: null },
+        focus: {
+            value: 100,
+            recoveryClock: 0,
+            processedEvents: [],
+            notice: null,
+        },
         lossReason: null,
         focusLossTime: 0,
 
@@ -115,21 +141,51 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
     return attempt;
 }
 
-export type CoreOptions = { seed: number; deaths?: number; completedStage?: 0 | StageId };
+export type CoreOptions = {
+    seed: number;
+    deaths?: number;
+    completedStage?: 0 | StageId;
+};
 
-export function createCore({ seed, deaths, completedStage }: CoreOptions): CoreState {
+export function createCore({
+    seed,
+    deaths,
+    completedStage,
+}: CoreOptions): CoreState {
     const rng = seedRng(seed);
-    const progress = createProgress(randomUint32(rng, 'cosmetic'), deaths, completedStage);
+    const progress = createProgress(
+        randomUint32(rng, 'cosmetic'),
+        deaths,
+        completedStage,
+    );
     return { ...progress, ...createAttempt(progress, rng, 'intro') };
 }
 
 export function progressOf(s: CoreState): Progress {
-    const { stage, checkpoint, lessons, deaths, completedStage, skylineSeed, tick } = s;
-    return { stage, checkpoint, lessons, deaths, completedStage, skylineSeed, tick };
+    const {
+        stage,
+        checkpoint,
+        lessons,
+        deaths,
+        completedStage,
+        skylineSeed,
+        tick,
+    } = s;
+    return {
+        stage,
+        checkpoint,
+        lessons,
+        deaths,
+        completedStage,
+        skylineSeed,
+        tick,
+    };
 }
 
 export function resetAttempt(s: CoreState, out: GameEvent[]) {
-    if (STAGES[s.stage].newSkylineEachAttempt) s.skylineSeed = randomUint32(s.rng, 'cosmetic');
+    if (STAGES[s.stage].newSkylineEachAttempt) {
+        s.skylineSeed = randomUint32(s.rng, 'cosmetic');
+    }
     Object.assign(s, createAttempt(progressOf(s), s.rng));
     out.push({ type: 'reset' });
 }
@@ -163,7 +219,8 @@ export function cloneState(s: Readonly<CoreState>): CoreState {
     return copy;
 }
 
-// Preserve player identity: the play step holds this reference throughout the tick.
+// Preserve player identity: the play step holds this reference throughout the
+// tick.
 export function setPlayer(s: CoreState, p: Readonly<CoreState['p']>) {
     Object.assign(s.p, p);
 }

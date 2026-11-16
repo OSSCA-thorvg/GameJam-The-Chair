@@ -3,11 +3,15 @@ import type { CoreState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { applyFocusHit } from '../../../systems/focus/apply';
 import type { MonitorContact } from './decide';
-export function applyMonitorContact(s: CoreState, out: GameEvent[], contact: MonitorContact | null) {
+export function applyMonitorContact(
+    s: CoreState,
+    out: GameEvent[],
+    contact: MonitorContact | null,
+) {
     if (!contact) return true;
     s.p.x = contact.x;
     s.p.vx = contact.vx;
-    s.p.w *= .45;
+    s.p.w *= 0.45;
     s.office.lightPenaltyRemaining = RULES.lightPenalty;
     out.push({ type: 'light-contact' });
     if (s.office.lightCooldown !== 0) return true;

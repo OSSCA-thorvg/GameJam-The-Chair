@@ -1,7 +1,13 @@
 import { STAGE_FOUR } from '../../game/stages/sky/data';
 import { createOrbitState } from '../../game/stages/orbit/state';
 import type { RenderCtx } from '../context';
-import { REVEAL_DURATION, revealChairOrbit, revealSpeed, revealTravel, SKY_DEPARTURE } from './sky-camera';
+import {
+    REVEAL_DURATION,
+    revealChairOrbit,
+    revealSpeed,
+    revealTravel,
+    SKY_DEPARTURE,
+} from './sky-camera';
 import { ORBIT_WATCH } from './orbit-watch';
 import { orbitEnding } from './orbit-ending';
 import { drawOrbitShot } from './orbit-shot';
@@ -26,7 +32,11 @@ export function drawSkyReveal(ctx: RenderCtx) {
         push: 0,
         turn: revealChairOrbit(elapsed, settle),
         clock: elapsed,
-        spray: 1 + 1.5 * (1 - departure), arrival: 1 - departure, departure,
-        basin: smooth(elapsed / (settle + turn)), entry: 0, ending: FLYING,
+        spray: 1 + 1.5 * (1 - departure),
+        arrival: 1 - departure,
+        departure,
+        basin: smooth(elapsed / (settle + turn)),
+        entry: 0,
+        ending: FLYING,
     });
 }

@@ -1,13 +1,22 @@
 #!/usr/bin/env node
 // Requires fontTools: pip install fonttools.
-import { mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import {
+    mkdtempSync,
+    readdirSync,
+    readFileSync,
+    statSync,
+    writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { loadSource } from '../tests/support/load.mjs';
 
 const FONTS = [
-    { file: 'BlackHanSans-sign.ttf', source: 'blackhansans/BlackHanSans-Regular.ttf' },
+    {
+        file: 'BlackHanSans-sign.ttf',
+        source: 'blackhansans/BlackHanSans-Regular.ttf',
+    },
     { file: 'DoHyeon-label.ttf', source: 'dohyeon/DoHyeon-Regular.ttf' },
     { file: 'Jua-speech.ttf', source: 'jua/Jua-Regular.ttf' },
 ];
@@ -19,15 +28,29 @@ const { allMessageText } = await loadSource(`
 `);
 
 function walk(dir) {
-    return readdirSync(dir).flatMap(name => {
+    return readdirSync(dir).flatMap((name) => {
         const path = join(dir, name);
-        return statSync(path).isDirectory() ? walk(path) : path.endsWith('.ts') ? [path] : [];
+        return statSync(path).isDirectory()
+            ? walk(path)
+            : path.endsWith('.ts')
+              ? [path]
+              : [];
     });
 }
-const literals = walk('src/render').map(path => readFileSync(path, 'utf8').match(/[ㄱ-ㆎ가-힣]/g)?.join('') ?? '').join('');
+const literals = walk('src/render')
+    .map(
+        (path) =>
+            readFileSync(path, 'utf8')
+                .match(/[ㄱ-ㆎ가-힣]/g)
+                ?.join('') ?? '',
+    )
+    .join('');
 let ascii = '';
 for (let c = 0x20; c < 0x7f; c++) ascii += String.fromCharCode(c);
-const text = [...new Set(ascii + allMessageText() + literals)].filter(c => c.trim()).join('') + ' ';
+const text =
+    [...new Set(ascii + allMessageText() + literals)]
+        .filter((c) => c.trim())
+        .join('') + ' ';
 
 const work = mkdtempSync(join(tmpdir(), 'chair-fonts-'));
 const textFile = join(work, 'text.txt');
@@ -38,7 +61,17 @@ for (const font of FONTS) {
     if (!res.ok) throw new Error(`${font.source}: ${res.status}`);
     writeFileSync(source, new Uint8Array(await res.arrayBuffer()));
     const out = join('src/assets/fonts', font.file);
-    const run = spawnSync('pyftsubset', [source, `--text-file=${textFile}`, `--output-file=${out}`, '--no-hinting', '--layout-features=kern'], { stdio: 'inherit' });
+    const run = spawnSync(
+        'pyftsubset',
+        [
+            source,
+            `--text-file=${textFile}`,
+            `--output-file=${out}`,
+            '--no-hinting',
+            '--layout-features=kern',
+        ],
+        { stdio: 'inherit' },
+    );
     if (run.status !== 0) throw new Error(`pyftsubset failed for ${font.file}`);
     console.log(`${out}: ${statSync(out).size} bytes`);
 }

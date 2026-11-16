@@ -10,7 +10,7 @@ export function record(value: unknown, path: string): Data {
 }
 
 export function exact(data: Data, allowed: readonly string[], path: string) {
-    const unexpected = Object.keys(data).find(key => !allowed.includes(key));
+    const unexpected = Object.keys(data).find((key) => !allowed.includes(key));
     if (unexpected) throw new Error(`${path}.${unexpected} is not allowed`);
 }
 
@@ -21,28 +21,47 @@ export function array(value: unknown, path: string, max: number): unknown[] {
 }
 
 export function finite(value: unknown, path: string): number {
-    if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`${path} must be a finite number`);
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+        throw new Error(`${path} must be a finite number`);
+    }
     return value;
 }
 
-export function integer(value: unknown, path: string, min = 0, max = Number.MAX_SAFE_INTEGER): number {
+export function integer(
+    value: unknown,
+    path: string,
+    min = 0,
+    max = Number.MAX_SAFE_INTEGER,
+): number {
     const number = finite(value, path);
-    if (!Number.isSafeInteger(number) || number < min || number > max) throw new Error(`${path} must be an integer from ${min} to ${max}`);
+    if (!Number.isSafeInteger(number) || number < min || number > max) {
+        throw new Error(`${path} must be an integer from ${min} to ${max}`);
+    }
     return number;
 }
 
 export function boolean(value: unknown, path: string): boolean {
-    if (typeof value !== 'boolean') throw new Error(`${path} must be a boolean`);
+    if (typeof value !== 'boolean') {
+        throw new Error(`${path} must be a boolean`);
+    }
     return value;
 }
 
 export function string(value: unknown, path: string, max = 200): string {
-    if (typeof value !== 'string' || value.length > max) throw new Error(`${path} must be a string of at most ${max} characters`);
+    if (typeof value !== 'string' || value.length > max) {
+        throw new Error(
+            `${path} must be a string of at most ${max} characters`,
+        );
+    }
     return value;
 }
 
-export function choice<T extends string | number>(value: unknown, values: readonly T[], path: string): T {
-    const selected = values.find(candidate => candidate === value);
+export function choice<T extends string | number>(
+    value: unknown,
+    values: readonly T[],
+    path: string,
+): T {
+    const selected = values.find((candidate) => candidate === value);
     if (selected === undefined) throw new Error(`${path} has an unknown value`);
     return selected;
 }
@@ -57,7 +76,9 @@ export function point(value: unknown, path: string) {
 export function player(value: unknown, path: string) {
     const data = record(value, path);
     exact(data, ['x', 'y', 'vx', 'vy', 'a', 'w'], path);
-    for (const key of ['x', 'y', 'vx', 'vy', 'a', 'w']) finite(data[key], `${path}.${key}`);
+    for (const key of ['x', 'y', 'vx', 'vy', 'a', 'w']) {
+        finite(data[key], `${path}.${key}`);
+    }
 }
 
 export function person(value: unknown, path: string) {
@@ -70,11 +91,32 @@ export function person(value: unknown, path: string) {
 
 export function paper(value: unknown, path: string) {
     const data = record(value, path);
-    exact(data, ['x', 'y', 'vx', 'vy', 'a', 'w', 'life', 'hit', 'landed', 'volley', 'safe', 'kind'], path);
+    exact(
+        data,
+        [
+            'x',
+            'y',
+            'vx',
+            'vy',
+            'a',
+            'w',
+            'life',
+            'hit',
+            'landed',
+            'volley',
+            'safe',
+            'kind',
+        ],
+        path,
+    );
     choice(data.kind, ['sheet', 'bundle'], `${path}.kind`);
-    for (const key of ['x', 'y', 'vx', 'vy', 'a', 'w', 'life']) finite(data[key], `${path}.${key}`);
+    for (const key of ['x', 'y', 'vx', 'vy', 'a', 'w', 'life']) {
+        finite(data[key], `${path}.${key}`);
+    }
     integer(data.volley, `${path}.volley`);
-    for (const key of ['hit', 'landed', 'safe']) boolean(data[key], `${path}.${key}`);
+    for (const key of ['hit', 'landed', 'safe']) {
+        boolean(data[key], `${path}.${key}`);
+    }
 }
 
 export function impact(value: unknown, path: string) {
@@ -90,7 +132,10 @@ export function impact(value: unknown, path: string) {
     point(data.point, `${path}.point`);
 }
 
-
-export function exactFields<T>(data: Data, fields: Record<keyof T, true>, path: string) {
+export function exactFields<T>(
+    data: Data,
+    fields: Record<keyof T, true>,
+    path: string,
+) {
     exact(data, Object.keys(fields), path);
 }

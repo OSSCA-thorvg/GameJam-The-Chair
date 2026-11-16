@@ -21,15 +21,73 @@ const blocks = [
 ];
 
 export const STAGE_THREE = deepFreeze({
-    length: 3320, goal: 2920,
-    entrance: { duration: 2.6, openDuration: .85, emergeAt: .55, emergeEnd: 1.8, closeAt: 1.95, closeDuration: .65, fromX: 100, toX: 235 },
+    length: 3320,
+    goal: 2920,
+    entrance: {
+        duration: 2.6,
+        openDuration: 0.85,
+        emergeAt: 0.55,
+        emergeEnd: 1.8,
+        closeAt: 1.95,
+        closeDuration: 0.65,
+        fromX: 100,
+        toX: 235,
+    },
     pickup: { x: 600, y: 368 },
-    duct: { x: 1660, y: 226, firstSneezeAt: 6, inhaleDuration: .12, twitchDuration: .08, sneezeDuration: 1.3, firstKnockback: 285,
-        gustPeriod: 3.4, gustInhaleDuration: .45, gustTwitchDuration: .12, gustSneezeDuration: .8, gustKnockback: 260 },
+    duct: {
+        x: 1660,
+        y: 226,
+        firstSneezeAt: 6,
+        inhaleDuration: 0.12,
+        twitchDuration: 0.08,
+        sneezeDuration: 1.3,
+        firstKnockback: 285,
+        gustPeriod: 3.4,
+        gustInhaleDuration: 0.45,
+        gustTwitchDuration: 0.12,
+        gustSneezeDuration: 0.8,
+        gustKnockback: 260,
+    },
     vents: [
-        { x: 1780, y: -172, axis: 'x', dir: -1, period: 3.2, offset: 0, warn: .7, blow: .9, reach: 330, spread: 62, force: 1500 },
-        { x: 1240, y: -342, axis: 'x', dir: 1, period: 3.2, offset: 1.1, warn: .7, blow: .9, reach: 330, spread: 62, force: 1500 },
-        { x: 1735, y: -552, axis: 'y', dir: 1, period: 3.2, offset: 2.2, warn: .7, blow: .9, reach: 230, spread: 80, force: 1500 },
+        {
+            x: 1780,
+            y: -172,
+            axis: 'x',
+            dir: -1,
+            period: 3.2,
+            offset: 0,
+            warn: 0.7,
+            blow: 0.9,
+            reach: 330,
+            spread: 62,
+            force: 1500,
+        },
+        {
+            x: 1240,
+            y: -342,
+            axis: 'x',
+            dir: 1,
+            period: 3.2,
+            offset: 1.1,
+            warn: 0.7,
+            blow: 0.9,
+            reach: 330,
+            spread: 62,
+            force: 1500,
+        },
+        {
+            x: 1735,
+            y: -552,
+            axis: 'y',
+            dir: 1,
+            period: 3.2,
+            offset: 2.2,
+            warn: 0.7,
+            blow: 0.9,
+            reach: 230,
+            spread: 80,
+            force: 1500,
+        },
     ],
     slick: [
         { left: 1550, right: 1640, y: 276 },
@@ -40,14 +98,25 @@ export const STAGE_THREE = deepFreeze({
     edge: 2460,
     graph: {
         points: [
-            { x: 2460, y: -144 }, { x: 2540, y: -176 }, { x: 2580, y: -164 }, { x: 2660, y: -260 },
-            { x: 2695, y: -240 }, { x: 2765, y: -380 }, { x: 2795, y: -360 }, { x: 2865, y: -540 },
-            { x: 2880, y: -760 }, { x: 2886, y: -1000 },
+            { x: 2460, y: -144 },
+            { x: 2540, y: -176 },
+            { x: 2580, y: -164 },
+            { x: 2660, y: -260 },
+            { x: 2695, y: -240 },
+            { x: 2765, y: -380 },
+            { x: 2795, y: -360 },
+            { x: 2865, y: -540 },
+            { x: 2880, y: -760 },
+            { x: 2886, y: -1000 },
         ],
         catchUntil: 7,
-        catchBelow: 10, catchAbove: 30,
-        startSpeed: 220, topSpeed: 820, accel: 480, lead: 130,
-        maxTilt: .75,
+        catchBelow: 10,
+        catchAbove: 30,
+        startSpeed: 220,
+        topSpeed: 820,
+        accel: 480,
+        lead: 130,
+        maxTilt: 0.75,
     },
     ceiling: -460,
     airSprayLimit: 3,
@@ -59,24 +128,37 @@ export const STAGE_THREE = deepFreeze({
         { x: 1310, y: 78 },
         { x: 1860, y: -172 },
     ],
-    terrain: blocks.map(b => [
-        { x: b.x, y: b.y }, { x: b.x + b.width, y: b.y },
-        { x: b.x + b.width, y: b.y + b.height }, { x: b.x, y: b.y + b.height },
+    terrain: blocks.map((b) => [
+        { x: b.x, y: b.y },
+        { x: b.x + b.width, y: b.y },
+        { x: b.x + b.width, y: b.y + b.height },
+        { x: b.x, y: b.y + b.height },
     ]) satisfies Point[][],
 });
 
 export type DuctBurst = { kind: 'first' | 'gust'; age: number };
 export function ductTimings(kind: DuctBurst['kind']) {
     const d = STAGE_THREE.duct;
-    if (kind === 'first') return { inhale: d.inhaleDuration, twitch: d.twitchDuration, sneeze: d.sneezeDuration };
-    return { inhale: d.gustInhaleDuration, twitch: d.gustTwitchDuration, sneeze: d.gustSneezeDuration };
+    if (kind === 'first') {
+        return {
+            inhale: d.inhaleDuration,
+            twitch: d.twitchDuration,
+            sneeze: d.sneezeDuration,
+        };
+    }
+    return {
+        inhale: d.gustInhaleDuration,
+        twitch: d.gustTwitchDuration,
+        sneeze: d.gustSneezeDuration,
+    };
 }
 
 export type Vent = (typeof STAGE_THREE.vents)[number];
 export type VentPhase = { kind: 'idle' | 'warn' | 'blow'; age: number };
 
 export function ventPhase(vent: Vent, time: number): VentPhase {
-    const t = ((time - vent.offset) % vent.period + vent.period) % vent.period;
+    const t =
+        (((time - vent.offset) % vent.period) + vent.period) % vent.period;
     const quiet = vent.period - vent.warn - vent.blow;
     if (t < quiet) return { kind: 'idle', age: t };
     if (t < quiet + vent.warn) return { kind: 'warn', age: t - quiet };
@@ -91,35 +173,63 @@ export function inVentBlast(vent: Vent, p: Readonly<Point>) {
 }
 
 export function onSlickPaper(p: Readonly<Point>, ground: boolean) {
-    return ground && STAGE_THREE.slick.some(span => p.x >= span.left && p.x <= span.right && Math.abs(p.y - (span.y - 28)) < 14);
+    return (
+        ground &&
+        STAGE_THREE.slick.some(
+            (span) =>
+                p.x >= span.left &&
+                p.x <= span.right &&
+                Math.abs(p.y - (span.y - 28)) < 14,
+        )
+    );
 }
 
 const GRAPH = STAGE_THREE.graph.points;
 const GRAPH_DIST = GRAPH.reduce<number[]>((acc, point, i) => {
-    acc.push(i === 0 ? 0 : acc[i - 1] + Det.hypot(point.x - GRAPH[i - 1].x, point.y - GRAPH[i - 1].y));
+    acc.push(
+        i === 0
+            ? 0
+            : acc[i - 1] +
+                  Det.hypot(point.x - GRAPH[i - 1].x, point.y - GRAPH[i - 1].y),
+    );
     return acc;
 }, []);
 export const GRAPH_LENGTH = GRAPH_DIST[GRAPH_DIST.length - 1];
 export const GRAPH_CORNERS: readonly number[] = GRAPH_DIST;
 
-export function graphPointAt(dist: number): { x: number; y: number; tx: number; ty: number } {
+export function graphPointAt(dist: number): {
+    x: number;
+    y: number;
+    tx: number;
+    ty: number;
+} {
     const d = Math.max(0, Math.min(GRAPH_LENGTH, dist));
     let i = 1;
     while (i < GRAPH.length - 1 && GRAPH_DIST[i] < d) i++;
-    const a = GRAPH[i - 1], b = GRAPH[i];
+    const a = GRAPH[i - 1],
+        b = GRAPH[i];
     const span = GRAPH_DIST[i] - GRAPH_DIST[i - 1];
     const k = span > 0 ? (d - GRAPH_DIST[i - 1]) / span : 0;
-    return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, tx: (b.x - a.x) / span, ty: (b.y - a.y) / span };
+    return {
+        x: a.x + (b.x - a.x) * k,
+        y: a.y + (b.y - a.y) * k,
+        tx: (b.x - a.x) / span,
+        ty: (b.y - a.y) / span,
+    };
 }
 
 export function graphCatch(p: Readonly<Point>): number | null {
     const g = STAGE_THREE.graph;
     for (let i = 1; i <= g.catchUntil; i++) {
-        const a = GRAPH[i - 1], b = GRAPH[i];
+        const a = GRAPH[i - 1],
+            b = GRAPH[i];
         if (p.x < a.x || p.x > b.x) continue;
         const k = (p.x - a.x) / (b.x - a.x);
-        const wheels = p.y + 28, line = a.y + (b.y - a.y) * k;
-        if (wheels < line - g.catchBelow || wheels > line + g.catchAbove) return null;
+        const wheels = p.y + 28,
+            line = a.y + (b.y - a.y) * k;
+        if (wheels < line - g.catchBelow || wheels > line + g.catchAbove) {
+            return null;
+        }
         return GRAPH_DIST[i - 1] + Det.hypot(p.x - a.x, line - a.y);
     }
     return null;

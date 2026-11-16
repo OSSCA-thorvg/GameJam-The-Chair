@@ -1,15 +1,34 @@
 import { FIXED_STEP } from './game/level';
-import { normalizeReplaySettings, readReplaySources, REPLAY_DEFAULTS, type ReplaySettings, type ReplaySource } from './game/replay';
+import {
+    normalizeReplaySettings,
+    readReplaySources,
+    REPLAY_DEFAULTS,
+    type ReplaySettings,
+    type ReplaySource,
+} from './game/replay';
 import { CONFIG_VERSION } from './game/stages/index';
-import { browserLocale, isMessage, keepLangOnLinks, translate, type Locale, type Message } from './i18n';
+import {
+    browserLocale,
+    isMessage,
+    keepLangOnLinks,
+    translate,
+    type Locale,
+    type Message,
+} from './i18n';
 import { createRenderer } from './render/renderer';
 import { createReplayPlayer } from './ui/replay-player';
-import { copyText, downloadJson, loadBrowserData, stamp } from './ui/replay-store';
+import {
+    copyText,
+    downloadJson,
+    loadBrowserData,
+    stamp,
+} from './ui/replay-store';
 import './style.css';
 import './preview.css';
 import './replay-tool.css';
 
-const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
+const $ = <T extends HTMLElement>(selector: string) =>
+    document.querySelector<T>(selector)!;
 const locale: Locale = browserLocale();
 keepLangOnLinks();
 const t = (message: Message) => translate(message, locale);
@@ -18,7 +37,9 @@ for (const element of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
     const key = element.dataset.i18n!;
     if (isMessage(key)) element.textContent = t(key);
 }
-for (const element of document.querySelectorAll<HTMLElement>('[data-i18n-aria]')) {
+for (const element of document.querySelectorAll<HTMLElement>(
+    '[data-i18n-aria]',
+)) {
     const key = element.dataset.i18nAria!;
     if (isMessage(key)) element.setAttribute('aria-label', t(key));
 }
@@ -31,18 +52,39 @@ let sources: ReplaySource[] = [];
 let selected: ReplaySource | null = null;
 
 const renderer = (() => {
-    try { return createRenderer(root, () => locale); } catch (error) { console.error(error); return null; }
+    try {
+        return createRenderer(root, () => locale);
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
 })();
-const player = createReplayPlayer(root, () => locale, () => settings, () => {}, { closable: false });
+const player = createReplayPlayer(
+    root,
+    () => locale,
+    () => settings,
+    () => {},
+    { closable: false },
+);
 
-const viewerInputs = { keyframeInterval: $<HTMLInputElement>('#keyframe'), warmupSeconds: $<HTMLInputElement>('#warmup'), playbackSpeed: $<HTMLInputElement>('#speed') };
+const viewerInputs = {
+    keyframeInterval: $<HTMLInputElement>('#keyframe'),
+    warmupSeconds: $<HTMLInputElement>('#warmup'),
+    playbackSpeed: $<HTMLInputElement>('#speed'),
+};
 for (const [key, input] of Object.entries(viewerInputs)) {
     input.value = String(settings[key as keyof typeof viewerInputs]);
     input.addEventListener('change', () => {
         const before = settings.keyframeInterval;
         settings = normalizeReplaySettings({ ...settings, [key]: input.value });
-        for (const [other, field] of Object.entries(viewerInputs)) field.value = String(settings[other as keyof typeof viewerInputs]);
-        if (key === 'keyframeInterval' && settings.keyframeInterval !== before && selected) {
+        for (const [other, field] of Object.entries(viewerInputs)) {
+            field.value = String(settings[other as keyof typeof viewerInputs]);
+        }
+        if (
+            key === 'keyframeInterval' &&
+            settings.keyframeInterval !== before &&
+            selected
+        ) {
             const tick = player.tick;
             open(selected);
             player.seek(tick);
@@ -55,7 +97,9 @@ function load(text: string, origin: string) {
     try {
         const result = readReplaySources(text);
         sources = result.sources;
-        sourcesSelect.replaceChildren(...sources.map((source, i) => new Option(source.label, String(i))));
+        sourcesSelect.replaceChildren(
+            ...sources.map((source, i) => new Option(source.label, String(i))),
+        );
         status.textContent = `${t('tool.loaded')}: ${origin} · ${sources.length}`;
         if (sources.length) {
             sourcesSelect.selectedIndex = 0;
@@ -70,40 +114,73 @@ function open(source: ReplaySource) {
     selected = source;
     const timeline = player.open(source.file);
     $('#empty').hidden = true;
-    const seconds = (tick: number) => ((tick - timeline.startTick) * FIXED_STEP).toFixed(2) + 's';
-    const facts: [string, string][] = [
-        ['version', `${source.file.version || '—'}${timeline.versionMismatch ? ` ≠ ${CONFIG_VERSION}` : ' ✓'}`],
+    const seconds = (tick: number) =>
+        ((tick - timeline.startTick) * FIXED_STEP).toFixed(2) + 's';
+    const facts: Array<[string, string]> = [
+        [
+            'version',
+            `${source.file.version || '—'}${timeline.versionMismatch ? ` ≠ ${CONFIG_VERSION}` : ' ✓'}`,
+        ],
         ['seed', String(source.file.seed ?? '—')],
-        ['stage', `${source.file.start.stage} · flag ${source.file.start.checkpoint}`],
-        ['ticks', `${timeline.startTick} → ${timeline.endTick} (${seconds(timeline.endTick)})`],
-        ['commands', String(source.file.commands.length) + (source.file.truncated ? ' (cut)' : '')],
-        ['hashes', `${source.file.hashes.length} · ${timeline.divergedAt === null ? 'match' : `differ at ${timeline.divergedAt}`}`],
+        [
+            'stage',
+            `${source.file.start.stage} · flag ${source.file.start.checkpoint}`,
+        ],
+        [
+            'ticks',
+            `${timeline.startTick} → ${timeline.endTick} (${seconds(timeline.endTick)})`,
+        ],
+        [
+            'commands',
+            String(source.file.commands.length) +
+                (source.file.truncated ? ' (cut)' : ''),
+        ],
+        [
+            'hashes',
+            `${source.file.hashes.length} · ${timeline.divergedAt === null ? 'match' : `differ at ${timeline.divergedAt}`}`,
+        ],
         ['keyframes', String(timeline.keyframes.length)],
     ];
     fill($('#file-info'), facts);
     const error = timeline.error ?? source.file.error;
     const errorInfo = $('#error-info');
     errorInfo.hidden = !error;
-    errorInfo.textContent = error ? [`${error.at} @ tick ${error.tick}`, error.message, source.error?.time ?? '', error.stack ?? ''].filter(Boolean).join('\n') : '';
-    $('#markers').replaceChildren(...timeline.markers.map(marker => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = `tool-marker tool-marker-${marker.kind}`;
-        button.textContent = `${marker.kind} · ${seconds(marker.tick)}`;
-        button.addEventListener('click', () => { player.seek(marker.tick); player.setPlaying(false); });
-        return button;
-    }));
+    errorInfo.textContent = error
+        ? [
+              `${error.at} @ tick ${error.tick}`,
+              error.message,
+              source.error?.time ?? '',
+              error.stack ?? '',
+          ]
+              .filter(Boolean)
+              .join('\n')
+        : '';
+    $('#markers').replaceChildren(
+        ...timeline.markers.map((marker) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `tool-marker tool-marker-${marker.kind}`;
+            button.textContent = `${marker.kind} · ${seconds(marker.tick)}`;
+            button.addEventListener('click', () => {
+                player.seek(marker.tick);
+                player.setPlaying(false);
+            });
+            return button;
+        }),
+    );
     lastShown = -1;
 }
 
-function fill(list: HTMLElement, facts: [string, string][]) {
-    list.replaceChildren(...facts.flatMap(([name, value]) => {
-        const dt = document.createElement('dt');
-        dt.textContent = name;
-        const dd = document.createElement('dd');
-        dd.textContent = value;
-        return [dt, dd];
-    }));
+function fill(list: HTMLElement, facts: Array<[string, string]>) {
+    list.replaceChildren(
+        ...facts.flatMap(([name, value]) => {
+            const dt = document.createElement('dt');
+            dt.textContent = name;
+            const dd = document.createElement('dd');
+            dd.textContent = value;
+            return [dt, dd];
+        }),
+    );
 }
 
 function showCommands(tick: number) {
@@ -112,17 +189,22 @@ function showCommands(tick: number) {
     let next = commands.findIndex(([at]) => at >= tick);
     if (next < 0) next = commands.length;
     const from = Math.max(0, next - 4);
-    $('#commands').replaceChildren(...commands.slice(from, next + 8).map(([at, command], i) => {
-        const item = document.createElement('li');
-        const button = document.createElement('button');
-        button.type = 'button';
-        const { type, ...rest } = command;
-        button.textContent = `${at} · ${type}${Object.keys(rest).length ? ' ' + JSON.stringify(rest) : ''}`;
-        if (from + i === next) item.className = 'next';
-        button.addEventListener('click', () => { player.seek(at); player.setPlaying(false); });
-        item.append(button);
-        return item;
-    }));
+    $('#commands').replaceChildren(
+        ...commands.slice(from, next + 8).map(([at, command], i) => {
+            const item = document.createElement('li');
+            const button = document.createElement('button');
+            button.type = 'button';
+            const { type, ...rest } = command;
+            button.textContent = `${at} · ${type}${Object.keys(rest).length ? ' ' + JSON.stringify(rest) : ''}`;
+            if (from + i === next) item.className = 'next';
+            button.addEventListener('click', () => {
+                player.seek(at);
+                player.setPlaying(false);
+            });
+            item.append(button);
+            return item;
+        }),
+    );
 }
 
 let lastShown = -1;
@@ -134,9 +216,15 @@ function showState() {
     const n = (value: number) => value.toFixed(1);
     fill($('#state-info'), [
         ['tick', `${state.tick} · ${state.time.toFixed(2)}s`],
-        ['mode', `${state.mode}${state.lossReason ? ` (${state.lossReason})` : ''}`],
+        [
+            'mode',
+            `${state.mode}${state.lossReason ? ` (${state.lossReason})` : ''}`,
+        ],
         ['stage', `${state.stage} · flag ${state.checkpoint}`],
-        ['player', `x ${n(p.x)} y ${n(p.y)} · v ${n(p.vx)}, ${n(p.vy)} · a ${p.a.toFixed(2)}`],
+        [
+            'player',
+            `x ${n(p.x)} y ${n(p.y)} · v ${n(p.vx)}, ${n(p.vy)} · a ${p.a.toFixed(2)}`,
+        ],
         ['ground', String(state.ground)],
         ['focus', String(state.focus)],
         ['keys', state.keys.join(', ') || '—'],
@@ -145,12 +233,20 @@ function showState() {
     showCommands(state.tick);
 }
 
-$('#open-file').addEventListener('click', () => $<HTMLInputElement>('#file').click());
-$<HTMLInputElement>('#file').addEventListener('change', async event => {
+$('#open-file').addEventListener('click', () =>
+    $<HTMLInputElement>('#file').click(),
+);
+$<HTMLInputElement>('#file').addEventListener('change', (event) => {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
-    if (file) load(await file.text(), file.name);
+    if (file) {
+        file.text()
+            .then((text) => load(text, file.name))
+            .catch(() => {
+                status.textContent = t('replay.badFile');
+            });
+    }
 });
 function loadBrowser() {
     const text = loadBrowserData();
@@ -158,22 +254,45 @@ function loadBrowser() {
     else status.textContent = t('tool.noBrowserData');
 }
 $('#browser-data').addEventListener('click', loadBrowser);
-$('#load-paste').addEventListener('click', () => load($<HTMLTextAreaElement>('#paste').value, t('tool.paste')));
+$('#load-paste').addEventListener('click', () =>
+    load($<HTMLTextAreaElement>('#paste').value, t('tool.paste')),
+);
 sourcesSelect.addEventListener('change', () => {
     const source = sources[Number(sourcesSelect.value)];
     if (source) open(source);
 });
-document.addEventListener('dragover', event => event.preventDefault());
-document.addEventListener('drop', async event => {
+document.addEventListener('dragover', (event) => event.preventDefault());
+document.addEventListener('drop', (event) => {
     event.preventDefault();
     const file = event.dataTransfer?.files[0];
-    if (file) load(await file.text(), file.name);
+    if (file) {
+        file.text()
+            .then((text) => load(text, file.name))
+            .catch(() => {
+                status.textContent = t('replay.badFile');
+            });
+    }
 });
 $('#download-replay').addEventListener('click', () => {
-    if (selected) downloadJson(`the-chair-replay-stage${selected.file.start.stage}-${stamp()}.json`, selected.file);
+    if (selected) {
+        downloadJson(
+            `the-chair-replay-stage${selected.file.start.stage}-${stamp()}.json`,
+            selected.file,
+        );
+    }
 });
-$('#copy-state').addEventListener('click', async () => {
-    if (player.state) status.textContent = t(await copyText(JSON.stringify(player.state, null, 2)) ? 'replay.copied' : 'replay.copyFailed');
+$('#copy-state').addEventListener('click', () => {
+    if (player.state) {
+        copyText(JSON.stringify(player.state, null, 2))
+            .then((copied) => {
+                status.textContent = t(
+                    copied ? 'replay.copied' : 'replay.copyFailed',
+                );
+            })
+            .catch(() => {
+                status.textContent = t('replay.copyFailed');
+            });
+    }
 });
 
 let last: number | null = null;
@@ -190,4 +309,8 @@ function frame(ms: number) {
 requestAnimationFrame(frame);
 if (loadBrowserData()) loadBrowser();
 
-(window as Window & { replayTool?: unknown }).replayTool = { load, player, sources: () => sources };
+(window as Window & { replayTool?: unknown }).replayTool = {
+    load,
+    player,
+    sources: () => sources,
+};

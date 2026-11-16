@@ -15,13 +15,18 @@ const backend = document.querySelector<HTMLElement>('#renderer')!;
 const locale: Locale = browserLocale();
 keepLangOnLinks();
 const renderer = createRenderer(root, () => locale);
-const splashCanvas = document.querySelector<HTMLCanvasElement>('#splash-preview')!;
+const splashCanvas =
+    document.querySelector<HTMLCanvasElement>('#splash-preview')!;
 const splash = createSplashPlayer(splashCanvas);
 
-for (const scene of previewScenes) select.add(new Option(scene.label, scene.id));
+for (const scene of previewScenes) {
+    select.add(new Option(scene.label, scene.id));
+}
 const requested = new URLSearchParams(location.search).get('motion');
 const requestedTime = Number(new URLSearchParams(location.search).get('t'));
-let scene: PreviewScene = (previewScenes.find(item => item.id === requested) ?? previewScenes[0]).create();
+let scene: PreviewScene = (
+    previewScenes.find((item) => item.id === requested) ?? previewScenes[0]
+).create();
 let time = 0;
 let playing = false;
 let previousFrame: number | null = null;
@@ -36,9 +41,26 @@ function render() {
         const { state, effects } = scene.sample(time);
         const width = root.querySelector('canvas')!.clientWidth;
         const worldWidth = width < 520 ? 540 : Math.max(760, width);
-        if (scene.opening) renderer.draw(state, effects, undefined, scene.opening(time));
-        else if (scene.title) renderer.draw(state, effects, undefined, undefined, undefined, time);
-        else renderer.draw(state, effects, (scene.follow ? state.player.x : scene.focusX) - worldWidth / 2, undefined, scene.talk?.(time, locale));
+        if (scene.opening) {
+            renderer.draw(state, effects, undefined, scene.opening(time));
+        } else if (scene.title) {
+            renderer.draw(
+                state,
+                effects,
+                undefined,
+                undefined,
+                undefined,
+                time,
+            );
+        } else {
+            renderer.draw(
+                state,
+                effects,
+                (scene.follow ? state.player.x : scene.focusX) - worldWidth / 2,
+                undefined,
+                scene.talk?.(time, locale),
+            );
+        }
     }
     slider.value = String(time);
     value.value = `${time.toFixed(2)} s`;
@@ -73,7 +95,10 @@ function selectScene(next: PreviewScene, at = 0) {
         const button = document.createElement('button');
         button.type = 'button';
         button.textContent = `${marker.label} · ${marker.at.toFixed(2)} s`;
-        button.addEventListener('click', () => { pause(); seek(marker.at); });
+        button.addEventListener('click', () => {
+            pause();
+            seek(marker.at);
+        });
         markers.append(button);
     }
     const url = new URL(location.href);
@@ -94,12 +119,21 @@ function frame(ms: number) {
 }
 
 select.addEventListener('change', () => {
-    const next = previewScenes.find(item => item.id === select.value);
+    const next = previewScenes.find((item) => item.id === select.value);
     if (next) selectScene(next.create());
 });
-slider.addEventListener('input', () => { pause(); seek(slider.valueAsNumber); });
-document.querySelector('#previous')!.addEventListener('click', () => { pause(); seek(time - 1 / 60); });
-document.querySelector('#next')!.addEventListener('click', () => { pause(); seek(time + 1 / 60); });
+slider.addEventListener('input', () => {
+    pause();
+    seek(slider.valueAsNumber);
+});
+document.querySelector('#previous')!.addEventListener('click', () => {
+    pause();
+    seek(time - 1 / 60);
+});
+document.querySelector('#next')!.addEventListener('click', () => {
+    pause();
+    seek(time + 1 / 60);
+});
 playButton.addEventListener('click', () => {
     if (playing) {
         pause();
@@ -111,16 +145,23 @@ playButton.addEventListener('click', () => {
     playButton.setAttribute('aria-label', 'Pause animation');
     scheduledFrame = requestAnimationFrame(frame);
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) pause();
+});
 const resize = new ResizeObserver(() => requestAnimationFrame(render));
 resize.observe(root);
-window.addEventListener('pagehide', () => { resize.disconnect(); renderer.destroy(); splash.destroy(); });
+window.addEventListener('pagehide', () => {
+    resize.disconnect();
+    renderer.destroy();
+    splash.destroy();
+});
 selectScene(scene, Number.isFinite(requestedTime) ? requestedTime : 0);
 void renderer.ready.then(() => {
-    backend.textContent = renderer.info().renderer === 'thorvg' ? 'ThorVG' : 'Canvas 2D';
+    backend.textContent =
+        renderer.info().renderer === 'thorvg' ? 'ThorVG' : 'Canvas 2D';
     render();
 });
-void splash.ready.then(render).catch(error => {
+void splash.ready.then(render).catch((error) => {
     console.error('Splash preview unavailable', error);
     splashCanvas.hidden = true;
 });

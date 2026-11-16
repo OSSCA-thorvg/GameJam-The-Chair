@@ -15,7 +15,16 @@ export const office: StageDefinition = {
     ],
     checkpoints: [
         startMark({ x: 100, y: F - 28 }),
-        { x: 1400, y: F - 28, area: { left: 1400, right: LEVEL.bin.a - 25, top: -Infinity, bottom: Infinity } },
+        {
+            x: 1400,
+            y: F - 28,
+            area: {
+                left: 1400,
+                right: LEVEL.bin.a - 25,
+                top: -Infinity,
+                bottom: Infinity,
+            },
+        },
     ],
     checkpointRule: 'pass',
     people: [
