@@ -13,11 +13,11 @@ const {
 } = await loadSource(`
     export { createRenderCtx } from './tests/support/render-context';
     export { player } from './src/render/scene/player';
-    export { sprayPlume } from './src/render/scene/spray';
+    export { sprayPlume } from './src/render/scene/effects/spray';
     export { drawSky } from './src/render/scene/sky';
-    export { skyWindResponse } from './src/render/scene/sky-wind-response';
+    export { skyWindResponse } from './src/render/scene/sky/wind-response';
     export { previewScenes } from './src/preview-scenes';
-    export { skyCoursePlatform } from './src/render/scene/sky-course-art';
+    export { skyCoursePlatform } from './src/render/scene/sky/course-art';
 `);
 const scene = previewScenes
     .find((scene) => scene.id === 'sky-wind-feedback')

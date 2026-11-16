@@ -1,7 +1,7 @@
 import { createGame } from '../game/game';
 import type { Input } from '../game/types';
 import { STAGE_FIVE } from '../game/stages/orbit/data';
-import { ORBIT_ENDING } from '../render/scene/orbit-ending';
+import { ORBIT_ENDING } from '../render/scene/orbit/ending';
 import { createEffects } from '../render/effects';
 import { type PreviewScene } from './types';
 import { recordedScene, capture, stepGame, moveToward } from './recording';

@@ -11,7 +11,7 @@ const {
     STAGE_FOUR,
 } = await bundled({
     stdin: {
-        contents: `export { createGame } from './src/game/game'; export { createRenderCtx } from './tests/support/render-context'; export { drawRooftop } from './src/render/scene/rooftop'; export { drawCloudStart } from './src/render/scene/clouds'; export { STAGE_THREE } from './src/game/stages/rooftop/data'; export { STAGE_FOUR } from './src/game/stages/sky/data';`,
+        contents: `export { createGame } from './src/game/game'; export { createRenderCtx } from './tests/support/render-context'; export { drawRooftop } from './src/render/scene/rooftop'; export { drawCloudStart } from './src/render/scene/sky/clouds'; export { STAGE_THREE } from './src/game/stages/rooftop/data'; export { STAGE_FOUR } from './src/game/stages/sky/data';`,
         resolveDir: process.cwd(),
     },
     bundle: true,

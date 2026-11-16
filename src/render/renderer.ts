@@ -12,23 +12,23 @@ import {
     type RenderCtx,
 } from './context';
 import { drawOrbit } from './scene/orbit';
-import { drawWorld } from './scene/world';
+import { drawWorld } from './scene/office/world';
 import { drawBuilding } from './scene/building';
 import { drawRooftop } from './scene/rooftop';
-import { drawCloudStart } from './scene/clouds';
-import { focusVignette } from './scene/focus-vignette';
-import { drawStageTitle, drawTalk } from './scene/talk';
+import { drawCloudStart } from './scene/sky/clouds';
+import { focusVignette } from './scene/effects/focus-vignette';
+import { drawStageTitle, drawTalk } from './scene/shared/talk';
 import type { SceneTalk } from './types';
 import { createPaintPool, paint, thorvgTextWidth } from './paint';
 import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
-import { drawTitle } from './scene/title';
+import { drawTitle } from './scene/shared/title';
 import {
     deathShotBurst,
     deathShotCloseness,
     DEATH_SHOT,
     type DeathShot,
 } from './death-shot';
-import { deathBurst } from './scene/death-burst';
+import { deathBurst } from './scene/effects/death-burst';
 import {
     resetRenderStats,
     type LayerOverrides,

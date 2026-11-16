@@ -217,31 +217,17 @@ export type CorridorResult = {
     tripped: number;
 };
 
-export function corridorStep(
-    input: CorridorInput,
+function updateTyping(
+    c: Corridor,
+    playerX: number,
     dt: number,
-    previousX: number,
-): CorridorResult {
-    const c = clonePlain(input.corridor) as Corridor;
-    const furniture: Furniture[] = input.furniture.map((chair) => ({
-        ...chair,
-    }));
-    const p = { ...input.p };
-    const ground = input.ground;
-    let seed = input.rng;
-    let stopRider = false;
-    let kick: CorridorResult['kick'] = null;
-    let tripped = -1;
-    const random = () => {
-        const draw = nextRandom(seed);
-        seed = draw.state;
-        return draw.value;
-    };
+    random: () => number,
+) {
     c.typingCooldown = Math.max(0, c.typingCooldown - dt);
     for (const office of c.offices) {
         office.life = Math.max(0, office.life - dt);
         office.cooldown = Math.max(0, office.cooldown - dt);
-        const nearby = Math.abs(p.x - office.x) < 190;
+        const nearby = Math.abs(playerX - office.x) < 190;
         if (nearby && !office.nearby) office.cooldown = 0;
         office.nearby = nearby;
     }
@@ -265,7 +251,15 @@ export function corridorStep(
             c.typingCooldown = office.life + 0.3;
         }
     }
-    if (p.x > STAGE_TWO.dispatch.trigger) c.dispatchStarted = true;
+}
+
+function dispatchChairs(
+    c: Corridor,
+    furniture: Furniture[],
+    playerX: number,
+    dt: number,
+) {
+    if (playerX > STAGE_TWO.dispatch.trigger) c.dispatchStarted = true;
     if (c.dispatchStarted) {
         c.dispatchAge += dt;
         furniture.forEach((chair, i) => {
@@ -276,12 +270,15 @@ export function corridorStep(
             }
         });
     }
-    const allReleased = furniture.every((chair) => chair.released);
-    const front = furniture[0],
-        back = furniture[2];
-    const frontX = front.x,
-        middleX = furniture[1].x;
-    const nearby = p.x > back.x - 240 && p.x < front.x + 240;
+}
+
+function updateConvoy(
+    c: Corridor,
+    furniture: Furniture[],
+    p: Player,
+    ground: boolean,
+    allReleased: boolean,
+) {
     const leading =
         allReleased &&
         ground &&
@@ -310,6 +307,19 @@ export function corridorStep(
         for (const chair of furniture) chair.vx = 360;
         p.vx = 360;
     }
+}
+
+function moveChairs(
+    c: Corridor,
+    furniture: Furniture[],
+    p: Player,
+    {
+        length,
+        previousX,
+        dt,
+    }: { length: number; previousX: number; dt: number },
+) {
+    const front = furniture[0];
     const minimumSpeed = 70;
     const rookieAway = c.lesson >= 0 && c.convoy === 'free';
     for (const [index, chair] of furniture.entries()) {
@@ -347,10 +357,7 @@ export function corridorStep(
                       Math.min(cruise + 170, cruise + (target - chair.x) * 2),
                   );
         chair.vx += (speed - chair.vx) * (1 - Det.exp(-4 * dt));
-        chair.x = Math.min(
-            input.length + 450 + index * 130,
-            chair.x + chair.vx * dt,
-        );
+        chair.x = Math.min(length + 450 + index * 130, chair.x + chair.vx * dt);
         if (c.convoy === 'free' && p.y > 350 && Math.abs(p.x - chair.x) < 58) {
             const side = previousX < chair.x ? 1 : -1;
             chair.x +=
@@ -361,13 +368,31 @@ export function corridorStep(
         }
         chair.y = 420;
     }
+}
+
+type ConvoyMovement = Pick<
+    CorridorInput,
+    'ground' | 'steering' | 'steer' | 'length'
+> & { previousX: number; dt: number };
+
+function moveConvoy(
+    c: Corridor,
+    furniture: Furniture[],
+    p: Player,
+    { ground, steering, steer, length, previousX, dt }: ConvoyMovement,
+) {
+    const front = furniture[0],
+        back = furniture[2];
+    const frontX = front.x;
+    const middleX = furniture[1].x;
+    moveChairs(c, furniture, p, { length, previousX, dt });
+    const captiveBoarding =
+        c.departure.kind === 'boarding' && c.departure.reason === 'abduction';
     const followsBoarding =
-        captiveBoarding && c.convoy === 'airborne' && !input.steering;
+        captiveBoarding && c.convoy === 'airborne' && !steering;
     if (isJoinedConvoy(c.convoy) || followsBoarding) {
         const shuffle =
-            isJoinedConvoy(c.convoy) && ground
-                ? input.steer * STAGE_TWO.shuffle
-                : 0;
+            isJoinedConvoy(c.convoy) && ground ? steer * STAGE_TWO.shuffle : 0;
         const nextX = previousX + front.x - frontX + shuffle * dt;
         const behindMiddle = previousX < middleX;
         let low: number;
@@ -403,6 +428,11 @@ export function corridorStep(
     ) {
         c.convoy = 'free';
     }
+}
+
+function tripRider(c: Corridor, p: Player, frontSpeed: number) {
+    let kick: CorridorResult['kick'] = null;
+    let tripped = -1;
     const touched = touchedObstacle(p);
     if (touched >= 0 && touched !== c.tripped) {
         const joined =
@@ -413,7 +443,7 @@ export function corridorStep(
         tripped = touched;
         p.vy = -ORIENTATION.kick;
         p.y -= 4;
-        p.vx = (joined ? front.vx : p.vx) * ORIENTATION.drag;
+        p.vx = (joined ? frontSpeed : p.vx) * ORIENTATION.drag;
         p.w += ORIENTATION.spin;
         c.convoy = 'free';
         if (c.chat.kind === 'orientation') {
@@ -428,6 +458,21 @@ export function corridorStep(
         }
     }
     if (tripped >= 0) c.tripped = tripped;
+    return { kick, tripped };
+}
+
+function updateChairChat(
+    c: Corridor,
+    furniture: Furniture[],
+    p: Player,
+    {
+        allReleased,
+        nearby,
+        dt,
+    }: { allReleased: boolean; nearby: boolean; dt: number },
+) {
+    const front = furniture[0],
+        back = furniture[2];
     if (
         c.departure.kind === 'none' &&
         allReleased &&
@@ -506,6 +551,21 @@ export function corridorStep(
             c.chat = { kind: 'ramp', age: 0 };
         }
     }
+}
+
+function updateDeparture(
+    c: Corridor,
+    furniture: Furniture[],
+    p: Player,
+    {
+        ground,
+        allReleased,
+        dt,
+    }: { ground: boolean; allReleased: boolean; dt: number },
+) {
+    const front = furniture[0],
+        back = furniture[2];
+    let stopRider = false;
     const recognized =
         c.lesson >= 0 ||
         c.chat.kind === 'wary' ||
@@ -584,5 +644,47 @@ export function corridorStep(
         };
         if (!abducting) c.convoy = 'free';
     }
+    return stopRider;
+}
+
+export function corridorStep(
+    input: CorridorInput,
+    dt: number,
+    previousX: number,
+): CorridorResult {
+    const c = clonePlain(input.corridor) as Corridor;
+    const furniture: Furniture[] = input.furniture.map((chair) => ({
+        ...chair,
+    }));
+    const p = { ...input.p };
+    const ground = input.ground;
+    let seed = input.rng;
+    const random = () => {
+        const draw = nextRandom(seed);
+        seed = draw.state;
+        return draw.value;
+    };
+    updateTyping(c, p.x, dt, random);
+    dispatchChairs(c, furniture, p.x, dt);
+    const allReleased = furniture.every((chair) => chair.released);
+    const front = furniture[0],
+        back = furniture[2];
+    const nearby = p.x > back.x - 240 && p.x < front.x + 240;
+    updateConvoy(c, furniture, p, ground, allReleased);
+    moveConvoy(c, furniture, p, {
+        ground,
+        steering: input.steering,
+        steer: input.steer,
+        previousX,
+        length: input.length,
+        dt,
+    });
+    const { kick, tripped } = tripRider(c, p, front.vx);
+    updateChairChat(c, furniture, p, { allReleased, nearby, dt });
+    const stopRider = updateDeparture(c, furniture, p, {
+        ground,
+        allReleased,
+        dt,
+    });
     return { corridor: c, furniture, p, rng: seed, stopRider, kick, tripped };
 }

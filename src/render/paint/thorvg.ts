@@ -77,6 +77,356 @@ export function thorvgTextWidth(TVG: ThorVGNamespace) {
     };
 }
 
+function blendOf(TVG: ThorVGNamespace, blend: Blend | undefined) {
+    switch (blend) {
+        case 'multiply':
+            return TVG.BlendMethod.Multiply;
+        case 'screen':
+            return TVG.BlendMethod.Screen;
+        case 'add':
+            return TVG.BlendMethod.Add;
+        case 'overlay':
+            return TVG.BlendMethod.Overlay;
+        case 'normal':
+        case undefined:
+            return TVG.BlendMethod.Normal;
+    }
+}
+
+function fillOf(
+    TVG: ThorVGNamespace,
+    g: Gradient,
+): LinearGradient | RadialGradient {
+    const fill =
+        g.radius === undefined
+            ? new TVG.LinearGradient(...g.from, ...g.to)
+            : new TVG.RadialGradient(...g.from, g.radius);
+    fill.setStops(...g.stops);
+    return fill;
+}
+
+function tracePath(s: Shape, cmd: PathCommand) {
+    s.reset();
+    s.moveTo(...cmd.points[0]);
+    for (let j = 1; j < cmd.points.length; j++) s.lineTo(...cmd.points[j]);
+    for (const c of cmd.curves || []) s.cubicTo(...c);
+    if (!cmd.open) s.close();
+}
+
+function applyShape(
+    ctx: Pick<RenderCtx, 'rgba'>,
+    TVG: ThorVGNamespace,
+    styled: PaintPool['styled'],
+    s: Shape,
+    cmd: PathCommand,
+) {
+    tracePath(s, cmd);
+    if (cmd.fill === null) {
+        s.fill(0, 0, 0, 0);
+    } else if (typeof cmd.fill === 'string') {
+        s.fill(...ctx.rgba(cmd.fill));
+    } else {
+        const g = fillOf(TVG, cmd.fill);
+        s.fill(g);
+        g.dispose();
+    }
+    const style = styled.get(s) ?? {
+        stroked: false,
+        trimmed: false,
+        blended: false,
+    };
+    if (cmd.stroke) {
+        const k = cmd.stroke;
+        const gradient =
+            typeof k.color === 'string' ? null : fillOf(TVG, k.color);
+        s.stroke({
+            width: k.width,
+            ...(gradient
+                ? { gradient }
+                : { color: ctx.rgba(k.color as string) }),
+            cap: k.cap === 'round' ? TVG.StrokeCap.Round : TVG.StrokeCap.Butt,
+            join: TVG.StrokeJoin.Round,
+            dash: k.dash ?? [],
+            dashOffset: k.dashOffset ?? 0,
+        });
+        gradient?.dispose();
+        style.stroked = true;
+    } else if (style.stroked) {
+        s.stroke({ width: 0, dash: [] });
+        style.stroked = false;
+    }
+    if (cmd.trim) {
+        s.trimPath(cmd.trim[0], cmd.trim[1], true);
+        style.trimmed = true;
+    } else if (style.trimmed) {
+        s.trimPath(0, 1, true);
+        style.trimmed = false;
+    }
+    if (cmd.blend && cmd.blend !== 'normal') {
+        s.blend(blendOf(TVG, cmd.blend));
+        style.blended = true;
+    } else if (style.blended) {
+        s.blend(TVG.BlendMethod.Normal);
+        style.blended = false;
+    }
+    if (style.stroked || style.trimmed || style.blended) {
+        styled.set(s, style);
+    } else styled.delete(s);
+    s.visible(true);
+}
+
+function applyText(
+    ctx: Pick<RenderCtx, 'rgba'>,
+    slot: TextSlot,
+    spec: TextSpec,
+) {
+    if (slot.font !== spec.font) {
+        slot.back.font(spec.font);
+        slot.front.font(spec.font);
+        slot.font = spec.font;
+    }
+    if (slot.content !== spec.content) {
+        slot.back.text(spec.content);
+        slot.front.text(spec.content);
+        slot.content = spec.content;
+    }
+    const c = Math.cos(spec.rotation),
+        s = Math.sin(spec.rotation);
+    const matrix = {
+        e11: c,
+        e12: -s,
+        e13: spec.x,
+        e21: s,
+        e22: c,
+        e23: spec.y,
+        e31: 0,
+        e32: 0,
+        e33: 1,
+    };
+    // ThorVG 1.1.3 Text sizes are points (96/72 px each); TextSpec sizes
+    // are CSS px like Canvas2D.
+    const size = spec.size * PX_TO_PT;
+    const [r, g, b, a] = ctx.rgba(spec.fill);
+    const fade = spec.opacity ?? 1;
+    slot.front
+        .fontSize(size)
+        .fill(r, g, b)
+        .opacity(Math.round(a * fade))
+        .transform(matrix)
+        .visible(true);
+    if (spec.outline) {
+        const [or, og, ob, oa] = ctx.rgba(spec.outline.color);
+        slot.back
+            .fontSize(size)
+            .fill(or, og, ob)
+            .outline(spec.outline.width, or, og, ob)
+            .opacity(Math.round(oa * fade))
+            .transform(matrix)
+            .visible(true);
+    } else {
+        slot.back.visible(false);
+    }
+}
+
+type LayerMetrics = {
+    shapeCount: number;
+    activeCount: number;
+    area: number;
+    effectScale: number;
+};
+
+function recordLayerStats(
+    stats: RenderStats,
+    spec: LayerSpec,
+    { shapeCount, activeCount, area, effectScale }: LayerMetrics,
+) {
+    const blurred =
+        !!spec.blur || (!!spec.motionBlur && spec.motionBlur.distance > 0.5);
+    stats.layers++;
+    stats.layerShapes += shapeCount;
+    stats.parkedShapes += shapeCount - activeCount;
+    if (spec.clip) stats.clips++;
+    if (spec.mask) stats.masks++;
+    if (spec.blur) {
+        stats.gaussianBlurs++;
+        stats.blurAmount += spec.blur * effectScale;
+    }
+    if (spec.motionBlur && spec.motionBlur.distance > 0.5) {
+        stats.motionBlurs++;
+        stats.blurAmount += spec.motionBlur.distance * effectScale;
+    }
+    if (blurred) stats.blurArea += area;
+    const effects: string[] = [];
+    if (spec.opacity !== undefined && spec.opacity < 1) {
+        effects.push(`α${spec.opacity.toFixed(2)}`);
+    }
+    if (spec.blend && spec.blend !== 'normal') effects.push(spec.blend);
+    if (spec.blur) effects.push(`blur${spec.blur}`);
+    if (spec.motionBlur && spec.motionBlur.distance > 0.5) {
+        effects.push('motion');
+    }
+    if (effectScale < 1) {
+        effects.push(`budget${Math.round(effectScale * 100)}%`);
+    }
+    if (spec.clip) effects.push('clip');
+    if (spec.mask) effects.push(spec.maskInvert ? 'invmask' : 'mask');
+    stats.layerList.push({ key: spec.key, shapes: activeCount, area, effects });
+}
+
+function applyLayerEffects(
+    ctx: Pick<RenderCtx, 'rgba'>,
+    TVG: ThorVGNamespace,
+    slot: LayerSlot,
+    spec: LayerSpec,
+    effectScale: number,
+) {
+    const { scene } = slot;
+    scene.resetEffects();
+    const quality = Math.max(20, Math.round(45 * effectScale));
+    if (spec.blur) {
+        scene.gaussianBlur(spec.blur * effectScale, 0, 0, quality);
+    }
+    if (spec.motionBlur && spec.motionBlur.distance > 0.5) {
+        scene.motionBlur(
+            spec.motionBlur.distance * effectScale,
+            spec.motionBlur.angle,
+            quality,
+        );
+    }
+    scene.blend(blendOf(TVG, spec.blend));
+    scene.opacity(
+        Math.round(Math.max(0, Math.min(1, spec.opacity ?? 1)) * 255),
+    );
+    if (spec.clip) {
+        if (!slot.clip) {
+            slot.clip = new TVG.Shape();
+            scene.clip(slot.clip);
+        }
+        tracePath(slot.clip, spec.clip);
+        slot.clip.fill(255, 255, 255, 255);
+    }
+    if (spec.mask) {
+        if (!slot.mask) {
+            slot.mask = new TVG.Shape();
+            slot.maskInvert = !!spec.maskInvert;
+            scene.mask(
+                slot.mask,
+                slot.maskInvert
+                    ? TVG.MaskMethod.InvAlpha
+                    : TVG.MaskMethod.Alpha,
+            );
+        }
+        const fill = spec.mask.fill;
+        tracePath(slot.mask, spec.mask);
+        if (fill === null) slot.mask.fill(255, 255, 255, 255);
+        else if (typeof fill === 'string') {
+            slot.mask.fill(...ctx.rgba(fill));
+        } else {
+            const g = fillOf(TVG, fill);
+            slot.mask.fill(g);
+            g.dispose();
+        }
+    }
+}
+
+function syncLayer(
+    ctx: Pick<RenderCtx, 'rgba' | 'W' | 'H'>,
+    TVG: ThorVGNamespace,
+    pool: PaintPool,
+    item: Extract<Item, { layer: LayerSpec }>,
+    stats?: RenderStats,
+) {
+    let slot = pool.layers.get(item.key);
+    if (!slot) {
+        slot = {
+            scene: new TVG.Scene(),
+            shapes: [],
+            clip: null,
+            mask: null,
+            maskInvert: false,
+            retainedGeometry: null,
+        };
+        pool.layers.set(item.key, slot);
+    }
+    const { scene, shapes } = slot;
+    const spec = item.layer;
+    const extent =
+        stats || spec.effectBudget
+            ? [Infinity, Infinity, -Infinity, -Infinity]
+            : undefined;
+    if (spec.retained && extent) {
+        const bounds = spec.retained.bounds;
+        extent[0] = Math.max(0, bounds.left);
+        extent[1] = Math.max(0, bounds.top);
+        extent[2] = Math.min(ctx.W, bounds.right);
+        extent[3] = Math.min(ctx.H, bounds.bottom);
+    }
+    const retainedReady =
+        !!spec.retained && slot.retainedGeometry === spec.retained.geometry;
+    let i = 0;
+    let anchor: [number, number] | null = null;
+    for (const cmd of item.cmds) {
+        const box: [number, number] | null = spec.retained
+            ? [
+                  Math.max(0, spec.retained.bounds.left),
+                  Math.max(0, spec.retained.bounds.top),
+              ]
+            : canvasBox(cmd, ctx.W, ctx.H, extent);
+        if (!box) continue;
+        anchor ??= box;
+        let s = shapes[i];
+        if (!s) {
+            s = new TVG.Shape();
+            shapes.push(s);
+            scene.add(s);
+        }
+        if (!retainedReady) applyShape(ctx, TVG, pool.styled, s, cmd);
+        i++;
+    }
+    if (spec.retained) {
+        scene.transform(spec.retained.transform);
+        slot.retainedGeometry = spec.retained.geometry;
+    }
+    // Re-adding shapes leaks ThorVG references; park unused shapes inside
+    // the drawn area.
+    const [px, py] = anchor ?? [0, 0];
+    const area =
+        extent && extent[2] > extent[0] && extent[3] > extent[1]
+            ? (extent[2] - extent[0]) * (extent[3] - extent[1])
+            : 0;
+    const effectScale = spec.effectBudget
+        ? effectScaleForArea(
+              area,
+              spec.effectBudget.area,
+              spec.effectBudget.minScale,
+          )
+        : 1;
+    if (stats) {
+        recordLayerStats(stats, spec, {
+            shapeCount: shapes.length,
+            activeCount: i,
+            area,
+            effectScale,
+        });
+    }
+    for (; i < shapes.length; i++) {
+        applyShape(ctx, TVG, pool.styled, shapes[i], {
+            kind: 'path',
+            points: [
+                [px, py],
+                [px + 1, py],
+                [px + 1, py + 1],
+                [px, py + 1],
+            ],
+            fill: '#00000001',
+        });
+    }
+
+    applyLayerEffects(ctx, TVG, slot, spec, effectScale);
+    scene.visible(true);
+    return scene;
+}
+
 export function paintThorvg(
     ctx: RenderCtx,
     TVG: ThorVGNamespace,
@@ -86,143 +436,6 @@ export function paintThorvg(
     stats?: RenderStats,
 ) {
     const syncStart = stats ? performance.now() : 0;
-    const blendOf = (blend: Blend | undefined) => {
-        switch (blend) {
-            case 'multiply':
-                return TVG.BlendMethod.Multiply;
-            case 'screen':
-                return TVG.BlendMethod.Screen;
-            case 'add':
-                return TVG.BlendMethod.Add;
-            case 'overlay':
-                return TVG.BlendMethod.Overlay;
-            case 'normal':
-            case undefined:
-                return TVG.BlendMethod.Normal;
-        }
-    };
-    const fillOf = (g: Gradient): LinearGradient | RadialGradient => {
-        const fill =
-            g.radius === undefined
-                ? new TVG.LinearGradient(...g.from, ...g.to)
-                : new TVG.RadialGradient(...g.from, g.radius);
-        fill.setStops(...g.stops);
-        return fill;
-    };
-    const tracePath = (s: Shape, cmd: PathCommand) => {
-        s.reset();
-        s.moveTo(...cmd.points[0]);
-        for (let j = 1; j < cmd.points.length; j++) s.lineTo(...cmd.points[j]);
-        for (const c of cmd.curves || []) s.cubicTo(...c);
-        if (!cmd.open) s.close();
-    };
-    const apply = (s: Shape, cmd: PathCommand) => {
-        tracePath(s, cmd);
-        if (cmd.fill === null) {
-            s.fill(0, 0, 0, 0);
-        } else if (typeof cmd.fill === 'string') {
-            s.fill(...ctx.rgba(cmd.fill));
-        } else {
-            const g = fillOf(cmd.fill);
-            s.fill(g);
-            g.dispose();
-        }
-        const style = pool.styled.get(s) ?? {
-            stroked: false,
-            trimmed: false,
-            blended: false,
-        };
-        if (cmd.stroke) {
-            const k = cmd.stroke;
-            const gradient =
-                typeof k.color === 'string' ? null : fillOf(k.color);
-            s.stroke({
-                width: k.width,
-                ...(gradient
-                    ? { gradient }
-                    : { color: ctx.rgba(k.color as string) }),
-                cap:
-                    k.cap === 'round'
-                        ? TVG.StrokeCap.Round
-                        : TVG.StrokeCap.Butt,
-                join: TVG.StrokeJoin.Round,
-                dash: k.dash ?? [],
-                dashOffset: k.dashOffset ?? 0,
-            });
-            gradient?.dispose();
-            style.stroked = true;
-        } else if (style.stroked) {
-            s.stroke({ width: 0, dash: [] });
-            style.stroked = false;
-        }
-        if (cmd.trim) {
-            s.trimPath(cmd.trim[0], cmd.trim[1], true);
-            style.trimmed = true;
-        } else if (style.trimmed) {
-            s.trimPath(0, 1, true);
-            style.trimmed = false;
-        }
-        if (cmd.blend && cmd.blend !== 'normal') {
-            s.blend(blendOf(cmd.blend));
-            style.blended = true;
-        } else if (style.blended) {
-            s.blend(TVG.BlendMethod.Normal);
-            style.blended = false;
-        }
-        if (style.stroked || style.trimmed || style.blended) {
-            pool.styled.set(s, style);
-        } else pool.styled.delete(s);
-        s.visible(true);
-    };
-
-    const applyText = (slot: TextSlot, spec: TextSpec) => {
-        if (slot.font !== spec.font) {
-            slot.back.font(spec.font);
-            slot.front.font(spec.font);
-            slot.font = spec.font;
-        }
-        if (slot.content !== spec.content) {
-            slot.back.text(spec.content);
-            slot.front.text(spec.content);
-            slot.content = spec.content;
-        }
-        const c = Math.cos(spec.rotation),
-            s = Math.sin(spec.rotation);
-        const matrix = {
-            e11: c,
-            e12: -s,
-            e13: spec.x,
-            e21: s,
-            e22: c,
-            e23: spec.y,
-            e31: 0,
-            e32: 0,
-            e33: 1,
-        };
-        // ThorVG 1.1.3 Text sizes are points (96/72 px each); TextSpec sizes
-        // are CSS px like Canvas2D.
-        const size = spec.size * PX_TO_PT;
-        const [r, g, b, a] = ctx.rgba(spec.fill);
-        const fade = spec.opacity ?? 1;
-        slot.front
-            .fontSize(size)
-            .fill(r, g, b)
-            .opacity(Math.round(a * fade))
-            .transform(matrix)
-            .visible(true);
-        if (spec.outline) {
-            const [or, og, ob, oa] = ctx.rgba(spec.outline.color);
-            slot.back
-                .fontSize(size)
-                .fill(or, og, ob)
-                .outline(spec.outline.width, or, og, ob)
-                .opacity(Math.round(oa * fade))
-                .transform(matrix)
-                .visible(true);
-        } else {
-            slot.back.visible(false);
-        }
-    };
 
     let topCount = 0;
     let textCount = 0;
@@ -266,177 +479,18 @@ export function paintThorvg(
     for (const item of items) {
         if ('cmd' in item) {
             const s = pool.top[topIndex++];
-            apply(s, item.cmd);
+            applyShape(ctx, TVG, pool.styled, s, item.cmd);
             order.push(s);
             continue;
         }
         if ('text' in item) {
             const slot = pool.texts[textIndex++];
-            applyText(slot, item.text);
+            applyText(ctx, slot, item.text);
             order.push(slot.back, slot.front);
             if (stats) stats.texts++;
             continue;
         }
-        let slot = pool.layers.get(item.key);
-        if (!slot) {
-            slot = {
-                scene: new TVG.Scene(),
-                shapes: [],
-                clip: null,
-                mask: null,
-                maskInvert: false,
-                retainedGeometry: null,
-            };
-            pool.layers.set(item.key, slot);
-        }
-        const { scene, shapes } = slot;
-        const spec = item.layer;
-        const blurred =
-            !!spec.blur ||
-            (!!spec.motionBlur && spec.motionBlur.distance > 0.5);
-        const extent =
-            stats || spec.effectBudget
-                ? [Infinity, Infinity, -Infinity, -Infinity]
-                : undefined;
-        if (spec.retained && extent) {
-            const bounds = spec.retained.bounds;
-            extent[0] = Math.max(0, bounds.left);
-            extent[1] = Math.max(0, bounds.top);
-            extent[2] = Math.min(ctx.W, bounds.right);
-            extent[3] = Math.min(ctx.H, bounds.bottom);
-        }
-        const retainedReady =
-            !!spec.retained && slot.retainedGeometry === spec.retained.geometry;
-        let i = 0;
-        let anchor: [number, number] | null = null;
-        for (const cmd of item.cmds) {
-            const box: [number, number] | null = spec.retained
-                ? [
-                      Math.max(0, spec.retained.bounds.left),
-                      Math.max(0, spec.retained.bounds.top),
-                  ]
-                : canvasBox(cmd, ctx.W, ctx.H, extent);
-            if (!box) continue;
-            anchor ??= box;
-            let s = shapes[i];
-            if (!s) {
-                s = new TVG.Shape();
-                shapes.push(s);
-                scene.add(s);
-            }
-            if (!retainedReady) apply(s, cmd);
-            i++;
-        }
-        if (spec.retained) {
-            scene.transform(spec.retained.transform);
-            slot.retainedGeometry = spec.retained.geometry;
-        }
-        // Re-adding shapes leaks ThorVG references; park unused shapes inside
-        // the drawn area.
-        const [px, py] = anchor ?? [0, 0];
-        const area =
-            extent && extent[2] > extent[0] && extent[3] > extent[1]
-                ? (extent[2] - extent[0]) * (extent[3] - extent[1])
-                : 0;
-        const effectScale = spec.effectBudget
-            ? effectScaleForArea(
-                  area,
-                  spec.effectBudget.area,
-                  spec.effectBudget.minScale,
-              )
-            : 1;
-        if (stats) {
-            stats.layers++;
-            stats.layerShapes += shapes.length;
-            stats.parkedShapes += shapes.length - i;
-            if (spec.clip) stats.clips++;
-            if (spec.mask) stats.masks++;
-            if (spec.blur) {
-                stats.gaussianBlurs++;
-                stats.blurAmount += spec.blur * effectScale;
-            }
-            if (spec.motionBlur && spec.motionBlur.distance > 0.5) {
-                stats.motionBlurs++;
-                stats.blurAmount += spec.motionBlur.distance * effectScale;
-            }
-            if (blurred) stats.blurArea += area;
-            const effects: string[] = [];
-            if (spec.opacity !== undefined && spec.opacity < 1) {
-                effects.push(`α${spec.opacity.toFixed(2)}`);
-            }
-            if (spec.blend && spec.blend !== 'normal') effects.push(spec.blend);
-            if (spec.blur) effects.push(`blur${spec.blur}`);
-            if (spec.motionBlur && spec.motionBlur.distance > 0.5) {
-                effects.push('motion');
-            }
-            if (effectScale < 1) {
-                effects.push(`budget${Math.round(effectScale * 100)}%`);
-            }
-            if (spec.clip) effects.push('clip');
-            if (spec.mask) effects.push(spec.maskInvert ? 'invmask' : 'mask');
-            stats.layerList.push({ key: spec.key, shapes: i, area, effects });
-        }
-        for (; i < shapes.length; i++) {
-            apply(shapes[i], {
-                kind: 'path',
-                points: [
-                    [px, py],
-                    [px + 1, py],
-                    [px + 1, py + 1],
-                    [px, py + 1],
-                ],
-                fill: '#00000001',
-            });
-        }
-
-        scene.resetEffects();
-        const quality = Math.max(20, Math.round(45 * effectScale));
-        if (spec.blur) {
-            scene.gaussianBlur(spec.blur * effectScale, 0, 0, quality);
-        }
-        if (spec.motionBlur && spec.motionBlur.distance > 0.5) {
-            scene.motionBlur(
-                spec.motionBlur.distance * effectScale,
-                spec.motionBlur.angle,
-                quality,
-            );
-        }
-        scene.blend(blendOf(spec.blend));
-        scene.opacity(
-            Math.round(Math.max(0, Math.min(1, spec.opacity ?? 1)) * 255),
-        );
-        if (spec.clip) {
-            if (!slot.clip) {
-                slot.clip = new TVG.Shape();
-                scene.clip(slot.clip);
-            }
-            tracePath(slot.clip, spec.clip);
-            slot.clip.fill(255, 255, 255, 255);
-        }
-        if (spec.mask) {
-            if (!slot.mask) {
-                slot.mask = new TVG.Shape();
-                slot.maskInvert = !!spec.maskInvert;
-                scene.mask(
-                    slot.mask,
-                    slot.maskInvert
-                        ? TVG.MaskMethod.InvAlpha
-                        : TVG.MaskMethod.Alpha,
-                );
-            }
-            const fill = spec.mask.fill;
-            tracePath(slot.mask, spec.mask);
-            if (fill === null) slot.mask.fill(255, 255, 255, 255);
-            else if (typeof fill === 'string') {
-                slot.mask.fill(...ctx.rgba(fill));
-            } else {
-                const g = fillOf(fill);
-                slot.mask.fill(g);
-                g.dispose();
-            }
-        }
-        scene.visible(true);
-        order.push(scene);
+        order.push(syncLayer(ctx, TVG, pool, item, stats));
     }
     for (let i = topIndex; i < pool.top.length; i++) pool.top[i].visible(false);
     for (let i = textIndex; i < pool.texts.length; i++) {

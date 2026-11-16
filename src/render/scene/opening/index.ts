@@ -1,5 +1,5 @@
 import type { RenderCtx } from '../../context';
-import { drawWorld } from '../world';
+import { drawWorld } from '../office/world';
 import { drawBubbles } from './bubble';
 import { drawClock } from './clock';
 import {

@@ -5,8 +5,8 @@ import { loadSource } from './support/load.mjs';
 const { createRenderCtx, breadCloud, puffCloud, CLOUD_TONES } =
     await loadSource(`
     export { createRenderCtx } from './tests/support/render-context';
-    export { breadCloud } from './src/render/scene/cloud-art';
-    export { puffCloud, CLOUD_TONES } from './src/render/scene/cloud-art';
+    export { breadCloud } from './src/render/scene/shared/cloud-art';
+    export { puffCloud, CLOUD_TONES } from './src/render/scene/shared/cloud-art';
 `);
 const context = () =>
     Object.assign(createRenderCtx({}), {

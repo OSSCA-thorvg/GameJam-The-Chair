@@ -13,7 +13,7 @@ const {
     STAGE_THREE,
 } = await bundled({
     stdin: {
-        contents: `export {createCore} from './src/game/state'; export {viewState} from './src/game/game'; export {applyRooftop} from './src/game/stages/rooftop/course/apply'; export {rooftopHooks} from './src/game/stages/rooftop/hooks'; export {createRenderCtx} from './tests/support/render-context'; export {rooftopDuct, DUCT_PROP_COLORS} from './src/render/scene/rooftop-duct'; export {STAGE_THREE} from './src/game/stages/rooftop/data';`,
+        contents: `export {createCore} from './src/game/state'; export {viewState} from './src/game/game'; export {applyRooftop} from './src/game/stages/rooftop/course/apply'; export {rooftopHooks} from './src/game/stages/rooftop/hooks'; export {createRenderCtx} from './tests/support/render-context'; export {rooftopDuct, DUCT_PROP_COLORS} from './src/render/scene/rooftop/duct'; export {STAGE_THREE} from './src/game/stages/rooftop/data';`,
         resolveDir: process.cwd(),
     },
     bundle: true,

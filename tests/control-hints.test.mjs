@@ -6,7 +6,7 @@ const { createGame, createRenderCtx, officeControlHints, rooftopSprayHint } =
     await loadSource(`
     export { createGame } from './src/game/game';
     export { createRenderCtx } from './tests/support/render-context';
-    export { officeControlHints, rooftopSprayHint } from './src/render/scene/control-hints';
+    export { officeControlHints, rooftopSprayHint } from './src/render/scene/shared/control-hints';
 `);
 
 const keyTops = (commands) =>
