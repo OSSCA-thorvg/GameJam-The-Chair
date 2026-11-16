@@ -34,3 +34,29 @@ test('frame construction supplies valid state and retains only reusable geometry
     assert.equal(builds, 1);
     assert.equal(next.commands.length, 1);
 });
+
+test('nested transform and layer scopes restore their callers even when drawing throws', () => {
+    const ctx = createRenderCtx(createRenderResources({}), createGame().getSnapshot(), createEffects().snapshot());
+    const outer = { key: 'outer' }, inner = { key: 'inner' };
+    ctx.ox = 12;
+    ctx.withLayer(outer, () => {
+        assert.throws(() => ctx.withTransform({ ox: 70, rotation: 1 }, () => {
+            ctx.withLayer(inner, () => {
+                ctx.rect(0, 0, 10, 10, '#ffffff');
+                throw new Error('draw failed');
+            });
+        }), /draw failed/);
+        assert.equal(ctx.layer, outer);
+        assert.equal(ctx.ox, 12);
+        assert.equal(ctx.rotation, 0);
+        ctx.rect(0, 0, 10, 10, '#ffffff');
+    });
+    assert.equal(ctx.layer, null);
+    assert.deepEqual(ctx.commands.map(command => command.layer), [inner, outer]);
+    ctx.beginLayer(outer);
+    ctx.beginLayer(inner);
+    ctx.endLayer();
+    assert.equal(ctx.layer, outer);
+    ctx.endLayer();
+    assert.equal(ctx.layer, null);
+});

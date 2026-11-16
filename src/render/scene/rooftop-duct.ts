@@ -345,26 +345,26 @@ export function rooftopVents(ctx: RenderCtx) {
         const phase = ventPhase(vent, ctx.state.time);
         const rattle = phase.kind === 'warn' ? Math.sin(phase.age * 90) * (1 + phase.age * 2) : 0;
         // Draw every vent as if it were on a left-facing wall, then turn it into place.
-        const ox = ctx.ox, oy = ctx.oy, rotation = ctx.rotation, mirror = ctx.mirror;
-        ctx.ox = vent.x + (vent.axis === 'x' ? rattle * .6 : rattle * .4);
-        ctx.oy = vent.y + (vent.axis === 'x' ? rattle * .4 : 0);
-        if (vent.axis === 'y') ctx.rotation = -Math.PI / 2;
-        else if (vent.dir > 0) { ctx.ox = 2 * ctx.ox; ctx.rotation = Math.PI; ctx.mirror = { y: 0, k: 1 }; ctx.oy = 0; }
-        const cx = vent.axis === 'x' && vent.dir > 0 ? vent.x + rattle * .6 : 0;
-        const cy = vent.axis === 'x' && vent.dir > 0 ? vent.y + rattle * .4 : 0;
-        ventGrille(ctx, cx, cy, phase);
-        if (phase.kind === 'warn') {
-            for (let i = 0; i < 4; i++) {
-                const u = (phase.age * (1.5 + phase.age * 2) + i / 4) % 1;
-                ctx.ellipse(cx - 14 - u * 40, cy - 14 + i * 9 - u * 10, 3 + u * 7, 2 + u * 4, ctx.tint('#f4f7f9', .45 * (1 - u)));
+        ctx.withTransform({}, () => {
+            ctx.ox = vent.x + (vent.axis === 'x' ? rattle * .6 : rattle * .4);
+            ctx.oy = vent.y + (vent.axis === 'x' ? rattle * .4 : 0);
+            if (vent.axis === 'y') ctx.rotation = -Math.PI / 2;
+            else if (vent.dir > 0) { ctx.ox = 2 * ctx.ox; ctx.rotation = Math.PI; ctx.mirror = { y: 0, k: 1 }; ctx.oy = 0; }
+            const cx = vent.axis === 'x' && vent.dir > 0 ? vent.x + rattle * .6 : 0;
+            const cy = vent.axis === 'x' && vent.dir > 0 ? vent.y + rattle * .4 : 0;
+            ventGrille(ctx, cx, cy, phase);
+            if (phase.kind === 'warn') {
+                for (let i = 0; i < 4; i++) {
+                    const u = (phase.age * (1.5 + phase.age * 2) + i / 4) % 1;
+                    ctx.ellipse(cx - 14 - u * 40, cy - 14 + i * 9 - u * 10, 3 + u * 7, 2 + u * 4, ctx.tint('#f4f7f9', .45 * (1 - u)));
+                }
             }
-        }
-        if (phase.kind === 'blow') {
-            const pace = Math.pow(STAGE_THREE.duct.sneezeDuration / vent.blow, .6);
-            const angle = vent.axis === 'y' ? 90 : vent.dir > 0 ? 0 : 180;
-            ductSteam(ctx, cx - 14, cy, phase.age * pace, vent.blow * pace, .9, angle);
-        }
-        ctx.ox = ox; ctx.oy = oy; ctx.rotation = rotation; ctx.mirror = mirror;
+            if (phase.kind === 'blow') {
+                const pace = Math.pow(STAGE_THREE.duct.sneezeDuration / vent.blow, .6);
+                const angle = vent.axis === 'y' ? 90 : vent.dir > 0 ? 0 : 180;
+                ductSteam(ctx, cx - 14, cy, phase.age * pace, vent.blow * pace, .9, angle);
+            }
+        });
     }
 }
 

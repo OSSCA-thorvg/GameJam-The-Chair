@@ -89,6 +89,8 @@ export type RenderCtx = {
     strokePath(start: Vector, curves: Curve[], stroke: StrokeInput, opts?: PathOptions & { closed?: boolean }): void;
     pathCommand(start: Vector, curves: Curve[]): DrawCommand;
     radialFill(cx: number, cy: number, r: number, stops: [number, string][], alpha?: number): Gradient;
+    withTransform(transform: Partial<Pick<RenderCtx, 'ox' | 'oy' | 'rotation' | 'localScale' | 'mirror'>>, draw: () => void): void;
+    withLayer(spec: LayerSpec, draw: () => void): void;
     beginLayer(spec: LayerSpec): void;
     endLayer(): void;
     gradientPolygon(points: Vector[], fill: Gradient, opts?: PathOptions): void;
@@ -218,11 +220,31 @@ function drawingMethods(getCtx: () => RenderCtx, { retained }: RenderResources) 
         radius: r * getCtx().scale * getCtx().localScale,
         stops: stops.map(([at, c]) => [at, getCtx().rgba(c, alpha)]),
     });
-    const beginLayer: RenderCtx['beginLayer'] = (spec) => {
+    const layers: (LayerSpec | null)[] = [];
+    const beginLayer: RenderCtx['beginLayer'] = spec => {
+        layers.push(getCtx().layer);
         getCtx().layer = spec;
     };
     const endLayer: RenderCtx['endLayer'] = () => {
-        getCtx().layer = null;
+        getCtx().layer = layers.pop() ?? null;
+    };
+    const withLayer: RenderCtx['withLayer'] = (spec, draw) => {
+        const ctx = getCtx();
+        const previous = ctx.layer;
+        const depth = layers.length;
+        ctx.layer = spec;
+        try { draw(); } finally {
+            ctx.layer = previous;
+            layers.length = depth;
+        }
+    };
+    const withTransform: RenderCtx['withTransform'] = (transform, draw) => {
+        const ctx = getCtx();
+        const { ox, oy, rotation, localScale, mirror } = ctx;
+        Object.assign(ctx, transform);
+        try { draw(); } finally {
+            Object.assign(ctx, { ox, oy, rotation, localScale, mirror });
+        }
     };
     const gradientPolygon: RenderCtx['gradientPolygon'] = (points, fill, opts) => {
         push({ v: points.map(v => getCtx().screenPoint(...v)), c: fill, ...opts });
@@ -323,5 +345,5 @@ function drawingMethods(getCtx: () => RenderCtx, { retained }: RenderResources) 
         getCtx().text(text, x, y - size * .35, size, color, { font });
     };
 
-    return { screenPoint, polygon, rgb, rgba, gradientFill, pathCommand, effectPath, strokePath, radialFill, beginLayer, endLayer, gradientPolygon, visible, retainedGroup, ripple, tint, rect, ellipse, rod, measureText, text, screenText, label };
+    return { withTransform, withLayer, screenPoint, polygon, rgb, rgba, gradientFill, pathCommand, effectPath, strokePath, radialFill, beginLayer, endLayer, gradientPolygon, visible, retainedGroup, ripple, tint, rect, ellipse, rod, measureText, text, screenText, label };
 }
