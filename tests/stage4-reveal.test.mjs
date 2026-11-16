@@ -74,7 +74,7 @@ test('the ending draws no slogans, only the departing promotion flag and the att
     const base = game.getSnapshot();
     for (const locale of ['en', 'ko']) for (const width of [320, 1000]) {
         const { hold } = STAGE_FOUR.reveal;
-        for (const [phase, age] of [['reveal', 1], ['reveal', 5], ['depth', 0], ['depth', hold * .3], ['depth', hold - .1]]) {
+        for (const [phase, age] of /** @type {const} */ ([['reveal', 1], ['reveal', 5], ['depth', 0], ['depth', hold * .3], ['depth', hold - .1]])) {
             const state = structuredClone(base);
             Object.assign(state.sky, { phase, age });
             const transforms = [];
@@ -139,7 +139,7 @@ test('the crown stays covered by hair throughout the orbit', () => {
         const view = createSkyProjection(1000, 510, frame / 12);
         endingChair(view, 0);
         const commands = view.commands();
-        for (const point of [[-4, 54, 8], [-4, 58, 8], [0, 58, 8]]) {
+        for (const point of /** @type {const} */ ([[-4, 54, 8], [-4, 58, 8], [0, 58, 8]])) {
             const screen = view.project(point);
             const visible = commands.filter(command => command.v.length > 2 && covers(screen, command.v)).at(-1);
             assert.ok(visible, `the crown is filled at orbit ${frame}/12`);
@@ -250,7 +250,7 @@ test('the reveal turns steadily from the side to behind the chair, keeping it ce
     for (let at = settle; at <= settle + turn + hold; at += .5) previous = (assert.ok(revealChairOrbit(at, settle) >= previous), revealChairOrbit(at, settle));
     assert.ok(Math.abs(revealChairOrbit(settle + turn, settle) - 1) < 1e-9, 'behind the chair once the turn is done');
     // Behind the chair, its silhouette (picked out by the model's own colours) stays centred and the same size.
-    for (const [phase, age] of [['depth', 0], ['depth', hold]]) {
+    for (const [phase, age] of /** @type {const} */ ([['depth', 0], ['depth', hold]])) {
         const rear = createSkyProjection(1000, 510, 1);
         endingChair(rear, settle + turn + age);
         const colours = new Set(rear.commands().map(command => command.c));
@@ -320,7 +320,7 @@ const cloudBodies = (commands, tone) => commands.filter(command =>
 
 test('the ending clouds are bread clouds, not flat pale ovals', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
-    for (const [phase, age] of [['reveal', 0], ['reveal', settle + turn / 2], ['depth', 0], ['depth', hold]]) {
+    for (const [phase, age] of /** @type {const} */ ([['reveal', 0], ['reveal', settle + turn / 2], ['depth', 0], ['depth', hold]])) {
         const commands = revealFrame(phase, age);
         assert.ok(cloudBodies(commands, CLOUD_TONES.bread).length >= 5, `${phase} ${age}: bread clouds stay on screen`);
         // The old ending drew its clouds as flat ovals in these two colours (the spray shares the base colour).

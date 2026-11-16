@@ -14,7 +14,7 @@ const dt = 1 / 120;
 const SHAFT_FLAG = STAGE_THREE.checkpoints.findIndex(mark => mark.x === 1310);
 const course = { kind: 'course' };
 
-function rooftop(p, { time = 0, duct = { kind: 'idle', rest: 0 }, ground = true } = {}) {
+function rooftop(p, { time = 0, duct = { kind: 'idle', rest: 0, shots: 0 }, ground = true } = {}) {
     return { p: { vx: 0, vy: 0, a: 0, w: 0, ...p }, ground, hasExtinguisher: true, firstFlight: course, ductReaction: duct, time };
 }
 
@@ -82,7 +82,7 @@ test('the scattered printouts make the shaft ledges slippery only once the duct 
     const s = createCore({ seed: 0 }); s.stage = 3; s.hasExtinguisher = true; s.ground = true;
     for (const span of STAGE_THREE.slick) {
         s.p = { x: (span.left + span.right) / 2, y: span.y - 28, vx: 0, vy: 0, a: 0, w: 0 };
-        s.rooftop.duct = { kind: 'idle', rest: 0 };
+        s.rooftop.duct = { kind: 'idle', rest: 0, shots: 0 };
         assert.deepEqual(rooftopHooks.drive(s, 0), {}, 'no paper before the first sneeze');
         s.rooftop.duct = { kind: 'done', shots: 1, rest: 0 };
         assert.deepEqual(rooftopHooks.drive(s, 0), { slip: true });

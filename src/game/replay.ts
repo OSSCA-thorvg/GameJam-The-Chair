@@ -100,7 +100,7 @@ function isArray(value: unknown): value is unknown[] {
     return Array.isArray(value);
 }
 
-function parseReplayError(value: unknown): ReplayError | null {
+export function parseReplayError(value: unknown): ReplayError | null {
     if (value === undefined || value === null) return null;
     if (!isRecord(value) || typeof value.tick !== 'number' || !Number.isSafeInteger(value.tick)
         || (value.at !== 'step' && value.at !== 'command' && value.at !== 'window')
@@ -111,7 +111,7 @@ function parseReplayError(value: unknown): ReplayError | null {
         tick: value.tick,
         at: value.at,
         message: value.message,
-        ...(value.stack === undefined ? {} : { stack: value.stack }),
+        ...(typeof value.stack === 'string' ? { stack: value.stack } : {}),
         ...(command === undefined ? {} : { command }),
     };
 }
@@ -156,7 +156,7 @@ export function parseReplay(text: string): ReplayFile {
     const truncated = data.truncated === undefined ? false : data.truncated;
     if (typeof truncated !== 'boolean') throw new Error('bad truncated flag');
     const error = parseReplayError(data.error);
-    return { format: REPLAY_FORMAT, version, seed, start, commands, hashes, endTick: data.endTick, truncated, error };
+    return { format: REPLAY_FORMAT, version, seed: typeof seed === 'number' ? seed : null, start, commands, hashes, endTick: data.endTick, truncated, error };
 }
 
 /**
@@ -219,7 +219,8 @@ export function createRecorder(getSettings: () => ReplaySettings, seed: number |
         },
         /** The newest attempt worth watching: at least half a second long, or one that ended in an error. */
         latest(minTicks = 60): ReplayFile | null {
-            return this.attempts().find(file => replayLength(file) >= minTicks || !!file.error) ?? null;
+            const file = [current, ...finished.slice().reverse()].find(file => file && (replayLength(file) >= minTicks || !!file.error));
+            return file ? clonePlain(file) : null;
         },
     };
 }

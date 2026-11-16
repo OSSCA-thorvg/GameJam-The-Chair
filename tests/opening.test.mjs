@@ -16,8 +16,8 @@ test('the opening plays once per page load after either a skip or a full run', (
     const originalWindow = globalThis.window;
     const originalDocument = globalThis.document;
     const scene = { append() {} };
-    globalThis.window = { addEventListener() {} };
-    globalThis.document = { createElement: () => ({
+    /** @type {any} */ (globalThis).window = { addEventListener() {} };
+    /** @type {any} */ (globalThis).document = { createElement: () => ({
         setAttribute() {}, append() {}, addEventListener() {}, focus() {}, remove() {},
     }) };
     const root = { querySelector: () => scene };
@@ -45,8 +45,8 @@ test('the opening plays once per page load after either a skip or a full run', (
         assert.equal(nextLoad.seen, false);
         nextLoad.destroy();
     } finally {
-        globalThis.window = originalWindow;
-        globalThis.document = originalDocument;
+        /** @type {any} */ (globalThis).window = originalWindow;
+        /** @type {any} */ (globalThis).document = originalDocument;
     }
 });
 

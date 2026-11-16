@@ -11,7 +11,7 @@ const { createGame, createRenderCtx, officeControlHints, rooftopSprayHint } = aw
 /** Keycap tops are the light face colour, with the hint's opacity appended. */
 const keyTops = commands => commands.filter(command => typeof command.c === 'string' && command.c.startsWith('#f4f1ea'));
 
-function frame(stage, setup = () => {}) {
+function frame(stage, setup = state => {}) {
     const game = createGame();
     game.startStage(stage);
     const state = game.getSnapshot();

@@ -9,10 +9,11 @@ const { createGame, bindInput } = await bundled({ stdin: {
 
 test('stage2 uses Down for meeting entry and exit, keeps Up for jumping, and supports touch', async () => {
     const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];
+    /** @type {any[]} */
     const saved = names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
-    const window = new EventTarget(), document = new EventTarget();
+    const window = /** @type {any} */ (new EventTarget()), document = /** @type {any} */ (new EventTarget());
     class Element {}
-    const downButton = new EventTarget();
+    const downButton = /** @type {any} */ (new EventTarget());
     Object.assign(globalThis, { window, document, Element, HTMLElement: Element,
         MutationObserver: class { observe() {} disconnect() {} },
     });

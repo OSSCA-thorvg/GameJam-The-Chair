@@ -1,4 +1,4 @@
-import type { Vector, Curve } from '../types';
+import type { Vector } from '../types';
 import type { DeepReadonly, Person } from '../../game/types';
 import type { RenderCtx } from '../context';
 import { bucketAngle, bucketOrigin, bucketPoint } from '../bucket';

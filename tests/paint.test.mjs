@@ -21,7 +21,7 @@ function fakeThorvg() {
     for (const name of ['moveTo', 'lineTo', 'cubicTo', 'close', 'fill', 'stroke', 'trimPath', 'blend', 'visible', 'appendRect', 'opacity']) Shape.prototype[name] = chain;
     Shape.prototype.reset = function () { log.push('shape-reset'); return this; };
     class Scene extends Paint {
-        constructor() { super(); this.children = []; }
+        constructor() { super(); this.children = []; this.rendered = false; }
         add(child) {
             this.children.push(child);
             if (this.onCanvas && this.rendered) this.stale = true;

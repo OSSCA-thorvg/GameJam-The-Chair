@@ -70,7 +70,7 @@ let savedDeaths = 0;
 let savedCompletedStage: 0 | StageId = 0;
 try {
     const saved = JSON.parse(localStorage.getItem('the-chair-office-v1') || 'null');
-    if (saved?.completedStage === 1 || saved?.completedStage === 2 || saved?.completedStage === 3 || saved?.completedStage === 4) {
+    if (saved?.completedStage === 1 || saved?.completedStage === 2 || saved?.completedStage === 3 || saved?.completedStage === 4 || saved?.completedStage === 5) {
         savedCompletedStage = saved.completedStage;
     }
     if (Number.isFinite(saved?.deaths)) {
@@ -88,6 +88,24 @@ const errorLog = createErrorLog(replaySettings.maxErrors);
 // The newest data stays in this browser so the replay tool (/replay.html) can open it directly.
 const keepBrowserData = () => saveBrowserData(replayData(recorder, errorLog));
 let lastStage: number | null = null;
+const reportedErrors = new Set<unknown>();
+let simulationFailed = false;
+const failurePanel = document.createElement('div');
+failurePanel.setAttribute('role', 'alert');
+failurePanel.style.cssText = 'position:fixed;inset:30% 15%;z-index:9999;background:#211c29;color:white;padding:2rem;text-align:center;border:2px solid #e9bc79';
+failurePanel.hidden = true;
+const failureMessage = document.createElement('p');
+const reloadButton = document.createElement('button');
+reloadButton.onclick = () => location.reload();
+failurePanel.append(failureMessage, reloadButton);
+root.append(failurePanel);
+function showFailure() {
+    simulationFailed = true;
+    failureMessage.textContent = locale === 'ko' ? '의자가 잠시 고장 났습니다. 다시 시작해 주세요.' : 'The chair broke down. Please restart.';
+    reloadButton.textContent = locale === 'ko' ? '다시 시작' : 'Restart';
+    failurePanel.hidden = false;
+    reloadButton.focus();
+}
 const effects = createEffects();
 const game = createGame({
     seed,
@@ -101,9 +119,11 @@ const game = createGame({
         recorder.onStep(state);
         effects.observe({ stage: state.stage, deaths: state.deaths, time: state.time, player: state.p });
     },
-    onError(error) {
+    onError(error, cause) {
+        reportedErrors.add(cause);
+        showFailure();
         recorder.onError(error);
-        errorLog.add(error, lastStage, recorder.attempts()[0] ?? null);
+        errorLog.add(error, lastStage, recorder.latest(0));
         keepBrowserData();
     },
 });
@@ -112,6 +132,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) keepB
 window.addEventListener('pagehide', keepBrowserData);
 const describeError = (value: unknown) => value instanceof Error ? { message: value.message, stack: value.stack } : { message: String(value) };
 function logWindowError(value: unknown) {
+    if (reportedErrors.has(value)) return;
     errorLog.add({ tick: -1, at: 'window', ...describeError(value) }, lastStage, recorder.latest(0));
     keepBrowserData();
 }
@@ -135,7 +156,7 @@ const hintedGame: typeof game = {
     },
 };
 const unbind = bindInput(root, hintedGame, {
-    blocked: () => player.active || opening.active,
+    blocked: () => simulationFailed || player.active || opening.active,
     onStart() {
         if (!opening.seen) opening.start(() => unbind.sync());
     },
@@ -146,7 +167,7 @@ function watchReplay(file: ReplayFile) {
     player.open(file);
     unbind.sync();
 }
-bindOrientation(root, game);
+const unbindOrientation = bindOrientation(root, game);
 bindReplayMenu(root, () => locale, { recorder, errorLog, watch: watchReplay });
 const hud = createHud(root, () => locale);
 let renderer: ReturnType<typeof createRenderer> | null = null;
@@ -163,8 +184,11 @@ const perf = createPerfOverlay(root, () => locale, {
     surface: () => renderer?.surface() ?? null,
 });
 let hudMs = 0;
+let replayWasActive = false;
 let presentationErrorReported = false;
 function draw() {
+    if (replayWasActive !== player.active) renderer?.resetView();
+    replayWasActive = player.active;
     const live = game.getSnapshot();
     const liveEvents = game.drainEvents();
     lastStage = live.stage;
@@ -210,6 +234,7 @@ let last: number | null = null;
 function frame(ms: number) {
     if (!root.isConnected) {
         unbind();
+        unbindOrientation();
         opening.destroy();
         player.destroy();
         renderer?.destroy();
@@ -223,21 +248,28 @@ function frame(ms: number) {
         requestAnimationFrame(frame);
         return;
     }
+    requestAnimationFrame(frame);
     const dt = last === null ? 0 : Math.max(0, (ms - last) / 1000);
     last = ms;
     const profiling = perf.enabled;
     const simStart = profiling ? performance.now() : 0;
     let advanced = { ticks: 0, dropped: 0 };
-    if (player.active) player.advance(dt);
-    else if (opening.active) opening.advance(dt);
-    else advanced = game.advance(dt);
+    try {
+        if (!simulationFailed) {
+            if (player.active) player.advance(dt);
+            else if (opening.active) opening.advance(dt);
+            else advanced = game.advance(dt);
+        }
+    } catch (error) {
+        logWindowError(error);
+        showFailure();
+    }
     // The end-of-run close-up keeps going after the game has stopped ticking.
     if (!player.active && !opening.active) effects.advance(dt);
     const simMs = profiling ? performance.now() - simStart : 0;
     hudMs = 0;
     draw();
     if (profiling) perf.record({ frameMs: dt * 1000, simMs, ticks: advanced.ticks, droppedMs: advanced.dropped * 1000, hudMs });
-    requestAnimationFrame(frame);
 }
 // Retain the existing browser debugging API without exposing live game state.
 const officeStageOne = {

@@ -9,6 +9,9 @@ const ENGINE_MATH_FUNCTIONS = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'ata
 const NOT_DETERMINISTIC = 'The game core must be deterministic: take time from state.time/state.tick, randomness from state.rng (rng.ts), and keep browser APIs in the shell (main.ts, ui/).';
 
 export default tseslint.config(
+    { files: ['scripts/**/*.mjs', 'tests/**/*.mjs'], rules: { 'no-unreachable': 'error', 'no-dupe-keys': 'error', 'no-duplicate-case': 'error' } },
+    { plugins: { '@typescript-eslint': tseslint.plugin } },
+    { files: ['src/**/*.ts', 'vite.config.ts'], languageOptions: { parser: tseslint.parser }, rules: { '@typescript-eslint/no-unused-vars': ['error', { args: 'none', varsIgnorePattern: '^_' }] } },
     { ignores: ['dist/**', 'node_modules/**'] },
     {
         files: ['src/game/**/*.ts'],
