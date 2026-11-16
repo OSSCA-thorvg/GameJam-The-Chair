@@ -1,46 +1,117 @@
-import { LEVEL, PHYSICS } from './level';
+import { PHYSICS } from './level';
 import { clonePlain } from './data';
-import type { CoreState, ExtinguisherState } from './state';
+import type { CoreState, ExtinguisherState, Progress } from './state';
 import type { DeepReadonly } from './types';
 import type { StageDefinition } from './stages/types';
-import type { OfficeState } from './stages/office/state';
-import type { BuildingState } from './stages/building/state';
-import type { RooftopState } from './stages/rooftop/state';
 import { STAGES } from './stages/index';
 import { stageSolids } from './step';
 import { focusBlockedIn } from './systems/focus/apply';
 import { stageHooks } from './stages/hooks';
-import { monitorsView } from './stages/view';
+import {
+    createOfficeSnapshot,
+    createBuildingSnapshot,
+    createRooftopSnapshot,
+    type OfficeSnapshot,
+    type BuildingSnapshot,
+    type RooftopSnapshot,
+} from './stages/view';
 
-type CommonView = Pick<
-    CoreState,
-    | 'lessons'
-    | 'skylineSeed'
-    | 'stage'
-    | 'completedStage'
-    | 'checkpoint'
-    | 'mode'
-    | 'ground'
-    | 'time'
-    | 'deaths'
-    | 'people'
-> & {
-    game: StageDefinition['name'];
-    actualSpeed: number;
+type SessionSnapshot = Pick<CoreState, 'mode' | 'time' | 'lossReason'>;
+type ProgressSource = Pick<
+    Progress,
+    'stage' | 'checkpoint' | 'completedStage' | 'deaths'
+>;
+type ProgressSnapshot = ProgressSource & { officeCheckpoint: boolean };
+
+function createProgressSnapshot(
+    progress: Readonly<ProgressSource>,
+): ProgressSnapshot {
+    return {
+        stage: progress.stage,
+        checkpoint: progress.checkpoint,
+        completedStage: progress.completedStage,
+        deaths: progress.deaths,
+        officeCheckpoint: progress.stage === 1 && progress.checkpoint > 0,
+    };
+}
+
+type TutorialSnapshot = {
+    lessons: Progress['lessons'];
     tutorialAssist: boolean;
+};
+
+function createTutorialSnapshot(
+    lessons: Readonly<Progress['lessons']>,
+    playerX: number,
+    playing: boolean,
+): TutorialSnapshot {
+    return {
+        lessons: clonePlain(lessons),
+        tutorialAssist: playing && playerX < PHYSICS.upright.tutorialUntilX,
+    };
+}
+
+type PlayerSource = Pick<CoreState, 'p' | 'ground' | 'actualSpeed'>;
+type PlayerSnapshot = Pick<CoreState, 'ground' | 'actualSpeed'> & {
     player: CoreState['p'];
+};
+
+function createPlayerSnapshot(
+    source: Readonly<PlayerSource>,
+    playing: boolean,
+): PlayerSnapshot {
+    return {
+        player: clonePlain(source.p),
+        ground: source.ground,
+        actualSpeed: playing ? source.actualSpeed : 0,
+    };
+}
+
+type WorldSource = Pick<CoreState, 'people' | 'skylineSeed'>;
+type WorldSnapshot = WorldSource & {
+    game: StageDefinition['name'];
     level: Pick<StageDefinition, 'length' | 'goal'>;
     solids: Array<{ p: ReturnType<typeof stageSolids>[number] }>;
 };
 
-type FocusView = Pick<CoreState, 'focusLossTime' | 'lossReason'> & {
+function createWorldSnapshot(
+    source: Readonly<WorldSource>,
+    stage: Readonly<Pick<StageDefinition, 'name' | 'length' | 'goal'>>,
+    solids: ReturnType<typeof stageSolids>,
+): WorldSnapshot {
+    return {
+        game: stage.name,
+        level: { length: stage.length, goal: stage.goal },
+        skylineSeed: source.skylineSeed,
+        people: clonePlain(source.people),
+        solids: solids.map((p) => ({ p: clonePlain(p) })),
+    };
+}
+
+type FocusSource = Pick<CoreState, 'focusLossTime'> & {
+    focus: Pick<CoreState['focus'], 'value' | 'recoveryClock' | 'notice'>;
+};
+type FocusSnapshot = Pick<CoreState, 'focusLossTime'> & {
     focus: CoreState['focus']['value'];
     focusClock: CoreState['focus']['recoveryClock'];
     focusNotice: CoreState['focus']['notice'];
     focusBlocked: boolean;
 };
 
-type SprayView = {
+function createFocusSnapshot(
+    source: Readonly<FocusSource>,
+    blocked: boolean,
+): FocusSnapshot {
+    return {
+        focus: source.focus.value,
+        focusClock: source.focus.recoveryClock,
+        focusLossTime: source.focusLossTime,
+        focusNotice: clonePlain(source.focus.notice),
+        focusBlocked: blocked,
+    };
+}
+
+type SpraySnapshot = {
     hasExtinguisher: boolean;
     spray: {
         burst: ExtinguisherState['burst'];
@@ -49,93 +120,9 @@ type SprayView = {
     };
 };
 
-type OfficeView = Pick<
-    OfficeState,
-    | 'slip'
-    | 'dirty'
-    | 'inBin'
-    | 'binAge'
-    | 'paperHits'
-    | 'binFalls'
-    | 'paperPenaltyRemaining'
-    | 'lightPenaltyRemaining'
-    | 'cleaning'
-    | 'lightHits'
-    | 'doorHits'
-    | 'papers'
-> & {
-    officeCheckpoint: boolean;
-    bursts: OfficeState['copier']['bursts'];
-    dirtyWaterExperienced: OfficeState['wetSeen'];
-    cleaningSpilled: OfficeState['cleaning']['spilled'];
-    soaked: boolean;
-    bucketAge: OfficeState['bucket']['age'];
-    monitors: ReturnType<typeof monitorsView>;
-    copier: Pick<
-        OfficeState['copier'],
-        'x' | 'cool' | 'burst' | 'next' | 'dir'
-    >;
-    urgentCopier: OfficeState['urgent'];
-    bin: typeof LEVEL.bin;
-};
-
-type BuildingView = Pick<BuildingState, 'furniture' | 'corridor'> & {
-    canEnterMeeting: boolean;
-};
-
-type RooftopView = Pick<RooftopState, 'airSprays'> & {
-    firstFlight: RooftopState['flight'];
-    rooftopEntrance: RooftopState['entrance'];
-    ductReaction: RooftopState['duct'];
-};
-
-type SnapshotData = CommonView &
-    FocusView &
-    SprayView &
-    OfficeView &
-    BuildingView &
-    RooftopView & {
-        sky: CoreState['sky'];
-        orbit: CoreState['orbit'] | undefined;
-    };
-
-export type GameSnapshot = DeepReadonly<SnapshotData>;
-
-function createCommonView(s: Readonly<CoreState>): CommonView {
-    const { length, goal, name } = STAGES[s.stage];
-    return {
-        game: name,
-        lessons: clonePlain(s.lessons),
-        skylineSeed: s.skylineSeed,
-        actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
-        tutorialAssist:
-            s.mode === 'play' && s.p.x < PHYSICS.upright.tutorialUntilX,
-        stage: s.stage,
-        completedStage: s.completedStage,
-        checkpoint: s.checkpoint,
-        level: { length, goal },
-        mode: s.mode,
-        player: clonePlain(s.p),
-        ground: s.ground,
-        time: s.time,
-        deaths: s.deaths,
-        people: clonePlain(s.people),
-        solids: stageSolids(s).map((p) => ({ p: clonePlain(p) })),
-    };
-}
-
-function createFocusView(s: Readonly<CoreState>): FocusView {
-    return {
-        focus: s.focus.value,
-        focusClock: s.focus.recoveryClock,
-        focusLossTime: s.focusLossTime,
-        focusNotice: clonePlain(s.focus.notice),
-        lossReason: s.lossReason,
-        focusBlocked: focusBlockedIn(s),
-    };
-}
-
-function createSprayView(extinguisher: Readonly<ExtinguisherState>): SprayView {
+function createSpraySnapshot(
+    extinguisher: Readonly<ExtinguisherState>,
+): SpraySnapshot {
     return {
         hasExtinguisher: extinguisher.owned,
         spray: {
@@ -146,60 +133,40 @@ function createSprayView(extinguisher: Readonly<ExtinguisherState>): SprayView {
     };
 }
 
-function createOfficeView(s: Readonly<CoreState>): OfficeView {
-    const office = s.office;
-    const { x, cool, burst, next, dir } = office.copier;
-    return {
-        officeCheckpoint: s.stage === 1 && s.checkpoint > 0,
-        slip: office.slip,
-        dirty: office.dirty,
-        inBin: office.inBin,
-        binAge: office.binAge,
-        bursts: office.copier.bursts,
-        paperHits: office.paperHits,
-        binFalls: office.binFalls,
-        dirtyWaterExperienced: office.wetSeen,
-        cleaningSpilled: office.cleaning.spilled,
-        soaked: office.soakedOnSpill > 0,
-        bucketAge: office.bucket.age,
-        paperPenaltyRemaining: office.paperPenaltyRemaining,
-        lightPenaltyRemaining: office.lightPenaltyRemaining,
-        cleaning: clonePlain(office.cleaning),
-        lightHits: office.lightHits,
-        doorHits: office.doorHits,
-        monitors: monitorsView(s.time),
-        papers: clonePlain(office.papers),
-        copier: { x, cool, burst, next, dir },
-        urgentCopier: clonePlain(office.urgent),
-        bin: clonePlain(LEVEL.bin),
+type SnapshotData = SessionSnapshot &
+    ProgressSnapshot &
+    TutorialSnapshot &
+    PlayerSnapshot &
+    WorldSnapshot &
+    FocusSnapshot &
+    SpraySnapshot &
+    OfficeSnapshot &
+    BuildingSnapshot &
+    RooftopSnapshot & {
+        sky: CoreState['sky'];
+        orbit: CoreState['orbit'] | undefined;
     };
-}
 
-function createBuildingView(s: Readonly<CoreState>): BuildingView {
-    return {
-        furniture: clonePlain(s.building.furniture),
-        corridor: clonePlain(s.building.corridor),
-        canEnterMeeting: stageHooks(s.stage).canInteract?.(s) ?? false,
-    };
-}
-
-function createRooftopView(rooftop: Readonly<RooftopState>): RooftopView {
-    return {
-        firstFlight: clonePlain(rooftop.flight),
-        rooftopEntrance: clonePlain(rooftop.entrance),
-        ductReaction: clonePlain(rooftop.duct),
-        airSprays: rooftop.airSprays,
-    };
-}
+export type GameSnapshot = DeepReadonly<SnapshotData>;
 
 export function viewState(s: Readonly<CoreState>): SnapshotData {
+    const playing = s.mode === 'play';
+    const focusBlocked = focusBlockedIn(s);
+    const canEnterMeeting = stageHooks(s.stage).canInteract?.(s) ?? false;
+    const solids = stageSolids(s);
     return {
-        ...createCommonView(s),
-        ...createFocusView(s),
-        ...createSprayView(s.extinguisher),
-        ...createOfficeView(s),
-        ...createBuildingView(s),
-        ...createRooftopView(s.rooftop),
+        mode: s.mode,
+        time: s.time,
+        lossReason: s.lossReason,
+        ...createProgressSnapshot(s),
+        ...createTutorialSnapshot(s.lessons, s.p.x, playing),
+        ...createPlayerSnapshot(s, playing),
+        ...createWorldSnapshot(s, STAGES[s.stage], solids),
+        ...createFocusSnapshot(s, focusBlocked),
+        ...createSpraySnapshot(s.extinguisher),
+        ...createOfficeSnapshot(s.office, s.time),
+        ...createBuildingSnapshot(s.building, canEnterMeeting),
+        ...createRooftopSnapshot(s.rooftop),
         sky: clonePlain(s.sky),
         orbit: s.stage === 5 ? clonePlain(s.orbit) : undefined,
     };

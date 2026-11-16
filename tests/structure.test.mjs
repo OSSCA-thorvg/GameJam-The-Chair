@@ -82,3 +82,18 @@ test('every stage has its definition, attempt setup and hooks in its own folder'
         }
     }
 });
+
+test('stage views receive projected inputs instead of whole-state rules', () => {
+    for (const path of files(STAGE_ROOT)) {
+        if (!STAGES.includes(stageOf(path)) || !path.endsWith('/view.ts')) {
+            continue;
+        }
+        for (const target of imports(path)) {
+            assert.ok(
+                target !== 'src/game/state' &&
+                    target !== 'src/game/stages/hooks',
+                `${path}: pass stage data and queried rule results into views`,
+            );
+        }
+    }
+});

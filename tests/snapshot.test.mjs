@@ -1,8 +1,23 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { load } from './support/load.mjs';
+import { loadSource } from './support/load.mjs';
 
-const { createGame, viewState } = await load('src/game/game.ts');
+const {
+    createGame,
+    viewState,
+    createOfficeSnapshot,
+    createBuildingSnapshot,
+    createRooftopSnapshot,
+    STAGE_TWO,
+} = await loadSource(`
+    export { createGame, viewState } from './src/game/game';
+    export {
+        createOfficeSnapshot,
+        createBuildingSnapshot,
+        createRooftopSnapshot,
+    } from './src/game/stages/view';
+    export { STAGE_TWO } from './src/game/stages/building/data';
+`);
 
 for (const stage of [1, 2, 3, 4, 5]) {
     test(`stage ${stage} snapshots detach nested data from the game and each other`, () => {
@@ -179,4 +194,77 @@ test('every nested snapshot object belongs to that snapshot', () => {
             assert.equal(secondObjects.has(object), false, 'no snapshot alias');
         }
     }
+});
+
+test('office projections use stage data and keep hazard counters distinct', () => {
+    const game = createGame({ seed: 42 });
+    const state = JSON.parse(game.serialize());
+    const { binCooldown, lightCooldown, slipCooldown, ...office } =
+        state.office;
+    office.paperHits = 2;
+    office.binFalls = 3;
+    office.lightHits = 4;
+    office.doorHits = 5;
+    office.copier.bursts = 6;
+    office.bucket.age = 0.75;
+    office.cleaning.spilled = true;
+    office.soakedOnSpill = 1;
+    office.wetSeen = true;
+    const saved = structuredClone(office);
+    const snapshot = createOfficeSnapshot(office, 1.4);
+    assert.equal(snapshot.paperHits, 2);
+    assert.equal(snapshot.binFalls, 3);
+    assert.equal(snapshot.lightHits, 4);
+    assert.equal(snapshot.doorHits, 5);
+    assert.equal(snapshot.bursts, 6);
+    assert.equal(snapshot.bucketAge, 0.75);
+    assert.equal(snapshot.cleaningSpilled, true);
+    assert.equal(snapshot.soaked, true);
+    assert.equal(snapshot.dirtyWaterExperienced, true);
+    assert.equal(snapshot.monitors[0].active, true);
+    assert.equal(createOfficeSnapshot(office, 0).monitors[0].active, false);
+    snapshot.cleaning.spilled = false;
+    snapshot.copier.x += 10;
+    snapshot.urgentCopier.x += 10;
+    assert.deepEqual(office, saved);
+});
+
+test('building and rooftop projections own data and accept queried availability', () => {
+    const game = createGame({ seed: 42 });
+    const state = JSON.parse(game.serialize());
+    const saved = structuredClone(state);
+    const building = createBuildingSnapshot(state.building, true);
+    assert.equal(building.canEnterMeeting, true);
+    assert.equal(
+        createBuildingSnapshot(state.building, false).canEnterMeeting,
+        false,
+    );
+    const rooftop = createRooftopSnapshot(state.rooftop);
+    building.corridor.lesson++;
+    rooftop.ductReaction.rest++;
+    assert.deepEqual(state, saved);
+});
+
+test('snapshot assembly applies the existing focus and interaction rules', () => {
+    const game = createGame({ seed: 42 });
+    game.startStage(1);
+    const office = JSON.parse(game.serialize());
+    assert.equal(viewState(office).focusBlocked, false);
+    office.office.paperPenaltyRemaining = 1;
+    assert.equal(viewState(office).focusBlocked, true);
+    office.office.paperPenaltyRemaining = 0;
+    office.office.lightPenaltyRemaining = 1;
+    assert.equal(viewState(office).focusBlocked, true);
+    game.startStage(2);
+    const building = JSON.parse(game.serialize());
+    building.p.x = STAGE_TWO.meeting;
+    building.ground = true;
+    building.building.corridor.convoy = 'free';
+    building.building.corridor.room = { kind: 'corridor' };
+    assert.equal(viewState(building).canEnterMeeting, true);
+    building.ground = false;
+    assert.equal(viewState(building).canEnterMeeting, false);
+    building.ground = true;
+    building.mode = 'pause';
+    assert.equal(viewState(building).canEnterMeeting, false);
 });

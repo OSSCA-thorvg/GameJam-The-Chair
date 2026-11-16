@@ -20,6 +20,7 @@ stages/<stage>/
   definition.ts        StageDefinition: length, goal, terrain, checkpoints, people, and rule flags
   attempt.ts           Initial values for a new attempt
   hooks.ts             StageHooks inserted into the shared tick
+  view.ts              Optional custom projection of detached stage presentation data
   <system>/decide.ts   Pure decision from the minimum required values
   <system>/apply.ts    Writes the decision to state
 ```
@@ -48,8 +49,9 @@ Command hooks are `canJump`, `canSpray`, `onSpray`, `interact`, `leave`, and `ca
 3. Keep only data in a `definition.ts`. Put behavior in `hooks.ts`.
 4. Do not use `Math.random`, `Date`, or `performance` in `src/game`. Read randomness through `state.rng` and `rng.ts`.
 5. In a decide/apply system, `decide.ts` does not mutate state. Its paired `apply.ts` writes the result.
+6. Stage views receive selected stage data and queried rule results. They do not import `CoreState` or dispatch stage hooks.
 
-`tests/structure.test.mjs` enforces rules 1 and 2 and requires each stage's core files. `npm run lint` enforces the forbidden APIs and `decide.ts` import boundary.
+`tests/structure.test.mjs` enforces rules 1, 2 and 6 and requires each stage's core files. `npm run lint` enforces the forbidden APIs and `decide.ts` import boundary.
 
 ## Add a stage
 
@@ -72,7 +74,7 @@ These files can still require changes when a feature crosses stage boundaries. K
 |---|---|
 | `Attempt` in `state.ts` | Adding a stage |
 | `CueId` and `Input` in `types.ts` | Adding a presentation cue or input |
-| `viewState` in `game.ts` | Exposing a value to the presentation layer |
+| `snapshot.ts` and `stages/<stage>/view.ts` | Exposing a value to the presentation layer |
 | `i18n.ts` | Adding text |
 | `src/render/scene/*`, `src/ui/hud.ts` | Changing stage presentation |
 

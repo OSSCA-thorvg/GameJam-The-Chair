@@ -39,9 +39,12 @@ Every value that affects gameplay belongs to one of these categories.
 | `rng.ts` | Seeded `physics` and `cosmetic` random streams |
 | `math.ts` | Bit-exact `sin`, `cos`, `tan`, `exp`, `atan2`, `hypot` that every browser computes the same way |
 | `replay.ts` | Replay recording, validation, and timelines |
-| `game.ts` | The `createGame` facade: state ownership, fixed-step accumulation, recording hooks, events, and presentation snapshots |
+| `game.ts` | The `createGame` facade: state ownership, fixed-step accumulation, recording hooks, and events |
+| `snapshot.ts` | Presentation snapshot assembly and shared projections with narrow input contracts |
 
 `getSnapshot()` creates the presentation snapshot once per frame. UI decisions use the allocation-free `status()`.
+
+`viewState` queries gameplay rules and terrain before projecting data. Shared projections accept only their selected input fields; stage projections live in `stages/<stage>/view.ts` and are exported through `stages/view.ts`. Each projection owns its returned objects and arrays. Raw sky and orbit data are cloned directly at the assembly boundary, without pass-through factory wrappers.
 
 ## Write a system
 
@@ -69,7 +72,7 @@ export function applyGeyserHits(s: GameState, out: GameEvent[], hits: readonly G
 
 ### Golden tests
 
-`tests/golden.test.mjs` hashes every tick's mode, player, focus, and events, plus the final presentation snapshot, for six fixed play scenarios.
+`tests/golden.test.mjs` hashes every tick's mode, player, focus, and events, plus the final presentation snapshot, for six fixed play scenarios. Object keys are sorted for hashing; array order and values remain significant.
 
 - A changed fingerprint during a refactor is a behavior regression.
 - For an intentional rule or level change, run `npm run golden:update` and record the reason in the test comment and PR.

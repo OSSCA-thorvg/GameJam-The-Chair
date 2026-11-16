@@ -39,9 +39,12 @@
 | `rng.ts` | seed 기반 `physics`와 `cosmetic` 난수 흐름 |
 | `math.ts` | 모든 브라우저에서 같은 비트를 내는 `sin`, `cos`, `tan`, `exp`, `atan2`, `hypot` |
 | `replay.ts` | 리플레이 기록, 검증, 타임라인 |
-| `game.ts` | `createGame` facade. state 보관, 고정 틱 누적, 기록 hook, event, 화면 snapshot 담당 |
+| `game.ts` | `createGame` facade. state 보관, 고정 틱 누적, 기록 hook, event 담당 |
+| `snapshot.ts` | 화면 snapshot 조립과 필요한 입력만 받는 공용 projection |
 
 `getSnapshot()`은 프레임마다 화면 snapshot을 한 번 만듭니다. UI 판단에는 할당하지 않는 `status()`를 사용합니다.
+
+`viewState`는 게임 규칙과 지형을 먼저 조회한 뒤 표시 데이터를 조립합니다. 공용 projection은 선택한 입력 필드만 받으며, 스테이지 projection은 `stages/<stage>/view.ts`에 두고 `stages/view.ts`로 공개합니다. 각 projection의 반환 객체와 배열은 원본 및 다른 snapshot과 공유하지 않습니다. 단순 복사만 필요한 하늘·궤도 데이터는 별도 전달 함수 없이 조립 경계에서 직접 복사합니다.
 
 ## 시스템 작성 방법
 
@@ -69,7 +72,7 @@ export function applyGeyserHits(s: GameState, out: GameEvent[], hits: readonly G
 
 ### Golden 테스트
 
-`tests/golden.test.mjs`는 정해진 여섯 플레이 시나리오에서 모든 tick의 mode, player, focus, event와 마지막 화면 snapshot을 hash로 저장합니다.
+`tests/golden.test.mjs`는 정해진 여섯 플레이 시나리오에서 모든 tick의 mode, player, focus, event와 마지막 화면 snapshot을 hash로 저장합니다. 객체 키를 정렬해 hash를 만들며, 배열 순서와 값의 차이는 유지합니다.
 
 - 리팩터링 중 지문이 바뀌면 동작 회귀입니다.
 - 의도한 규칙이나 레벨 변경이면 `npm run golden:update`를 실행하고 테스트 주석과 PR에 이유를 기록합니다.
