@@ -106,7 +106,7 @@ function load(text: string, origin: string) {
             open(sources[0]);
         }
     } catch (error) {
-        status.textContent = `${t('replay.badFile')} (${error instanceof Error ? error.message : error})`;
+        status.textContent = `${t('replay.badFile')} (${error instanceof Error ? error.message : String(error)})`;
     }
 }
 
@@ -226,7 +226,7 @@ function showState() {
             `x ${n(p.x)} y ${n(p.y)} · v ${n(p.vx)}, ${n(p.vy)} · a ${p.a.toFixed(2)}`,
         ],
         ['ground', String(state.ground)],
-        ['focus', String(state.focus)],
+        ['focus', String(state.focus.value)],
         ['keys', state.keys.join(', ') || '—'],
         ['deaths', String(state.deaths)],
     ]);
@@ -258,7 +258,8 @@ $('#load-paste').addEventListener('click', () =>
     load($<HTMLTextAreaElement>('#paste').value, t('tool.paste')),
 );
 sourcesSelect.addEventListener('change', () => {
-    const source = sources[Number(sourcesSelect.value)];
+    const index = Number(sourcesSelect.value);
+    const source = index >= 0 ? sources.at(index) : undefined;
     if (source) open(source);
 });
 document.addEventListener('dragover', (event) => event.preventDefault());

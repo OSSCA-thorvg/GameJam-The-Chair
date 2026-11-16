@@ -204,7 +204,7 @@ export function parseState(json: string): CoreState {
 
 // Frozen rewind frames are shared between states; never mutate them.
 export function snapshot(s: CoreState): Snapshot {
-    return Object.freeze({ p: Object.freeze({ ...s.p }) }) as Snapshot;
+    return Object.freeze({ p: Object.freeze({ ...s.p }) });
 }
 
 export function cloneState(s: Readonly<CoreState>): CoreState {

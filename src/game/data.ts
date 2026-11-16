@@ -10,7 +10,11 @@ export function deepFreeze<T>(value: T): DeepReadonly<T> {
 
 export function canonicalJson(value: unknown): string {
     return JSON.stringify(value, (_key, entry: unknown) => {
-        if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+        if (
+            entry === null ||
+            typeof entry !== 'object' ||
+            Array.isArray(entry)
+        ) {
             return entry;
         }
         return Object.fromEntries(

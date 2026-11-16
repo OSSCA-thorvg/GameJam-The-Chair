@@ -76,15 +76,15 @@ export function actionForKey(key: string, state: GameStatus): Action | null {
 }
 
 export function applyControlLabels(root: ParentNode) {
-    root.querySelectorAll?.<HTMLElement>('[data-control-label]').forEach(
-        (el) => {
-            const action = el.dataset.controlLabel;
-            el.textContent =
-                action === 'move'
-                    ? MOVE_LABEL
-                    : (CONTROLS[action as Action]?.label ?? el.textContent);
-        },
-    );
+    root.querySelectorAll<HTMLElement>('[data-control-label]').forEach((el) => {
+        const action = el.dataset.controlLabel;
+        el.textContent =
+            action === 'move'
+                ? MOVE_LABEL
+                : ((action && action in CONTROLS
+                      ? CONTROLS[action as Action].label
+                      : undefined) ?? el.textContent);
+    });
 }
 
 type ControlHooks = {
@@ -159,7 +159,7 @@ export function bindControls(
             (e) => {
                 e.preventDefault();
                 game.press(input);
-                el.setPointerCapture?.(e.pointerId);
+                el.setPointerCapture(e.pointerId);
             },
             options,
         );

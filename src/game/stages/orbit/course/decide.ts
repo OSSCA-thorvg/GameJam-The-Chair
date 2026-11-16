@@ -149,7 +149,7 @@ function aimAt(
     return C.satelliteLight.beams.map((beam, i) => {
         const { lock, track } = gearAt(beam.from),
             chase = 1 - Det.exp(-track * dt);
-        const aim = orbit.aims[i] ?? { x: p.x, y: p.y };
+        const aim = orbit.aims.at(i) ?? { x: p.x, y: p.y };
         const arrival = satelliteLightArrival(beam, orbit.z, orbit.speed);
         const lead = beam.lead ?? 0,
             edge = (v: number, b: number) => Math.max(-b, Math.min(b, v));
@@ -193,7 +193,7 @@ export function satelliteLightOn(
 ): Beam | null {
     for (let i = 0; i < C.satelliteLight.beams.length; i++) {
         const beam = C.satelliteLight.beams[i],
-            aim = orbit.aims[i];
+            aim = orbit.aims.at(i);
         if (!aim || z < beam.from || z > beam.to) continue;
         const inside = overlap(aim, beam, p);
         if (inside.x > 0 && inside.y > 0) return beam;
@@ -224,7 +224,7 @@ function satelliteLightShove(
 }
 
 function advanceRings(next: OrbitState, p: Player) {
-    const ring = C.rings[next.rings];
+    const ring = C.rings.at(next.rings);
     if (!ring || next.z < ring.z) return;
     if (Det.hypot(p.x - ring.x, p.y - ring.y) < ring.radius - C.ringClearance) {
         next.rings++;

@@ -317,7 +317,7 @@ function worker(ctx: RenderCtx, pose: Pose, L: Look, t: number, look: number) {
 }
 
 const STAFF: Readonly<
-    Record<number, { pose: Pose; look: number; dx: number }>
+    Partial<Record<number, { pose: Pose; look: number; dx: number }>>
 > = {
     2: { pose: 'phone', look: 3, dx: -1 },
     5: { pose: 'typing', look: 1, dx: -2 },

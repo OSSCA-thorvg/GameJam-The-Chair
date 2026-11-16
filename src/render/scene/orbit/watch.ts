@@ -50,7 +50,7 @@ function routeCctvs(
 const REVEAL_COLUMNS = [60, 210, 360, 640, 790, 940],
     REVEAL_ROWS = [50, 170, 300, 430];
 const REVEAL_VIEW = { focal: 841.5, centerY: 188.7, camera: 480 };
-const REVEAL_BIRDS: Record<number, SkyRobot> = {
+const REVEAL_BIRDS: Partial<Record<number, SkyRobot>> = {
     1: 'liquid',
     6: 'black',
     11: 'liquid',

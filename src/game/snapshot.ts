@@ -5,8 +5,7 @@ import type { DeepReadonly } from './types';
 import type { StageDefinition } from './stages/types';
 import { STAGES } from './stages/index';
 import { stageSolids } from './step';
-import { focusBlockedIn } from './systems/focus/apply';
-import { stageHooks } from './stages/hooks';
+import { focusBlockedIn, stageHooks } from './stages/hooks';
 import {
     createOfficeSnapshot,
     createBuildingSnapshot,

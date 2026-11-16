@@ -1,4 +1,9 @@
-import { createGame, type Game, type GameSnapshot } from '../game/game';
+import {
+    parseState,
+    createGame,
+    type Game,
+    type GameSnapshot,
+} from '../game/game';
 import type { Input } from '../game/types';
 import { STAGE_TWO } from '../game/stages/building/data';
 import { createEffects } from '../render/effects';
@@ -8,21 +13,19 @@ import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
 export function convoyRide(x: number, line: number, said = false): Game {
     const game = createGame();
     game.startStage(2);
-    const saved = JSON.parse(game.serialize());
+    const saved = parseState(game.serialize());
     const cruise = STAGE_TWO.orientation.cruise;
     saved.checkpoint = 2;
     saved.lessons = { moved: true, jumped: true };
     saved.p = { ...saved.p, x, y: 392, vx: cruise, vy: 0, a: 0, w: 0 };
     saved.ground = true;
-    saved.building.furniture = saved.building.furniture.map(
-        (chair: object, i: number) => ({
-            ...chair,
-            x: x + 90 - i * 130,
-            vx: cruise,
-            released: true,
-            cheer: 0,
-        }),
-    );
+    saved.building.furniture = saved.building.furniture.map((chair, i) => ({
+        ...chair,
+        x: x + 90 - i * 130,
+        vx: cruise,
+        released: true,
+        cheer: 0,
+    }));
     Object.assign(saved.building.corridor, {
         dispatchStarted: true,
         dispatchAge: 10,
@@ -120,7 +123,7 @@ export function expressRun(
 export function meetingVisit(visit = 1): PreviewScene {
     const game = createGame({ seed: 8 });
     game.startStage(2);
-    const saved = JSON.parse(game.serialize());
+    const saved = parseState(game.serialize());
     saved.mode = 'play';
     saved.ground = true;
     saved.p.x = STAGE_TWO.meeting - 110;
@@ -169,7 +172,7 @@ export function meetingVisit(visit = 1): PreviewScene {
 export function chairDispatch(): PreviewScene {
     const game = createGame({ seed: 8 });
     game.startStage(2);
-    const saved = JSON.parse(game.serialize());
+    const saved = parseState(game.serialize());
     saved.mode = 'play';
     saved.ground = true;
     saved.checkpoint = 1;

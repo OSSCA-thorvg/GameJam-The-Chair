@@ -9,10 +9,10 @@ const HEIGHT = 540;
 export function createSplashPlayer(element: HTMLCanvasElement) {
     let canvas: Canvas | null = null;
     let animation: Animation | null = null;
-    let disposed = false;
+    const lifecycle = { disposed: false };
     const ready = (async () => {
         const TVG = await loadThorvg();
-        if (disposed) return;
+        if (lifecycle.disposed) return;
         const nextAnimation = new TVG.Animation();
         try {
             nextAnimation.load(splashData);
@@ -24,11 +24,6 @@ export function createSplashPlayer(element: HTMLCanvasElement) {
                 height: HEIGHT,
             });
             nextCanvas.add(picture);
-            if (disposed) {
-                nextCanvas.destroy();
-                nextAnimation.dispose();
-                return;
-            }
             animation = nextAnimation;
             canvas = nextCanvas;
             draw(0);
@@ -50,7 +45,7 @@ export function createSplashPlayer(element: HTMLCanvasElement) {
         ready,
         draw,
         destroy() {
-            disposed = true;
+            lifecycle.disposed = true;
             canvas?.destroy();
             animation?.dispose();
             canvas = null;

@@ -27,9 +27,13 @@ export function createErrorLog(max: number) {
     max = Number.isFinite(max) ? Math.max(0, Math.floor(max)) : 0;
     let entries: ReplayErrorEntry[] = [];
     try {
-        const saved = JSON.parse(localStorage.getItem(ERRORS_KEY) || '[]');
+        const saved: unknown = JSON.parse(
+            localStorage.getItem(ERRORS_KEY) || '[]',
+        );
         if (Array.isArray(saved)) {
-            for (const entry of saved) {
+            for (const value of saved as unknown[]) {
+                if (!value || typeof value !== 'object') continue;
+                const entry = value as Record<string, unknown>;
                 try {
                     const error = parseReplayError(entry);
                     if (
@@ -41,7 +45,8 @@ export function createErrorLog(max: number) {
                     }
                     if (
                         entry.stage !== null &&
-                        (!Number.isInteger(entry.stage) ||
+                        (typeof entry.stage !== 'number' ||
+                            !Number.isInteger(entry.stage) ||
                             entry.stage < 1 ||
                             entry.stage > 5)
                     ) {
@@ -157,7 +162,8 @@ export async function copyText(text: string) {
         area.style.opacity = '0';
         document.body.append(area);
         area.select();
-        const ok = document.execCommand?.('copy') ?? false;
+        const target: Partial<Pick<Document, 'execCommand'>> = document;
+        const ok = target.execCommand?.('copy') ?? false;
         area.remove();
         return ok;
     }

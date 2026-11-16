@@ -225,7 +225,7 @@ function sheets(ctx: RenderCtx, age: number): Sheet[] {
         const speed = Math.hypot(vx, vy) || 1;
         const landedHere = p[1] >= floor;
         if (landedHere) {
-            const prev = current[current.length - 1];
+            const prev = current.at(-1);
             if (!prev) break;
             const k = (floor - prev.p[1]) / (p[1] - prev.p[1]);
             p = [prev.p[0] + (p[0] - prev.p[0]) * k, floor];
@@ -336,7 +336,8 @@ export function drawPour(ctx: RenderCtx) {
         }));
         const falling = shapes
             .filter((s) => !s.sheet.landed)
-            .sort((a, b) => b.front.p[1] - a.front.p[1])[0];
+            .sort((a, b) => b.front.p[1] - a.front.p[1])
+            .at(0);
         let mask: PathCommand | undefined;
         if (falling) {
             const { p, dir } = falling.front;

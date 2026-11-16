@@ -199,8 +199,12 @@ test('every nested snapshot object belongs to that snapshot', () => {
 test('office projections use stage data and keep hazard counters distinct', () => {
     const game = createGame({ seed: 42 });
     const state = JSON.parse(game.serialize());
-    const { binCooldown, lightCooldown, slipCooldown, ...office } =
-        state.office;
+    const {
+        binCooldown: _binCooldown,
+        lightCooldown: _lightCooldown,
+        slipCooldown: _slipCooldown,
+        ...office
+    } = state.office;
     office.paperHits = 2;
     office.binFalls = 3;
     office.lightHits = 4;

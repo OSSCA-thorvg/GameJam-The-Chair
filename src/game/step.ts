@@ -11,7 +11,8 @@ import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages/index';
 import { stageHooks } from './stages/hooks';
 import { runCommand, spray, type Command } from './commands';
 import { collide, drivePlayer, fellOffFloor } from './physics';
-import { applyFocusLoss, applyFocusRecovery } from './systems/focus/apply';
+import { applyFocusLoss } from './systems/focus/apply';
+import { applyFocusRecovery } from './systems/focus/recovery';
 import { applyHeadHit, applyImpact } from './systems/impact/apply';
 import * as Det from './math';
 
@@ -163,7 +164,7 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
     hooks.afterCollide?.(s, out, dt, prev);
     if (s.mode !== 'play') return;
     if (hooks.checkpointsOpen?.(s) ?? true) reachCheckpoints(s, out);
-    applyFocusRecovery(s, dt);
+    applyFocusRecovery(s, dt, hooks.focusBlocked?.(s) ?? false);
     if (s.ground) {
         p.w -= Det.sin(p.a) * dt;
     }

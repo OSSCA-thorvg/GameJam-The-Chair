@@ -34,7 +34,9 @@ export function bindOrientation(
 async function goLandscape() {
     try {
         if (!document.fullscreenElement) {
-            await document.documentElement.requestFullscreen?.({
+            const target: Partial<Pick<HTMLElement, 'requestFullscreen'>> =
+                document.documentElement;
+            await target.requestFullscreen?.({
                 navigationUI: 'hide',
             });
         }

@@ -1,4 +1,4 @@
-import { createGame } from '../game/game';
+import { parseState, createGame } from '../game/game';
 import type { Input } from '../game/types';
 import { STAGE_FIVE } from '../game/stages/orbit/data';
 import { ORBIT_ENDING } from '../render/scene/orbit/ending';
@@ -55,7 +55,7 @@ export function orbitRoute(): PreviewScene {
 export function orbitEndingScene(aside = false): PreviewScene {
     const game = createGame();
     game.startStage(5);
-    const parked = JSON.parse(game.serialize());
+    const parked = parseState(game.serialize());
     Object.assign(parked.orbit, {
         phase: 'parked',
         z: STAGE_FIVE.checkpoint.z,

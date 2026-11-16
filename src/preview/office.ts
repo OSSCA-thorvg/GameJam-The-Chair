@@ -1,4 +1,4 @@
-import { createGame, type GameSnapshot } from '../game/game';
+import { parseState, createGame, type GameSnapshot } from '../game/game';
 import { LEVEL, FIXED_STEP } from '../game/level';
 import { deathShotLength } from '../render/death-shot';
 import { FOCUS_LOSS_DURATION } from '../game/systems/focus/decide';
@@ -460,7 +460,7 @@ export function urgentCopier(
 ): PreviewScene {
     const game = createGame();
     game.startStage(1);
-    const saved = JSON.parse(game.serialize());
+    const saved = parseState(game.serialize());
     saved.lessons = { moved: true, jumped: true };
     saved.p = {
         ...saved.p,

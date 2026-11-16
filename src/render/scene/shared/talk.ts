@@ -157,10 +157,7 @@ export function drawTalk(ctx: RenderCtx, talk: SceneTalk) {
 export function drawStageTitle(ctx: RenderCtx) {
     const t = ctx.state.time;
     if (ctx.mode !== 'play' || t > TITLE_TIME) return;
-    const text = translate(
-        STAGE_TITLES[ctx.state.stage] ?? 'stageLabel.stage1',
-        ctx.locale,
-    );
+    const text = translate(STAGE_TITLES[ctx.state.stage], ctx.locale);
     const size = ctx.W < 520 ? 14 : 17;
     const w = ctx.measureText(text, size, LABEL_FONT) + 34,
         h = size + 18;

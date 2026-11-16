@@ -1,12 +1,6 @@
 import type { CoreState } from '../../state';
-import { stageHooks } from '../../stages/hooks';
 import type { GameEvent } from '../../types';
-import {
-    focusAfterHit,
-    focusLossStep,
-    focusRecovery,
-    type FocusHit,
-} from './decide';
+import { focusAfterHit, focusLossStep, type FocusHit } from './decide';
 export function applyFocusHit(s: CoreState, out: GameEvent[], hit: FocusHit) {
     if (s.mode !== 'play') return false;
     const r = focusAfterHit(s.focus, hit);
@@ -18,7 +12,7 @@ export function applyFocusHit(s: CoreState, out: GameEvent[], hit: FocusHit) {
         notice: r.notice,
     };
     if (r.lost) applyFocusFailure(s, out);
-    return s.mode === 'play';
+    return !r.lost;
 }
 
 function applyFocusFailure(s: CoreState, out: GameEvent[]) {
@@ -40,12 +34,4 @@ export function applyFocusLoss(s: CoreState, out: GameEvent[], dt: number) {
         s.mode = 'dead';
         out.push({ type: 'cue', id: 'focus-game-over' });
     }
-}
-
-export function focusBlockedIn(s: Readonly<CoreState>) {
-    return stageHooks(s.stage).focusBlocked?.(s) ?? false;
-}
-
-export function applyFocusRecovery(s: CoreState, dt: number) {
-    Object.assign(s.focus, focusRecovery(s.focus, focusBlockedIn(s), dt));
 }

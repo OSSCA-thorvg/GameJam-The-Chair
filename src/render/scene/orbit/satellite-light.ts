@@ -493,7 +493,7 @@ export function satelliteLightWarmth(
 ) {
     let best = { warmth: 0, toward: { x: 0, y: 0 } };
     P.beams.forEach((b, i) => {
-        const aim = aims[i];
+        const aim = aims.at(i);
         if (!aim) return;
         const round =
             b.shape === 'circle'

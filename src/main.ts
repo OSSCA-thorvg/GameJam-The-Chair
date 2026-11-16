@@ -100,20 +100,26 @@ for (const button of root.querySelectorAll<HTMLButtonElement>(
 let savedDeaths = 0;
 let savedCompletedStage: 0 | StageId = 0;
 try {
-    const saved = JSON.parse(
+    const saved: unknown = JSON.parse(
         localStorage.getItem('the-chair-office-v1') || 'null',
     );
-    if (
-        saved?.completedStage === 1 ||
-        saved?.completedStage === 2 ||
-        saved?.completedStage === 3 ||
-        saved?.completedStage === 4 ||
-        saved?.completedStage === 5
-    ) {
-        savedCompletedStage = saved.completedStage;
-    }
-    if (Number.isFinite(saved?.deaths)) {
-        savedDeaths = Math.max(0, saved.deaths);
+    if (saved && typeof saved === 'object') {
+        const progress = saved as Record<string, unknown>;
+        if (
+            progress.completedStage === 1 ||
+            progress.completedStage === 2 ||
+            progress.completedStage === 3 ||
+            progress.completedStage === 4 ||
+            progress.completedStage === 5
+        ) {
+            savedCompletedStage = progress.completedStage;
+        }
+        if (
+            typeof progress.deaths === 'number' &&
+            Number.isFinite(progress.deaths)
+        ) {
+            savedDeaths = Math.max(0, progress.deaths);
+        }
     }
 } catch {}
 const seed = crypto.getRandomValues(new Uint32Array(1))[0];
@@ -152,7 +158,7 @@ const game = createGame({
         recorder.onAttemptStart(state);
         keepBrowserData();
     },
-    onCommand: recorder.onCommand,
+    onCommand: (tick, command) => recorder.onCommand(tick, command),
     onStep(state) {
         recorder.onStep(state);
         effects.observe({

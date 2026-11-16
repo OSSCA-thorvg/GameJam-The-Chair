@@ -244,7 +244,7 @@ export function createReplayPlayer(
             ) {
                 return;
             }
-            const handled: Record<string, () => void> = {
+            const handled: Partial<Record<string, () => void>> = {
                 ' ': () => playButton?.click(),
                 ArrowLeft: () =>
                     q<HTMLButtonElement>('[data-replay-prev]')?.click(),

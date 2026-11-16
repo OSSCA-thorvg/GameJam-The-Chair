@@ -158,7 +158,7 @@ export function parseReplay(text: string): ReplayFile {
         assertGameState(data.start, 'start state');
     } catch (error) {
         throw new Error(
-            `bad start state: ${error instanceof Error ? error.message : error}`,
+            `bad start state: ${error instanceof Error ? error.message : String(error)}`,
         );
     }
     const start = data.start;
@@ -551,7 +551,6 @@ export function readReplaySources(text: string): {
         attempts.forEach((attempt, i) => {
             try {
                 const serialized = JSON.stringify(attempt);
-                if (serialized === undefined) return;
                 const file = parseReplay(serialized);
                 sources.push({
                     label: `#${i + 1} · stage ${file.start.stage} · ${seconds(file)}${file.error ? ' · error' : ''}`,
@@ -571,7 +570,6 @@ export function readReplaySources(text: string): {
             }
             try {
                 const serialized = JSON.stringify(value.replay);
-                if (serialized === undefined) return;
                 const file = parseReplay(serialized);
                 const parsed = parseReplayError(value);
                 if (!parsed) return;

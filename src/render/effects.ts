@@ -329,9 +329,12 @@ export function createEffects() {
     return {
         receive,
         observe,
-        restorePersonalBox: personalBox.restore,
-        pressKey: keyHints.press,
-        advance: deathShot.advance,
+        restorePersonalBox: (...args: Parameters<typeof personalBox.restore>) =>
+            personalBox.restore(...args),
+        pressKey: (...args: Parameters<typeof keyHints.press>) =>
+            keyHints.press(...args),
+        advance: (...args: Parameters<typeof deathShot.advance>) =>
+            deathShot.advance(...args),
         snapshot: () => ({
             specks,
             waterDrops,

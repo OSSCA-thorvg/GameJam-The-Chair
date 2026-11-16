@@ -3,10 +3,8 @@ import type { GameEvent, Input } from '../../../types';
 import { STAGES } from '../../index';
 import { skyStep } from './decide';
 import { FOCUS_DAMAGE } from '../../../level';
-import {
-    applyFocusHit,
-    applyFocusRecovery,
-} from '../../../systems/focus/apply';
+import { applyFocusHit } from '../../../systems/focus/apply';
+import { applyFocusRecovery } from '../../../systems/focus/recovery';
 export function applySky(s: CoreState, out: GameEvent[], dt: number) {
     const held = (input: Input) => (s.keys.includes(input) ? 1 : 0);
     const r = skyStep(
@@ -58,7 +56,7 @@ export function applySky(s: CoreState, out: GameEvent[], dt: number) {
         }
     }
     // Takeover skips shared focus recovery; apply it here.
-    if (s.sky.phase === 'course') applyFocusRecovery(s, dt);
+    if (s.sky.phase === 'course') applyFocusRecovery(s, dt, false);
     if (r.fell) s.deaths++;
     if (r.won) {
         s.completedStage = 4;

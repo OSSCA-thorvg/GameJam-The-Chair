@@ -4,7 +4,6 @@ import { loadSource } from './support/load.mjs';
 
 const {
     SKY_DEPARTURE,
-    REVEAL_DURATION,
     revealChairOrbit,
     createGame,
     createSky,

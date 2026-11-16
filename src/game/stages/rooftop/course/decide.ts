@@ -222,7 +222,6 @@ function ductReactionStep(
             bursts: [{ kind: 'gust', age: reaction.rest - duct.gustPeriod }],
         };
     }
-    if (reaction.kind !== 'reacting') return { reaction, p, knocked: false };
     let knocked = false;
     reaction.age += dt;
     for (const burst of reaction.bursts) {

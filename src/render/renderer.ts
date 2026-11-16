@@ -278,7 +278,7 @@ function setup(
         info: () => ({
             renderer,
             renderError,
-            commands: ctx?.commands.length ?? 0,
+            commands: ctx.commands.length,
         }),
         profile(next: RenderStats | null) {
             stats = next;

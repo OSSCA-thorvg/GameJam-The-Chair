@@ -374,7 +374,7 @@ function syncLayer(
             : canvasBox(cmd, ctx.W, ctx.H, extent);
         if (!box) continue;
         anchor ??= box;
-        let s = shapes[i];
+        let s = shapes.at(i);
         if (!s) {
             s = new TVG.Shape();
             shapes.push(s);

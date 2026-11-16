@@ -48,9 +48,9 @@ export function bindInput(
             !panelOpen &&
             !paused &&
             !blocked() &&
-            !document.querySelector?.('.startup-splash')
+            !document.querySelector('.startup-splash')
         ) {
-            panel?.querySelector<HTMLButtonElement>('[data-start]')?.focus();
+            panel.querySelector<HTMLButtonElement>('[data-start]')?.focus();
         }
         if (
             !visiblePanel &&
@@ -105,7 +105,7 @@ export function bindInput(
     const accepting = () =>
         root.isConnected &&
         !blocked() &&
-        !document.querySelector?.('.startup-splash');
+        !document.querySelector('.startup-splash');
     window.addEventListener(
         'keydown',
         (e) => {
@@ -119,8 +119,8 @@ export function bindInput(
                       : null;
             if (!dialog) return;
             const targets = focusable(dialog);
-            const first = targets[0],
-                last = targets[targets.length - 1];
+            const first = targets.at(0),
+                last = targets.at(-1);
             if (
                 e.shiftKey &&
                 (document.activeElement === first ||

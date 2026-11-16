@@ -23,7 +23,9 @@ export function installInputEnvironment(t) {
     class Element {}
     Object.assign(globalThis, {
         window,
-        document: new EventTarget(),
+        document: Object.assign(new EventTarget(), {
+            querySelector: () => null,
+        }),
         Element,
         HTMLElement: Element,
         MutationObserver: class {

@@ -1,4 +1,4 @@
-import { createGame } from '../game/game';
+import { parseState, createGame } from '../game/game';
 import { STAGE_FOUR } from '../game/stages/sky/data';
 import {
     revealGlideStart,
@@ -401,7 +401,7 @@ export function skyEnding(): PreviewScene {
 export function skyToOrbit(): PreviewScene {
     const game = createGame();
     game.startStage(4);
-    const start = JSON.parse(game.serialize());
+    const start = parseState(game.serialize());
     Object.assign(start.sky, { phase: 'reveal', age: 0 });
     Object.assign(start.p, { x: 5045, y: -2338, vx: 0, vy: 0 });
     start.ground = false;

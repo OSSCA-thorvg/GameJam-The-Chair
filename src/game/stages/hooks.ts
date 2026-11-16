@@ -1,3 +1,4 @@
+import type { CoreState } from '../state';
 import type { StageId } from '../types';
 import type { StageHooks } from './types';
 import { officeHooks } from './office/hooks';
@@ -19,4 +20,8 @@ export function stageHooks(stage: StageId): StageHooks {
         case 5:
             return orbitHooks;
     }
+}
+
+export function focusBlockedIn(s: Readonly<CoreState>) {
+    return stageHooks(s.stage).focusBlocked?.(s) ?? false;
 }

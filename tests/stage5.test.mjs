@@ -142,7 +142,7 @@ test('stage five climbs through 5-1 to 5-3 and stops in the Earth shadow, withou
 
 test('no satellite light reaches into the Earth shadow, every edge is slower than the chair, and each gear is busier', () => {
     const { beams, chairRadius } = STAGE_FIVE.satelliteLight,
-        { bounds, steer, gears } = STAGE_FIVE;
+        { bounds, gears } = STAGE_FIVE;
     assert.ok(
         beams.every((beam) => beam.to <= STAGE_FIVE.autopilot.from - 300),
         'a quiet stretch before the shadow',

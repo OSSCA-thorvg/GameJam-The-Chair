@@ -169,7 +169,7 @@ for (const file of tracked) {
     for (const [oldFile, newFile] of moves) {
         source = source.replaceAll(oldFile, newFile);
         const pattern = new RegExp(
-            `${escape(oldFile.replace(/\.ts$/, ''))}(?=$|[.'\"\x60\\s)])`,
+            `${escape(oldFile.replace(/\.ts$/, ''))}(?=$|[.'"\x60\\s)])`,
             'g',
         );
         source = source.replace(pattern, modulePath(newFile));

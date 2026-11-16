@@ -14,7 +14,6 @@ export type GpuTimer = {
 
 export type TimerGl = Pick<
     WebGL2RenderingContext,
-    | 'createQuery'
     | 'deleteQuery'
     | 'beginQuery'
     | 'endQuery'
@@ -23,7 +22,7 @@ export type TimerGl = Pick<
     | 'getExtension'
     | 'QUERY_RESULT'
     | 'QUERY_RESULT_AVAILABLE'
->;
+> & { createQuery(): WebGLQuery | null };
 
 export function createGpuTimer(gl: TimerGl | null): GpuTimer | null {
     if (!gl || !gl.getExtension('EXT_disjoint_timer_query_webgl2')) return null;
