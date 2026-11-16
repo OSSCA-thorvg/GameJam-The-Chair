@@ -25,7 +25,6 @@ import type { ReplayFile } from './game/replay';
 import type { StageId } from './game/stages/building/data';
 import type { Input } from './game/types';
 import type { Locale } from './i18n';
-
 import './style.css';
 const app = document.querySelector('#app');
 if (!app) {
@@ -267,6 +266,47 @@ function draw() {
         renderer?.resetView();
     }
     replayWasActive = player.active;
+    presentFrame();
+}
+let last: number | null = null;
+function presentFrame() {
+    const { replay, state, events } = readPresentationFrame();
+    try {
+        if (!replay) {
+            effects.observe(state);
+            for (const event of events) {
+                effects.receive(event);
+                feedback.receive(event, state);
+            }
+        }
+        const visual = replay ? player.effects() : effects.snapshot();
+        const cutscene = replay ? null : opening.frame();
+        const cues = replay ? player.feedback() : feedback.snapshot();
+        if (cutscene) {
+            renderer?.draw(
+                openingState(state, cutscene),
+                visual,
+                undefined,
+                cutscene,
+            );
+        } else {
+            renderer?.draw(state, visual, undefined, undefined, {
+                talk: cues,
+            });
+        }
+        const hudStart = perf.enabled ? performance.now() : 0;
+        hud.draw(state, cues, visual, !!cutscene);
+        if (perf.enabled) {
+            hudMs = performance.now() - hudStart;
+        }
+    } catch (error) {
+        if (!presentationErrorReported) {
+            console.error('Presentation failed', error);
+            presentationErrorReported = true;
+        }
+    }
+}
+function readPresentationFrame() {
     const live = game.getSnapshot();
     const liveEvents = game.drainEvents();
     lastStage = live.stage;
@@ -289,40 +329,8 @@ function draw() {
             );
         } catch {}
     }
-    try {
-        if (!replay) {
-            effects.observe(state);
-            for (const event of events) {
-                effects.receive(event);
-                feedback.receive(event, state);
-            }
-        }
-        const visual = replay ? player.effects() : effects.snapshot();
-        const cutscene = replay ? null : opening.frame();
-        const cues = replay ? player.feedback() : feedback.snapshot();
-        if (cutscene) {
-            renderer?.draw(
-                openingState(state, cutscene),
-                visual,
-                undefined,
-                cutscene,
-            );
-        } else {
-            renderer?.draw(state, visual, undefined, undefined, cues);
-        }
-        const hudStart = perf.enabled ? performance.now() : 0;
-        hud.draw(state, cues, visual, !!cutscene);
-        if (perf.enabled) {
-            hudMs = performance.now() - hudStart;
-        }
-    } catch (error) {
-        if (!presentationErrorReported) {
-            console.error('Presentation failed', error);
-            presentationErrorReported = true;
-        }
-    }
+    return { replay, state, events };
 }
-let last: number | null = null;
 function frame(ms: number) {
     if (!root.isConnected) {
         unbind();

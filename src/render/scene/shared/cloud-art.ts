@@ -1,6 +1,5 @@
 import type { RenderCtx } from '../../context';
 import type { Curve, Vector } from '../../types';
-
 export type CloudTone = {
     top: string;
     middle: string;
@@ -8,7 +7,6 @@ export type CloudTone = {
     highlight: string;
     rim: string;
 };
-
 export const CLOUD_TONES = {
     dusk: {
         top: '#fff2df',
@@ -32,7 +30,6 @@ export const CLOUD_TONES = {
         rim: '#ffe4a3',
     },
 } satisfies Record<string, CloudTone>;
-
 function mixHex(from: string, to: string, amount: number) {
     const channel = (hex: string, index: number) =>
         parseInt(hex.slice(1 + index * 2, 3 + index * 2), 16);
@@ -50,7 +47,6 @@ function mixHex(from: string, to: string, amount: number) {
             .join('')
     );
 }
-
 export function blendCloudTone(
     from: CloudTone,
     to: CloudTone,
@@ -65,13 +61,11 @@ export function blendCloudTone(
         rim: mixHex(from.rim, to.rim, t),
     };
 }
-
 export type CloudOptions = {
     alpha?: number;
     fade?: boolean;
     detail?: 'auto' | 'full' | 'reduced';
 };
-
 type Puff = { x: number; y: number; r: number };
 type CloudShape = {
     start: Vector;
@@ -82,10 +76,8 @@ type CloudShape = {
     top: number;
     bottom: number;
 };
-
 const FLAT_BOTTOM = 34;
 const shapes = new Map<string, CloudShape>();
-
 export function seeded(seed: number) {
     let a = (Math.imul(seed | 0, 0x9e3779b1) ^ 0x5bd1e995) >>> 0;
     return (): number => {
@@ -96,9 +88,7 @@ export function seeded(seed: number) {
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
 }
-
 type Lump = { x: number; y: number; rx: number; ry: number };
-
 function envelope(
     lumps: readonly Lump[],
     x: number,
@@ -117,7 +107,6 @@ function envelope(
     }
     return edge;
 }
-
 function smoothLoop(points: Vector[], from: number, to: number): Curve[] {
     const n = points.length;
     const at = (i: number) => points[((i % n) + n) % n];
@@ -138,7 +127,6 @@ function smoothLoop(points: Vector[], from: number, to: number): Curve[] {
     }
     return curves;
 }
-
 function buildShape(seed: number, samples: number): CloudShape {
     const random = seeded(seed);
     const count = 4 + Math.floor(random() * 3);
@@ -195,7 +183,6 @@ function buildShape(seed: number, samples: number): CloudShape {
         bottom: FLAT_BOTTOM,
     };
 }
-
 function shapeFor(seed: number, detail: 'full' | 'reduced') {
     const key = `${seed}:${detail}`;
     let shape = shapes.get(key);
@@ -210,7 +197,6 @@ function shapeFor(seed: number, detail: 'full' | 'reduced') {
     }
     return shape;
 }
-
 function circle(x: number, y: number, r: number): [Vector, Curve[]] {
     const k = r * 0.5523;
     return [
@@ -223,15 +209,20 @@ function circle(x: number, y: number, r: number): [Vector, Curve[]] {
         ],
     ];
 }
-
 export function puffCloud(
     ctx: RenderCtx,
     x: number,
     y: number,
     size: number,
-    seed: number,
-    tone: CloudTone,
-    options: CloudOptions = {},
+    {
+        seed,
+        tone,
+        options = {},
+    }: {
+        seed: number;
+        tone: CloudTone;
+        options?: CloudOptions;
+    },
 ): void {
     const projected = size * ctx.localScale * ctx.scale;
     const detail =
@@ -249,38 +240,29 @@ export function puffCloud(
     ctx.oy = y;
     ctx.localScale = size;
     ctx.rotation = 0;
-
     ctx.effectPath(
         shape.start,
         shape.outline,
-        ctx.gradientFill(
-            0,
-            shape.top,
-            0,
-            shape.bottom,
-            [
+        ctx.gradientFill(0, shape.top, 0, shape.bottom, {
+            stops: [
                 [0, tone.top],
                 [0.5, tone.middle],
                 [1, options.fade ? ctx.tint(tone.belly, 0) : tone.belly],
             ],
             alpha,
-        ),
+        }),
     );
     if (!options.fade) {
         ctx.effectPath(
             shape.start,
             shape.outline,
-            ctx.gradientFill(
-                0,
-                shape.bottom - 32,
-                0,
-                shape.bottom,
-                [
+            ctx.gradientFill(0, shape.bottom - 32, 0, shape.bottom, {
+                stops: [
                     [0, ctx.tint(tone.belly, 0)],
                     [1, ctx.tint(tone.belly, 0.55)],
                 ],
                 alpha,
-            ),
+            }),
         );
     }
     const litPuffs =
@@ -313,23 +295,30 @@ export function puffCloud(
         color: ctx.tint(tone.rim, 0.7 * alpha),
         cap: 'round',
     });
-
     ctx.ox = ox;
     ctx.oy = oy;
     ctx.localScale = scale;
     ctx.rotation = rotation;
 }
-
 export function breadCloud(
     ctx: RenderCtx,
     x: number,
     y: number,
     size: number,
-    seed: number,
-    near = false,
+    {
+        seed,
+        near = false,
+    }: {
+        seed: number;
+        near?: boolean;
+    },
 ): void {
-    puffCloud(ctx, x, y, size, seed, CLOUD_TONES.bread, {
-        alpha: near ? 0.95 : 0.72,
-        fade: true,
+    puffCloud(ctx, x, y, size, {
+        seed,
+        tone: CLOUD_TONES.bread,
+        options: {
+            alpha: near ? 0.95 : 0.72,
+            fade: true,
+        },
     });
 }

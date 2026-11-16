@@ -17,65 +17,15 @@ import {
 } from './validation/primitives';
 
 import type { CoreState } from './state';
-
 const STAGE_IDS = Object.values(STAGES).map((stage) => stage.id);
 const MAX_CHECKPOINT = Math.max(
     ...Object.values(STAGES).map((stage) => stage.checkpoints.length - 1),
 );
-
 export function assertGameState(
     value: unknown,
     path = 'state',
 ): asserts value is CoreState {
-    const data = record(value, path);
-    exactFields<CoreState>(
-        data,
-        {
-            stage: true,
-            checkpoint: true,
-            lessons: true,
-            deaths: true,
-            completedStage: true,
-            skylineSeed: true,
-            tick: true,
-            rng: true,
-            extinguisher: true,
-            mode: true,
-            p: true,
-            keys: true,
-            ground: true,
-            coyote: true,
-            jumpQ: true,
-            time: true,
-            practiceJump: true,
-            actualSpeed: true,
-            rollCooldown: true,
-            reverseCooldown: true,
-            people: true,
-            history: true,
-            impact: true,
-            focus: true,
-            lossReason: true,
-            focusLossTime: true,
-            office: true,
-            building: true,
-            rooftop: true,
-            sky: true,
-            orbit: true,
-        },
-        path,
-    );
-    choice(data.stage, STAGE_IDS, `${path}.stage`);
-    integer(data.checkpoint, `${path}.checkpoint`, 0, MAX_CHECKPOINT);
-    const lessons = record(data.lessons, `${path}.lessons`);
-    exact(lessons, ['moved', 'jumped'], `${path}.lessons`);
-    boolean(lessons.moved, `${path}.lessons.moved`);
-    boolean(lessons.jumped, `${path}.lessons.jumped`);
-    integer(data.deaths, `${path}.deaths`);
-    choice(data.completedStage, [0, ...STAGE_IDS], `${path}.completedStage`);
-    integer(data.skylineSeed, `${path}.skylineSeed`, 0, 0xffffffff);
-    integer(data.tick, `${path}.tick`);
-
+    const data = readCoreStateRecord(value, path);
     const rng = record(data.rng, `${path}.rng`);
     exact(rng, ['physics', 'cosmetic'], `${path}.rng`);
     integer(rng.physics, `${path}.rng.physics`, 0, 0xffffffff);
@@ -170,4 +120,55 @@ export function assertGameState(
     rooftop(data.rooftop, `${path}.rooftop`);
     sky(data.sky, `${path}.sky`);
     orbit(data.orbit, `${path}.orbit`);
+}
+function readCoreStateRecord(value: unknown, path: string) {
+    const data = record(value, path);
+    exactFields<CoreState>(
+        data,
+        {
+            stage: true,
+            checkpoint: true,
+            lessons: true,
+            deaths: true,
+            completedStage: true,
+            skylineSeed: true,
+            tick: true,
+            rng: true,
+            extinguisher: true,
+            mode: true,
+            p: true,
+            keys: true,
+            ground: true,
+            coyote: true,
+            jumpQ: true,
+            time: true,
+            practiceJump: true,
+            actualSpeed: true,
+            rollCooldown: true,
+            reverseCooldown: true,
+            people: true,
+            history: true,
+            impact: true,
+            focus: true,
+            lossReason: true,
+            focusLossTime: true,
+            office: true,
+            building: true,
+            rooftop: true,
+            sky: true,
+            orbit: true,
+        },
+        path,
+    );
+    choice(data.stage, STAGE_IDS, `${path}.stage`);
+    integer(data.checkpoint, `${path}.checkpoint`, 0, MAX_CHECKPOINT);
+    const lessons = record(data.lessons, `${path}.lessons`);
+    exact(lessons, ['moved', 'jumped'], `${path}.lessons`);
+    boolean(lessons.moved, `${path}.lessons.moved`);
+    boolean(lessons.jumped, `${path}.lessons.jumped`);
+    integer(data.deaths, `${path}.deaths`);
+    choice(data.completedStage, [0, ...STAGE_IDS], `${path}.completedStage`);
+    integer(data.skylineSeed, `${path}.skylineSeed`, 0, 0xffffffff);
+    integer(data.tick, `${path}.tick`);
+    return data;
 }

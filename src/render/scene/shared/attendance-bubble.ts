@@ -5,24 +5,27 @@ import { PathBuilder, push } from '../opening/shapes';
 import type { Message } from '../../../i18n';
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-
 export const ATTENDANCE = {
     lead: 1.2,
     fade: 3,
     out: 0.6,
 };
-
 const TYPE_SPEED = 28;
 const easeOutBack = (u: number) => 1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2;
-
 function bubblePath(
     anchor: Vector,
     x: number,
     y: number,
     w: number,
-    h: number,
-    size: number,
-    scale: number,
+    {
+        h,
+        size,
+        scale,
+    }: {
+        h: number;
+        size: number;
+        scale: number;
+    },
 ) {
     const s = (px: number, py: number): Vector => [
         anchor[0] + (px - anchor[0]) * scale,
@@ -39,7 +42,6 @@ function bubblePath(
         .line(...s(x, y + r))
         .corner(...s(x, y), ...s(x + r, y));
 }
-
 export function attendanceBubble(
     ctx: RenderCtx,
     anchor: Vector,
@@ -62,7 +64,11 @@ export function attendanceBubble(
     ctx.beginLayer({ key: 'attendance-bubble', opacity: alpha });
     push(
         ctx,
-        bubblePath(anchor, x, y, w, h, size, scale).command('#ffffff', {
+        bubblePath(anchor, x, y, w, {
+            h,
+            size,
+            scale,
+        }).command('#ffffff', {
             width: 2,
             color: '#2b2f3a',
             cap: 'round',
@@ -82,8 +88,10 @@ export function attendanceBubble(
             left + (measure(shown) / 2) * scale,
             middle,
             size * scale,
-            '#2b2f3a',
-            { font: SPEECH_FONT },
+            {
+                fill: '#2b2f3a',
+                opts: { font: SPEECH_FONT },
+            },
         );
     }
     ctx.endLayer();

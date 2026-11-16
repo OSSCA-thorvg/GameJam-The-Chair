@@ -18,28 +18,43 @@ import { officeAppearance, typingWorker } from './workers';
 import { ceilingCctvs } from '../shared/ceiling-cctv';
 import { practiceFloor, checkpointFlag, chairPictogram } from '../shared/decor';
 
+import type { Furniture } from '../../../game/stages/building/data';
 import type { Message } from '../../../i18n';
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-
 const OFFICE_BUBBLE_TOP = 70;
 function chair(ctx: RenderCtx, x: number, y: number) {
     const shadowStart = ctx.commands.length;
-    ctx.ellipse(x, y + 3, 37, 5, '#35465622');
-    ctx.rod(x - 18, y - 37, x - 22, y - 90, 6, '#515665');
+    ctx.ellipse(x, y + 3, 37, 5, {
+        c: '#35465622',
+    });
+    ctx.rod(x - 18, y - 37, x - 22, y - 90, {
+        w: 6,
+        c: '#515665',
+    });
     ctx.rect(x - 30, y - 90, 18, 48, '#6f7687');
     ctx.rect(x - 24, y - 40, 48, 8, '#6f7687');
-    ctx.rod(x, y - 32, x, y - 10, 5, '#a5b1b7');
-    ctx.rod(x - 22, y - 8, x + 22, y - 8, 4, '#81959d');
+    ctx.rod(x, y - 32, x, y - 10, {
+        w: 5,
+        c: '#a5b1b7',
+    });
+    ctx.rod(x - 22, y - 8, x + 22, y - 8, {
+        w: 4,
+        c: '#81959d',
+    });
     for (const side of [-1, 1]) {
-        ctx.ellipse(x + side * 17, y - 5, 5, 5, '#3f4650');
+        ctx.ellipse(x + side * 17, y - 5, 5, 5, {
+            c: '#3f4650',
+        });
         ctx.rod(
             x + side * 17,
             y - 5,
             x + side * 17 + Math.cos(ctx.t * 9) * 3,
             y - 5 + Math.sin(ctx.t * 9) * 3,
-            1,
-            '#b6c5c7',
+            {
+                w: 1,
+                c: '#b6c5c7',
+            },
         );
     }
     if (ctx.state.corridor.departure.kind === 'descending') {
@@ -95,7 +110,6 @@ function cabinActors(ctx: RenderCtx, start: number) {
     });
     ctx.commands.push(...visible);
 }
-
 function liftDoors(ctx: RenderCtx, x: number, aperture: number) {
     for (const side of [-1, 1]) {
         const left = side < 0 ? x - 100 : x + aperture * 99;
@@ -106,11 +120,13 @@ function liftDoors(ctx: RenderCtx, x: number, aperture: number) {
                 [left + (1 - aperture) * 99, 419],
                 [left, 419],
             ],
-            ctx.gradientFill(left, 0, left + 99, 0, [
-                [0, '#9eb1b2'],
-                [0.5, '#c2ceca'],
-                [1, '#879da3'],
-            ]),
+            ctx.gradientFill(left, 0, left + 99, 0, {
+                stops: [
+                    [0, '#9eb1b2'],
+                    [0.5, '#c2ceca'],
+                    [1, '#879da3'],
+                ],
+            }),
         );
     }
 }
@@ -126,11 +142,13 @@ function buildingBackdrop(ctx: RenderCtx) {
             [cam + VW, 420],
             [cam, 420],
         ],
-        ctx.gradientFill(cam, 0, cam, 420, [
-            [0, '#a3b3b8'],
-            [0.55, '#d2d7ce'],
-            [1, '#b1bfbc'],
-        ]),
+        ctx.gradientFill(cam, 0, cam, 420, {
+            stops: [
+                [0, '#a3b3b8'],
+                [0.55, '#d2d7ce'],
+                [1, '#b1bfbc'],
+            ],
+        }),
     );
     ctx.rect(cam, -ctx.vertical, VW, 57 + ctx.vertical, '#586e79');
     for (let x = Math.floor(cam / 240) * 240; x < cam + VW + 240; x += 240) {
@@ -142,28 +160,32 @@ function buildingBackdrop(ctx: RenderCtx) {
                 [x + 240, 420],
                 [x - 30, 420],
             ],
-            ctx.gradientFill(
-                x,
-                37,
-                x,
-                420,
-                [
+            ctx.gradientFill(x, 37, x, 420, {
+                stops: [
                     [0, '#ffefc9'],
                     [1, '#ffefc9'],
                 ],
-                0.09,
-            ),
+                alpha: 0.09,
+            }),
         );
-        ctx.rod(x, 60, x, 420, 1, '#91a4a7');
+        ctx.rod(x, 60, x, 420, {
+            w: 1,
+            c: '#91a4a7',
+        });
     }
     ceilingCctvs(ctx, 960);
     ctx.rect(cam, 420, VW, ctx.H / ctx.scale, '#929f9d');
-    ctx.rod(cam, 422, cam + VW, 422, 4, '#586f75');
+    ctx.rod(cam, 422, cam + VW, 422, {
+        w: 4,
+        c: '#586f75',
+    });
     for (let x = Math.floor(cam / 120) * 120; x < cam + VW; x += 120) {
-        ctx.rod(x, 428, x + 100, 520, 1, '#a7b2aa');
+        ctx.rod(x, 428, x + 100, 520, {
+            w: 1,
+            c: '#a7b2aa',
+        });
     }
 }
-
 function officeWindows(ctx: RenderCtx) {
     const c = ctx.state.corridor;
     for (const [officeIndex, office] of c.offices.entries()) {
@@ -183,7 +205,10 @@ function officeWindows(ctx: RenderCtx) {
             officeAppearance(c.appearanceSeed, officeIndex, 1),
         );
         ctx.rect(x - 105, 180, 210, 170, '#6d8b9970');
-        ctx.rod(x, 175, x, 355, 5, '#849a9e');
+        ctx.rod(x, 175, x, 355, {
+            w: 5,
+            c: '#849a9e',
+        });
         ctx.polygon(
             [
                 [x - 98, 184],
@@ -202,15 +227,16 @@ function officeWindows(ctx: RenderCtx) {
                 TYPING_SOUNDS[office.phrase],
                 x + office.offset.x,
                 OFFICE_BUBBLE_TOP + office.offset.y * 0.55,
-                156,
-                false,
-                Math.min(0.78, office.life * 2),
-                false,
+                {
+                    width: 156,
+                    spiky: false,
+                    alpha: Math.min(0.78, office.life * 2),
+                    tail: false,
+                },
             );
         }
     }
 }
-
 function liftShaft(ctx: RenderCtx) {
     const c = ctx.state.corridor;
     const departure = c.departure;
@@ -231,13 +257,9 @@ function liftShaft(ctx: RenderCtx) {
     }
     chairPictogram(ctx, lx, 'lift');
     if (c.lift.kind === 'arriving') {
-        ctx.ellipse(
-            lx + 138,
-            277,
-            7,
-            7,
-            Math.sin(ctx.t * 8) > 0 ? '#f2d191' : '#aa9475',
-        );
+        ctx.ellipse(lx + 138, 277, 7, 7, {
+            c: Math.sin(ctx.t * 8) > 0 ? '#f2d191' : '#aa9475',
+        });
         ctx.polygon(
             [
                 [lx - 130, 437],
@@ -248,7 +270,6 @@ function liftShaft(ctx: RenderCtx) {
         );
     }
 }
-
 function corridorExit(ctx: RenderCtx) {
     const { state } = ctx;
     for (let i = 1; i < STAGE_TWO.checkpoints.length; i++) {
@@ -257,17 +278,22 @@ function corridorExit(ctx: RenderCtx) {
     }
     ctx.rect(ctx.GOAL - 48, 190, 105, 230, '#587878');
     ctx.rect(ctx.GOAL - 40, 198, 89, 220, '#a6bcb1');
-    ctx.rod(ctx.GOAL + 29, 299, ctx.GOAL + 29, 330, 4, '#5f797b');
+    ctx.rod(ctx.GOAL + 29, 299, ctx.GOAL + 29, 330, {
+        w: 4,
+        c: '#5f797b',
+    });
     chairPictogram(ctx, ctx.GOAL, 'exit');
     practiceFloor(ctx);
 }
-
 function liftForeground(ctx: RenderCtx) {
     const departure = ctx.state.corridor.departure;
     const lx = STAGE_TWO.lift;
     if (departure.kind === 'descending') {
         ctx.rect(lx - 105, 420, 210, ctx.H / ctx.scale, '#929f9d');
-        ctx.rod(lx - 105, 422, lx + 105, 422, 4, '#586f75');
+        ctx.rod(lx - 105, 422, lx + 105, 422, {
+            w: 4,
+            c: '#586f75',
+        });
         for (
             let x = Math.floor((lx - 205) / 120) * 120;
             x < lx + 105;
@@ -276,14 +302,10 @@ function liftForeground(ctx: RenderCtx) {
             const a = Math.max(x, lx - 105);
             const b = Math.min(x + 100, lx + 105);
             if (a < b) {
-                ctx.rod(
-                    a,
-                    428 + (a - x) * 0.92,
-                    b,
-                    428 + (b - x) * 0.92,
-                    1,
-                    '#a7b2aa',
-                );
+                ctx.rod(a, 428 + (a - x) * 0.92, b, 428 + (b - x) * 0.92, {
+                    w: 1,
+                    c: '#a7b2aa',
+                });
             }
         }
         liftDoors(
@@ -292,7 +314,10 @@ function liftForeground(ctx: RenderCtx) {
             1 - Math.max(0, Math.min(1, (departure.age - 1.3) / 0.7)),
         );
         const y = 268 + (departure.age / CHAIR_DEPARTURE.descending) * 25;
-        ctx.rod(lx + 138, y - 18, lx + 138, y, 4, '#d5e6b3');
+        ctx.rod(lx + 138, y - 18, lx + 138, y, {
+            w: 4,
+            c: '#d5e6b3',
+        });
         ctx.polygon(
             [
                 [lx + 128, y - 4],
@@ -303,7 +328,6 @@ function liftForeground(ctx: RenderCtx) {
         );
     }
 }
-
 function chairSpeech(ctx: RenderCtx) {
     const { state } = ctx;
     const c = state.corridor;
@@ -332,49 +356,110 @@ function chairSpeech(ctx: RenderCtx) {
                 ? Math.min(1, (CHAIR_DEPARTURE.descending - departure.age) * 4)
                 : 1;
         if (speaker.x > ctx.cam - 60 && speaker.x < ctx.cam + ctx.VW + 60) {
-            chairBubble(ctx, line.text, x, 242 + Math.min(drop, 38), 350, {
-                alpha: Math.min(1, localAge * 6) * fade,
-                side: 1,
+            chairBubble(ctx, line.text, x, 242 + Math.min(drop, 38), {
+                width: 350,
+                options: {
+                    alpha: Math.min(1, localAge * 6) * fade,
+                    side: 1,
+                },
             });
         }
     } else if (departure.kind === 'none' && c.chat.kind !== 'waiting') {
         const interval = CHAIR_CHAT_INTERVAL[c.chat.kind];
         const line = chairChatLine(c.chat, c.appearanceSeed);
         const speaker = state.furniture[line.speaker];
-        const once = chairChatOnce(c.chat.kind);
-        const localAge = once ? c.chat.age : c.chat.age % interval;
-        const said =
-            c.chat.kind !== 'trip' ||
-            c.chat.age < interval * CHAIR_CHAT.trip.length;
-        const shown =
-            c.chat.kind === 'orientation'
-                ? localAge >= 0 && localAge < interval - 0.35
-                : said && localAge % interval < interval - 0.35;
-        if (shown) {
-            const left = ctx.cam + 180;
-            const right = ctx.cam + ctx.VW - 180;
-            const x = Math.max(left, Math.min(right, speaker.x));
-            if (
-                c.chat.kind === 'dismissed' ||
-                (speaker.x > ctx.cam - 60 && speaker.x < ctx.cam + ctx.VW + 60)
-            ) {
-                const lineAge = localAge % interval;
-                chairBubble(ctx, line.text, x, 224, 350, {
+        drawChairChat(c.chat, interval, ctx, speaker, line);
+    }
+}
+function drawChairChat(
+    chat: Exclude<
+        RenderCtx['state']['corridor']['chat'],
+        {
+            kind: 'waiting';
+        }
+    >,
+    interval: number,
+    ctx: RenderCtx,
+    speaker: Furniture,
+    line: {
+        readonly speaker: 0 | 1 | 2;
+        readonly text: Message;
+        readonly at?: number;
+    },
+) {
+    const once = chairChatOnce(chat.kind);
+    drawChairChatLine(once, chat, interval, ctx, {
+        speaker,
+        line,
+    });
+}
+function drawChairChatLine(
+    once: boolean,
+    chat:
+        | {
+              readonly kind:
+                  | 'gossip'
+                  | 'wary'
+                  | 'dismissed'
+                  | 'realizing'
+                  | 'welcoming'
+                  | 'trip'
+                  | 'rush'
+                  | 'ramp';
+              readonly age: number;
+          }
+        | {
+              readonly kind: 'orientation';
+              readonly age: number;
+              readonly line: number;
+          },
+    interval: number,
+    ctx: RenderCtx,
+    {
+        speaker,
+        line,
+    }: {
+        speaker: Furniture;
+        line: {
+            readonly speaker: 0 | 1 | 2;
+            readonly text: Message;
+            readonly at?: number;
+        };
+    },
+) {
+    const localAge = once ? chat.age : chat.age % interval;
+    const said =
+        chat.kind !== 'trip' || chat.age < interval * CHAIR_CHAT.trip.length;
+    const shown =
+        chat.kind === 'orientation'
+            ? localAge >= 0 && localAge < interval - 0.35
+            : said && localAge % interval < interval - 0.35;
+    if (shown) {
+        const left = ctx.cam + 180;
+        const right = ctx.cam + ctx.VW - 180;
+        const x = Math.max(left, Math.min(right, speaker.x));
+        if (
+            chat.kind === 'dismissed' ||
+            (speaker.x > ctx.cam - 60 && speaker.x < ctx.cam + ctx.VW + 60)
+        ) {
+            const lineAge = localAge % interval;
+            chairBubble(ctx, line.text, x, 224, {
+                width: 350,
+                options: {
                     spiky:
-                        c.chat.kind === 'wary' ||
-                        c.chat.kind === 'rush' ||
-                        c.chat.kind === 'trip',
+                        chat.kind === 'wary' ||
+                        chat.kind === 'rush' ||
+                        chat.kind === 'trip',
                     alpha: Math.min(
                         1,
                         lineAge * 6,
                         (interval - 0.35 - lineAge) * 5,
                     ),
-                });
-            }
+                },
+            });
         }
     }
 }
-
 function chairActors(ctx: RenderCtx) {
     const { state } = ctx;
     const c = state.corridor;
@@ -403,8 +488,13 @@ function chairActors(ctx: RenderCtx) {
                 )[i],
                 item.x,
                 285 - (i % 2) * 60,
-                185,
-                { spiky: true, alpha: Math.min(1, item.cheer * 2) },
+                {
+                    width: 185,
+                    options: {
+                        spiky: true,
+                        alpha: Math.min(1, item.cheer * 2),
+                    },
+                },
             );
         }
     });
@@ -443,7 +533,6 @@ function chairActors(ctx: RenderCtx) {
         }
     }
 }
-
 export function drawBuilding(ctx: RenderCtx): void {
     const departure = ctx.state.corridor.departure;
     buildingBackdrop(ctx);
@@ -462,7 +551,9 @@ export function drawBuilding(ctx: RenderCtx): void {
         departure.kind !== 'lost' &&
         !(departure.kind === 'descending' && departure.reason === 'abduction')
     ) {
-        ctx.ellipse(ctx.player.x, 425, 45, 5, '#61747544');
+        ctx.ellipse(ctx.player.x, 425, 45, 5, {
+            c: '#61747544',
+        });
     }
     liftForeground(ctx);
     chairSpeech(ctx);

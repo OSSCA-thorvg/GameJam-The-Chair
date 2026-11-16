@@ -28,7 +28,7 @@ Game determinism, unsafe-value checks, and cycle detection remain errors.
 The same applicable JavaScript rules cover scripts and tests.
 TypeScript tests also use naming, type-import, assertion, and public-function rules.
 
-## Warnings
+## Size and complexity limits
 
 These thresholds apply throughout the codebase:
 
@@ -39,16 +39,15 @@ These thresholds apply throughout the codebase:
 | `max-params` | 5 parameters |
 | `complexity` | 15 |
 
-Warnings do not fail CI.
-Long drawing routines, scene setup, and coordinate functions currently produce warnings.
+All limits are errors. Both lint commands use `--max-warnings 0`, so any warning also fails the command.
+Application code, drawing routines, scripts, and tests follow the same limits.
 No directory has a blanket exemption.
-A warning identifies code for review; it does not require an object allocation or a wrapper in a per-frame path.
 
 ## Commands
 
 | Command | Result |
 | --- | --- |
-| `npm run lint` | Checks errors and reports complexity warnings. |
+| `npm run lint` | Fails on errors and warnings. |
 | `npm run lint:fix` | Applies supported ESLint fixes. |
 | `npm run format` | Formats source, configuration, scripts, and tests. |
 | `npm run format:check` | Checks formatting without changing files. |

@@ -3,15 +3,12 @@ import { PathBuilder, push } from '../opening/shapes';
 
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-
 export type KeyFace = 'left' | 'right' | 'up' | { text: string };
-
 const hex = (a: number) =>
     Math.round(a * 255)
         .toString(16)
         .padStart(2, '0');
 const INK = '#2b2f3a';
-
 function keyPath([x, y]: Vector, w: number, h: number, r: number) {
     return new PathBuilder(x + r, y)
         .line(x + w - r, y)
@@ -23,12 +20,15 @@ function keyPath([x, y]: Vector, w: number, h: number, r: number) {
         .line(x, y + r)
         .corner(x, y, x + r, y);
 }
-
 export function keycapSize(
     ctx: RenderCtx,
     face: KeyFace,
     size: number,
-): { w: number; h: number; depth: number } {
+): {
+    w: number;
+    h: number;
+    depth: number;
+} {
     const h = size * 1.9;
     const w =
         typeof face === 'string'
@@ -36,20 +36,20 @@ export function keycapSize(
             : ctx.measureText(face.text, size, LABEL_FONT) + size * 2.6;
     return { w, h, depth: size * 0.35 };
 }
-
 export function keycapPress(age: number): 1 | 0 {
     const beat = (age * 1.1) % 1;
     return beat < 0.1 || (beat > 0.2 && beat < 0.3) ? 1 : 0;
 }
-
 export function keycapPop(
     age: number,
     pop = 0.25,
-): { alpha: number; scale: number } {
+): {
+    alpha: number;
+    scale: number;
+} {
     const u = Math.max(0, Math.min(1, age / pop));
     return { alpha: u, scale: 1 + 0.25 * Math.sin(u * Math.PI) };
 }
-
 function arrow(
     ctx: RenderCtx,
     face: 'left' | 'right' | 'up',
@@ -79,14 +79,18 @@ function arrow(
     );
     push(ctx, path.line(first[0], first[1]).command(color));
 }
-
 export function keycap(
     ctx: RenderCtx,
     face: KeyFace,
     at: Vector,
     size: number,
-    alpha: number,
-    press: number,
+    {
+        alpha,
+        press,
+    }: {
+        alpha: number;
+        press: number;
+    },
 ): void {
     const { w, h, depth } = keycapSize(ctx, face, size);
     const [x, y] = at;
@@ -114,9 +118,12 @@ export function keycap(
             INK + hex(alpha),
         );
     } else {
-        ctx.screenText(face.text, x + w / 2, top + h / 2, size, INK, {
-            font: LABEL_FONT,
-            opacity: alpha,
+        ctx.screenText(face.text, x + w / 2, top + h / 2, size, {
+            fill: INK,
+            opts: {
+                font: LABEL_FONT,
+                opacity: alpha,
+            },
         });
     }
 }

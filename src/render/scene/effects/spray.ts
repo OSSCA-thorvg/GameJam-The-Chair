@@ -2,7 +2,6 @@ import { skyWindResponse, sprayOrigin } from '../sky/wind-response';
 
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-
 type Plume = {
     origin: Vector;
     dx: number;
@@ -12,7 +11,6 @@ type Plume = {
     drift: number;
     age: number;
 };
-
 export function sprayPlume(ctx: RenderCtx): void {
     const spray = ctx.state.spray;
     const continuous =
@@ -39,7 +37,6 @@ export function sprayPlume(ctx: RenderCtx): void {
     }
     plumeSwirl(ctx, shape);
 }
-
 function point(shape: Plume, along: number, across = 0): Vector {
     return [
         shape.origin[0] +
@@ -49,7 +46,6 @@ function point(shape: Plume, along: number, across = 0): Vector {
         shape.origin[1] + shape.dy * shape.length * along + shape.dx * across,
     ];
 }
-
 function plumeCone(ctx: RenderCtx, shape: Plume) {
     const { spread, dx, dy, age } = shape;
     const tip = point(shape, 1);
@@ -74,32 +70,31 @@ function plumeCone(ctx: RenderCtx, shape: Plume) {
                 ...shape.origin,
             ],
         ],
-        ctx.gradientFill(
-            ...shape.origin,
-            ...tip,
-            [
+        ctx.gradientFill(shape.origin[0], shape.origin[1], tip[0], tip[1], {
+            stops: [
                 [0, '#fffbedf0'],
                 [0.5, '#f3f0e3c0'],
                 [1, '#e5e9e800'],
             ],
-            0.4 + age * 0.6,
-        ),
+            alpha: 0.4 + age * 0.6,
+        }),
     );
 }
-
 function plumePuffs(ctx: RenderCtx, shape: Plume) {
     for (let i = 0; i < 7; i++) {
         const u = (ctx.t * 2.2 + i / 7) % 1;
         const wobble = Math.sin(i * 2.7 + ctx.t * 8) * shape.spread * u * 0.5;
         ctx.ellipse(
-            ...point(shape, u, wobble),
+            point(shape, u, wobble)[0],
+            point(shape, u, wobble)[1],
             3 + u * 6,
             3 + u * 5,
-            ctx.tint('#f4f1e7', (1 - u) * 0.5),
+            {
+                c: ctx.tint('#f4f1e7', (1 - u) * 0.5),
+            },
         );
     }
 }
-
 function plumeSwirl(ctx: RenderCtx, shape: Plume) {
     const swirl = Math.sin(ctx.t * 20) * shape.spread * 0.4;
     const tip = point(shape, 1);
@@ -117,14 +112,12 @@ function plumeSwirl(ctx: RenderCtx, shape: Plume) {
                 tip[1] - shape.dy * 4,
             ],
         ],
-        ctx.gradientFill(
-            ...shape.origin,
-            ...tip,
-            [
+        ctx.gradientFill(shape.origin[0], shape.origin[1], tip[0], tip[1], {
+            stops: [
                 [0, '#ffffffe0'],
                 [1, '#ffffff00'],
             ],
-            0.7 * shape.age,
-        ),
+            alpha: 0.7 * shape.age,
+        }),
     );
 }

@@ -12,9 +12,9 @@
     "replay:check": "node scripts/replay-check.mjs",
     "golden:update": "node scripts/golden-update.mjs",
     "route:update": "node scripts/route-update.mjs",
-    "lint": "eslint src vite.config.ts eslint.config.js scripts tests",
+    "lint": "eslint src vite.config.ts eslint.config.js scripts tests --max-warnings 0",
     "test:fast": "node scripts/test-fast.mjs",
-    "lint:fix": "eslint src vite.config.ts eslint.config.js scripts tests --fix",
+    "lint:fix": "eslint src vite.config.ts eslint.config.js scripts tests --fix --max-warnings 0",
     "format": "prettier --write \"src/**/*.ts\" vite.config.ts eslint.config.js \"scripts/**/*.mjs\" \"tests/**/*.{ts,mjs}\"",
     "format:check": "prettier --check \"src/**/*.ts\" vite.config.ts eslint.config.js \"scripts/**/*.mjs\" \"tests/**/*.{ts,mjs}\""
   },

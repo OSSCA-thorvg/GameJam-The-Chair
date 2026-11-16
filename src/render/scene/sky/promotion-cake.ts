@@ -3,7 +3,6 @@ import { SIGN_FONT } from '../../fonts';
 import type { RenderCtx } from '../../context';
 import type { Curve, Vector } from '../../types';
 import type { Point3, SkyProjection } from '../shared/projection';
-
 const INK = '#7a2f2a';
 const CREAM = '#fff6f4';
 const BLUSH = '#f6b7c1';
@@ -34,7 +33,6 @@ const bodyTop = (x: number) =>
         (x - BODY.left) / (BODY.right - BODY.left),
     );
 const bandY = (x: number, t: number) => lerp(bodyTop(x), BODY.base, t);
-
 type Blob = { x: number; y: number; r: number; drip: boolean };
 const BLOBS: readonly Blob[] = [
     ...Array.from({ length: 10 }, (_, i): Blob => ({
@@ -77,15 +75,12 @@ const LEAVES = [
 ] as const;
 const BERRY = { x: 56, y: -206, scale: 1.55 };
 const FLAG = { pole: 46, top: -306, length: 112, width: 146, height: 66 };
-
 type Place = (x: number, y: number) => Vector;
-
 const line = (points: Vector[]): Curve[] =>
     points
         .slice(1)
         .concat([points[0]])
         .map(([x, y]): Curve => [x, y, x, y, x, y]);
-
 function strawberryCurves(
     place: Place,
     cx: number,
@@ -105,7 +100,6 @@ function strawberryCurves(
         ],
     ];
 }
-
 function arch(
     place: Place,
     x: number,
@@ -124,14 +118,23 @@ function arch(
         ],
     ];
 }
-
 function flag2d(ctx: RenderCtx, place: Place, s: number) {
     const [px, top] = place(FLAG.pole, FLAG.top);
     const bottom = top + FLAG.length * s;
-    ctx.rod(px, top, px, bottom, 6 * s, INK);
-    ctx.rod(px, top, px, bottom, 3.6 * s, '#f8e4ae');
-    ctx.ellipse(px, top - 3 * s, 8 * s, 8 * s, INK);
-    ctx.ellipse(px, top - 3 * s, 6 * s, 6 * s, '#ffd36b');
+    ctx.rod(px, top, px, bottom, {
+        w: 6 * s,
+        c: INK,
+    });
+    ctx.rod(px, top, px, bottom, {
+        w: 3.6 * s,
+        c: '#f8e4ae',
+    });
+    ctx.ellipse(px, top - 3 * s, 8 * s, 8 * s, {
+        c: INK,
+    });
+    ctx.ellipse(px, top - 3 * s, 6 * s, 6 * s, {
+        c: '#ffd36b',
+    });
     const w = FLAG.width * s;
     const h = FLAG.height * s;
     const y0 = top + 10 * s;
@@ -155,71 +158,33 @@ function flag2d(ctx: RenderCtx, place: Place, s: number) {
         30 * s,
         (30 * s * room) / Math.max(1, ctx.measureText(word, 30 * s)),
     );
-    ctx.text(
-        word,
-        px - w / 2 - s,
-        y0 + h / 2 + 2 * s + flap / 2,
-        size,
-        '#fff5d8',
-    );
+    ctx.text(word, px - w / 2 - s, y0 + h / 2 + 2 * s + flap / 2, size, {
+        fill: '#fff5d8',
+    });
 }
-
 export function promotionCake(ctx: RenderCtx, width: number): void {
     const s = 0.52;
     const cx = width / 2 - 92;
-    const place: Place = (x, y) => [cx + x * s, -9 + (y - BODY.base) * s];
-    const quad = (x0: number, x1: number, t0: number, t1: number): Vector[] => [
-        place(x0, bandY(x0, t0)),
-        place(x1, bandY(x1, t0)),
-        place(x1, bandY(x1, t1)),
-        place(x0, bandY(x0, t1)),
-    ];
-    const { left, right } = BODY;
-    ctx.ellipse(cx, -6, 150 * s, 9 * s, '#46546b33');
-    flag2d(ctx, place, s);
-    for (const [t0, t1, color] of BANDS) {
-        ctx.polygon(quad(left, right, t0, t1), color);
-    }
-    for (const x of BERRIES) {
-        const y = bandY(x, BERRY_ROW);
-        const [start, curves] = arch(place, x, y, 24);
-        ctx.effectPath(start, curves, '#e2384a');
-        ctx.strokePath(
-            start,
-            curves,
-            { width: 2 * s, color: INK },
-            { closed: true },
-        );
-        const [inner, innerCurves] = arch(place, x, y, 14);
-        ctx.effectPath(inner, innerCurves, '#ffd0d6');
-    }
-    const body = quad(left, right, 0, 1);
-    ctx.strokePath(
-        body[0],
-        line(body),
-        { width: 4.5 * s, color: INK },
-        { closed: true },
-    );
-    const base = CREAM_BASE.map(([x, y]) => place(x, y));
-    ctx.strokePath(
-        base[0],
-        line(base),
-        { width: 9 * s, color: INK },
-        { closed: true },
-    );
-    for (const b of BLOBS) {
-        const [x, y] = place(b.x, b.y);
-        ctx.ellipse(x, y, (b.r + 4.5) * s, (b.r + 4.5) * s, INK);
-    }
+    const {
+        base,
+        place,
+    }: {
+        base: Vector[];
+        place: Place;
+    } = promotionCakeDetails(cx, s, ctx);
     ctx.polygon(base, CREAM);
     for (const b of BLOBS) {
         const [x, y] = place(b.x, b.y);
-        ctx.ellipse(x, y, b.r * s, b.r * s, CREAM);
+        ctx.ellipse(x, y, b.r * s, b.r * s, {
+            c: CREAM,
+        });
     }
     for (const b of BLOBS) {
         const [x, y] = place(b.x, b.y);
         if (b.drip) {
-            ctx.ellipse(x, y + 5 * s, 8 * s, 3 * s, BLUSH + 'b3');
+            ctx.ellipse(x, y + 5 * s, 8 * s, 3 * s, {
+                c: BLUSH + 'b3',
+            });
             continue;
         }
         ctx.ellipse(
@@ -227,14 +192,18 @@ export function promotionCake(ctx: RenderCtx, width: number): void {
             y + b.r * 0.45 * s,
             b.r * 0.55 * s,
             b.r * 0.28 * s,
-            BLUSH + 'bf',
+            {
+                c: BLUSH + 'bf',
+            },
         );
         ctx.ellipse(
             x + b.r * 0.35 * s,
             y - b.r * 0.4 * s,
             b.r * 0.3 * s,
             b.r * 0.18 * s,
-            '#ffffff',
+            {
+                c: '#ffffff',
+            },
         );
     }
     for (const [x0, y0, angle] of WAFERS) {
@@ -254,9 +223,15 @@ export function promotionCake(ctx: RenderCtx, width: number): void {
         for (const v of [-30, -16, -2]) {
             const [ax, ay] = at(7, v);
             const [bx, by] = at(-7, v - 8);
-            ctx.rod(ax, ay, bx, by, 3 * s, '#c9752a');
+            ctx.rod(ax, ay, bx, by, {
+                w: 3 * s,
+                c: '#c9752a',
+            });
         }
     }
+    promotionCakeDetails3(place, ctx, s);
+}
+function promotionCakeDetails3(place: Place, ctx: RenderCtx, s: number) {
     for (const [x0, y0, angle] of LEAVES) {
         const a = (angle * Math.PI) / 180;
         const leaf = Array.from({ length: 10 }, (_, i): Vector => {
@@ -278,8 +253,12 @@ export function promotionCake(ctx: RenderCtx, width: number): void {
     }
     for (const [x0, y0, r] of ROSETTES) {
         const [x, y] = place(x0, y0);
-        ctx.ellipse(x, y, (r + 3) * s, (r + 3) * s, INK);
-        ctx.ellipse(x, y, r * s, r * s, CREAM);
+        ctx.ellipse(x, y, (r + 3) * s, (r + 3) * s, {
+            c: INK,
+        });
+        ctx.ellipse(x, y, r * s, r * s, {
+            c: CREAM,
+        });
         ctx.strokePath(
             [x - r * 0.6 * s, y],
             [
@@ -301,6 +280,15 @@ export function promotionCake(ctx: RenderCtx, width: number): void {
         BERRY.y,
         BERRY.scale,
     );
+    promotionCakeDetails2(ctx, start, curves, place, s);
+}
+function promotionCakeDetails2(
+    ctx: RenderCtx,
+    start: Vector,
+    curves: Curve[],
+    place: Place,
+    s: number,
+) {
     ctx.effectPath(
         start,
         curves,
@@ -342,12 +330,66 @@ export function promotionCake(ctx: RenderCtx, width: number): void {
         [1, 13],
     ]) {
         const [sx, sy] = place(BERRY.x + x * k, BERRY.y + y * k);
-        ctx.ellipse(sx, sy, 1.9 * s, 1.9 * s, '#ffe2a0');
+        ctx.ellipse(sx, sy, 1.9 * s, 1.9 * s, {
+            c: '#ffe2a0',
+        });
     }
     const [hx, hy] = place(BERRY.x - 7 * k, BERRY.y - 12 * k);
-    ctx.ellipse(hx, hy, 5 * s, 8 * s, '#ffffff73');
+    ctx.ellipse(hx, hy, 5 * s, 8 * s, {
+        c: '#ffffff73',
+    });
 }
-
+function promotionCakeDetails(cx: number, s: number, ctx: RenderCtx) {
+    const place: Place = (x, y) => [cx + x * s, -9 + (y - BODY.base) * s];
+    const quad = (x0: number, x1: number, t0: number, t1: number): Vector[] => [
+        place(x0, bandY(x0, t0)),
+        place(x1, bandY(x1, t0)),
+        place(x1, bandY(x1, t1)),
+        place(x0, bandY(x0, t1)),
+    ];
+    const { left, right } = BODY;
+    ctx.ellipse(cx, -6, 150 * s, 9 * s, {
+        c: '#46546b33',
+    });
+    flag2d(ctx, place, s);
+    for (const [t0, t1, color] of BANDS) {
+        ctx.polygon(quad(left, right, t0, t1), color);
+    }
+    for (const x of BERRIES) {
+        const y = bandY(x, BERRY_ROW);
+        const [start, curves] = arch(place, x, y, 24);
+        ctx.effectPath(start, curves, '#e2384a');
+        ctx.strokePath(
+            start,
+            curves,
+            { width: 2 * s, color: INK },
+            { closed: true },
+        );
+        const [inner, innerCurves] = arch(place, x, y, 14);
+        ctx.effectPath(inner, innerCurves, '#ffd0d6');
+    }
+    const body = quad(left, right, 0, 1);
+    ctx.strokePath(
+        body[0],
+        line(body),
+        { width: 4.5 * s, color: INK },
+        { closed: true },
+    );
+    const base = CREAM_BASE.map(([x, y]) => place(x, y));
+    ctx.strokePath(
+        base[0],
+        line(base),
+        { width: 9 * s, color: INK },
+        { closed: true },
+    );
+    for (const b of BLOBS) {
+        const [x, y] = place(b.x, b.y);
+        ctx.ellipse(x, y, (b.r + 4.5) * s, (b.r + 4.5) * s, {
+            c: INK,
+        });
+    }
+    return { base, place };
+}
 export function departureCake(
     ctx: RenderCtx,
     view: SkyProjection,
@@ -359,54 +401,12 @@ export function departureCake(
     const floor = -80;
     const z0 = -70;
     const half = 36;
-    const turn =
-        -0.75 *
-        Math.min(1, progress * 1.8) ** 2 *
-        (3 - 2 * Math.min(1, progress * 1.8));
-    const c = Math.cos(turn);
-    const sn = Math.sin(turn);
-    const at = (x: number, y: number, z = 0): Point3 => {
-        const lx = x * s;
-        const lz = z;
-        return place([
-            cx + lx * c - lz * sn,
-            floor - (y - BODY.base) * s,
-            z0 + lx * sn + lz * c,
-        ]);
-    };
-    const yaw = (p: Point3) => at(p[0], p[1], p[2]);
-    for (const [t0, t1, color] of BANDS) {
-        if (t1 - t0 < 0.1 && t0 > 0) {
-            continue;
-        }
-        const outline: Array<[number, number]> = [
-            [BODY.left, bandY(BODY.left, t0)],
-            [BODY.right, bandY(BODY.right, t0)],
-            [BODY.right, bandY(BODY.right, t1)],
-            [BODY.left, bandY(BODY.left, t1)],
-        ];
-        view.profile(outline, half, color, 0, { bevel: 1, place: yaw });
-    }
-    for (const x of BERRIES) {
-        const y = bandY(x, BERRY_ROW);
-        const ring = (r: number, z: number) =>
-            Array.from({ length: 9 }, (_, i): Point3 => {
-                const a = (Math.PI * i) / 8;
-                return at(x - Math.cos(a) * r, y - Math.sin(a) * r, z);
-            });
-        view.polygon(ring(24, half + 0.5), '#e2384aff');
-        view.polygon(ring(14, half + 0.8), '#ffd0d6ff');
-    }
-    view.profile(CREAM_BASE, half, CREAM, 0, { bevel: 1, place: yaw });
-    for (const b of BLOBS) {
-        for (const z of [-half * 0.55, half * 0.55]) {
-            view.oval(
-                at(b.x, b.y, z),
-                [b.r * s, b.r * s, half * 0.62],
-                b.drip ? '#fbe3e6' : CREAM,
-            );
-        }
-    }
+    const at = departureCakeDetails(progress, s, place, cx, {
+        floor,
+        z0,
+        view,
+        half,
+    });
     for (const [x, y, r] of ROSETTES) {
         view.oval(at(x, y, half * 0.3), [r * s, r * s, r * s], '#fffdfb');
     }
@@ -463,9 +463,79 @@ export function departureCake(
             return;
         }
         const rotation = Math.atan2(a[1] - b[1], a[0] - b[0]);
-        ctx.screenText(word, centre[0], centre[1], size, '#fff5d8', {
-            rotation,
-            opacity: 1 - progress * progress,
+        ctx.screenText(word, centre[0], centre[1], size, {
+            fill: '#fff5d8',
+            opts: {
+                rotation,
+                opacity: 1 - progress * progress,
+            },
         });
     };
+}
+function departureCakeDetails(
+    progress: number,
+    s: number,
+    place: (p: Point3) => Point3,
+    cx: number,
+    {
+        floor,
+        z0,
+        view,
+        half,
+    }: {
+        floor: number;
+        z0: number;
+        view: SkyProjection;
+        half: number;
+    },
+) {
+    const turn =
+        -0.75 *
+        Math.min(1, progress * 1.8) ** 2 *
+        (3 - 2 * Math.min(1, progress * 1.8));
+    const c = Math.cos(turn);
+    const sn = Math.sin(turn);
+    const at = (x: number, y: number, z = 0): Point3 => {
+        const lx = x * s;
+        const lz = z;
+        return place([
+            cx + lx * c - lz * sn,
+            floor - (y - BODY.base) * s,
+            z0 + lx * sn + lz * c,
+        ]);
+    };
+    const yaw = (p: Point3) => at(p[0], p[1], p[2]);
+    for (const [t0, t1, color] of BANDS) {
+        if (t1 - t0 < 0.1 && t0 > 0) {
+            continue;
+        }
+        const outline: Array<[number, number]> = [
+            [BODY.left, bandY(BODY.left, t0)],
+            [BODY.right, bandY(BODY.right, t0)],
+            [BODY.right, bandY(BODY.right, t1)],
+            [BODY.left, bandY(BODY.left, t1)],
+        ];
+        view.profile(outline, half, color, 0, { bevel: 1, place: yaw });
+    }
+    for (const x of BERRIES) {
+        const y = bandY(x, BERRY_ROW);
+        const ring = (r: number, z: number) =>
+            Array.from({ length: 9 }, (_, i): Point3 => {
+                const a = (Math.PI * i) / 8;
+                return at(x - Math.cos(a) * r, y - Math.sin(a) * r, z);
+            });
+        view.polygon(ring(24, half + 0.5), '#e2384aff');
+        view.polygon(ring(14, half + 0.8), '#ffd0d6ff');
+    }
+    view.profile(CREAM_BASE, half, CREAM, 0, { bevel: 1, place: yaw });
+    for (const b of BLOBS) {
+        for (const z of [-half * 0.55, half * 0.55]) {
+            view.oval(
+                at(b.x, b.y, z),
+                [b.r * s, b.r * s, half * 0.62],
+                b.drip ? '#fbe3e6' : CREAM,
+            );
+        }
+    }
+    return at;
 }

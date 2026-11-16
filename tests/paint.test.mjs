@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { loadSource } from './support/load.mjs';
-
 const {
     paint,
     createPaintPool,
@@ -15,7 +14,6 @@ const {
     export { createRenderStats, resetRenderStats, createLayerOverrides } from './src/render/perf';
     export { createRenderCtx } from './tests/support/render-context';
 `);
-
 // ThorVG 1.1.3 throws when removing an on-canvas scene with children added
 // since its last update.
 function fakeThorvg() {
@@ -107,6 +105,20 @@ function fakeThorvg() {
             return this;
         };
     }
+    return fakeThorvgDetails(log, Shape, Scene, Text);
+}
+const square = (x, layer) => ({
+    kind: 'path',
+    points: [
+        [x, 10],
+        [x + 10, 10],
+        [x + 10, 20],
+        [x, 20],
+    ],
+    fill: '#336699',
+    ...(layer ? { layer } : {}),
+});
+function fakeThorvgDetails(log, Shape, Scene, Text) {
     class Gradient {
         setStops() {
             return this;
@@ -156,19 +168,6 @@ function fakeThorvg() {
     };
     return { TVG, canvas: new Canvas(), log };
 }
-
-const square = (x, layer) => ({
-    kind: 'path',
-    points: [
-        [x, 10],
-        [x + 10, 10],
-        [x + 10, 20],
-        [x, 20],
-    ],
-    fill: '#336699',
-    ...(layer ? { layer } : {}),
-});
-
 function frame(ctx, layerShapes, plainShapes) {
     const layer = { key: 'water-body', opacity: 0.9 };
     ctx.commands = [
@@ -178,13 +177,11 @@ function frame(ctx, layerShapes, plainShapes) {
         ...Array.from({ length: plainShapes }, (_, i) => square(200 + i * 12)),
     ];
 }
-
 test('a layer that gains children on a reordering frame does not blank the canvas', () => {
     const { TVG, canvas } = fakeThorvg();
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
-
     frame(ctx, 2, 3);
     paint(ctx, TVG, canvas, pool);
     frame(ctx, 12, 5);
@@ -194,7 +191,6 @@ test('a layer that gains children on a reordering frame does not blank the canva
         'the canvas still holds the scene after the rebuild',
     );
 });
-
 test('a failed rebuild is retried on the next frame instead of leaving the canvas empty', () => {
     const { TVG, canvas } = fakeThorvg();
     const ctx = createRenderCtx({});
@@ -210,7 +206,6 @@ test('a failed rebuild is retried on the next frame instead of leaving the canva
     plainFirst(4);
     paint(ctx, TVG, canvas, pool);
     paint(ctx, TVG, canvas, pool);
-
     const remove = canvas.remove;
     canvas.remove = function () {
         canvas.remove = remove;
@@ -226,7 +221,6 @@ test('a failed rebuild is retried on the next frame instead of leaving the canva
         'the next frame rebuilds the emptied canvas',
     );
 });
-
 test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds without changing the picture', () => {
     const { TVG, canvas } = fakeThorvg();
     const ctx = createRenderCtx({});
@@ -247,8 +241,9 @@ test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds w
         square(220),
         square(1000),
     ];
-
-    paint(ctx, TVG, canvas, pool, stats);
+    paint(ctx, TVG, canvas, pool, {
+        stats,
+    });
     assert.equal(stats.commands, 5);
     assert.equal(stats.topShapes, 3);
     assert.equal(stats.poolTop, 3);
@@ -272,11 +267,14 @@ test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds w
         },
     ]);
     assert.ok(stats.syncMs >= 0 && stats.renderMs >= 0);
-
     resetRenderStats(stats);
-    paint(ctx, TVG, canvas, pool, stats);
+    paint(ctx, TVG, canvas, pool, {
+        stats,
+    });
     resetRenderStats(stats);
-    paint(ctx, TVG, canvas, pool, stats);
+    paint(ctx, TVG, canvas, pool, {
+        stats,
+    });
     assert.equal(stats.reorder, false);
     ctx.commands = [
         square(20, blurred),
@@ -285,10 +283,11 @@ test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds w
         square(1000),
     ];
     resetRenderStats(stats);
-    paint(ctx, TVG, canvas, pool, stats);
+    paint(ctx, TVG, canvas, pool, {
+        stats,
+    });
     assert.equal(stats.parkedShapes, 1);
 });
-
 test('debug layer overrides hide a layer or draw it as plain shapes, and leave other layers alone', () => {
     const { TVG, canvas } = fakeThorvg();
     const ctx = createRenderCtx({});
@@ -306,14 +305,16 @@ test('debug layer overrides hide a layer or draw it as plain shapes, and leave o
     ];
     const run = () => {
         resetRenderStats(stats);
-        paint(ctx, TVG, canvas, pool, stats, overrides);
+        paint(ctx, TVG, canvas, pool, {
+            stats,
+            overrides,
+        });
         return {
             keys: stats.layerList.map((layer) => layer.key),
             top: stats.topShapes,
             commands: stats.commands,
         };
     };
-
     assert.deepEqual(run(), { keys: ['sun', 'fog'], top: 1, commands: 4 });
     assert.deepEqual(stats.layerList[0].effects, ['α0.50', 'screen']);
     overrides.hidden.add('fog');
@@ -325,7 +326,6 @@ test('debug layer overrides hide a layer or draw it as plain shapes, and leave o
     assert.deepEqual(run(), { keys: ['sun', 'fog'], top: 1, commands: 4 });
     assert.equal(ctx.commands[0].layer, sun);
 });
-
 test('a layer that drops its mask or clip gets a fresh scene instead of a pass-through stand-in', () => {
     // ThorVG cannot detach masks; a transparent stand-in caused GL smearing.
     const { TVG, canvas } = fakeThorvg();
@@ -339,22 +339,18 @@ test('a layer that drops its mask or clip gets a fresh scene instead of a pass-t
         paint(ctx, TVG, canvas, pool);
         paint(ctx, TVG, canvas, pool);
     };
-
     draw({ key: 'glint', blend: 'screen', mask: square(0), clip: square(0) });
     const masked = sceneOf();
     assert.ok(masked.maskShape && masked.clipShape);
     assert.equal(masked.maskMethod, TVG.MaskMethod.Alpha);
-
     draw({ key: 'glint', blend: 'screen', clip: square(0) });
     const unmasked = sceneOf();
     assert.notEqual(unmasked, masked, 'dropping the mask replaces the scene');
     assert.equal(unmasked.maskShape, undefined);
     assert.ok(unmasked.clipShape, 'the clip it still has is set up again');
     assert.ok(!canvas.paints.includes(masked), 'the old scene left the canvas');
-
     draw({ key: 'glint', blend: 'screen', clip: square(0) });
     assert.equal(sceneOf(), unmasked, 'an unchanged layer keeps its scene');
-
     draw({
         key: 'glint',
         blend: 'screen',
@@ -364,7 +360,6 @@ test('a layer that drops its mask or clip gets a fresh scene instead of a pass-t
     });
     assert.equal(sceneOf(), unmasked, 'adding a mask reuses the scene');
     assert.equal(unmasked.maskMethod, TVG.MaskMethod.InvAlpha);
-
     draw({ key: 'glint', blend: 'screen', clip: square(0), mask: square(0) });
     const flipped = sceneOf();
     assert.notEqual(
@@ -373,7 +368,6 @@ test('a layer that drops its mask or clip gets a fresh scene instead of a pass-t
         'flipping the mask mode replaces the scene',
     );
     assert.equal(flipped.maskMethod, TVG.MaskMethod.Alpha);
-
     draw({ key: 'glint', blend: 'screen' });
     assert.equal(
         sceneOf().clipShape,
@@ -381,7 +375,6 @@ test('a layer that drops its mask or clip gets a fresh scene instead of a pass-t
         'dropping the clip replaces the scene too',
     );
 });
-
 test('retained geometry is traced once while its ThorVG Scene transform can change every frame', () => {
     const { TVG, canvas, log } = fakeThorvg();
     const ctx = createRenderCtx({});
@@ -405,11 +398,9 @@ test('retained geometry is traced once while its ThorVG Scene transform can chan
             bounds: { left: tx, top: 10, right: tx + 10, bottom: 20 },
         },
     });
-
     ctx.commands = [square(10, retained(0))];
     paint(ctx, TVG, canvas, pool);
     const firstTraceCount = log.filter((item) => item === 'shape-reset').length;
-
     ctx.commands = [square(10, retained(80))];
     paint(ctx, TVG, canvas, pool);
     assert.equal(
@@ -418,7 +409,6 @@ test('retained geometry is traced once while its ThorVG Scene transform can chan
         'moving the retained Scene does not retrace its child path',
     );
 });
-
 test('ThorVG Text keeps its place in the command order so later shapes paint over it', () => {
     const { TVG, canvas } = fakeThorvg();
     const ctx = createRenderCtx({});
@@ -449,7 +439,6 @@ test('ThorVG Text keeps its place in the command order so later shapes paint ove
         square(100),
     ];
     paint(ctx, TVG, canvas, pool);
-
     const kinds = canvas.paints.map((paint) => paint.constructor.name);
     assert.deepEqual(
         kinds,
@@ -471,7 +460,6 @@ test('ThorVG Text keeps its place in the command order so later shapes paint ove
     assert.deepEqual(front.calls.align, [0.5, 0.5]);
     assert.equal(front.calls.transform[0].e13, 100);
     assert.ok(Math.abs(front.calls.transform[0].e21 - Math.sin(0.1)) < 1e-9);
-
     ctx.commands = [square(10), square(100)];
     paint(ctx, TVG, canvas, pool);
     assert.equal(front.calls.visible[0], false);
@@ -481,7 +469,6 @@ test('ThorVG Text keeps its place in the command order so later shapes paint ove
         2,
     );
 });
-
 test('a layer that changes nothing is painted as plain shapes, and one faded to nothing is skipped', () => {
     const { TVG, canvas } = fakeThorvg();
     const ctx = createRenderCtx({});
@@ -496,7 +483,9 @@ test('a layer that changes nothing is painted as plain shapes, and one faded to 
         square(60, gone),
         square(80, seen),
     ];
-    paint(ctx, TVG, canvas, createPaintPool(), stats);
+    paint(ctx, TVG, canvas, createPaintPool(), {
+        stats,
+    });
     assert.equal(
         stats.topShapes,
         2,
@@ -508,7 +497,6 @@ test('a layer that changes nothing is painted as plain shapes, and one faded to 
         ['fading'],
     );
 });
-
 test('back-to-back layers that only screen-blend share one Scene; any other effect or a plain shape between keeps them apart', () => {
     const { TVG, canvas } = fakeThorvg();
     const ctx = createRenderCtx({});
@@ -528,7 +516,9 @@ test('back-to-back layers that only screen-blend share one Scene; any other effe
         square(120),
         square(140, rec),
     ];
-    paint(ctx, TVG, canvas, createPaintPool(), stats);
+    paint(ctx, TVG, canvas, createPaintPool(), {
+        stats,
+    });
     assert.deepEqual(
         stats.layerList.map((layer) => [layer.key, layer.shapes]),
         [

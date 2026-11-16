@@ -1,11 +1,9 @@
 // Use exactly rounded operations to keep replays identical across engines;
 // coefficients follow Sun Microsystems fdlibm.
-
 const PIO4 = 7.85398163397448278999e-1;
 const PI = 3.141592653589793;
 const PI_LO = 1.2246467991473532e-16;
 const PIO2_HI = 1.570796326794896558;
-
 const INV_PIO2 = 6.36619772367581382433e-1;
 // π/2 split into parts whose products with n (|n| < 2^20) are exact.
 const PIO2_1 = 1.57079632673412561417;
@@ -13,9 +11,7 @@ const PIO2_2 = 6.0771005063039659766e-11;
 const PIO2_2T = 2.02226624879595063154e-21;
 const PIO2_3 = 2.0222662487111664558e-21;
 const PIO2_3T = 8.47842766036889956997e-32;
-
 const reduced = { n: 0, y0: 0, y1: 0 };
-
 function reduce(x: number) {
     const n = Math.round(x * INV_PIO2);
     // Cody–Waite reduction: always apply all three fdlibm refinement steps.
@@ -33,28 +29,24 @@ function reduce(x: number) {
     reduced.y0 = y0;
     reduced.y1 = r - y0 - w;
 }
-
 const S1 = -1.66666666666666324348e-1;
 const S2 = 8.33333333332248946124e-3;
 const S3 = -1.98412698298579493134e-4;
 const S4 = 2.75573137070700676789e-6;
 const S5 = -2.50507602534068634195e-8;
 const S6 = 1.58969099521155010221e-10;
-
 function kernelSin(x: number, y: number) {
     const z = x * x;
     const v = z * x;
     const r = S2 + z * (S3 + z * (S4 + z * (S5 + z * S6)));
     return x - (z * (0.5 * y - v * r) - y - v * S1);
 }
-
 const C1 = 4.16666666666666019037e-2;
 const C2 = -1.38888888888741095749e-3;
 const C3 = 2.48015872894767294178e-5;
 const C4 = -2.75573143513906633035e-7;
 const C5 = 2.0875723212981748279e-9;
 const C6 = -1.13596475577881948265e-11;
-
 function kernelCos(x: number, y: number) {
     const z = x * x;
     const r = z * (C1 + z * (C2 + z * (C3 + z * (C4 + z * (C5 + z * C6)))));
@@ -62,7 +54,6 @@ function kernelCos(x: number, y: number) {
     const w = 1 - hz;
     return w + (1 - w - hz + (z * r - x * y));
 }
-
 export function sin(x: number): number {
     if (!Number.isFinite(x)) {
         return NaN;
@@ -83,7 +74,6 @@ export function sin(x: number): number {
             return -kernelCos(y0, y1);
     }
 }
-
 export function cos(x: number): number {
     if (!Number.isFinite(x)) {
         return NaN;
@@ -104,11 +94,9 @@ export function cos(x: number): number {
             return kernelSin(y0, y1);
     }
 }
-
 export function tan(x: number): number {
     return sin(x) / cos(x);
 }
-
 const LN2_HI = 6.9314718036912381649e-1;
 const LN2_LO = 1.90821492927058770002e-10;
 const INV_LN2 = 1.442695040888963387;
@@ -119,7 +107,6 @@ const P4 = -1.6533902205465251539e-6;
 const P5 = 4.13813679705723846039e-8;
 const EXP_MAX = 7.09782712893383973096e2;
 const EXP_MIN = -7.4513321910194110842e2;
-
 function pow2(k: number) {
     let result = 1;
     let base = k < 0 ? 0.5 : 2;
@@ -133,7 +120,6 @@ function pow2(k: number) {
     }
     return result;
 }
-
 export function exp(x: number): number {
     if (Number.isNaN(x)) {
         return NaN;
@@ -167,7 +153,6 @@ export function exp(x: number): number {
     }
     return y * pow2(k);
 }
-
 const ATAN_HI = [
     4.63647609000806093515e-1, 7.85398163397448278999e-1,
     9.82793723247329054082e-1, 1.570796326794896558,
@@ -184,7 +169,6 @@ const AT = [
     4.97687799461593236017e-2, -3.6531572744216915527e-2,
     1.62858201153657823623e-2,
 ];
-
 export function atan(x: number): number {
     if (Number.isNaN(x)) {
         return NaN;
@@ -230,7 +214,6 @@ export function atan(x: number): number {
     const result = ATAN_HI[id] - (v * (s1 + s2) - ATAN_LO[id] - v);
     return x < 0 ? -result : result;
 }
-
 export function atan2(y: number, x: number): number {
     if (Number.isNaN(x) || Number.isNaN(y)) {
         return NaN;
@@ -243,11 +226,7 @@ export function atan2(y: number, x: number): number {
         return y > 0 ? PIO2_HI : -PIO2_HI;
     }
     if (!Number.isFinite(x)) {
-        if (!Number.isFinite(y)) {
-            const corner = x > 0 ? PIO4 : 3 * PIO4;
-            return y > 0 ? corner : -corner;
-        }
-        return x > 0 ? (y > 0 ? 0 : -0) : y > 0 ? PI : -PI;
+        return infiniteAtan2(y, x);
     }
     if (!Number.isFinite(y)) {
         return y > 0 ? PIO2_HI : -PIO2_HI;
@@ -259,7 +238,6 @@ export function atan2(y: number, x: number): number {
     const result = PI - (z - PI_LO);
     return y < 0 ? -result : result;
 }
-
 export function hypot(x: number, y: number): number {
     let a = Math.abs(x);
     let b = Math.abs(y);
@@ -279,4 +257,11 @@ export function hypot(x: number, y: number): number {
     }
     const r = b / a;
     return a * Math.sqrt(1 + r * r);
+}
+function infiniteAtan2(y: number, x: number): number {
+    if (!Number.isFinite(y)) {
+        const corner = x > 0 ? PIO4 : 3 * PIO4;
+        return y > 0 ? corner : -corner;
+    }
+    return x > 0 ? (y > 0 ? 0 : -0) : y > 0 ? PI : -PI;
 }

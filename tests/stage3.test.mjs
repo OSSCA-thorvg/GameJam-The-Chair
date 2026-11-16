@@ -4,7 +4,6 @@ import test from 'node:test';
 import { bundled } from './support/load.mjs';
 import { driveStageThree } from './support/stage3-route.mjs';
 import { runUntil } from './support/until.mjs';
-
 const { createGame } = await bundled({
     entryPoints: ['src/game/game.ts'],
     bundle: true,
@@ -13,7 +12,6 @@ const { createGame } = await bundled({
     format: 'esm',
 });
 const dt = 1 / 120;
-
 test('extinguisher must be collected and does not leak into other stages', () => {
     const game = createGame();
     for (const stage of [1, 2, 3]) {
@@ -33,7 +31,6 @@ test('extinguisher must be collected and does not leak into other stages', () =>
     game.startStage(1);
     assert.equal(game.getSnapshot().hasExtinguisher, false);
 });
-
 test('held spray repeats every 0.24 seconds, three bursts per time in the air, and right input propels right', () => {
     const game = createGame();
     game.startStage(3);
@@ -86,56 +83,8 @@ test('held spray repeats every 0.24 seconds, three bursts per time in the air, a
             .some((event) => event.type === 'cue' && event.id === 'spray'),
     );
 });
-
 test('dropping off the roof onto the sales graph rides it into an airborne stage-four start', () => {
-    const game = createGame();
-    game.startStage(3);
-    const flags = new Set();
-    const landings = new Set();
-    const reactions = new Set();
-    const ride = driveStageThree(
-        game,
-        (state) => state.firstFlight.kind === 'ride',
-        (state) => {
-            flags.add(state.checkpoint);
-            reactions.add(state.ductReaction.kind);
-            if (state.ground) {
-                if (
-                    state.player.x > 1480 &&
-                    state.player.x < 1780 &&
-                    Math.abs(state.player.y - 248) < 18
-                ) {
-                    landings.add('R1');
-                }
-                if (
-                    state.player.x > 1240 &&
-                    state.player.x < 1540 &&
-                    Math.abs(state.player.y - 78) < 18
-                ) {
-                    landings.add('L1');
-                }
-                if (
-                    state.player.x > 1480 &&
-                    state.player.x < 1780 &&
-                    Math.abs(state.player.y + 92) < 18
-                ) {
-                    landings.add('R2');
-                }
-                if (
-                    state.player.x > 1240 &&
-                    state.player.x < 1540 &&
-                    Math.abs(state.player.y + 262) < 18
-                ) {
-                    landings.add('L2');
-                }
-            }
-        },
-    );
-    assert.deepEqual([...flags], [0, 1, 2, 3, 4]);
-    assert.deepEqual(landings, new Set(['R1', 'L1', 'R2', 'L2']));
-    assert.deepEqual([...reactions], ['idle', 'reacting', 'done']);
-    assert.equal(ride.mode, 'play');
-    assert.equal(ride.deaths, 0);
+    const { ride, game } = verifyDetails();
     assert.ok(
         ride.player.x > 2400 && ride.player.x < 2560,
         'the chair boards where the board meets the roof edge',
@@ -224,7 +173,6 @@ test('dropping off the roof onto the sales graph rides it into an airborne stage
     assert.equal(game.getSnapshot().hasExtinguisher, true);
     assert.equal(game.getSnapshot().firstFlight.kind, 'course');
 });
-
 test('entrance moves the chair to the first block and closes before enabling controls', () => {
     const game = createGame();
     game.startStage(3);
@@ -286,7 +234,6 @@ test('entrance moves the chair to the first block and closes before enabling con
         'controls activate after the door closes',
     );
 });
-
 test('the sales graph waits until the chair rolls onto it', () => {
     const game = createGame();
     game.startStage(3);
@@ -316,7 +263,6 @@ test('the sales graph waits until the chair rolls onto it', () => {
     assert.equal(state.firstFlight.kind, 'ride');
     assert.equal(state.deaths, 0);
 });
-
 test('a steam blast costs focus once per blast', async () => {
     const { STAGE_THREE, ventPhase } = await bundled({
         stdin: {
@@ -357,7 +303,6 @@ test('a steam blast costs focus once per blast', async () => {
         'the same blast only counts once',
     );
 });
-
 test('the duct sneeze steam costs focus when it knocks the chair back', async () => {
     const { STAGE_THREE } = await bundled({
         stdin: {
@@ -393,3 +338,54 @@ test('the duct sneeze steam costs focus when it knocks the chair back', async ()
     assert.ok(hit, 'the sneeze registers as a steam hit');
     assert.equal(hit.focus, 100 - 15);
 });
+function verifyDetails() {
+    const game = createGame();
+    game.startStage(3);
+    const flags = new Set();
+    const landings = new Set();
+    const reactions = new Set();
+    const ride = driveStageThree(
+        game,
+        (state) => state.firstFlight.kind === 'ride',
+        (state) => {
+            flags.add(state.checkpoint);
+            reactions.add(state.ductReaction.kind);
+            if (state.ground) {
+                if (
+                    state.player.x > 1480 &&
+                    state.player.x < 1780 &&
+                    Math.abs(state.player.y - 248) < 18
+                ) {
+                    landings.add('R1');
+                }
+                if (
+                    state.player.x > 1240 &&
+                    state.player.x < 1540 &&
+                    Math.abs(state.player.y - 78) < 18
+                ) {
+                    landings.add('L1');
+                }
+                if (
+                    state.player.x > 1480 &&
+                    state.player.x < 1780 &&
+                    Math.abs(state.player.y + 92) < 18
+                ) {
+                    landings.add('R2');
+                }
+                if (
+                    state.player.x > 1240 &&
+                    state.player.x < 1540 &&
+                    Math.abs(state.player.y + 262) < 18
+                ) {
+                    landings.add('L2');
+                }
+            }
+        },
+    );
+    assert.deepEqual([...flags], [0, 1, 2, 3, 4]);
+    assert.deepEqual(landings, new Set(['R1', 'L1', 'R2', 'L2']));
+    assert.deepEqual([...reactions], ['idle', 'reacting', 'done']);
+    assert.equal(ride.mode, 'play');
+    assert.equal(ride.deaths, 0);
+    return { ride, game };
+}

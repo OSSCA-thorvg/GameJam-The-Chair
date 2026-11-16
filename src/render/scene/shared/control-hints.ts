@@ -6,10 +6,8 @@ import { SPRAY_KEY } from '../../../ui/controls';
 import type { KeyFace } from './keycap';
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-
 const hintSize = (ctx: RenderCtx, age: number) =>
     ctx.clamp(ctx.W / 52, 12, 20) * keycapPop(age).scale;
-
 function keyRow(ctx: RenderCtx, faces: KeyFace[], centre: Vector, age: number) {
     const size = hintSize(ctx, age);
     const alpha = keycapPop(age).alpha;
@@ -20,18 +18,13 @@ function keyRow(ctx: RenderCtx, faces: KeyFace[], centre: Vector, age: number) {
         (sizes.reduce((sum, s) => sum + s.w, 0) + gap * (faces.length - 1)) / 2;
     faces.forEach((face, i) => {
         const { w, h, depth } = sizes[i];
-        keycap(
-            ctx,
-            face,
-            [x, centre[1] - h - depth],
-            size,
+        keycap(ctx, face, [x, centre[1] - h - depth], size, {
             alpha,
-            keycapPress(age + i * 0.45),
-        );
+            press: keycapPress(age + i * 0.45),
+        });
         x += w + gap;
     });
 }
-
 export function officeControlHints(ctx: RenderCtx): void {
     if (ctx.mode !== 'play' || ctx.cutscene || ctx.cam > 340) {
         return;
@@ -53,7 +46,6 @@ export function officeControlHints(ctx: RenderCtx): void {
         );
     }
 }
-
 export function rooftopSprayHint(ctx: RenderCtx): void {
     const pickup = STAGE_THREE.pickup;
     if (

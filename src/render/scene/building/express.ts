@@ -1,12 +1,10 @@
 import { STAGE_TWO } from '../../../game/stages/building/data';
 
 import type { RenderCtx } from '../../context';
-
 const FLOOR = 420;
 const { pit, ramp, launch } = STAGE_TWO.express;
 const EXPRESS_SPEED = 360;
 const GRAVITY = 950;
-
 export function chairLift(x: number): number {
     if (x >= ramp.start && x < pit.left) {
         return ((x - ramp.start) / (pit.left - ramp.start)) * ramp.rise;
@@ -17,61 +15,24 @@ export function chairLift(x: number): number {
     }
     return 0;
 }
-
 export function expressFloor(ctx: RenderCtx): void {
     const { cam, VW, t } = ctx;
     if (ramp.start > cam + VW + 120 || pit.right < cam - 120) {
         return;
     }
-
-    ctx.gradientPolygon(
-        [
-            [pit.left, FLOOR],
-            [pit.right, FLOOR],
-            [pit.right, FLOOR + 400],
-            [pit.left, FLOOR + 400],
-        ],
-        ctx.gradientFill(0, FLOOR, 0, FLOOR + 260, [
-            [0, '#3b4448'],
-            [0.25, '#1c2226'],
-            [1, '#0b0e10'],
-        ]),
-    );
-    for (const x of [pit.left, pit.right]) {
-        ctx.rect(x - 4, FLOOR, 8, 400, '#5d6b6c');
-    }
-    const width = pit.right - pit.left;
-    for (let i = 1; i < 6; i++) {
-        ctx.rod(
-            pit.left + (i * width) / 6,
-            FLOOR + 70 + (i % 2) * 18,
-            pit.left + (i * width) / 6 + 14,
-            FLOOR + 160,
-            2,
-            '#4a3b30',
-        );
-    }
-    ctx.strokePath(
-        [pit.left + 20, FLOOR + 30],
-        [
-            [
-                pit.left + 120,
-                FLOOR + 160,
-                pit.right - 140,
-                FLOOR + 40,
-                pit.right - 30,
-                FLOOR + 120,
-            ],
-        ],
-        { width: 3, color: '#20262a', cap: 'round' },
-    );
-
-    const lip = FLOOR - ramp.rise;
-    const spring =
-        Math.sin(t * 24) * (ctx.state.corridor.pace === 'express' ? 1.5 : 0);
-    ctx.rod(pit.left - 46, lip + 6, pit.left - 58, FLOOR, 5, '#6b5034');
-    ctx.rod(pit.left - 22, lip + 6, pit.left - 10, FLOOR, 5, '#6b5034');
-    ctx.rod(pit.left - 52, lip + 22, pit.left - 16, lip + 22, 4, '#6b5034');
+    const { lip, spring } = expressFloorDetails(ctx, t);
+    ctx.rod(pit.left - 46, lip + 6, pit.left - 58, FLOOR, {
+        w: 5,
+        c: '#6b5034',
+    });
+    ctx.rod(pit.left - 22, lip + 6, pit.left - 10, FLOOR, {
+        w: 5,
+        c: '#6b5034',
+    });
+    ctx.rod(pit.left - 52, lip + 22, pit.left - 16, lip + 22, {
+        w: 4,
+        c: '#6b5034',
+    });
     ctx.strokePath(
         [ramp.start - 6, FLOOR],
         [
@@ -115,18 +76,63 @@ export function expressFloor(ctx: RenderCtx): void {
             '#f2c14e',
         );
     }
-
     cone(ctx, pit.right + 34);
-    ctx.rod(
-        pit.right + 4,
-        FLOOR - 30,
-        pit.right + 34,
-        FLOOR - 26,
-        3,
-        '#f2c14e',
-    );
+    ctx.rod(pit.right + 4, FLOOR - 30, pit.right + 34, FLOOR - 26, {
+        w: 3,
+        c: '#f2c14e',
+    });
 }
-
+function expressFloorDetails(ctx: RenderCtx, t: number) {
+    ctx.gradientPolygon(
+        [
+            [pit.left, FLOOR],
+            [pit.right, FLOOR],
+            [pit.right, FLOOR + 400],
+            [pit.left, FLOOR + 400],
+        ],
+        ctx.gradientFill(0, FLOOR, 0, FLOOR + 260, {
+            stops: [
+                [0, '#3b4448'],
+                [0.25, '#1c2226'],
+                [1, '#0b0e10'],
+            ],
+        }),
+    );
+    for (const x of [pit.left, pit.right]) {
+        ctx.rect(x - 4, FLOOR, 8, 400, '#5d6b6c');
+    }
+    const width = pit.right - pit.left;
+    for (let i = 1; i < 6; i++) {
+        ctx.rod(
+            pit.left + (i * width) / 6,
+            FLOOR + 70 + (i % 2) * 18,
+            pit.left + (i * width) / 6 + 14,
+            FLOOR + 160,
+            {
+                w: 2,
+                c: '#4a3b30',
+            },
+        );
+    }
+    ctx.strokePath(
+        [pit.left + 20, FLOOR + 30],
+        [
+            [
+                pit.left + 120,
+                FLOOR + 160,
+                pit.right - 140,
+                FLOOR + 40,
+                pit.right - 30,
+                FLOOR + 120,
+            ],
+        ],
+        { width: 3, color: '#20262a', cap: 'round' },
+    );
+    const lip = FLOOR - ramp.rise;
+    const spring =
+        Math.sin(t * 24) * (ctx.state.corridor.pace === 'express' ? 1.5 : 0);
+    return { lip, spring };
+}
 function cone(ctx: RenderCtx, x: number) {
     ctx.polygon(
         [

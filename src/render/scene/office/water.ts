@@ -1,10 +1,13 @@
-import { WATER_GRAVITY, bucketMouth, pourLaunch } from '../../bucket';
+import {
+    WATER_GRAVITY,
+    bucketMouth,
+    pourLaunch,
+    type BucketMouth,
+} from '../../bucket';
 
 import type { RenderCtx } from '../../context';
 import type { Curve, PathCommand, Vector } from '../../types';
-
 type Path = { start: Vector; curves: Curve[] };
-
 const WATER = {
     body: ['#93a37f', '#788a68', '#62735a'] as const,
     core: '#c4cfa8',
@@ -14,9 +17,7 @@ const WATER = {
     rim: '#8a9784',
     sheen: '#e3ece9',
 };
-
 const smooth = (u: number) => u * u * (3 - 2 * u);
-
 function spline(points: Vector[], closed: boolean): Path {
     const n = points.length;
     const at = (i: number) =>
@@ -39,7 +40,6 @@ function spline(points: Vector[], closed: boolean): Path {
     }
     return { start: points[0], curves };
 }
-
 function ellipsePath(x: number, y: number, rx: number, ry: number): Path {
     const k = 0.5523;
     return {
@@ -52,7 +52,6 @@ function ellipsePath(x: number, y: number, rx: number, ry: number): Path {
         ],
     };
 }
-
 export type PuddleShape = {
     cx: number;
     cy: number;
@@ -61,7 +60,6 @@ export type PuddleShape = {
     outline: Path;
     clip: PathCommand;
 };
-
 export function puddleShape(ctx: RenderCtx): PuddleShape | null {
     const cleaning = ctx.cleaning;
     if (!cleaning.spilled) {
@@ -113,7 +111,6 @@ export function puddleShape(ctx: RenderCtx): PuddleShape | null {
         clip: ctx.pathCommand(outline.start, outline.curves),
     };
 }
-
 export function drawPuddle(
     ctx: RenderCtx,
     shape: PuddleShape,
@@ -124,11 +121,13 @@ export function drawPuddle(
     ctx.effectPath(
         outline.start,
         outline.curves,
-        ctx.gradientFill(cx, cy - ry, cx, cy + ry, [
-            [0, WATER.wet[2]],
-            [0.45, WATER.wet[1]],
-            [1, WATER.wet[0]],
-        ]),
+        ctx.gradientFill(cx, cy - ry, cx, cy + ry, {
+            stops: [
+                [0, WATER.wet[2]],
+                [0.45, WATER.wet[1]],
+                [1, WATER.wet[0]],
+            ],
+        }),
     );
     ctx.strokePath(
         outline.start,
@@ -137,7 +136,6 @@ export function drawPuddle(
         { closed: true },
     );
     ctx.endLayer();
-
     ctx.beginLayer({
         key: 'puddle-reflect',
         clip,
@@ -148,18 +146,19 @@ export function drawPuddle(
     reflect();
     ctx.mirror = null;
     ctx.endLayer();
-
     ctx.beginLayer({ key: 'puddle-shine', clip, blend: 'screen' });
     const drift = Math.sin(ctx.t * 0.45) * rx * 0.08 + (ctx.cam % 400) * 0.03;
     const band = ellipsePath(cx + drift, cy - ry * 0.25, rx * 0.72, ry * 0.32);
     ctx.effectPath(
         band.start,
         band.curves,
-        ctx.gradientFill(cx, cy - ry * 0.6, cx, cy + ry * 0.1, [
-            [0, '#00000000'],
-            [0.5, ctx.tint(WATER.sheen, 0.38)],
-            [1, '#00000000'],
-        ]),
+        ctx.gradientFill(cx, cy - ry * 0.6, cx, cy + ry * 0.1, {
+            stops: [
+                [0, '#00000000'],
+                [0.5, ctx.tint(WATER.sheen, 0.38)],
+                [1, '#00000000'],
+            ],
+        }),
     );
     for (const [dx, w] of [
         [-0.4, 0.07],
@@ -193,12 +192,9 @@ export function drawPuddle(
     }
     ctx.endLayer();
 }
-
 type SheetPoint = { p: Vector; dir: Vector; w: number; te: number };
 type Sheet = { points: SheetPoint[]; attached: boolean; landed: boolean };
-
 const wave = (v: number) => Math.sin(v) * 0.6 + Math.sin(v * 2.37 + 1.1) * 0.4;
-
 function sheets(ctx: RenderCtx, age: number): Sheet[] {
     const { x, splashDir: side } = ctx.cleaning;
     const floor = ctx.F + 3;
@@ -265,11 +261,13 @@ function sheets(ctx: RenderCtx, age: number): Sheet[] {
     flush(false);
     return result;
 }
-
 function sheetOutline(
     sheet: Sheet,
     age: number,
-): { outline: Path; front: SheetPoint } {
+): {
+    outline: Path;
+    front: SheetPoint;
+} {
     const pts = sheet.points;
     const n = pts.length;
     const left: Vector[] = [];
@@ -320,7 +318,6 @@ function sheetOutline(
         front,
     };
 }
-
 export function drawPour(ctx: RenderCtx): void {
     const cleaning = ctx.cleaning;
     const age = ctx.state.bucketAge;
@@ -336,7 +333,6 @@ export function drawPour(ctx: RenderCtx): void {
         ? smooth(ctx.clamp((age - 0.06) / 0.12, 0, 1)) *
           (1 - smooth(ctx.clamp((age - 0.2) / 0.12, 0, 1)))
         : 0;
-
     if (curtains.length || swell > 0) {
         let dx = 0;
         let dy = 0;
@@ -375,147 +371,233 @@ export function drawPour(ctx: RenderCtx): void {
                 p[1] - dir[1] * 14,
                 p[0] + dir[0] * 12,
                 p[1] + dir[1] * 12,
-                [
-                    [0, '#ffffff'],
-                    [1, '#ffffff00'],
-                ],
+                {
+                    stops: [
+                        [0, '#ffffff'],
+                        [1, '#ffffff00'],
+                    ],
+                },
             );
         }
-        ctx.beginLayer({
-            key: 'water-sheet',
-            motionBlur: {
-                distance: 4 * ctx.scale,
-                angle: (Math.atan2(dy, dx) * 180) / Math.PI,
-            },
-            mask,
+        drawPourDetails5(ctx, dy, dx, mask, {
+            swell,
+            mouth,
+            lx,
+            ax,
+            ly,
+            ay,
+            shapes,
+            side,
+            age,
         });
-        if (swell > 0) {
-            const [ox, oy] = mouth.out;
-            const reach = 7 * swell;
-            const end: Vector = [lx + ax * 0.4, ly + ay * 0.4];
-            ctx.effectPath(
-                mouth.lip,
+    }
+    drawPourDetails2(spray, crowns, ctx);
+}
+function drawPourDetails5(
+    ctx: RenderCtx,
+    dy: number,
+    dx: number,
+    mask: PathCommand | undefined,
+    {
+        swell,
+        mouth,
+        lx,
+        ax,
+        ly,
+        ay,
+        shapes,
+        side,
+        age,
+    }: {
+        swell: number;
+        mouth: BucketMouth;
+        lx: number;
+        ax: number;
+        ly: number;
+        ay: number;
+        shapes: Array<{
+            outline: Path;
+            front: SheetPoint;
+            sheet: Sheet;
+        }>;
+        side: number;
+        age: number;
+    },
+) {
+    ctx.beginLayer({
+        key: 'water-sheet',
+        motionBlur: {
+            distance: 4 * ctx.scale,
+            angle: (Math.atan2(dy, dx) * 180) / Math.PI,
+        },
+        mask,
+    });
+    if (swell > 0) {
+        const [ox, oy] = mouth.out;
+        const reach = 7 * swell;
+        const end: Vector = [lx + ax * 0.4, ly + ay * 0.4];
+        ctx.effectPath(
+            mouth.lip,
+            [
                 [
-                    [
-                        lx + ox * reach,
-                        ly + oy * reach,
-                        end[0] + ox * reach,
-                        end[1] + oy * reach,
-                        end[0],
-                        end[1],
-                    ],
-                    [end[0], end[1], lx, ly, lx, ly],
+                    lx + ox * reach,
+                    ly + oy * reach,
+                    end[0] + ox * reach,
+                    end[1] + oy * reach,
+                    end[0],
+                    end[1],
                 ],
-                ctx.gradientFill(lx, ly, lx + ox * reach, ly + oy * reach, [
+                [end[0], end[1], lx, ly, lx, ly],
+            ],
+            ctx.gradientFill(lx, ly, lx + ox * reach, ly + oy * reach, {
+                stops: [
                     [0, WATER.body[1]],
                     [1, WATER.body[0]],
-                ]),
-            );
-        }
-        for (const { sheet, outline, front } of shapes) {
-            const top = sheet.points[0].p;
-            ctx.effectPath(
-                outline.start,
-                outline.curves,
-                ctx.gradientFill(...top, ...front.p, [
+                ],
+            }),
+        );
+    }
+    drawPourDetails4(shapes, ctx, side);
+    if (shapes.length) {
+        ctx.beginLayer({
+            key: 'water-glint',
+            blend: 'screen',
+            opacity: 0.8 + 0.2 * wave(age * 31),
+            mask,
+        });
+        drawPourDetails3(shapes, side, ctx);
+    }
+}
+function drawPourDetails4(
+    shapes: Array<{
+        outline: Path;
+        front: SheetPoint;
+        sheet: Sheet;
+    }>,
+    ctx: RenderCtx,
+    side: number,
+) {
+    for (const { sheet, outline, front } of shapes) {
+        const top = sheet.points[0].p;
+        ctx.effectPath(
+            outline.start,
+            outline.curves,
+            ctx.gradientFill(top[0], top[1], front.p[0], front.p[1], {
+                stops: [
                     [0, ctx.tint(WATER.body[0], 0.72)],
                     [0.35, ctx.tint(WATER.body[1], 0.92)],
                     [1, ctx.tint(WATER.body[2], 0.88)],
-                ]),
+                ],
+            }),
+        );
+        if (sheet.points.length > 2) {
+            const inner = sheet.points.map(
+                (q) =>
+                    [
+                        q.p[0] + q.dir[1] * q.w * 0.3 * side,
+                        q.p[1] - q.dir[0] * q.w * 0.3 * side,
+                    ] as Vector,
             );
-            if (sheet.points.length > 2) {
-                const inner = sheet.points.map(
-                    (q) =>
-                        [
-                            q.p[0] + q.dir[1] * q.w * 0.3 * side,
-                            q.p[1] - q.dir[0] * q.w * 0.3 * side,
-                        ] as Vector,
-                );
-                const line = spline(inner, false);
-                const w =
-                    sheet.points.reduce((sum, q) => sum + q.w, 0) /
-                    sheet.points.length;
-                ctx.strokePath(
-                    line.start,
-                    line.curves,
-                    {
-                        width: w * 0.7,
-                        color: ctx.tint(WATER.core, 0.28),
-                        cap: 'round',
-                    },
-                    { trim: [0.05, 0.85] },
-                );
-            }
-            if (sheet.landed) {
-                const w = front.w;
-                ctx.ellipse(
-                    front.p[0],
-                    ctx.F + 3,
-                    5 + w * 1.8,
-                    1.6 + w * 0.35,
-                    ctx.tint('#dfe3cd', 0.7),
-                );
-            }
+            const line = spline(inner, false);
+            const w =
+                sheet.points.reduce((sum, q) => sum + q.w, 0) /
+                sheet.points.length;
+            ctx.strokePath(
+                line.start,
+                line.curves,
+                {
+                    width: w * 0.7,
+                    color: ctx.tint(WATER.core, 0.28),
+                    cap: 'round',
+                },
+                { trim: [0.05, 0.85] },
+            );
         }
-        ctx.endLayer();
-
-        if (shapes.length) {
-            ctx.beginLayer({
-                key: 'water-glint',
-                blend: 'screen',
-                opacity: 0.8 + 0.2 * wave(age * 31),
-                mask,
+        if (sheet.landed) {
+            const w = front.w;
+            ctx.ellipse(front.p[0], ctx.F + 3, 5 + w * 1.8, 1.6 + w * 0.35, {
+                c: ctx.tint('#dfe3cd', 0.7),
             });
-            for (const { sheet } of shapes) {
-                if (sheet.points.length < 3) {
-                    continue;
-                }
-                const edge = sheet.points.map(
-                    (q) =>
-                        [
-                            q.p[0] + q.dir[1] * q.w * 0.72 * side,
-                            q.p[1] - q.dir[0] * q.w * 0.72 * side,
-                        ] as Vector,
-                );
-                const line = spline(edge, false);
-                ctx.strokePath(
-                    line.start,
-                    line.curves,
-                    {
-                        width: 1.1,
-                        color: ctx.tint(WATER.glint, 0.6),
-                        cap: 'round',
-                    },
-                    {
-                        trim: [
-                            sheet.attached ? 0.02 : 0.15,
-                            sheet.landed ? 0.9 : 0.75,
-                        ],
-                    },
-                );
-                const under = sheet.points.map(
-                    (q) =>
-                        [
-                            q.p[0] - q.dir[1] * q.w * 0.6 * side,
-                            q.p[1] + q.dir[0] * q.w * 0.6 * side,
-                        ] as Vector,
-                );
-                const low = spline(under, false);
-                ctx.strokePath(
-                    low.start,
-                    low.curves,
-                    {
-                        width: 0.7,
-                        color: ctx.tint(WATER.glint, 0.22),
-                        cap: 'round',
-                    },
-                    { trim: [0.3, 0.8] },
-                );
-            }
-            ctx.endLayer();
         }
     }
-
+    ctx.endLayer();
+}
+function drawPourDetails3(
+    shapes: Array<{
+        outline: Path;
+        front: SheetPoint;
+        sheet: Sheet;
+    }>,
+    side: number,
+    ctx: RenderCtx,
+) {
+    for (const { sheet } of shapes) {
+        if (sheet.points.length < 3) {
+            continue;
+        }
+        const edge = sheet.points.map(
+            (q) =>
+                [
+                    q.p[0] + q.dir[1] * q.w * 0.72 * side,
+                    q.p[1] - q.dir[0] * q.w * 0.72 * side,
+                ] as Vector,
+        );
+        const line = spline(edge, false);
+        ctx.strokePath(
+            line.start,
+            line.curves,
+            {
+                width: 1.1,
+                color: ctx.tint(WATER.glint, 0.6),
+                cap: 'round',
+            },
+            {
+                trim: [sheet.attached ? 0.02 : 0.15, sheet.landed ? 0.9 : 0.75],
+            },
+        );
+        const under = sheet.points.map(
+            (q) =>
+                [
+                    q.p[0] - q.dir[1] * q.w * 0.6 * side,
+                    q.p[1] + q.dir[0] * q.w * 0.6 * side,
+                ] as Vector,
+        );
+        const low = spline(under, false);
+        ctx.strokePath(
+            low.start,
+            low.curves,
+            {
+                width: 0.7,
+                color: ctx.tint(WATER.glint, 0.22),
+                cap: 'round',
+            },
+            { trim: [0.3, 0.8] },
+        );
+    }
+    ctx.endLayer();
+}
+function drawPourDetails2(
+    spray: Array<{
+        readonly kind: 'stream' | 'drop' | 'spray';
+        readonly chain: number;
+        readonly x: number;
+        readonly y: number;
+        readonly vx: number;
+        readonly vy: number;
+        readonly life: number;
+        readonly r: number;
+        readonly floor: number;
+    }>,
+    crowns: Array<{
+        readonly x: number;
+        readonly y: number;
+        readonly age: number;
+        readonly life: number;
+        readonly r: number;
+        readonly crown: boolean;
+    }>,
+    ctx: RenderCtx,
+) {
     if (spray.length || crowns.length) {
         ctx.beginLayer({ key: 'water-body' });
         for (const c of crowns) {
@@ -539,40 +621,30 @@ export function drawPour(ctx: RenderCtx): void {
             ctx.effectPath(
                 crown.start,
                 crown.curves,
-                ctx.gradientFill(
-                    x,
-                    y - h,
-                    x,
-                    y,
-                    [
+                ctx.gradientFill(x, y - h, x, y, {
+                    stops: [
                         [0, ctx.tint(WATER.core, 0.85)],
                         [1, ctx.tint(WATER.body[1], 0.7)],
                     ],
-                    1 - u * 0.6,
-                ),
+                    alpha: 1 - u * 0.6,
+                }),
             );
             for (const d of [-1, 1]) {
-                ctx.ellipse(
-                    x + d * (s + 1),
-                    y - h - 2,
-                    1.6,
-                    1.8,
-                    ctx.tint(WATER.spray, 1 - u),
-                );
+                ctx.ellipse(x + d * (s + 1), y - h - 2, 1.6, 1.8, {
+                    c: ctx.tint(WATER.spray, 1 - u),
+                });
             }
         }
         for (const z of spray) {
-            ctx.ellipse(
-                z.x,
-                z.y,
-                z.r,
-                z.r * 1.15,
-                ctx.tint(WATER.spray, ctx.clamp(z.life / 0.4, 0, 1) * 0.95),
-            );
+            ctx.ellipse(z.x, z.y, z.r, z.r * 1.15, {
+                c: ctx.tint(WATER.spray, ctx.clamp(z.life / 0.4, 0, 1) * 0.95),
+            });
         }
         ctx.endLayer();
     }
-
+    drawPourDetails(ctx);
+}
+function drawPourDetails(ctx: RenderCtx) {
     const drops = ctx.waterDrops.filter((z) => z.kind === 'drop');
     if (drops.length) {
         let vx = 0;
@@ -605,26 +677,18 @@ export function drawPour(ctx: RenderCtx): void {
                     [w, -h * 0.3, w, h * 0.7, 0, h],
                     [-w, h * 0.7, -w, -h * 0.3, 0, -h],
                 ],
-                ctx.gradientFill(
-                    -w,
-                    0,
-                    w,
-                    0,
-                    [
+                ctx.gradientFill(-w, 0, w, 0, {
+                    stops: [
                         [0, ctx.tint(WATER.body[2], 0.9)],
                         [0.5, ctx.tint(WATER.body[0], 0.95)],
                         [1, ctx.tint(WATER.body[1], 0.7)],
                     ],
-                    fade,
-                ),
+                    alpha: fade,
+                }),
             );
-            ctx.ellipse(
-                -w * 0.25,
-                -h * 0.15,
-                z.r * 0.22,
-                z.r * 0.3,
-                ctx.tint(WATER.glint, fade * 0.8),
-            );
+            ctx.ellipse(-w * 0.25, -h * 0.15, z.r * 0.22, z.r * 0.3, {
+                c: ctx.tint(WATER.glint, fade * 0.8),
+            });
             ctx.ox = ctx.oy = ctx.rotation = 0;
         }
         ctx.endLayer();

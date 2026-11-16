@@ -51,9 +51,7 @@ import { SPLASH_DURATION } from './ui/splash-meta';
 
 import type { PreviewRegistration } from './preview/registration';
 export type { PreviewScene } from './preview/types';
-
 export type { PreviewRegistration } from './preview/registration';
-
 export const previewScenes: readonly PreviewRegistration[] = (
     [
         {
@@ -199,14 +197,16 @@ export const previewScenes: readonly PreviewRegistration[] = (
                     'Building · Orientation: hop the cables',
                     3570,
                     0,
-                    true,
-                    420,
-                    [
-                        { at: 0, label: 'Rule one' },
-                        { at: 1.4, label: 'Chairs hop first' },
-                        { at: 2, label: 'Rookie hops' },
-                        { at: 3.6, label: 'Again' },
-                    ],
+                    {
+                        hop: true,
+                        frameCount: 420,
+                        markers: [
+                            { at: 0, label: 'Rule one' },
+                            { at: 1.4, label: 'Chairs hop first' },
+                            { at: 2, label: 'Rookie hops' },
+                            { at: 3.6, label: 'Again' },
+                        ],
+                    },
                 ),
         },
         {
@@ -218,13 +218,15 @@ export const previewScenes: readonly PreviewRegistration[] = (
                     'Building · Orientation: overtime sleepers',
                     4890,
                     3,
-                    true,
-                    480,
-                    [
-                        { at: 0, label: 'Shh' },
-                        { at: 2.2, label: 'Hop the sleeping bag' },
-                        { at: 3.7, label: 'Another one' },
-                    ],
+                    {
+                        hop: true,
+                        frameCount: 480,
+                        markers: [
+                            { at: 0, label: 'Shh' },
+                            { at: 2.2, label: 'Hop the sleeping bag' },
+                            { at: 3.7, label: 'Another one' },
+                        ],
+                    },
                 ),
         },
         {
@@ -236,13 +238,15 @@ export const previewScenes: readonly PreviewRegistration[] = (
                     'Building · Orientation: back to back after the flag',
                     6150,
                     6,
-                    true,
-                    540,
-                    [
-                        { at: 1.2, label: 'Two cables' },
-                        { at: 3.6, label: 'Sleeper, cable' },
-                        { at: 5.5, label: 'Three cables' },
-                    ],
+                    {
+                        hop: true,
+                        frameCount: 540,
+                        markers: [
+                            { at: 1.2, label: 'Two cables' },
+                            { at: 3.6, label: 'Sleeper, cable' },
+                            { at: 5.5, label: 'Three cables' },
+                        ],
+                    },
                 ),
         },
         {
@@ -254,12 +258,14 @@ export const previewScenes: readonly PreviewRegistration[] = (
                     'Building · Orientation: sleeper pair and the last mix',
                     7900,
                     6,
-                    true,
-                    360,
-                    [
-                        { at: 0.8, label: 'Two sleepers' },
-                        { at: 3, label: 'Cable, sleeper, cable' },
-                    ],
+                    {
+                        hop: true,
+                        frameCount: 360,
+                        markers: [
+                            { at: 0.8, label: 'Two sleepers' },
+                            { at: 3, label: 'Cable, sleeper, cable' },
+                        ],
+                    },
                 ),
         },
         {
@@ -271,13 +277,15 @@ export const previewScenes: readonly PreviewRegistration[] = (
                     'Building · Orientation: rookie trips',
                     3570,
                     0,
-                    false,
-                    480,
-                    [
-                        { at: 2, label: 'Trip on the cable' },
-                        { at: 2.2, label: 'Rookie down!' },
-                        { at: 3.7, label: 'Chairs wait' },
-                    ],
+                    {
+                        hop: false,
+                        frameCount: 480,
+                        markers: [
+                            { at: 2, label: 'Trip on the cable' },
+                            { at: 2.2, label: 'Rookie down!' },
+                            { at: 3.7, label: 'Chairs wait' },
+                        ],
+                    },
                 ),
         },
         {

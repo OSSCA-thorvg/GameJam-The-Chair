@@ -12,7 +12,6 @@ import {
 
 import type { Player } from '../../../types';
 import type { DuctBurst } from '../data';
-
 export type RooftopEntrance =
     { kind: 'opening'; age: number } | { kind: 'ready' };
 export type FirstFlight =
@@ -23,7 +22,6 @@ export type DuctReaction =
     | { kind: 'idle'; rest: number }
     | { kind: 'reacting'; age: number; shots: number; bursts: DuctBurst[] }
     | { kind: 'done'; shots: number; rest: number };
-
 const cloneReaction = (reaction: Readonly<DuctReaction>): DuctReaction =>
     reaction.kind === 'reacting'
         ? {
@@ -31,11 +29,17 @@ const cloneReaction = (reaction: Readonly<DuctReaction>): DuctReaction =>
               bursts: reaction.bursts.map((burst) => ({ ...burst })),
           }
         : { ...reaction };
-
 export function entranceStep(
-    entrance: { kind: 'opening'; age: number },
+    entrance: {
+        kind: 'opening';
+        age: number;
+    },
     dt: number,
-): { entrance: RooftopEntrance; pose: Player; done: boolean } {
+): {
+    entrance: RooftopEntrance;
+    pose: Player;
+    done: boolean;
+} {
     const e = STAGE_THREE.entrance;
     const age = Math.min(e.duration, entrance.age + dt);
     const progress = Math.max(
@@ -61,9 +65,7 @@ export function entranceStep(
         done,
     };
 }
-
-const DUCT_STEAM_ID = 1_000_000;
-
+const DUCT_STEAM_ID = 1000000;
 export type RooftopInput = {
     p: Readonly<Player>;
     ground: boolean;
@@ -80,8 +82,65 @@ export type RooftopResult = {
     pickup: boolean;
     steamHits: number[];
 };
-
 export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
+    const {
+        p,
+        ground,
+        firstFlight,
+        duct,
+        pickup,
+        steamHits,
+    }: {
+        p: Player;
+        ground: boolean;
+        firstFlight: FirstFlight;
+        duct: {
+            reaction: DuctReaction;
+            p: Player;
+            knocked: boolean;
+        };
+        pickup: boolean;
+        steamHits: number[];
+    } = advanceRooftopFlight(input, dt);
+    return {
+        p,
+        ground,
+        firstFlight,
+        ductReaction: duct.reaction,
+        pickup,
+        steamHits,
+    };
+}
+
+function advanceRooftopFlight(input: RooftopInput, dt: number) {
+    const preparedFields1 = advanceRooftopHazards(input, dt);
+    let firstFlight: FirstFlight = preparedFields1.firstFlight;
+    const p: Player = preparedFields1.p;
+    const ground: boolean = preparedFields1.ground;
+    const duct: {
+        reaction: DuctReaction;
+        p: Player;
+        knocked: boolean;
+    } = preparedFields1.duct;
+    const pickup: boolean = preparedFields1.pickup;
+    const steamHits: number[] = preparedFields1.steamHits;
+    const caught =
+        firstFlight.kind === 'course' &&
+        input.hasExtinguisher &&
+        (p.vx > 20 || p.vy >= 0)
+            ? graphCatch(p)
+            : null;
+    if (caught !== null) {
+        firstFlight = {
+            kind: 'ride',
+            dist: caught,
+            speed: Math.max(STAGE_THREE.graph.startSpeed, Math.abs(p.vx)),
+            age: 0,
+        };
+    }
+    return { p, ground, firstFlight, duct, pickup, steamHits };
+}
+function advanceRooftopHazards(input: RooftopInput, dt: number) {
     const duct = ductReactionStep(input.ductReaction, input.p, dt);
     const p = duct.p;
     const steamHits: number[] = [];
@@ -114,36 +173,24 @@ export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
         p.y = STAGE_THREE.ceiling;
         p.vy = Math.max(0, p.vy);
     }
-    let firstFlight: FirstFlight = { ...input.firstFlight };
-    const caught =
-        firstFlight.kind === 'course' &&
-        input.hasExtinguisher &&
-        (p.vx > 20 || p.vy >= 0)
-            ? graphCatch(p)
-            : null;
-    if (caught !== null) {
-        firstFlight = {
-            kind: 'ride',
-            dist: caught,
-            speed: Math.max(STAGE_THREE.graph.startSpeed, Math.abs(p.vx)),
-            age: 0,
-        };
-    }
-    return {
-        p,
-        ground,
-        firstFlight,
-        ductReaction: duct.reaction,
-        pickup,
-        steamHits,
-    };
+    const firstFlight: FirstFlight = { ...input.firstFlight };
+    return { firstFlight, p, ground, duct, pickup, steamHits };
 }
-
 export function graphRideStep(
-    ride: Readonly<Extract<FirstFlight, { kind: 'ride' }>>,
+    ride: Readonly<
+        Extract<
+            FirstFlight,
+            {
+                kind: 'ride';
+            }
+        >
+    >,
     p: Readonly<Player>,
     dt: number,
-): { flight: FirstFlight; p: Player } {
+): {
+    flight: FirstFlight;
+    p: Player;
+} {
     const g = STAGE_THREE.graph;
     const speed = Math.min(g.topSpeed, ride.speed + g.accel * dt);
     const dist = ride.dist + speed * dt;
@@ -171,12 +218,18 @@ export function graphRideStep(
     next.vy = Math.min(next.vy, -320);
     return { flight: { kind: 'flight', age: 0 }, p: next };
 }
-
 export function flightStep(
-    flight: { kind: 'flight'; age: number },
+    flight: {
+        kind: 'flight';
+        age: number;
+    },
     p: Readonly<Player>,
     dt: number,
-): { flight: FirstFlight; p: Player; arrived: boolean } {
+): {
+    flight: FirstFlight;
+    p: Player;
+    arrived: boolean;
+} {
     const next = { ...p };
     next.vx *= Det.exp(-3 * dt);
     next.x += next.vx * dt;
@@ -191,12 +244,15 @@ export function flightStep(
         arrived: next.y <= STAGE_FOUR.arrivalY,
     };
 }
-
 function ductReactionStep(
     input: Readonly<DuctReaction>,
     player: Readonly<Player>,
     dt: number,
-): { reaction: DuctReaction; p: Player; knocked: boolean } {
+): {
+    reaction: DuctReaction;
+    p: Player;
+    knocked: boolean;
+} {
     const p = { ...player };
     const duct = STAGE_THREE.duct;
     let reaction = cloneReaction(input);

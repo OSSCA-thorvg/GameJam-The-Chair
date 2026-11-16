@@ -2,7 +2,6 @@ import { STAGE_FOUR } from '../../../game/stages/sky/data';
 
 import type { SkyHazard } from '../../../game/stages/sky/data';
 import type { RenderCtx } from '../../context';
-
 const G = {
     shell: '#aab4c0',
     side: '#465b79',
@@ -13,7 +12,6 @@ const G = {
     led: '#7dffb0',
     cable: '#3a4658',
 };
-
 function monitor(ctx: RenderCtx, h: SkyHazard) {
     ctx.polygon(
         [
@@ -40,11 +38,13 @@ function monitor(ctx: RenderCtx, h: SkyHazard) {
             [22, 14],
             [-22, 14],
         ],
-        ctx.gradientFill(-22, -16, 22, 14, [
-            [0, '#a6afbf'],
-            [0.6, G.shell],
-            [1, G.mid],
-        ]),
+        ctx.gradientFill(-22, -16, 22, 14, {
+            stops: [
+                [0, '#a6afbf'],
+                [0.6, G.shell],
+                [1, G.mid],
+            ],
+        }),
     );
     ctx.rect(-19, -13, 38, 24, G.side);
     ctx.gradientPolygon(
@@ -54,17 +54,25 @@ function monitor(ctx: RenderCtx, h: SkyHazard) {
             [17, 9],
             [-17, 9],
         ],
-        ctx.gradientFill(-17, -11, 17, 9, [
-            [0, '#9fd3ff'],
-            [0.5, '#4f86c6'],
-            [1, '#2f5590'],
-        ]),
+        ctx.gradientFill(-17, -11, 17, 9, {
+            stops: [
+                [0, '#9fd3ff'],
+                [0.5, '#4f86c6'],
+                [1, '#2f5590'],
+            ],
+        }),
     );
     for (let y = -7; y < 8; y += 4) {
-        ctx.rod(-14, y, 14, y, 0.5, '#ffffff55');
+        ctx.rod(-14, y, 14, y, {
+            w: 0.5,
+            c: '#ffffff55',
+        });
     }
     for (let x = -8; x < 17; x += 8) {
-        ctx.rod(x, -10, x, 8, 0.5, '#ffffff55');
+        ctx.rod(x, -10, x, 8, {
+            w: 0.5,
+            c: '#ffffff55',
+        });
     }
     ctx.polygon(
         [
@@ -75,16 +83,22 @@ function monitor(ctx: RenderCtx, h: SkyHazard) {
         ],
         '#ffffff22',
     );
-    ctx.ellipse(15, 12, 0.9, 0.9, Math.sin(h.spin * 9) > 0 ? G.led : '#3c8a5c');
-    ctx.rod(0, 15, 0, 23, 4, G.mid);
-    ctx.ellipse(0, 24, 13, 2.5, G.mid);
+    ctx.ellipse(15, 12, 0.9, 0.9, {
+        c: Math.sin(h.spin * 9) > 0 ? G.led : '#3c8a5c',
+    });
+    ctx.rod(0, 15, 0, 23, {
+        w: 4,
+        c: G.mid,
+    });
+    ctx.ellipse(0, 24, 13, 2.5, {
+        c: G.mid,
+    });
     ctx.strokePath([4, 22], [[12, 30, -6, 34, 6, 44]], {
         width: 1.4,
         color: G.cable,
         cap: 'round',
     });
 }
-
 function keyboard(ctx: RenderCtx, h: SkyHazard) {
     ctx.polygon(
         [
@@ -102,10 +116,12 @@ function keyboard(ctx: RenderCtx, h: SkyHazard) {
             [32, 3],
             [-32, 3],
         ],
-        ctx.gradientFill(0, -9, 0, 3, [
-            [0, G.light],
-            [1, G.shell],
-        ]),
+        ctx.gradientFill(0, -9, 0, 3, {
+            stops: [
+                [0, G.light],
+                [1, G.shell],
+            ],
+        }),
     );
     for (let row = 0; row < 3; row++) {
         for (let col = 0; col < 9; col++) {
@@ -127,7 +143,6 @@ function keyboard(ctx: RenderCtx, h: SkyHazard) {
         { width: 1.6, color: G.cable, cap: 'round' },
     );
 }
-
 function mouse(ctx: RenderCtx, h: SkyHazard) {
     ctx.strokePath(
         [10, -2],
@@ -143,29 +158,25 @@ function mouse(ctx: RenderCtx, h: SkyHazard) {
         ],
         { width: 1.5, color: G.cable, cap: 'round' },
     );
-    ctx.ellipse(
-        0,
-        0,
-        13,
-        9,
-        ctx.radialFill(-3, -3, 14, [
+    ctx.ellipse(0, 0, 13, 9, {
+        c: ctx.radialFill(-3, -3, 14, [
             [0, G.light],
             [0.7, G.shell],
             [1, G.side],
         ]),
-    );
-    ctx.rod(-12, -1, 0, -1, 0.8, G.side);
-    ctx.ellipse(-5, -1, 2, 1.4, G.dark);
-    ctx.ellipse(
-        -9,
-        3,
-        2.5,
-        1.2,
-        ctx.tint('#ff5a4f', 0.5 + Math.sin(h.spin * 6) * 0.5),
-        { blend: 'add' },
-    );
+    });
+    ctx.rod(-12, -1, 0, -1, {
+        w: 0.8,
+        c: G.side,
+    });
+    ctx.ellipse(-5, -1, 2, 1.4, {
+        c: G.dark,
+    });
+    ctx.ellipse(-9, 3, 2.5, 1.2, {
+        c: ctx.tint('#ff5a4f', 0.5 + Math.sin(h.spin * 6) * 0.5),
+        opts: { blend: 'add' },
+    });
 }
-
 function tower(ctx: RenderCtx, h: SkyHazard) {
     ctx.polygon(
         [
@@ -192,33 +203,42 @@ function tower(ctx: RenderCtx, h: SkyHazard) {
             [13, 26],
             [-13, 26],
         ],
-        ctx.gradientFill(-13, 0, 13, 0, [
-            [0, G.mid],
-            [0.4, G.side],
-            [1, G.dark],
-        ]),
+        ctx.gradientFill(-13, 0, 13, 0, {
+            stops: [
+                [0, G.mid],
+                [0.4, G.side],
+                [1, G.dark],
+            ],
+        }),
     );
     ctx.rect(-10, -21, 20, 5, G.dark);
     ctx.rect(-10, -14, 20, 5, G.dark);
-    ctx.rod(-7, -18.5, 3, -18.5, 1, G.mid);
-    ctx.ellipse(0, 8, 8, 8, G.dark);
+    ctx.rod(-7, -18.5, 3, -18.5, {
+        w: 1,
+        c: G.mid,
+    });
+    ctx.ellipse(0, 8, 8, 8, {
+        c: G.dark,
+    });
     for (let i = 0; i < 4; i++) {
         const a = h.spin * 14 + (i * Math.PI) / 2;
-        ctx.rod(0, 8, Math.cos(a) * 7, 8 + Math.sin(a) * 7, 2, G.mid);
+        ctx.rod(0, 8, Math.cos(a) * 7, 8 + Math.sin(a) * 7, {
+            w: 2,
+            c: G.mid,
+        });
     }
-    ctx.ellipse(0, 8, 2, 2, G.light);
-    ctx.ellipse(-8, 21, 1.4, 1.4, G.led, { blend: 'add' });
-    ctx.ellipse(
-        -4,
-        21,
-        1.4,
-        1.4,
-        Math.sin(h.spin * 11) > 0.3 ? '#ffb347' : G.dark,
-    );
+    ctx.ellipse(0, 8, 2, 2, {
+        c: G.light,
+    });
+    ctx.ellipse(-8, 21, 1.4, 1.4, {
+        c: G.led,
+        opts: { blend: 'add' },
+    });
+    ctx.ellipse(-4, 21, 1.4, 1.4, {
+        c: Math.sin(h.spin * 11) > 0.3 ? '#ffb347' : G.dark,
+    });
 }
-
 const ART = { monitor, keyboard, mouse, tower };
-
 export function skyGearArt(ctx: RenderCtx, gear: readonly SkyHazard[]): void {
     if (!gear.length) {
         return;
@@ -235,7 +255,6 @@ export function skyGearArt(ctx: RenderCtx, gear: readonly SkyHazard[]): void {
     ctx.localScale = 1;
     ctx.endLayer();
 }
-
 export function skyKnockKeycaps(ctx: RenderCtx): void {
     const sky = ctx.state.sky;
     if (sky.knockKind !== 'gear' || sky.knock <= 0) {
@@ -249,11 +268,18 @@ export function skyKnockKeycaps(ctx: RenderCtx): void {
         ctx.player.y - 40,
         26 + age * 30,
         26 + age * 30,
-        ctx.radialFill(ctx.player.x + 18, ctx.player.y - 40, 26 + age * 30, [
-            [0, '#fff6c8'],
-            [0.4, '#ffd36a88'],
-            [1, '#ffd36a00'],
-        ]),
+        {
+            c: ctx.radialFill(
+                ctx.player.x + 18,
+                ctx.player.y - 40,
+                26 + age * 30,
+                [
+                    [0, '#fff6c8'],
+                    [0.4, '#ffd36a88'],
+                    [1, '#ffd36a00'],
+                ],
+            ),
+        },
     );
     ctx.endLayer();
     for (let i = 0; i < 8; i++) {

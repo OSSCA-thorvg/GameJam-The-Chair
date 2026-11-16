@@ -7,7 +7,6 @@ import type { Locale } from './i18n';
 import type { PreviewScene } from './preview-scenes';
 import './style.css';
 import './preview.css';
-
 const root = document.querySelector<HTMLElement>('#chair-office-one')!;
 const select = document.querySelector<HTMLSelectElement>('#motion')!;
 const slider = document.querySelector<HTMLInputElement>('#time')!;
@@ -21,7 +20,6 @@ const renderer = createRenderer(root, () => locale);
 const splashCanvas =
     document.querySelector<HTMLCanvasElement>('#splash-preview')!;
 const splash = createSplashPlayer(splashCanvas);
-
 for (const scene of previewScenes) {
     select.add(new Option(scene.label, scene.id));
 }
@@ -34,7 +32,6 @@ let time = 0;
 let playing = false;
 let previousFrame: number | null = null;
 let scheduledFrame: number | null = null;
-
 function render() {
     const isSplash = scene.id === 'startup-splash';
     root.querySelector('.scene')?.classList.toggle('splash-scene', isSplash);
@@ -48,28 +45,25 @@ function render() {
         if (scene.opening) {
             renderer.draw(state, effects, undefined, scene.opening(time));
         } else if (scene.title) {
-            renderer.draw(
-                state,
-                effects,
-                undefined,
-                undefined,
-                undefined,
-                time,
-            );
+            renderer.draw(state, effects, undefined, undefined, {
+                talk: undefined,
+                titleTime: time,
+            });
         } else {
             renderer.draw(
                 state,
                 effects,
                 (scene.follow ? state.player.x : scene.focusX) - worldWidth / 2,
                 undefined,
-                scene.talk?.(time, locale),
+                {
+                    talk: scene.talk?.(time, locale),
+                },
             );
         }
     }
     slider.value = String(time);
     value.value = `${time.toFixed(2)} s`;
 }
-
 function pause() {
     playing = false;
     previousFrame = null;
@@ -80,7 +74,6 @@ function pause() {
     playButton.textContent = 'Play';
     playButton.setAttribute('aria-label', 'Play animation');
 }
-
 function seek(next: number, persist = true) {
     time = Math.max(0, Math.min(scene.duration, next));
     render();
@@ -90,7 +83,6 @@ function seek(next: number, persist = true) {
         history.replaceState(null, '', url);
     }
 }
-
 function selectScene(next: PreviewScene, at = 0) {
     pause();
     scene = next;
@@ -112,7 +104,6 @@ function selectScene(next: PreviewScene, at = 0) {
     history.replaceState(null, '', url);
     seek(at);
 }
-
 function frame(ms: number) {
     scheduledFrame = null;
     if (!playing) {
@@ -125,7 +116,6 @@ function frame(ms: number) {
     previousFrame = ms;
     scheduledFrame = requestAnimationFrame(frame);
 }
-
 select.addEventListener('change', () => {
     const next = previewScenes.find((item) => item.id === select.value);
     if (next) {

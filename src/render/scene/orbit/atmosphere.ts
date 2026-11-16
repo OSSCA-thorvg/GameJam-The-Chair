@@ -2,7 +2,6 @@ import { CLOUD_TONES, puffCloud, seeded } from '../shared/cloud-art';
 
 import type { RenderCtx } from '../../context';
 import type { SkyProjection } from '../shared/projection';
-
 const CLOUDS = (() => {
     const random = seeded(817);
     return Array.from({ length: 10 }, (_, i) => ({
@@ -13,9 +12,7 @@ const CLOUDS = (() => {
         seed: 6100 + i,
     })).sort((a, b) => b.z - a.z);
 })();
-
 export type BasinAnchor = { x: number; y: number };
-
 export function orbitSky(ctx: RenderCtx): void {
     ctx.commands.push({
         kind: 'path',
@@ -36,7 +33,6 @@ export function orbitSky(ctx: RenderCtx): void {
         },
     });
 }
-
 export type CloudBankOptions = {
     anchor?: BasinAnchor;
     only?: ReadonlySet<number>;
@@ -45,9 +41,7 @@ export type CloudBankOptions = {
     turn?: number;
     alpha?: number;
 };
-
 const PASS_FADE = 260;
-
 type PlacedCloud = {
     seed: number;
     x: number;
@@ -55,7 +49,6 @@ type PlacedCloud = {
     size: number;
     opacity: number;
 };
-
 function placeClouds(
     ctx: RenderCtx,
     view: SkyProjection,
@@ -66,7 +59,7 @@ function placeClouds(
     const anchor = options.anchor ?? ctx.state.player;
     const placed: PlacedCloud[] = [];
     for (const cloud of CLOUDS) {
-        if (options.only && !options.only.has(cloud.seed)) {
+        if (cloudExcluded(options, cloud.seed)) {
             continue;
         }
         const z = options.unwrapped
@@ -98,25 +91,15 @@ function placeClouds(
         ) {
             continue;
         }
-        if (
-            x < -size * 300 ||
-            x > ctx.W + size * 300 ||
-            y - size * 180 > ctx.H ||
-            y + size * 40 < 0
-        ) {
+        if (cloudOffscreen(ctx, x, y, size)) {
             continue;
         }
         const reach = ctx.clamp(ahead / PASS_FADE, 0, 1);
-        const opacity =
-            reach *
-            (options.nearDepth === undefined
-                ? 1
-                : ctx.clamp((depth - options.nearDepth) / 600, 0, 1));
+        const opacity = cloudOpacity(options, depth, reach);
         placed.push({ seed: cloud.seed, x, y, size, opacity });
     }
     return placed;
 }
-
 export function basinCloudSeeds(
     ctx: RenderCtx,
     view: SkyProjection,
@@ -131,7 +114,6 @@ export function basinCloudSeeds(
         ),
     );
 }
-
 export function orbitCloudBank(
     ctx: RenderCtx,
     view: SkyProjection,
@@ -166,15 +148,27 @@ export function orbitCloudBank(
         y: number,
         size: number,
         seed: number,
-        near: boolean,
-        opacity = 1,
+        {
+            near,
+            opacity = 1,
+        }: {
+            near: boolean;
+            opacity?: number;
+        },
     ) =>
-        puffCloud(ctx, x, y, size, seed, CLOUD_TONES.bread, {
-            alpha: (near ? 0.95 : 0.72) * opacity * fade,
-            fade: true,
+        puffCloud(ctx, x, y, size, {
+            seed,
+            tone: CLOUD_TONES.bread,
+            options: {
+                alpha: (near ? 0.95 : 0.72) * opacity * fade,
+                fade: true,
+            },
         });
     for (const { seed, x, y, size, opacity } of placed) {
-        bread(x, y, size, seed, foreground, opacity);
+        bread(x, y, size, seed, {
+            near: foreground,
+            opacity,
+        });
     }
     if (!foreground) {
         for (const [x, y, seed] of [
@@ -186,7 +180,9 @@ export function orbitCloudBank(
                 ctx.H * y,
                 ctx.W / 2500,
                 seed,
-                false,
+                {
+                    near: false,
+                },
             );
         }
     }
@@ -197,9 +193,34 @@ export function orbitCloudBank(
                 ctx.H * (0.98 + Math.sin(i * 4) * 0.065),
                 (ctx.W / 1000) * (0.8 + (i % 2) * 0.2),
                 700 + i * 2,
-                false,
+                {
+                    near: false,
+                },
             );
         }
     }
     Object.assign(ctx, saved);
+}
+
+function cloudExcluded(options: CloudBankOptions, seed: number) {
+    return !!options.only && !options.only.has(seed);
+}
+function cloudOffscreen(ctx: RenderCtx, x: number, y: number, size: number) {
+    return (
+        x < -size * 300 ||
+        x > ctx.W + size * 300 ||
+        y - size * 180 > ctx.H ||
+        y + size * 40 < 0
+    );
+}
+function cloudOpacity(options: CloudBankOptions, depth: number, reach: number) {
+    return (
+        reach *
+        (options.nearDepth === undefined
+            ? 1
+            : ctxClamp((depth - options.nearDepth) / 600))
+    );
+}
+function ctxClamp(value: number) {
+    return Math.max(0, Math.min(1, value));
 }

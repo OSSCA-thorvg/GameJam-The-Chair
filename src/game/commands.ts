@@ -5,7 +5,6 @@ import { resetAttempt, startStage } from './state';
 
 import type { CoreState } from './state';
 import type { StageId, GameEvent, Input } from './types';
-
 export type Command =
     | { type: 'keys'; keys: Input[] }
     | { type: 'jump' }
@@ -16,15 +15,12 @@ export type Command =
     | { type: 'reset' }
     | { type: 'restart' }
     | { type: 'startStage'; id: StageId };
-
 function isRecord(value: unknown): value is Record<string, unknown> {
     return !!value && typeof value === 'object' && !Array.isArray(value);
 }
-
 function isArray(value: unknown): value is unknown[] {
     return Array.isArray(value);
 }
-
 function isInput(value: unknown): value is Input {
     return (
         value === 'left' ||
@@ -37,27 +33,21 @@ function isInput(value: unknown): value is Input {
         value === 'brake'
     );
 }
-
 function isStageId(value: unknown): value is StageId {
     return (
         value === 1 || value === 2 || value === 3 || value === 4 || value === 5
     );
 }
-
 export function parseCommand(value: unknown): Command {
     if (!isRecord(value) || typeof value.type !== 'string') {
         throw new Error('bad command');
     }
+    return parseCommandRecord(value);
+}
+function parseCommandRecord(value: Record<string, unknown>): Command {
     switch (value.type) {
         case 'keys': {
-            if (
-                !isArray(value.keys) ||
-                value.keys.length > 8 ||
-                !value.keys.every(isInput)
-            ) {
-                throw new Error('bad command keys');
-            }
-            return { type: 'keys', keys: [...new Set(value.keys)] };
+            return { type: 'keys', keys: parseInputKeys(value.keys) };
         }
         case 'startStage':
             if (!isStageId(value.id)) {
@@ -76,7 +66,6 @@ export function parseCommand(value: unknown): Command {
             throw new Error('bad command type');
     }
 }
-
 export function runCommand(
     s: CoreState,
     command: Command,
@@ -117,14 +106,12 @@ export function runCommand(
             return;
     }
 }
-
 function jump(s: CoreState) {
     if (s.mode !== 'play' || stageHooks(s.stage).canJump?.(s) === false) {
         return;
     }
     s.jumpQ = PHYSICS.jump.buffer;
 }
-
 export function spray(s: CoreState, out: GameEvent[]): void {
     const hooks = stageHooks(s.stage);
     if (
@@ -148,11 +135,16 @@ export function spray(s: CoreState, out: GameEvent[]): void {
     out.push({ type: 'cue', id: 'spray' });
     hooks.onSpray?.(s, dx);
 }
-
 function pause(s: CoreState) {
     if (s.mode !== 'play' && s.mode !== 'pause') {
         return;
     }
     s.mode = s.mode === 'play' ? 'pause' : 'play';
     s.keys = [];
+}
+function parseInputKeys(value: unknown): Input[] {
+    if (!isArray(value) || value.length > 8 || !value.every(isInput)) {
+        throw new Error('bad command keys');
+    }
+    return [...new Set(value)];
 }

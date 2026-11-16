@@ -3,16 +3,13 @@ import { LABEL_FONT } from '../../fonts';
 
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-
 const B = STAGE_FIVE.bounds;
 const MARGIN = { x: 70, top: 95, bottom: 75 };
-
 const hex = (color: string, alpha: number) =>
     color +
     Math.round(Math.max(0, Math.min(1, alpha)) * 255)
         .toString(16)
         .padStart(2, '0');
-
 export function orbitViewfinder(
     ctx: RenderCtx,
     plane: (x: number, y: number) => Vector,
@@ -88,8 +85,11 @@ export function orbitViewfinder(
             layer,
         });
     }
-    ctx.screenText('REC', cx + size * 1.4, cy, size, '#ffffff', {
-        font: LABEL_FONT,
-        opacity: lit * shown,
+    ctx.screenText('REC', cx + size * 1.4, cy, size, {
+        fill: '#ffffff',
+        opts: {
+            font: LABEL_FONT,
+            opacity: lit * shown,
+        },
     });
 }

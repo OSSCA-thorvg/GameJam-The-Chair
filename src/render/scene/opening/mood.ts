@@ -3,7 +3,6 @@ import { officeTint } from '../office/window-view';
 
 import type { OpeningFrame } from './timeline';
 import type { RenderCtx } from '../../context';
-
 export function drawSunbeams(ctx: RenderCtx, frame: OpeningFrame): void {
     const strength = (1 - frame.dusk) * frame.lighting;
     if (strength <= 0) {
@@ -29,22 +28,17 @@ export function drawSunbeams(ctx: RenderCtx, frame: OpeningFrame): void {
                 [x + 380, F],
                 [x + 160, F],
             ],
-            ctx.gradientFill(
-                0,
-                100,
-                0,
-                F,
-                [
+            ctx.gradientFill(0, 100, 0, F, {
+                stops: [
                     [0, '#ffc98a'],
                     [1, '#ffc98a00'],
                 ],
-                0.55,
-            ),
+                alpha: 0.55,
+            }),
         );
     }
     ctx.endLayer();
 }
-
 export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame): void {
     const { dusk, lighting } = frame;
     if (lighting <= 0) {
@@ -58,7 +52,6 @@ export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame): void {
     });
     screenRect(ctx, tint.color);
     ctx.endLayer();
-
     const p = ctx.player;
     if (dusk > 0) {
         const [lx, ly] = ctx.screenPoint(p.x + 44, p.y - 46);
@@ -70,11 +63,13 @@ export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame): void {
         });
         screenRect(
             ctx,
-            radial(ctx, lx, ly, r, [
-                [0, '#9fd2ff'],
-                [0.25, '#6fa9e099'],
-                [1, '#2a3b6000'],
-            ]),
+            radial(ctx, lx, ly, r, {
+                stops: [
+                    [0, '#9fd2ff'],
+                    [0.25, '#6fa9e099'],
+                    [1, '#2a3b6000'],
+                ],
+            }),
         );
         ctx.endLayer();
     }
@@ -84,16 +79,17 @@ export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame): void {
         ctx.beginLayer({ key: 'opening-vignette', opacity: vignette });
         screenRect(
             ctx,
-            radial(ctx, ctx.W / 2, ctx.H / 2, r, [
-                [0, '#0b0d1800'],
-                [0.55, '#0b0d1800'],
-                [1, '#0b0d18e0'],
-            ]),
+            radial(ctx, ctx.W / 2, ctx.H / 2, r, {
+                stops: [
+                    [0, '#0b0d1800'],
+                    [0.55, '#0b0d1800'],
+                    [1, '#0b0d18e0'],
+                ],
+            }),
         );
         ctx.endLayer();
     }
 }
-
 export function drawChairMood(ctx: RenderCtx, frame: OpeningFrame): void {
     if (frame.hum > 0) {
         drawJoy(ctx, frame);
@@ -105,10 +101,14 @@ export function drawChairMood(ctx: RenderCtx, frame: OpeningFrame): void {
         drawRage(ctx, frame);
     }
 }
-
 function note(ctx: RenderCtx, color: string, big: boolean) {
-    ctx.ellipse(0, 0, 3.6, 2.7, color);
-    ctx.rod(3, -1, 3, -13, 1.4, color);
+    ctx.ellipse(0, 0, 3.6, 2.7, {
+        c: color,
+    });
+    ctx.rod(3, -1, 3, -13, {
+        w: 1.4,
+        c: color,
+    });
     if (!big) {
         ctx.polygon(
             [
@@ -120,12 +120,19 @@ function note(ctx: RenderCtx, color: string, big: boolean) {
             color,
         );
     } else {
-        ctx.ellipse(9, 2, 3.6, 2.7, color);
-        ctx.rod(12, 1, 12, -11, 1.4, color);
-        ctx.rod(3, -13, 12, -11, 2.2, color);
+        ctx.ellipse(9, 2, 3.6, 2.7, {
+            c: color,
+        });
+        ctx.rod(12, 1, 12, -11, {
+            w: 1.4,
+            c: color,
+        });
+        ctx.rod(3, -13, 12, -11, {
+            w: 2.2,
+            c: color,
+        });
     }
 }
-
 function drawJoy(ctx: RenderCtx, frame: OpeningFrame) {
     const p = ctx.player;
     const t = frame.t;
@@ -163,7 +170,6 @@ function drawJoy(ctx: RenderCtx, frame: OpeningFrame) {
     }
     ctx.endLayer();
 }
-
 function drawCreak(ctx: RenderCtx, frame: OpeningFrame) {
     const p = ctx.player;
     const reach = 8 + 14 * frame.creak;
@@ -181,14 +187,15 @@ function drawCreak(ctx: RenderCtx, frame: OpeningFrame) {
                 p.y + y + Math.sin(a) * from,
                 p.x + x + Math.cos(a) * (from + reach),
                 p.y + y + Math.sin(a) * (from + reach),
-                2,
-                '#fff3d6',
+                {
+                    w: 2,
+                    c: '#fff3d6',
+                },
             );
         }
     }
     ctx.endLayer();
 }
-
 function angerMark(ctx: RenderCtx, x: number, y: number, scale: number) {
     ctx.ox = x;
     ctx.oy = y;
@@ -208,7 +215,6 @@ function angerMark(ctx: RenderCtx, x: number, y: number, scale: number) {
     ctx.ox = ctx.oy = 0;
     ctx.localScale = 1;
 }
-
 function drawRage(ctx: RenderCtx, frame: OpeningFrame) {
     const p = ctx.player;
     const t = frame.t;
@@ -217,7 +223,6 @@ function drawRage(ctx: RenderCtx, frame: OpeningFrame) {
     ctx.endLayer();
     floorDust(ctx, t, frame.rage);
 }
-
 function floorDust(ctx: RenderCtx, t: number, shake: number) {
     const p = ctx.player;
     ctx.beginLayer({ key: 'opening-floor-dust', opacity: shake });
@@ -226,11 +231,12 @@ function floorDust(ctx: RenderCtx, t: number, shake: number) {
         const side = i % 2 ? 1 : -1;
         const x = p.x + side * (22 + i * 4 + u * 10);
         const y = ctx.F + 2 - Math.sin(u * Math.PI) * (8 + (i % 3) * 4);
-        ctx.ellipse(x, y, 1.8, 1.4, ctx.tint('#c9c3b4', 1 - u));
+        ctx.ellipse(x, y, 1.8, 1.4, {
+            c: ctx.tint('#c9c3b4', 1 - u),
+        });
     }
     ctx.endLayer();
 }
-
 export function drawRageFlash(
     ctx: RenderCtx,
     frame: OpeningFrame,

@@ -1,8 +1,7 @@
 import { STAGE_FIVE } from '../../../game/stages/orbit/data';
 
 import type { RenderCtx } from '../../context';
-import type { DrawCommand, Vector } from '../../types';
-
+import type { PathCommand, DrawCommand, Vector } from '../../types';
 const R = 6371;
 type V3 = [number, number, number];
 const dot = (a: V3, b: V3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -32,10 +31,8 @@ const alpha = (value: number) =>
     Math.round(Math.max(0, Math.min(1, value)) * 255)
         .toString(16)
         .padStart(2, '0');
-
 const H = STAGE_FIVE.heights;
 const NEAR = 20;
-
 export function earthAltitude(z: number): number {
     return (
         12 +
@@ -43,7 +40,6 @@ export function earthAltitude(z: number): number {
         280 * smooth((z - H.space) / (H.shadow - H.space))
     );
 }
-
 const TRACK: Array<[number, number]> = [
     [84, 10],
     [88, 12],
@@ -54,7 +50,6 @@ const TRACK: Array<[number, number]> = [
     [125.5, 31],
     [126.5, 37],
 ];
-
 export function groundTrack(z: number): [number, number] {
     const u =
         Math.max(0, Math.min(1, z / STAGE_FIVE.checkpoint.z)) *
@@ -70,7 +65,6 @@ export function groundTrack(z: number): [number, number] {
             (-a[k] + 3 * b[k] - 3 * c[k] + d[k]) * t * t * t);
     return [spline(0), spline(1)];
 }
-
 const LAND: Array<{
     color: string;
     outline: Array<[number, number]>;
@@ -373,7 +367,6 @@ const LAND: Array<{
         ],
     },
 ];
-
 const CLOUDS: Array<[number, number, number, number]> = (() => {
     let seed = 4417;
     const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -384,7 +377,6 @@ const CLOUDS: Array<[number, number, number, number]> = (() => {
         0.35 + random() * 0.5,
     ]);
 })();
-
 const LAND_DENSE = (() => {
     const densify = (outline: Array<[number, number]>) =>
         outline.flatMap(([lon, lat], i) => {
@@ -406,7 +398,6 @@ const LAND_ORDER = [
     ...LAND_DENSE.filter((land) => !land.inland),
     ...LAND_DENSE.filter((land) => land.inland),
 ];
-
 const CITIES: Array<[number, number, number]> = [
     [127, 37.5, 3.4],
     [129, 35.1, 1.7],
@@ -439,7 +430,6 @@ const CITIES: Array<[number, number, number]> = [
     [118.8, 32.1, 1.4],
     [126.5, 45.8, 1.2],
 ];
-
 export type EarthCamera = {
     cx: number;
     cy: number;
@@ -447,7 +437,6 @@ export type EarthCamera = {
     roll: number;
     pitch: number;
 };
-
 function earthView(z: number, yaw: number, camera: EarthCamera, spin = 0) {
     const h = earthAltitude(z);
     const [lon, lat] = groundTrack(z);
@@ -537,15 +526,20 @@ function earthView(z: number, yaw: number, camera: EarthCamera, spin = 0) {
         middle: horizon[Math.floor(horizon.length / 2)],
     };
 }
-
 export function orbitEarth(
     ctx: RenderCtx,
     travel: number,
     camera: EarthCamera,
     yaw: number,
-    strength: number,
-    night: number,
-    spin = 0,
+    {
+        strength,
+        night,
+        spin = 0,
+    }: {
+        strength: number;
+        night: number;
+        spin?: number;
+    },
 ): Vector | undefined {
     if (strength <= 0) {
         return;
@@ -553,6 +547,211 @@ export function orbitEarth(
     const view = earthView(travel, yaw, camera, spin);
     const { horizon, middle } = view;
     const far = Math.max(ctx.W, ctx.H) * 4;
+    const {
+        surface,
+        ground,
+        clip,
+    }: {
+        surface: {
+            key: string;
+            clip: PathCommand;
+        };
+        ground: Vector[];
+        clip: DrawCommand;
+    } = orbitEarthDetails(horizon, far, ctx, middle, {
+        strength,
+        view,
+    });
+    orbitEarthDetails3(ctx, night, strength, view, surface);
+    if (night > 0) {
+        ctx.commands.push({
+            kind: 'path',
+            points: ground,
+            fill: '#06101f' + alpha(0.86 * night * strength),
+            layer: surface,
+        });
+        for (const land of LAND_DENSE) {
+            if (land.inland) {
+                continue;
+            }
+            const points = land.points;
+            if (!points.some(view.visible)) {
+                continue;
+            }
+            const v = view.outline(points);
+            if (v.length) {
+                ctx.commands.push({
+                    kind: 'path',
+                    points: v,
+                    fill: null,
+                    stroke: {
+                        width: Math.max(1, ctx.W / 800),
+                        color: '#6f8fbf' + alpha(0.45 * night * strength),
+                    },
+                    layer: surface,
+                });
+            }
+        }
+        orbitEarthDetails4(strength, night, clip, view, ctx);
+    }
+    return orbitEarthDetails2(horizon, ctx, middle, strength);
+}
+function orbitEarthDetails4(
+    strength: number,
+    night: number,
+    clip: PathCommand,
+    view: {
+        project: (n: V3) => Vector;
+        outline: (points: V3[]) => Vector[];
+        visible: (n: V3) => boolean;
+        horizon: Vector[];
+        middle: Vector;
+    },
+    ctx: RenderCtx,
+) {
+    const glow = {
+        key: 'orbit-earth-lights',
+        blend: 'screen' as const,
+        opacity: strength * night,
+        clip,
+    };
+    for (const [lon, lat, size] of CITIES) {
+        if (!view.visible(globe(lon, lat))) {
+            continue;
+        }
+        const [x, y] = view.project(globe(lon, lat));
+        const r = (size * ctx.W) / 420;
+        ctx.commands.push({
+            kind: 'path',
+            points: [
+                [x - r * 4, y - r * 4],
+                [x + r * 4, y - r * 4],
+                [x + r * 4, y + r * 4],
+                [x - r * 4, y + r * 4],
+            ],
+            layer: glow,
+            fill: {
+                from: [x, y],
+                to: [x + r * 4, y],
+                radius: r * 4,
+                stops: [
+                    [0, ctx.rgba('#ffc96a', 1)],
+                    [0.35, ctx.rgba('#ffb84d', 0.45)],
+                    [1, ctx.rgba('#ffb84d', 0)],
+                ],
+            },
+        });
+        ctx.commands.push({
+            kind: 'path',
+            points: [
+                [x - r * 2.2, y],
+                [x, y - r],
+                [x + r * 2.2, y],
+                [x, y + r],
+            ],
+            fill: '#fff6dc',
+            layer: glow,
+        });
+    }
+}
+function orbitEarthDetails3(
+    ctx: RenderCtx,
+    night: number,
+    strength: number,
+    view: {
+        project: (n: V3) => Vector;
+        outline: (points: V3[]) => Vector[];
+        visible: (n: V3) => boolean;
+        horizon: Vector[];
+        middle: Vector;
+    },
+    surface: {
+        key: string;
+        clip: PathCommand;
+    },
+) {
+    const drift = ctx.t * 0.015;
+    const cloud = '#ffffff' + alpha(0.5 * (1 - night * 0.85) * strength);
+    CLOUDS.forEach(([lon, lat, r, stretch], k) => {
+        if (!view.visible(globe(lon + drift, lat))) {
+            return;
+        }
+        const v = view.outline(
+            Array.from({ length: 9 }, (_, i) => {
+                const a = (i / 9) * Math.PI * 2;
+                return globe(
+                    lon +
+                        drift +
+                        Math.cos(a) * r * (1 + 0.3 * Math.sin(i * 2.3 + k)),
+                    lat + Math.sin(a) * r * stretch,
+                );
+            }),
+        );
+        if (v.length) {
+            ctx.commands.push({
+                kind: 'path',
+                points: v,
+                fill: cloud,
+                layer: surface,
+            });
+        }
+    });
+}
+function orbitEarthDetails2(
+    horizon: Vector[],
+    ctx: RenderCtx,
+    middle: Vector,
+    strength: number,
+) {
+    const above = horizon.map(([x, y]): Vector => [x, y - ctx.H * 0.07]);
+    ctx.commands.push({
+        kind: 'path',
+        points: [...horizon, ...above.reverse()],
+        layer: { key: 'orbit-earth-air', blend: 'screen' },
+        fill: {
+            from: middle,
+            to: [middle[0], middle[1] - ctx.H * 0.07],
+            stops: [
+                [0, ctx.rgba('#7fb8ff', 0.55 * strength)],
+                [1, ctx.rgba('#7fb8ff', 0)],
+            ],
+        },
+    });
+    const limb = { key: 'orbit-earth-limb', blend: 'screen' as const };
+    for (const [width, color, opacity] of [
+        [ctx.W * 0.012, '#4f8fe0', 0.45],
+        [ctx.W * 0.004, '#d8f0ff', 0.85],
+    ] as const) {
+        ctx.commands.push({
+            kind: 'path',
+            points: horizon,
+            open: true,
+            fill: null,
+            stroke: { width, color: color + alpha(opacity * strength) },
+            layer: limb,
+        });
+    }
+    return middle;
+}
+function orbitEarthDetails(
+    horizon: Vector[],
+    far: number,
+    ctx: RenderCtx,
+    middle: Vector,
+    {
+        strength,
+        view,
+    }: {
+        strength: number;
+        view: {
+            project: (n: V3) => Vector;
+            outline: (points: V3[]) => Vector[];
+            visible: (n: V3) => boolean;
+            horizon: Vector[];
+            middle: Vector;
+        };
+    },
+) {
     const ground: Vector[] = [
         ...horizon,
         [horizon.at(-1)![0] + far, horizon.at(-1)![1] + far],
@@ -602,137 +801,8 @@ export function orbitEarth(
             });
         }
     }
-    const drift = ctx.t * 0.015;
-    const cloud = '#ffffff' + alpha(0.5 * (1 - night * 0.85) * strength);
-    CLOUDS.forEach(([lon, lat, r, stretch], k) => {
-        if (!view.visible(globe(lon + drift, lat))) {
-            return;
-        }
-        const v = view.outline(
-            Array.from({ length: 9 }, (_, i) => {
-                const a = (i / 9) * Math.PI * 2;
-                return globe(
-                    lon +
-                        drift +
-                        Math.cos(a) * r * (1 + 0.3 * Math.sin(i * 2.3 + k)),
-                    lat + Math.sin(a) * r * stretch,
-                );
-            }),
-        );
-        if (v.length) {
-            ctx.commands.push({
-                kind: 'path',
-                points: v,
-                fill: cloud,
-                layer: surface,
-            });
-        }
-    });
-    if (night > 0) {
-        ctx.commands.push({
-            kind: 'path',
-            points: ground,
-            fill: '#06101f' + alpha(0.86 * night * strength),
-            layer: surface,
-        });
-        for (const land of LAND_DENSE) {
-            if (land.inland) {
-                continue;
-            }
-            const points = land.points;
-            if (!points.some(view.visible)) {
-                continue;
-            }
-            const v = view.outline(points);
-            if (v.length) {
-                ctx.commands.push({
-                    kind: 'path',
-                    points: v,
-                    fill: null,
-                    stroke: {
-                        width: Math.max(1, ctx.W / 800),
-                        color: '#6f8fbf' + alpha(0.45 * night * strength),
-                    },
-                    layer: surface,
-                });
-            }
-        }
-        const glow = {
-            key: 'orbit-earth-lights',
-            blend: 'screen' as const,
-            opacity: strength * night,
-            clip,
-        };
-        for (const [lon, lat, size] of CITIES) {
-            if (!view.visible(globe(lon, lat))) {
-                continue;
-            }
-            const [x, y] = view.project(globe(lon, lat));
-            const r = (size * ctx.W) / 420;
-            ctx.commands.push({
-                kind: 'path',
-                points: [
-                    [x - r * 4, y - r * 4],
-                    [x + r * 4, y - r * 4],
-                    [x + r * 4, y + r * 4],
-                    [x - r * 4, y + r * 4],
-                ],
-                layer: glow,
-                fill: {
-                    from: [x, y],
-                    to: [x + r * 4, y],
-                    radius: r * 4,
-                    stops: [
-                        [0, ctx.rgba('#ffc96a', 1)],
-                        [0.35, ctx.rgba('#ffb84d', 0.45)],
-                        [1, ctx.rgba('#ffb84d', 0)],
-                    ],
-                },
-            });
-            ctx.commands.push({
-                kind: 'path',
-                points: [
-                    [x - r * 2.2, y],
-                    [x, y - r],
-                    [x + r * 2.2, y],
-                    [x, y + r],
-                ],
-                fill: '#fff6dc',
-                layer: glow,
-            });
-        }
-    }
-    const above = horizon.map(([x, y]): Vector => [x, y - ctx.H * 0.07]);
-    ctx.commands.push({
-        kind: 'path',
-        points: [...horizon, ...above.reverse()],
-        layer: { key: 'orbit-earth-air', blend: 'screen' },
-        fill: {
-            from: middle,
-            to: [middle[0], middle[1] - ctx.H * 0.07],
-            stops: [
-                [0, ctx.rgba('#7fb8ff', 0.55 * strength)],
-                [1, ctx.rgba('#7fb8ff', 0)],
-            ],
-        },
-    });
-    const limb = { key: 'orbit-earth-limb', blend: 'screen' as const };
-    for (const [width, color, opacity] of [
-        [ctx.W * 0.012, '#4f8fe0', 0.45],
-        [ctx.W * 0.004, '#d8f0ff', 0.85],
-    ] as const) {
-        ctx.commands.push({
-            kind: 'path',
-            points: horizon,
-            open: true,
-            fill: null,
-            stroke: { width, color: color + alpha(opacity * strength) },
-            layer: limb,
-        });
-    }
-    return middle;
+    return { surface, ground, clip };
 }
-
 export function earthHorizonAhead(
     travel: number,
     camera: EarthCamera,
@@ -741,14 +811,18 @@ export function earthHorizonAhead(
 ): Vector {
     return earthView(travel, yaw, camera, spin).middle;
 }
-
 export function earthSkyBottom(
     travel: number,
     camera: EarthCamera,
     yaw: number,
     width: number,
-    height: number,
-    spin = 0,
+    {
+        height,
+        spin = 0,
+    }: {
+        height: number;
+        spin?: number;
+    },
 ): number {
     const horizon = earthView(travel, yaw, camera, spin).horizon;
     const skyY: number[] = [];

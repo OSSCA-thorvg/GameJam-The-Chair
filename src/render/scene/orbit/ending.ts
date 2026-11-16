@@ -7,7 +7,6 @@ import type { OrbitState } from '../../../game/stages/orbit/data';
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
 import type { SkyProjection } from '../shared/projection';
-
 export const ORBIT_ENDING = {
     calm: 5,
     release: 1.2,
@@ -26,12 +25,10 @@ export const ORBIT_ENDING = {
     dark: 37,
     end: 39,
 };
-
 const smooth = (value: number) => {
     const t = Math.max(0, Math.min(1, value));
     return t * t * (3 - 2 * t);
 };
-
 export type OrbitEndingState = {
     parked: boolean;
     t: number;
@@ -52,7 +49,6 @@ export type OrbitEndingState = {
     signalLost: number;
     still: number;
 };
-
 export function orbitEnding(orbit: Readonly<OrbitState>): OrbitEndingState {
     const t = orbit.phase === 'parked' ? Math.max(0, orbit.settled - 1) : 0;
     const E = ORBIT_ENDING;
@@ -79,12 +75,10 @@ export function orbitEnding(orbit: Readonly<OrbitState>): OrbitEndingState {
         still: Math.max(0, t - E.handsStop),
     };
 }
-
 const alpha = (value: number) =>
     Math.round(Math.max(0, Math.min(1, value)) * 255)
         .toString(16)
         .padStart(2, '0');
-
 export function endingNebula(
     ctx: RenderCtx,
     strength: number,
@@ -171,7 +165,6 @@ export function endingNebula(
         });
     }
 }
-
 export function endingChairLights(
     ctx: RenderCtx,
     chair: SkyProjection,
@@ -205,7 +198,6 @@ export function endingChairLights(
         });
     }
 }
-
 export function endingFade(ctx: RenderCtx, e: OrbitEndingState): void {
     if (e.dark <= 0) {
         return;
@@ -229,11 +221,12 @@ export function endingFade(ctx: RenderCtx, e: OrbitEndingState): void {
         ctx.W / 2,
         ctx.H / 2,
         ctx.clamp(ctx.H * 0.055, 16, 40),
-        '#efe6d2',
-        { font: LABEL_FONT, opacity: e.title },
+        {
+            fill: '#efe6d2',
+            opts: { font: LABEL_FONT, opacity: e.title },
+        },
     );
 }
-
 export function endingSignal(
     ctx: RenderCtx,
     head: Vector,
@@ -283,7 +276,6 @@ export function endingSignal(
         });
     }
 }
-
 export function endingLaptopScreen(
     chair: SkyProjection,
     e: OrbitEndingState,
@@ -297,8 +289,13 @@ export function endingLaptopScreen(
         v0: number,
         u1: number,
         v1: number,
-        color: string,
-        lift = 0.7,
+        {
+            color,
+            lift = 0.7,
+        }: {
+            color: string;
+            lift?: number;
+        },
     ) =>
         chair.polygon(
             [
@@ -310,9 +307,13 @@ export function endingLaptopScreen(
             color,
         );
     if (e.lightsOut >= 1) {
-        return quad(0.04, 0.06, 0.96, 0.94, '#1b1f27');
+        return quad(0.04, 0.06, 0.96, 0.94, {
+            color: '#1b1f27',
+        });
     }
-    quad(0.04, 0.06, 0.96, 0.94, e.lightsOut > 0.5 ? '#1b1f27' : '#dce8f2');
+    quad(0.04, 0.06, 0.96, 0.94, {
+        color: e.lightsOut > 0.5 ? '#1b1f27' : '#dce8f2',
+    });
     if (e.lightsOut > 0.5) {
         return;
     }
@@ -321,17 +322,27 @@ export function endingLaptopScreen(
             const v = 0.8 - i * 0.12;
             const typing =
                 i === 5 ? 0.3 + 0.5 * (((e.t - e.still) * 0.6) % 1) : 0.82;
-            quad(0.1, v - 0.025, 0.1 + 0.78 * typing, v + 0.025, '#8fa6ba');
+            quad(0.1, v - 0.025, 0.1 + 0.78 * typing, v + 0.025, {
+                color: '#8fa6ba',
+            });
         }
     }
     if (e.message <= 0) {
         return;
     }
-    quad(0.05, 0.12, 0.95, 0.88, '#ffffff', 1.3);
-    quad(0.05, 0.8, 0.95, 0.88, '#c9d4de', 1.6);
-    quad(0.08, 0.44, 0.15, 0.56, '#d9534f', 1.6);
+    quad(0.05, 0.12, 0.95, 0.88, {
+        color: '#ffffff',
+        lift: 1.3,
+    });
+    quad(0.05, 0.8, 0.95, 0.88, {
+        color: '#c9d4de',
+        lift: 1.6,
+    });
+    quad(0.08, 0.44, 0.15, 0.56, {
+        color: '#d9534f',
+        lift: 1.6,
+    });
 }
-
 function twoLines(text: string): string[] {
     const spaces = [...text].flatMap((c, i) => (c === ' ' ? [i] : []));
     if (!spaces.length) {
@@ -344,7 +355,6 @@ function twoLines(text: string): string[] {
     );
     return [text.slice(0, cut), text.slice(cut + 1)];
 }
-
 export function endingLaptopText(
     ctx: RenderCtx,
     chair: SkyProjection,
@@ -378,10 +388,13 @@ export function endingLaptopText(
     lines.forEach((line, i) => {
         const v = 0.48 + (((lines.length - 1) / 2 - i) * 0.58) / lines.length;
         const at = chair.project(laptopScreenPoint(0.46, v, bob));
-        ctx.screenText(line, at[0], at[1], size, '#20242c', {
-            font: SPEECH_FONT,
-            opacity: e.message,
-            rotation,
+        ctx.screenText(line, at[0], at[1], size, {
+            fill: '#20242c',
+            opts: {
+                font: SPEECH_FONT,
+                opacity: e.message,
+                rotation,
+            },
         });
     });
 }

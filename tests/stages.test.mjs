@@ -3,7 +3,6 @@ import test from 'node:test';
 
 import { createExpressRider } from './support/harness.mjs';
 import { bundled } from './support/load.mjs';
-
 const { createGame } = await bundled({
     entryPoints: ['src/game/game.ts'],
     bundle: true,
@@ -12,7 +11,6 @@ const { createGame } = await bundled({
     format: 'esm',
 });
 const dt = 1 / 120;
-
 const GEYSERS = [
     { x: 2600, period: 3.5, offset: 0 },
     { x: 2850, period: 3.5, offset: 1.2 },
@@ -42,40 +40,13 @@ function drive(game, stop = (state) => state.mode !== 'play', options = {}) {
         if (stop(state)) {
             return { state, seen };
         }
-        let hazardWait = false;
-        if (state.stage === 1) {
-            for (const g of GEYSERS) {
-                if (
-                    g.x - p.x > 10 &&
-                    g.x - p.x < 70 &&
-                    geyserBursting(g, simT + 0.4)
-                ) {
-                    hazardWait = true;
-                    break;
-                }
-            }
-        }
-        const correction = -p.a * 12 - p.w * 4;
-        const keys =
-            (state.stage === 2 ? express(state, game) : null) ??
-            (hazardWait ? [] : ['right']);
-        if (correction < -0.4) {
-            keys.push('q');
-        }
-        if (correction > 0.4) {
-            keys.push('e');
-        }
-        game.setInput(...keys);
-        game.step(dt);
-        for (const event of game.drainEvents()) {
-            if (event.type === 'cue' && event.id === 'convoy-bump') {
-                seen.bumps++;
-            }
-        }
+        driveDetails(state, p, simT, express, {
+            game,
+            seen,
+        });
     }
     assert.fail('Route did not finish within 120 simulated seconds');
 }
-
 test('stage2 completes through chair dispatch and the clock-out lift', () => {
     const game = createGame();
     game.startStage(2);
@@ -102,7 +73,6 @@ test('stage2 completes through chair dispatch and the clock-out lift', () => {
     assert.equal(state.bursts, 0);
     assert.equal(state.cleaningSpilled, false);
 });
-
 test('staying aboard the express convoy ends in a forced clock-out', () => {
     const game = createGame();
     game.startStage(2);
@@ -125,7 +95,6 @@ test('staying aboard the express convoy ends in a forced clock-out', () => {
         'the lift has already left',
     );
 });
-
 test('hopping every obstacle and flying off the ramp with the convoy reaches the exit without losing focus', () => {
     const game = createGame();
     game.startStage(2);
@@ -135,7 +104,6 @@ test('hopping every obstacle and flying off the ramp with the convoy reaches the
     assert.equal(state.focus, 100);
     assert.ok(state.player.x >= state.level.goal);
 });
-
 test('the express convoy does not carry a rider across the pit without a ramp jump', () => {
     const game = createGame();
     game.startStage(2);
@@ -161,7 +129,6 @@ test('the express convoy does not carry a rider across the pit without a ramp ju
     );
     assert.equal(state.deaths, 1, 'the player falls when the jump is missed');
 });
-
 test('jumping at the start of the ramp falls short of the far side', () => {
     const game = createGame();
     game.startStage(2);
@@ -182,7 +149,6 @@ test('jumping at the start of the ramp falls short of the far side', () => {
     assert.equal(crossed, false);
     assert.equal(game.getSnapshot().deaths, 1);
 });
-
 test('tripping on the orientation obstacles costs focus until the rookie loses it', () => {
     const game = createGame();
     game.startStage(2);
@@ -215,7 +181,6 @@ test('tripping on the orientation obstacles costs focus until the rookie loses i
     );
     assert.equal(game.getSnapshot().lossReason, 'focus');
 });
-
 test('restart resumes at the last reached checkpoint and stage selection starts fresh', () => {
     const game = createGame();
     game.startStage(2);
@@ -235,7 +200,6 @@ test('restart resumes at the last reached checkpoint and stage selection starts 
     assert.equal(game.getSnapshot().level.goal, 3240);
     assert.equal(game.getSnapshot().people.length, 3);
 });
-
 test('three chairs are dispatched in sequence and snapshots cannot edit them', () => {
     const game = createGame();
     game.startStage(2);
@@ -265,7 +229,6 @@ test('three chairs are dispatched in sequence and snapshots cannot edit them', (
     assert.equal(game.getSnapshot().furniture[0].x, originalChairX);
     assert.equal(game.getSnapshot().corridor.convoy, convoy);
 });
-
 test('head impact can be retried from the saved flag', () => {
     const game = createGame();
     game.startStage(2);
@@ -285,7 +248,6 @@ test('head impact can be retried from the saved flag', () => {
     assert.equal(game.getSnapshot().player.x, 1300);
     assert.equal(game.getSnapshot().checkpoint, 1);
 });
-
 test('stage1 still emits copier hazards after switching back from stage2', () => {
     const game = createGame();
     game.startStage(2);
@@ -297,7 +259,6 @@ test('stage1 still emits copier hazards after switching back from stage2', () =>
     }
     assert.ok(game.getSnapshot().bursts > 0);
 });
-
 test('optional meeting scene returns the rider automatically and can be left early', () => {
     for (const early of [false, true]) {
         const game = createGame();
@@ -332,7 +293,6 @@ test('optional meeting scene returns the rider automatically and can be left ear
         assert.equal(drive(game).state.mode, 'won');
     }
 });
-
 test('office typing bubbles fade, repeat nearby and reactivate on a return visit', () => {
     const game = createGame();
     game.startStage(2);
@@ -368,7 +328,6 @@ test('office typing bubbles fade, repeat nearby and reactivate on a return visit
         'returning to the window triggers another brief bubble',
     );
 });
-
 test('stationary and forward jumps can land safely in both starter practice areas', () => {
     for (const stage of [1, 2]) {
         for (const input of /** @type {const} */ ([[], ['right']])) {
@@ -401,7 +360,6 @@ test('stationary and forward jumps can land safely in both starter practice area
         }
     }
 });
-
 test('office bin retries restore a dry, focused chair at the safe approach flag', () => {
     const game = createGame();
     game.startStage(1);
@@ -424,7 +382,6 @@ test('office bin retries restore a dry, focused chair at the safe approach flag'
     assert.equal(game.getSnapshot().officeCheckpoint, false);
     assert.equal(game.getSnapshot().player.x, 100);
 });
-
 test('the office flag restores focus when first reached after a distraction', () => {
     const game = createGame();
     game.startStage(1);
@@ -441,7 +398,6 @@ test('the office flag restores focus when first reached after a distraction', ()
     assert.equal(focusLostBeforeFlag, true);
     assert.equal(game.getSnapshot().officeCheckpoint, true);
     assert.equal(game.getSnapshot().focus, 100);
-
     game.setInput('left');
     for (let i = 0; i < 120 * 20 && game.getSnapshot().player.x > 1150; i++) {
         game.step(dt);
@@ -457,7 +413,6 @@ test('the office flag restores focus when first reached after a distraction', ()
         'crossing the saved flag again must not refill focus',
     );
 });
-
 test('airborne balance input corrects tilt while holding the opposite movement input', () => {
     for (const [input, sign] of /** @type {const} */ ([
         [['right', 'q'], -1],
@@ -483,7 +438,6 @@ test('airborne balance input corrects tilt while holding the opposite movement i
         );
     }
 });
-
 test('jumping across the office flag still saves the safe retry location', () => {
     const game = createGame();
     game.startStage(1);
@@ -500,7 +454,6 @@ test('jumping across the office flag still saves the safe retry location', () =>
     game.reset();
     assert.equal(game.getSnapshot().player.x, 1400);
 });
-
 test('starter jump completes one contextual lesson and emits its reward once', () => {
     const game = createGame();
     game.startStage(1);
@@ -527,7 +480,6 @@ test('starter jump completes one contextual lesson and emits its reward once', (
     }
     assert.equal(game.getSnapshot().lessons.moved, true);
 });
-
 test('copier previews its shot and its first paper batch is safe', () => {
     const game = createGame();
     game.startStage(1);
@@ -560,7 +512,6 @@ test('copier previews its shot and its first paper batch is safe', () => {
         'later shots retain the hazard',
     );
 });
-
 test('holding right runs into the copier papers while the copier keeps firing', () => {
     const game = createGame();
     game.startStage(1);
@@ -602,7 +553,6 @@ test('holding right runs into the copier papers while the copier keeps firing', 
         'the copier must fire another volley after the rider leaves its trigger range',
     );
 });
-
 test('cleared-stage history survives retries, stage changes and saved-game restoration', () => {
     const game = createGame({ progress: { completedStage: 1 } });
     assert.equal(game.getSnapshot().completedStage, 1);
@@ -627,7 +577,6 @@ test('cleared-stage history survives retries, stage changes and saved-game resto
     assert.equal(restored.getSnapshot().completedStage, 2);
     assert.equal(createGame().getSnapshot().completedStage, 0);
 });
-
 test('removed braking commands do not slow or stabilize a coasting chair', () => {
     for (const command of ['brake', 'ArrowDown', 's']) {
         const coasting = createGame();
@@ -651,3 +600,35 @@ test('removed braking commands do not slow or stabilize a coasting chair', () =>
         }
     }
 });
+function driveDetails(state, p, simT, express, { game, seen }) {
+    let hazardWait = false;
+    if (state.stage === 1) {
+        for (const g of GEYSERS) {
+            if (
+                g.x - p.x > 10 &&
+                g.x - p.x < 70 &&
+                geyserBursting(g, simT + 0.4)
+            ) {
+                hazardWait = true;
+                break;
+            }
+        }
+    }
+    const correction = -p.a * 12 - p.w * 4;
+    const keys =
+        (state.stage === 2 ? express(state, game) : null) ??
+        (hazardWait ? [] : ['right']);
+    if (correction < -0.4) {
+        keys.push('q');
+    }
+    if (correction > 0.4) {
+        keys.push('e');
+    }
+    game.setInput(...keys);
+    game.step(dt);
+    for (const event of game.drainEvents()) {
+        if (event.type === 'cue' && event.id === 'convoy-bump') {
+            seen.bumps++;
+        }
+    }
+}

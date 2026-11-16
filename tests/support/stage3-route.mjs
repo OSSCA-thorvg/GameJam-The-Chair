@@ -1,10 +1,8 @@
 import { load } from './load.mjs';
-
 const { STAGE_THREE, ventPhase } = await load(
     'src/game/stages/rooftop/data.ts',
 );
 const LIMIT = STAGE_THREE.airSprayLimit;
-
 function quietFor(vent, time) {
     const phase = ventPhase(vent, time);
     if (phase.kind !== 'idle') {
@@ -19,14 +17,12 @@ const ductJustGusted = (state) =>
 const ductQuietFor = (seconds) => (state) =>
     state.ductReaction.kind === 'done' &&
     state.ductReaction.rest < STAGE_THREE.duct.gustPeriod - seconds;
-
 const FLOOR = 368;
 const R1 = 248;
 const L1 = 78;
 const R2 = -92;
 const L2 = -262;
 const UPPER = -172;
-
 const ROUTE = [
     { how: 'start' },
     { how: 'pickup' },
@@ -79,7 +75,6 @@ const ROUTE = [
     { how: 'board' },
 ];
 export const ROUTE_STEPS = ROUTE.length;
-
 function retryFrom(y) {
     let best = -1;
     for (let i = 0; i < ROUTE.length; i++) {
@@ -90,158 +85,218 @@ function retryFrom(y) {
     }
     return best;
 }
-
 export function driveStageThree(
     game,
     stop = (state) => state.stage === 4 || state.mode !== 'play',
     observe = (state, phase) => {},
 ) {
-    let phase = 0;
-    let sub = 'go';
+    const driver = new StageThreeRoute(game);
     for (let i = 0; i < 120 * 150; i++) {
         const state = game.getSnapshot();
-        const p = state.player;
-        observe(state, phase);
+        observe(state, driver.phase);
         if (stop(state)) {
             return state;
         }
-        const step = ROUTE[phase];
-        const toward = (x) => {
-            const error = x - p.x - p.vx * 0.32;
-            return error > 12 ? ['right'] : error < -12 ? ['left'] : [];
-        };
-        if (step.how === 'start') {
-            game.setInput('right');
-            if (p.x > 210 && state.ground) {
-                game.jump();
-                phase++;
-            }
-        } else if (step.how === 'pickup') {
-            game.setInput('right');
-            if (
-                state.ground &&
-                ((p.x > 205 && p.x < 330) || (p.x > 370 && p.x < 450))
-            ) {
-                game.jump();
-            }
-            if (state.hasExtinguisher) {
-                phase++;
-            }
-        } else if (step.how === 'rise') {
-            const keys = toward(step.x);
-            if (p.y + p.vy * 0.2 > step.y) {
-                keys.push('spray');
-            }
-            game.setInput(...keys);
-            if (Math.abs(p.x - step.x) < 40 && p.y < step.y + 15) {
-                phase++;
-            }
-        } else if (step.how === 'roll') {
-            game.setInput(...toward(step.x));
-            if (Math.abs(p.x - step.x) < 40 && state.ground) {
-                phase++;
-            }
-        } else if (step.how === 'wait') {
-            game.setInput(...(state.ground ? toward(step.x) : []));
-            if (ductJustGusted(state) && state.ground) {
-                phase++;
-                sub = 'go';
-            }
-        } else if (step.how === 'hop' || step.how === 'leap') {
-            const [tx, ty] = step.to;
-            const onLevel = (y) => state.ground && Math.abs(p.y - y) < 20;
-            if (
-                state.ground &&
-                (sub === 'air' || (sub === 'settle' && !onLevel(ty)))
-            ) {
-                sub = 'go';
-            }
-            if (
-                onLevel(ty) &&
-                Math.abs(p.x - tx) < (step.how === 'leap' ? 60 : 150)
-            ) {
-                sub = 'settle';
-                game.setInput(...toward(tx));
-                if (Math.abs(p.vx) < 60) {
-                    phase++;
-                    sub = 'go';
-                }
-            } else if (onLevel(ty)) {
-                game.setInput(...toward(tx));
-            } else if (state.ground && !onLevel(step.level)) {
-                const retry = retryFrom(p.y);
-                if (retry >= 0) {
-                    phase = retry;
-                    sub = 'go';
-                }
-                game.setInput();
-            } else if (state.ground && sub !== 'air') {
-                const runUp =
-                    step.how === 'leap' && sub === 'go'
-                        ? step.start
-                        : step.takeoff;
-                if (sub === 'go') {
-                    game.setInput(...toward(runUp));
-                    if (Math.abs(p.x - runUp) < 20 && Math.abs(p.vx) < 40) {
-                        sub = 'ready';
-                    }
-                } else if (sub === 'ready') {
-                    game.setInput(...toward(runUp));
-                    if (step.ready(state)) {
-                        sub = step.how === 'leap' ? 'run' : 'launch';
-                    }
-                } else if (sub === 'run') {
-                    game.setInput('right');
-                    if (p.x >= step.takeoff) {
-                        sub = 'launch';
-                    }
-                }
-                if (sub === 'launch') {
-                    game.setInput(
-                        ...(step.how === 'leap'
-                            ? ['right', 'spray']
-                            : ['spray']),
-                    );
-                    sub = 'air';
-                }
-            } else if (sub === 'settle') {
-                game.setInput(...(p.vy < 120 ? toward(tx) : []));
-            } else {
-                sub = state.ground ? sub : 'air';
-                const keys = [];
-                const high = p.y + p.vy * 0.25 <= step.apex;
-                const left = LIMIT - state.airSprays;
-                if (step.how === 'leap' && p.x > 1810) {
-                    keys.push(...toward(tx));
-                } else if (step.how === 'leap') {
-                    keys.push('right');
-                    if (!high && left > 0) {
-                        keys.push('spray');
-                    }
-                } else if (
-                    !high &&
-                    left > 1 &&
-                    state.airSprays < (step.ups ?? 2)
-                ) {
-                    keys.push('spray');
-                } else if (left > 0 && Math.abs(tx - p.x) > 90 && p.vy > -160) {
-                    keys.push(tx > p.x ? 'right' : 'left', 'spray');
-                } else if (p.vy < 120) {
-                    keys.push(...toward(tx));
-                }
-                game.setInput(...keys);
-                if (state.ground) {
-                    sub = 'go';
-                }
-            }
-        } else if (step.how === 'board') {
-            game.setInput('right');
-        }
+        driver.update(state);
         game.step(1 / 120);
         game.drainEvents();
     }
-    const step = ROUTE[phase];
+    const step = ROUTE[driver.phase];
     throw new Error(
-        `Stage-three route timed out at phase ${phase} (${step.how}${step.to ? ` to ${step.to}` : step.x ? ` ${step.x}` : ''}, ${sub})`,
+        `Stage-three route timed out at phase ${driver.phase} (${step.how}${step.to ? ` to ${step.to}` : step.x ? ` ${step.x}` : ''}, ${driver.sub})`,
     );
+}
+class StageThreeRoute {
+    phase = 0;
+    sub = 'go';
+    tx = 0;
+    ty = 0;
+    constructor(game) {
+        this.game = game;
+    }
+    update(state) {
+        this.state = state;
+        this.p = state.player;
+        this.step = ROUTE[this.phase];
+        if (this.step.how === 'start') {
+            this.controlStart();
+        } else if (this.step.how === 'pickup') {
+            this.controlPickup();
+        } else if (this.step.how === 'rise') {
+            this.controlRise();
+        } else if (this.step.how === 'roll') {
+            this.controlRoll();
+        } else if (this.step.how === 'wait') {
+            this.controlWait();
+        } else if (this.step.how === 'hop' || this.step.how === 'leap') {
+            this.controlHop();
+        } else if (this.step.how === 'board') {
+            this.controlBoard();
+        }
+    }
+    toward(x) {
+        const error = x - this.p.x - this.p.vx * 0.32;
+        return error > 12 ? ['right'] : error < -12 ? ['left'] : [];
+    }
+    onLevel(y) {
+        return this.state.ground && Math.abs(this.p.y - y) < 20;
+    }
+    controlStart() {
+        this.game.setInput('right');
+        if (this.p.x > 210 && this.state.ground) {
+            this.game.jump();
+            this.phase++;
+        }
+    }
+    controlPickup() {
+        this.game.setInput('right');
+        if (
+            this.state.ground &&
+            ((this.p.x > 205 && this.p.x < 330) ||
+                (this.p.x > 370 && this.p.x < 450))
+        ) {
+            this.game.jump();
+        }
+        if (this.state.hasExtinguisher) {
+            this.phase++;
+        }
+    }
+    controlRise() {
+        const keys = this.toward(this.step.x);
+        if (this.p.y + this.p.vy * 0.2 > this.step.y) {
+            keys.push('spray');
+        }
+        this.game.setInput(...keys);
+        if (
+            Math.abs(this.p.x - this.step.x) < 40 &&
+            this.p.y < this.step.y + 15
+        ) {
+            this.phase++;
+        }
+    }
+    controlRoll() {
+        this.game.setInput(...this.toward(this.step.x));
+        if (Math.abs(this.p.x - this.step.x) < 40 && this.state.ground) {
+            this.phase++;
+        }
+    }
+    controlWait() {
+        this.game.setInput(
+            ...(this.state.ground ? this.toward(this.step.x) : []),
+        );
+        if (ductJustGusted(this.state) && this.state.ground) {
+            this.phase++;
+            this.sub = 'go';
+        }
+    }
+    settleTarget() {
+        this.sub = 'settle';
+        this.game.setInput(...this.toward(this.tx));
+        if (Math.abs(this.p.vx) < 60) {
+            this.phase++;
+            this.sub = 'go';
+        }
+    }
+    holdTarget() {
+        this.game.setInput(...this.toward(this.tx));
+    }
+    retryLanding() {
+        const retry = retryFrom(this.p.y);
+        if (retry >= 0) {
+            this.phase = retry;
+            this.sub = 'go';
+        }
+        this.game.setInput();
+    }
+    prepareLaunch() {
+        const runUp =
+            this.step.how === 'leap' && this.sub === 'go'
+                ? this.step.start
+                : this.step.takeoff;
+        if (this.sub === 'go') {
+            this.game.setInput(...this.toward(runUp));
+            if (Math.abs(this.p.x - runUp) < 20 && Math.abs(this.p.vx) < 40) {
+                this.sub = 'ready';
+            }
+        } else if (this.sub === 'ready') {
+            this.game.setInput(...this.toward(runUp));
+            if (this.step.ready(this.state)) {
+                this.sub = this.step.how === 'leap' ? 'run' : 'launch';
+            }
+        } else if (this.sub === 'run') {
+            this.game.setInput('right');
+            if (this.p.x >= this.step.takeoff) {
+                this.sub = 'launch';
+            }
+        }
+        if (this.sub === 'launch') {
+            this.game.setInput(
+                ...(this.step.how === 'leap' ? ['right', 'spray'] : ['spray']),
+            );
+            this.sub = 'air';
+        }
+    }
+    settleLanding() {
+        this.game.setInput(...(this.p.vy < 120 ? this.toward(this.tx) : []));
+    }
+    canClimb(high, left) {
+        return !high && left > 1 && this.state.airSprays < (this.step.ups ?? 2);
+    }
+    controlAirborne() {
+        this.sub = this.state.ground ? this.sub : 'air';
+        const keys = [];
+        const high = this.p.y + this.p.vy * 0.25 <= this.step.apex;
+        const left = LIMIT - this.state.airSprays;
+        if (this.step.how === 'leap' && this.p.x > 1810) {
+            keys.push(...this.toward(this.tx));
+        } else if (this.step.how === 'leap') {
+            keys.push('right');
+            if (!high && left > 0) {
+                keys.push('spray');
+            }
+        } else if (this.canClimb(high, left)) {
+            keys.push('spray');
+        } else if (
+            left > 0 &&
+            Math.abs(this.tx - this.p.x) > 90 &&
+            this.p.vy > -160
+        ) {
+            keys.push(this.tx > this.p.x ? 'right' : 'left', 'spray');
+        } else if (this.p.vy < 120) {
+            keys.push(...this.toward(this.tx));
+        }
+        this.game.setInput(...keys);
+        if (this.state.ground) {
+            this.sub = 'go';
+        }
+    }
+    controlHop() {
+        [this.tx, this.ty] = this.step.to;
+        if (
+            this.state.ground &&
+            (this.sub === 'air' ||
+                (this.sub === 'settle' && !this.onLevel(this.ty)))
+        ) {
+            this.sub = 'go';
+        }
+        if (
+            this.onLevel(this.ty) &&
+            Math.abs(this.p.x - this.tx) < (this.step.how === 'leap' ? 60 : 150)
+        ) {
+            this.settleTarget();
+        } else if (this.onLevel(this.ty)) {
+            this.holdTarget();
+        } else if (this.state.ground && !this.onLevel(this.step.level)) {
+            this.retryLanding();
+        } else if (this.state.ground && this.sub !== 'air') {
+            this.prepareLaunch();
+        } else if (this.sub === 'settle') {
+            this.settleLanding();
+        } else {
+            this.controlAirborne();
+        }
+    }
+    controlBoard() {
+        this.game.setInput('right');
+    }
 }

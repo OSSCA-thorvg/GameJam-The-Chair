@@ -6,7 +6,6 @@ import { createEffects } from '../render/effects';
 import type { PreviewScene } from './types';
 import type { Game, GameSnapshot } from '../game/game';
 import type { Input } from '../game/types';
-
 export function convoyRide(x: number, line: number, said = false): Game {
     const game = createGame();
     game.startStage(2);
@@ -33,7 +32,6 @@ export function convoyRide(x: number, line: number, said = false): Game {
     game.restore(JSON.stringify(saved));
     return game;
 }
-
 export function orientationHop(state: GameSnapshot): boolean {
     if (!state.ground) {
         return false;
@@ -44,15 +42,20 @@ export function orientationHop(state: GameSnapshot): boolean {
         return time > 0.36 && time < 0.44;
     });
 }
-
 export function orientationRun(
     id: string,
     label: string,
     x: number,
     line: number,
-    hop: boolean,
-    frameCount: number,
-    markers: PreviewScene['markers'],
+    {
+        hop,
+        frameCount,
+        markers,
+    }: {
+        hop: boolean;
+        frameCount: number;
+        markers: PreviewScene['markers'];
+    },
 ): PreviewScene {
     const game = convoyRide(x, line);
     const effects = createEffects();
@@ -72,7 +75,6 @@ export function orientationRun(
     }
     return { ...recordedScene(id, label, x, markers, frames), follow: true };
 }
-
 export function expressRun(
     id: string,
     label: string,
@@ -123,7 +125,6 @@ export function expressRun(
         follow: true,
     };
 }
-
 export function meetingVisit(visit = 1): PreviewScene {
     const game = createGame({ seed: 8 });
     game.startStage(2);
@@ -172,7 +173,6 @@ export function meetingVisit(visit = 1): PreviewScene {
         frames,
     );
 }
-
 export function chairDispatch(): PreviewScene {
     const game = createGame({ seed: 8 });
     game.startStage(2);
@@ -203,7 +203,6 @@ export function chairDispatch(): PreviewScene {
         frames,
     );
 }
-
 export function officeTyping(): PreviewScene {
     const game = createGame();
     game.startStage(2);

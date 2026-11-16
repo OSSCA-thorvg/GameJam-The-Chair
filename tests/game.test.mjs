@@ -3,7 +3,6 @@ import test from 'node:test';
 
 import { createGame } from './support/harness.mjs';
 import { bundled } from './support/load.mjs';
-
 const {
     createEffects,
     EFFECT_STYLE,
@@ -47,7 +46,6 @@ function applyInput(game, scenario, i) {
         game.jump();
     }
 }
-
 test('changing effect durations and particle count cannot change gameplay', () => {
     const plain = createGame();
     const decorated = createGame();
@@ -84,7 +82,6 @@ test('changing effect durations and particle count cannot change gameplay', () =
         Object.assign(EFFECT_STYLE, saved);
     }
 });
-
 test('snapshots and event payloads do not expose live gameplay objects', () => {
     const game = createGame();
     game.reset();
@@ -108,7 +105,6 @@ test('snapshots and event payloads do not expose live gameplay objects', () => {
     }
     assert.deepEqual(game.getSnapshot(), state);
 });
-
 test('HUD can be removed or replaced without affecting simulation', () => {
     const hud = createHud({ querySelector: () => null });
     const feedback = createFeedback();
@@ -129,7 +125,6 @@ test('HUD can be removed or replaced without affecting simulation', () => {
     }
     assert.equal(game.serialize(), reference.serialize());
 });
-
 test('fixed-step simulation is independent of render frequency', () => {
     const fast = createGame();
     const slow = createGame();
@@ -147,7 +142,6 @@ test('fixed-step simulation is independent of render frequency', () => {
     }
     assert.equal(fast.serialize(), slow.serialize());
 });
-
 test('advance reports how many fixed ticks ran for the performance overlay', () => {
     const game = createGame();
     game.reset();
@@ -156,7 +150,6 @@ test('advance reports how many fixed ticks ran for the performance overlay', () 
     game.pause();
     assert.equal(game.advance(1).ticks, 0);
 });
-
 test('pause, restart and focus-loss/impact progression remain headless', () => {
     const game = createGame({ progress: { deaths: 3 } });
     game.reset();
@@ -176,7 +169,6 @@ test('pause, restart and focus-loss/impact progression remain headless', () => {
     game.advanceFocusLoss(10);
     assert.equal(game.getSnapshot().mode, 'play');
 });
-
 test('renderer consumes snapshots and supports changed art without editing physics', async (t) => {
     for (const [key, value] of Object.entries({
         devicePixelRatio: 1,
@@ -195,57 +187,8 @@ test('renderer consumes snapshots and supports changed art without editing physi
             }
         });
     }
-    let paths = 0;
-    let labels = 0;
-    const finite = (...args) =>
-        args.forEach((n) => assert.ok(Number.isFinite(n)));
-    const context = {
-        save() {},
-        restore() {},
-        transform: finite,
-        translate: finite,
-        rotate: finite,
-        strokeText() {},
-        setTransform: finite,
-        clearRect: finite,
-        beginPath() {
-            paths++;
-        },
-        moveTo: finite,
-        lineTo: finite,
-        bezierCurveTo: finite,
-        closePath() {},
-        fill() {},
-        stroke() {},
-        clip() {},
-        setLineDash() {},
-        measureText(text) {
-            return { width: text.length * 8 };
-        },
-        fillText(text, x, y) {
-            assert.equal(typeof text, 'string');
-            finite(x, y);
-            labels++;
-        },
-        createLinearGradient(...coords) {
-            finite(...coords);
-            return {
-                addColorStop(at, color) {
-                    finite(at);
-                    assert.equal(typeof color, 'string');
-                },
-            };
-        },
-        createRadialGradient(...coords) {
-            finite(...coords);
-            return {
-                addColorStop(at, color) {
-                    finite(at);
-                    assert.equal(typeof color, 'string');
-                },
-            };
-        },
-    };
+    const counts = { paths: 0, labels: 0 };
+    const context = verifyDetails(counts);
     const canvas = () => ({
         clientWidth: 800,
         clientHeight: 510,
@@ -278,8 +221,8 @@ test('renderer consumes snapshots and supports changed art without editing physi
                 assert.deepEqual(game.getSnapshot(), before);
             }
         }
-        assert.ok(paths > 0);
-        assert.ok(labels > 0);
+        assert.ok(counts.paths > 0);
+        assert.ok(counts.labels > 0);
         assert.equal(renderer.info().renderer, 'canvas2d');
     } finally {
         Object.assign(ART.player, saved);
@@ -287,7 +230,6 @@ test('renderer consumes snapshots and supports changed art without editing physi
         renderer.destroy();
     }
 });
-
 test('head impact and focus loss finish without any UI', () => {
     const head = createGame();
     head.reset();
@@ -316,3 +258,55 @@ test('head impact and focus loss finish without any UI', () => {
     focus.advanceFocusLoss(1.7);
     assert.equal(focus.getSnapshot().mode, 'dead');
 });
+function verifyDetails(counts) {
+    const finite = (...args) =>
+        args.forEach((n) => assert.ok(Number.isFinite(n)));
+    const context = {
+        save() {},
+        restore() {},
+        transform: finite,
+        translate: finite,
+        rotate: finite,
+        strokeText() {},
+        setTransform: finite,
+        clearRect: finite,
+        beginPath() {
+            counts.paths++;
+        },
+        moveTo: finite,
+        lineTo: finite,
+        bezierCurveTo: finite,
+        closePath() {},
+        fill() {},
+        stroke() {},
+        clip() {},
+        setLineDash() {},
+        measureText(text) {
+            return { width: text.length * 8 };
+        },
+        fillText(text, x, y) {
+            assert.equal(typeof text, 'string');
+            finite(x, y);
+            counts.labels++;
+        },
+        createLinearGradient(...coords) {
+            finite(...coords);
+            return {
+                addColorStop(at, color) {
+                    finite(at);
+                    assert.equal(typeof color, 'string');
+                },
+            };
+        },
+        createRadialGradient(...coords) {
+            finite(...coords);
+            return {
+                addColorStop(at, color) {
+                    finite(at);
+                    assert.equal(typeof color, 'string');
+                },
+            };
+        },
+    };
+    return context;
+}

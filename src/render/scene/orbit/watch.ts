@@ -13,9 +13,7 @@ import type { RenderCtx } from '../../context';
 import type { DrawCommand, LayerSpec } from '../../types';
 import type { CctvKind } from '../shared/cctv-models';
 import type { Point3, SkyProjection } from '../shared/projection';
-
 export type RoutePoint = (x: number, y: number, z: number) => Point3;
-
 type Spot = {
     x: number;
     y: number;
@@ -26,10 +24,8 @@ type Spot = {
     appear: number;
     bird?: SkyRobot;
 };
-
 const pick = (random: () => number) =>
     CCTV_KINDS[Math.floor(random() * CCTV_KINDS.length)];
-
 function routeCctvs(
     seed: number,
     count: number,
@@ -47,7 +43,6 @@ function routeCctvs(
         appear: 0.5,
     }));
 }
-
 const REVEAL_COLUMNS = [60, 210, 360, 640, 790, 940];
 const REVEAL_ROWS = [50, 170, 300, 430];
 const REVEAL_VIEW = { focal: 841.5, centerY: 188.7, camera: 480 };
@@ -58,7 +53,6 @@ const REVEAL_BIRDS: Partial<Record<number, SkyRobot>> = {
     16: 'black',
     19: 'liquid',
 };
-
 function revealCctvs(seed: number, glide: number): Spot[] {
     const random = seeded(seed);
     const count = REVEAL_ROWS.length * REVEAL_COLUMNS.length;
@@ -88,9 +82,7 @@ function revealCctvs(seed: number, glide: number): Spot[] {
         }),
     );
 }
-
 const GLIDE = 1600;
-
 type Glint = {
     x: number;
     y: number;
@@ -98,7 +90,6 @@ type Glint = {
     rate: number;
     phase: number;
 };
-
 function cloudGlints(seed: number): Glint[] {
     const random = seeded(seed);
     const floor = Array.from({ length: 16 }, (_, i) => {
@@ -117,7 +108,6 @@ function cloudGlints(seed: number): Glint[] {
         phase: random() * Math.PI * 2,
     }));
 }
-
 export const ORBIT_WATCH = {
     glide: GLIDE,
     reveal: revealCctvs(4100, GLIDE),
@@ -130,10 +120,8 @@ export const ORBIT_WATCH = {
     after: 40,
     blink: 7,
 };
-
 export type LampState = 'idle' | 'flash' | 'recorded';
 type Lamp = { at: Point3; state: LampState; glow?: number; rec?: boolean };
-
 export function cctvLamp(ahead: number, t: number): LampState {
     if (ahead > ORBIT_WATCH.before) {
         return 'idle';
@@ -143,14 +131,11 @@ export function cctvLamp(ahead: number, t: number): LampState {
     }
     return 'recorded';
 }
-
 const recording = (t: number, seed: number) =>
     (t * 0.8 + seed * 0.618) % 1 < 0.55;
 const lampColor = (state: LampState, rec: boolean) =>
     state !== 'idle' || rec ? '#ff4a3a' : '#5e1d1a';
-
 const SWERVE = 200;
-
 function swerve(p: Point3, ahead: number): Point3 {
     const t = Math.max(0, Math.min(1, 1 - ahead / SWERVE));
     const out = 700 * t * t * (3 - 2 * t);
@@ -159,7 +144,6 @@ function swerve(p: Point3, ahead: number): Point3 {
     const r = Math.hypot(x, y) || 1;
     return [p[0], 15 + y * (1 + out / r), x * (1 + out / r)];
 }
-
 function floating(
     view: SkyProjection,
     point: RoutePoint,
@@ -194,11 +178,14 @@ function floating(
     );
     return [{ at: lamp, state, rec }];
 }
-
 function satellite(
     view: SkyProjection,
     point: RoutePoint,
-    at: { x: number; y: number; z: number },
+    at: {
+        x: number;
+        y: number;
+        z: number;
+    },
     travel: number,
     t: number,
 ): Lamp {
@@ -244,15 +231,24 @@ function satellite(
     view.oval(lamp, [5, 5, 2], lampColor(state, rec));
     return { at: lamp, state, rec };
 }
-
 export function orbitWatchers(
     view: SkyProjection,
     point: RoutePoint,
     travel: number,
     t: number,
-    shown = 1,
-    satelliteLightPoint = point,
-    satellites: ReadonlyArray<{ x: number; y: number; z: number }> = [],
+    {
+        shown = 1,
+        satelliteLightPoint = point,
+        satellites = [],
+    }: {
+        shown?: number;
+        satelliteLightPoint?: RoutePoint;
+        satellites?: ReadonlyArray<{
+            x: number;
+            y: number;
+            z: number;
+        }>;
+    } = {},
 ): Lamp[] {
     const lamps = [...ORBIT_WATCH.reveal, ...ORBIT_WATCH.route]
         .filter(
@@ -270,7 +266,6 @@ export function orbitWatchers(
     }
     return lamps;
 }
-
 export function orbitWatchGlow(
     ctx: RenderCtx,
     view: SkyProjection,
@@ -288,7 +283,13 @@ export function orbitWatchGlow(
             continue;
         }
         if (glow) {
-            eyes.push(eyeGlow(ctx, view, at, glow, state, alpha, eyeLayer));
+            eyes.push(
+                eyeGlow(ctx, view, at, glow, {
+                    state,
+                    alpha,
+                    layer: eyeLayer,
+                }),
+            );
             continue;
         }
         if (state === 'idle' && !rec) {
@@ -321,15 +322,20 @@ export function orbitWatchGlow(
     }
     ctx.commands.push(...recs, ...lights, ...eyes);
 }
-
 function eyeGlow(
     ctx: RenderCtx,
     view: SkyProjection,
     at: Point3,
     glow: number,
-    state: LampState,
-    alpha: number,
-    layer: LayerSpec,
+    {
+        state,
+        alpha,
+        layer,
+    }: {
+        state: LampState;
+        alpha: number;
+        layer: LayerSpec;
+    },
 ): DrawCommand {
     const [x, y] = view.project(at);
     const radius =
@@ -359,7 +365,6 @@ function eyeGlow(
         layer,
     };
 }
-
 export function orbitBeacon(
     ctx: RenderCtx,
     view: SkyProjection,
@@ -425,7 +430,6 @@ export function orbitBeacon(
         layer,
     });
 }
-
 export function orbitCloudGlints(ctx: RenderCtx, alpha = 1): void {
     if (alpha <= 0) {
         return;

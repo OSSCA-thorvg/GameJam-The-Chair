@@ -6,7 +6,6 @@ const { skyPlatforms, STAGE_FOUR, createGame } = await loadSource(
 );
 const { settle, turn, hold } = STAGE_FOUR.reveal;
 const FINISH_TIME = 6 + settle + turn + hold;
-
 export const STAGE_FOUR_ROUTE = [
     'arrival-roof',
     'window-one',
@@ -24,11 +23,9 @@ export const STAGE_FOUR_RECORDING = new URL(
     import.meta.url,
 );
 const STEP = 1 / 120;
-
 function platform(state, id) {
     return skyPlatforms(state.sky, state.time).find((item) => item.id === id);
 }
-
 function steer(p, x, speed, keys) {
     const wanted = Math.max(-speed, Math.min(speed, (x - p.x) * 2.7));
     if (p.vx < wanted - 12) {
@@ -38,7 +35,6 @@ function steer(p, x, speed, keys) {
         keys.push('left');
     }
 }
-
 function standKeys(state) {
     const keys = [];
     const here = platform(state, state.sky.standing);
@@ -47,7 +43,6 @@ function standKeys(state) {
     }
     return keys;
 }
-
 function hopKeys(state, id) {
     const keys = [];
     const p = state.player;
@@ -72,7 +67,6 @@ function hopKeys(state, id) {
     }
     return keys;
 }
-
 function startHop(plan, id) {
     return {
         plan,
@@ -84,7 +78,6 @@ function startHop(plan, id) {
         ),
     };
 }
-
 function hopFrame(sim, hop, visit) {
     const { game } = sim;
     const { plan, id } = hop;
@@ -114,6 +107,9 @@ function hopFrame(sim, hop, visit) {
     ) {
         return state.sky.standing;
     }
+    hopFrameDetails(hop, plan, state, id, game);
+}
+function hopFrameDetails(hop, plan, state, id, game) {
     if (!hop.launched && hop.frames * STEP >= plan.wait) {
         hop.launched = true;
         const keys = hopKeys(state, id);
@@ -137,7 +133,6 @@ function hopFrame(sim, hop, visit) {
     game.step(STEP);
     game.drainEvents();
 }
-
 function run(sim, hop, visit) {
     while (hop.frames++ < hop.limit) {
         const result = hopFrame(sim, hop, visit);
@@ -147,7 +142,6 @@ function run(sim, hop, visit) {
     }
     return 'missed';
 }
-
 function scratch() {
     let core;
     const game = createGame({
@@ -172,7 +166,6 @@ function scratch() {
         },
     };
 }
-
 function plan(sim, saved, from, id, deaths) {
     const order = (result) =>
         result === 'won' || result === id
@@ -191,16 +184,7 @@ function plan(sim, saved, from, id, deaths) {
         let state = saved;
         let ended = null;
         for (let wait = minWait; wait < 9; wait += 0.2) {
-            if (!ended) {
-                sim.restore(state);
-                while (!ended && (waiting.frames + 1) * STEP < wait) {
-                    waiting.frames++;
-                    ended = hopFrame(sim, waiting);
-                }
-                if (!ended) {
-                    state = sim.game.serialize();
-                }
-            }
+            ({ ended, state } = planDetails(ended, sim, state, waiting, wait));
             for (const launch of ['spray', 'jump']) {
                 const attempt = { wait, launch, clean, from, deaths };
                 let result = ended;
@@ -231,7 +215,19 @@ function plan(sim, saved, from, id, deaths) {
     }
     return forward ?? fallback;
 }
-
+function planDetails(ended, sim, state, waiting, wait) {
+    if (!ended) {
+        sim.restore(state);
+        while (!ended && (waiting.frames + 1) * STEP < wait) {
+            waiting.frames++;
+            ended = hopFrame(sim, waiting);
+        }
+        if (!ended) {
+            state = sim.game.serialize();
+        }
+    }
+    return { ended, state };
+}
 function drive(game, choose, visit) {
     const sim = { game, read: () => game.getSnapshot() };
     for (let frame = 0; frame < 120 * 20; frame++) {
@@ -282,9 +278,7 @@ function drive(game, choose, visit) {
         `Stage 4 did not finish: ${JSON.stringify(game.getSnapshot().sky)}`,
     );
 }
-
 let recording;
-
 export function driveStageFour(game, visit = () => {}) {
     recording ??= JSON.parse(readFileSync(STAGE_FOUR_RECORDING, 'utf8'));
     return drive(
@@ -301,7 +295,6 @@ export function driveStageFour(game, visit = () => {}) {
         visit,
     );
 }
-
 export function planStageFour() {
     const game = createGame();
     const sim = scratch();

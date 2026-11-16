@@ -3,7 +3,6 @@ import { LEVEL, PHYSICS } from './level';
 import * as Det from './math';
 
 import type { DeepReadonly, Player, Point } from './types';
-
 export type Drive = {
     grounded: boolean;
     slip: boolean;
@@ -13,7 +12,6 @@ export type Drive = {
     convoyJump: boolean;
     expressJump: boolean;
 };
-
 export function drivePlayer(
     player: Readonly<Player>,
     d: Drive,
@@ -26,13 +24,7 @@ export function drivePlayer(
     if (d.upright) {
         p.w += (-Det.sin(p.a) * upright.pull - p.w * upright.damping) * dt;
     }
-    if (d.convoyJump && d.dir) {
-        p.vx += d.dir * (d.expressJump ? drive.express : drive.convoy) * dt;
-    } else if (was && d.dir) {
-        p.vx += d.dir * (d.slip ? drive.slip : drive.ground) * dt;
-    } else if (!was && d.dir) {
-        p.vx += d.dir * drive.air * dt;
-    }
+    applyDriveAcceleration(d, p, drive, dt, was);
     p.vy += PHYSICS.gravity * dt;
     let linearDrag = drag.air;
     if (d.convoyJump) {
@@ -60,9 +52,28 @@ export function drivePlayer(
     p.a += p.w * dt;
     return p;
 }
-
 export type Collision = { p: Player; ground: boolean; headHit: Point | null };
-
+function applyDriveAcceleration(
+    d: Drive,
+    p: Player,
+    drive: {
+        readonly ground: number;
+        readonly slip: number;
+        readonly air: number;
+        readonly convoy: number;
+        readonly express: number;
+    },
+    dt: number,
+    was: boolean,
+) {
+    if (d.convoyJump && d.dir) {
+        p.vx += d.dir * (d.expressJump ? drive.express : drive.convoy) * dt;
+    } else if (was && d.dir) {
+        p.vx += d.dir * (d.slip ? drive.slip : drive.ground) * dt;
+    } else if (!was && d.dir) {
+        p.vx += d.dir * drive.air * dt;
+    }
+}
 export function collide(
     player: Readonly<Player>,
     solids: ReadonlyArray<DeepReadonly<Point[]>>,
@@ -123,7 +134,6 @@ export function collide(
     }
     return { p, ground, headHit: null };
 }
-
 export function fellOffFloor(p: Readonly<Point>): boolean {
     return p.y > LEVEL.floor + PHYSICS.fallDepth;
 }

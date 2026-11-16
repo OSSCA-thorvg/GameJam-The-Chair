@@ -22,18 +22,15 @@ import type {
 import type { GameSnapshot } from '../game/game';
 import type { DeepReadonly, Mode } from '../game/types';
 import type { Locale } from '../i18n';
-
 export type RenderCtx = {
     locale: Locale;
     bg: CanvasRenderingContext2D;
     // Width at 1px font size.
     textWidth(content: string, font: FontName): number;
-
     readonly F: number;
     readonly TAU: number;
     readonly C: typeof ART.palette;
     clamp(v: number, a: number, b: number): number;
-
     W: number;
     H: number;
     scale: number;
@@ -42,16 +39,16 @@ export type RenderCtx = {
     dpr: number;
     cam: number;
     wheel: number;
-
     ox: number;
     oy: number;
     rotation: number;
     localScale: number;
-    mirror: { y: number; k: number } | null;
+    mirror: {
+        y: number;
+        k: number;
+    } | null;
     layer: LayerSpec | null;
-
     commands: DrawCommand[];
-
     state: GameSnapshot;
     player: GameSnapshot['player'];
     mode: Mode;
@@ -59,8 +56,12 @@ export type RenderCtx = {
         GameSnapshot['monitors'][number] & (typeof ART.monitors)[number]
     >;
     cleaning: GameSnapshot['cleaning'];
-    bin: GameSnapshot['bin'] & { bottom: number };
-    copier: GameSnapshot['copier'] & { flash: number };
+    bin: GameSnapshot['bin'] & {
+        bottom: number;
+    };
+    copier: GameSnapshot['copier'] & {
+        flash: number;
+    };
     urgentCopier: GameSnapshot['urgentCopier'];
     people: GameSnapshot['people'];
     solids: GameSnapshot['solids'];
@@ -72,7 +73,6 @@ export type RenderCtx = {
     t: number;
     LEN: number;
     GOAL: number;
-
     waterDrops: DeepReadonly<EffectsState['waterDrops']>;
     waterRipples: DeepReadonly<EffectsState['waterRipples']>;
     waterPour: DeepReadonly<EffectsState['waterPour']>;
@@ -83,12 +83,15 @@ export type RenderCtx = {
     practiceBurst: number;
     saveFlash: number;
     personalBox: PersonalBoxReaction;
-    chairPose: { backrest: number; riderPop: number; shiver: number };
+    chairPose: {
+        backrest: number;
+        riderPop: number;
+        shiver: number;
+    };
     cutscene: boolean;
     windowDusk: number;
     keysTried: KeysTried;
     meetingVisit: number;
-
     screenPoint(x: number, y: number): Vector;
     polygon(
         points: Vector[],
@@ -102,8 +105,10 @@ export type RenderCtx = {
         y1: number,
         x2: number,
         y2: number,
-        stops: Array<[number, string]>,
-        alpha?: number,
+        options: {
+            stops: Array<[number, string]>;
+            alpha?: number;
+        },
     ): Gradient;
     effectPath(
         start: Vector,
@@ -115,7 +120,9 @@ export type RenderCtx = {
         start: Vector,
         curves: Curve[],
         stroke: StrokeInput,
-        opts?: PathOptions & { closed?: boolean },
+        opts?: PathOptions & {
+            closed?: boolean;
+        },
     ): void;
     pathCommand(start: Vector, curves: Curve[]): PathCommand;
     radialFill(
@@ -143,8 +150,10 @@ export type RenderCtx = {
         y: number,
         rx: number,
         ry: number,
-        width: number,
-        color: string,
+        options: {
+            width: number;
+            color: string;
+        },
     ): void;
     tint(hex: string, alpha: number): string;
     rect(x: number, y: number, w: number, h: number, c: string): void;
@@ -153,16 +162,20 @@ export type RenderCtx = {
         y: number,
         rx: number,
         ry: number,
-        c: string | Gradient,
-        opts?: PathOptions,
+        options: {
+            c: string | Gradient;
+            opts?: PathOptions;
+        },
     ): void;
     rod(
         x: number,
         y: number,
         xx: number,
         yy: number,
-        w: number,
-        c: string,
+        options: {
+            w: number;
+            c: string;
+        },
     ): void;
     // Baseline at world (x, y).
     label(
@@ -170,8 +183,10 @@ export type RenderCtx = {
         x: number,
         y: number,
         size?: number,
-        color?: string,
-        font?: FontName,
+        options?: {
+            color?: string;
+            font?: FontName;
+        },
     ): void;
     // Width at the requested size, in local units.
     measureText(content: string, size: number, font?: FontName): number;
@@ -181,8 +196,10 @@ export type RenderCtx = {
         x: number,
         y: number,
         size: number,
-        fill: string,
-        opts?: TextOptions,
+        options: {
+            fill: string;
+            opts?: TextOptions;
+        },
     ): void;
     // Centred at screen (x, y); ignores the camera.
     screenText(
@@ -190,11 +207,12 @@ export type RenderCtx = {
         x: number,
         y: number,
         size: number,
-        fill: string,
-        opts?: TextOptions,
+        options: {
+            fill: string;
+            opts?: TextOptions;
+        },
     ): void;
 };
-
 export type TextOptions = {
     font?: FontName;
     outline?: { width: number; color: string };
@@ -209,7 +227,6 @@ export type StrokeInput = {
     dash?: number[];
     dashOffset?: number;
 };
-
 export function createRenderResources(bg: CanvasRenderingContext2D): {
     bg: CanvasRenderingContext2D;
     retained: Map<string, DrawCommand[]>;
@@ -228,7 +245,6 @@ export function createRenderResources(bg: CanvasRenderingContext2D): {
     };
 }
 export type RenderResources = ReturnType<typeof createRenderResources>;
-
 export function createRenderCtx(
     resources: RenderResources,
     state: GameSnapshot,
@@ -297,45 +313,55 @@ export function createRenderCtx(
     };
     return ctx;
 }
-
 function drawingMethods(
     getCtx: () => RenderCtx,
     { retained }: RenderResources,
 ) {
-    const TAU = Math.PI * 2;
-    const clamp = (v: number, a: number, b: number) =>
-        Math.max(a, Math.min(b, v));
-    const screenPoint: RenderCtx['screenPoint'] = (x, y) => {
-        const c = Math.cos(getCtx().rotation);
-        const s = Math.sin(getCtx().rotation);
-        x *= getCtx().localScale;
-        y *= getCtx().localScale;
-        let wy = x * s + y * c + getCtx().oy;
-        const mirror = getCtx().mirror;
+    return new DrawingMethods(getCtx, retained).api();
+}
+class DrawingMethods {
+    private getCtx!: () => RenderCtx;
+    private retained!: Map<string, DrawCommand[]>;
+    private TAU!: number;
+    private clamp: (v: number, a: number, b: number) => number = (
+        v: number,
+        a: number,
+        b: number,
+    ) => {
+        return Math.max(a, Math.min(b, v));
+    };
+    private screenPoint: RenderCtx['screenPoint'] = (x, y) => {
+        const c = Math.cos(this.getCtx().rotation);
+        const s = Math.sin(this.getCtx().rotation);
+        x *= this.getCtx().localScale;
+        y *= this.getCtx().localScale;
+        let wy = x * s + y * c + this.getCtx().oy;
+        const mirror = this.getCtx().mirror;
         if (mirror) {
             wy = mirror.y + (mirror.y - wy) * mirror.k;
         }
         return [
-            (x * c - y * s + getCtx().ox - getCtx().cam) * getCtx().scale,
-            (wy + getCtx().vertical) * getCtx().scale,
+            (x * c - y * s + this.getCtx().ox - this.getCtx().cam) *
+                this.getCtx().scale,
+            (wy + this.getCtx().vertical) * this.getCtx().scale,
         ];
     };
-    const push = (cmd: DrawCommand) => {
-        const layer = getCtx().layer;
+    private push: (cmd: DrawCommand) => void = (cmd: DrawCommand) => {
+        const layer = this.getCtx().layer;
         if (layer) {
             cmd.layer = layer;
         }
-        getCtx().commands.push(cmd);
+        this.getCtx().commands.push(cmd);
     };
-    const polygon: RenderCtx['polygon'] = (points, color, opts) => {
-        push({
+    private polygon: RenderCtx['polygon'] = (points, color, opts) => {
+        this.push({
             kind: 'path',
-            points: points.map(([x, y]) => getCtx().screenPoint(x, y)),
+            points: points.map(([x, y]) => this.getCtx().screenPoint(x, y)),
             fill: color,
             ...opts,
         });
     };
-    const rgb: RenderCtx['rgb'] = (hex) => {
+    private rgb: RenderCtx['rgb'] = (hex) => {
         const h = hex.slice(1);
         return [
             parseInt(h.slice(0, 2), 16),
@@ -343,41 +369,53 @@ function drawingMethods(
             parseInt(h.slice(4, 6), 16),
         ];
     };
-    const rgba: RenderCtx['rgba'] = (hex, alpha = 1) => {
+    private rgba: RenderCtx['rgba'] = (hex, alpha = 1) => {
         return [
-            ...getCtx().rgb(hex),
+            ...this.getCtx().rgb(hex),
             Math.round(
                 (hex.length === 9 ? parseInt(hex.slice(7, 9), 16) : 255) *
-                    clamp(alpha, 0, 1),
+                    this.clamp(alpha, 0, 1),
             ),
         ];
     };
-    const gradientFill: RenderCtx['gradientFill'] = (
+    private gradientFill: RenderCtx['gradientFill'] = (
         x1,
         y1,
         x2,
         y2,
-        stops,
-        alpha = 1,
+        {
+            stops,
+            alpha = 1,
+        }: {
+            stops: Array<[number, string]>;
+            alpha?: number | undefined;
+        },
     ) => {
         return {
-            from: getCtx().screenPoint(x1, y1),
-            to: getCtx().screenPoint(x2, y2),
-            stops: stops.map(([at, c]) => [at, getCtx().rgba(c, alpha)]),
+            from: this.getCtx().screenPoint(x1, y1),
+            to: this.getCtx().screenPoint(x2, y2),
+            stops: stops.map(([at, c]) => [at, this.getCtx().rgba(c, alpha)]),
         };
     };
-    const pathCommand: RenderCtx['pathCommand'] = (start, curves) => ({
-        kind: 'path',
-        points: [getCtx().screenPoint(...start)],
-        curves: curves.map((c) => [
-            ...getCtx().screenPoint(c[0], c[1]),
-            ...getCtx().screenPoint(c[2], c[3]),
-            ...getCtx().screenPoint(c[4], c[5]),
-        ]),
-        fill: null,
-    });
-    const effectPath: RenderCtx['effectPath'] = (start, curves, fill, opts) => {
-        const cmd = getCtx().pathCommand(start, curves);
+    private pathCommand: RenderCtx['pathCommand'] = (start, curves) => {
+        return {
+            kind: 'path',
+            points: [this.getCtx().screenPoint(...start)],
+            curves: curves.map((c) => [
+                ...this.getCtx().screenPoint(c[0], c[1]),
+                ...this.getCtx().screenPoint(c[2], c[3]),
+                ...this.getCtx().screenPoint(c[4], c[5]),
+            ]),
+            fill: null,
+        };
+    };
+    private effectPath: RenderCtx['effectPath'] = (
+        start,
+        curves,
+        fill,
+        opts,
+    ) => {
+        const cmd = this.getCtx().pathCommand(start, curves);
         cmd.fill = fill;
         if (opts?.blend) {
             cmd.blend = opts.blend;
@@ -385,16 +423,16 @@ function drawingMethods(
         if (opts?.trim) {
             cmd.trim = opts.trim;
         }
-        push(cmd);
+        this.push(cmd);
     };
-    const strokePath: RenderCtx['strokePath'] = (
+    private strokePath: RenderCtx['strokePath'] = (
         start,
         curves,
         stroke,
         opts,
     ) => {
-        const cmd = getCtx().pathCommand(start, curves);
-        const unit = getCtx().scale * getCtx().localScale;
+        const cmd = this.getCtx().pathCommand(start, curves);
+        const unit = this.getCtx().scale * this.getCtx().localScale;
         cmd.open = !opts?.closed;
         cmd.stroke = {
             width: stroke.width * unit,
@@ -412,42 +450,44 @@ function drawingMethods(
         if (opts?.trim) {
             cmd.trim = opts.trim;
         }
-        push(cmd);
+        this.push(cmd);
     };
-    const radialFill: RenderCtx['radialFill'] = (
+    private radialFill: RenderCtx['radialFill'] = (
         cx,
         cy,
         r,
         stops,
         alpha = 1,
-    ) => ({
-        from: getCtx().screenPoint(cx, cy),
-        to: getCtx().screenPoint(cx + r, cy),
-        radius: r * getCtx().scale * getCtx().localScale,
-        stops: stops.map(([at, c]) => [at, getCtx().rgba(c, alpha)]),
-    });
-    const layers: Array<LayerSpec | null> = [];
-    const beginLayer: RenderCtx['beginLayer'] = (spec) => {
-        layers.push(getCtx().layer);
-        getCtx().layer = spec;
+    ) => {
+        return {
+            from: this.getCtx().screenPoint(cx, cy),
+            to: this.getCtx().screenPoint(cx + r, cy),
+            radius: r * this.getCtx().scale * this.getCtx().localScale,
+            stops: stops.map(([at, c]) => [at, this.getCtx().rgba(c, alpha)]),
+        };
     };
-    const endLayer: RenderCtx['endLayer'] = () => {
-        getCtx().layer = layers.pop() ?? null;
+    private layers!: Array<LayerSpec | null>;
+    private beginLayer: RenderCtx['beginLayer'] = (spec) => {
+        this.layers.push(this.getCtx().layer);
+        this.getCtx().layer = spec;
     };
-    const withLayer: RenderCtx['withLayer'] = (spec, draw) => {
-        const ctx = getCtx();
+    private endLayer: RenderCtx['endLayer'] = () => {
+        this.getCtx().layer = this.layers.pop() ?? null;
+    };
+    private withLayer: RenderCtx['withLayer'] = (spec, draw) => {
+        const ctx = this.getCtx();
         const previous = ctx.layer;
-        const depth = layers.length;
+        const depth = this.layers.length;
         ctx.layer = spec;
         try {
             draw();
         } finally {
             ctx.layer = previous;
-            layers.length = depth;
+            this.layers.length = depth;
         }
     };
-    const withTransform: RenderCtx['withTransform'] = (transform, draw) => {
-        const ctx = getCtx();
+    private withTransform: RenderCtx['withTransform'] = (transform, draw) => {
+        const ctx = this.getCtx();
         const { ox, oy, rotation, localScale, mirror } = ctx;
         Object.assign(ctx, transform);
         try {
@@ -456,23 +496,26 @@ function drawingMethods(
             Object.assign(ctx, { ox, oy, rotation, localScale, mirror });
         }
     };
-    const gradientPolygon: RenderCtx['gradientPolygon'] = (
+    private gradientPolygon: RenderCtx['gradientPolygon'] = (
         points,
         fill,
         opts,
     ) => {
-        push({
+        this.push({
             kind: 'path',
-            points: points.map((v) => getCtx().screenPoint(...v)),
+            points: points.map((v) => this.getCtx().screenPoint(...v)),
             fill,
             ...opts,
         });
     };
-    const visible: RenderCtx['visible'] = (bounds, margin = 0) => {
-        const left = getCtx().cam - margin;
-        const right = getCtx().cam + getCtx().VW + margin;
-        const top = -getCtx().vertical - margin;
-        const bottom = getCtx().H / getCtx().scale - getCtx().vertical + margin;
+    private visible: RenderCtx['visible'] = (bounds, margin = 0) => {
+        const left = this.getCtx().cam - margin;
+        const right = this.getCtx().cam + this.getCtx().VW + margin;
+        const top = -this.getCtx().vertical - margin;
+        const bottom =
+            this.getCtx().H / this.getCtx().scale -
+            this.getCtx().vertical +
+            margin;
         return (
             bounds.right > left &&
             bounds.left < right &&
@@ -480,88 +523,104 @@ function drawingMethods(
             bounds.top < bottom
         );
     };
-    const retainedGroup: RenderCtx['retainedGroup'] = (key, bounds, draw) => {
-        if (!getCtx().visible(bounds)) {
+    private retainedGroup: RenderCtx['retainedGroup'] = (key, bounds, draw) => {
+        if (!this.getCtx().visible(bounds)) {
             return;
         }
-        let geometry = retained.get(key);
+        let geometry = this.retained.get(key);
         if (!geometry) {
             const saved = {
-                commands: getCtx().commands,
-                cam: getCtx().cam,
-                vertical: getCtx().vertical,
-                scale: getCtx().scale,
-                ox: getCtx().ox,
-                oy: getCtx().oy,
-                rotation: getCtx().rotation,
-                localScale: getCtx().localScale,
-                mirror: getCtx().mirror,
-                layer: getCtx().layer,
+                commands: this.getCtx().commands,
+                cam: this.getCtx().cam,
+                vertical: this.getCtx().vertical,
+                scale: this.getCtx().scale,
+                ox: this.getCtx().ox,
+                oy: this.getCtx().oy,
+                rotation: this.getCtx().rotation,
+                localScale: this.getCtx().localScale,
+                mirror: this.getCtx().mirror,
+                layer: this.getCtx().layer,
             };
-            getCtx().commands = [];
-            getCtx().cam =
-                getCtx().vertical =
-                getCtx().ox =
-                getCtx().oy =
-                getCtx().rotation =
+            this.getCtx().commands = [];
+            this.getCtx().cam =
+                this.getCtx().vertical =
+                this.getCtx().ox =
+                this.getCtx().oy =
+                this.getCtx().rotation =
                     0;
-            getCtx().scale = getCtx().localScale = 1;
-            getCtx().mirror = getCtx().layer = null;
+            this.getCtx().scale = this.getCtx().localScale = 1;
+            this.getCtx().mirror = this.getCtx().layer = null;
             try {
                 draw();
-                geometry = getCtx().commands;
-                retained.set(key, geometry);
+                geometry = this.getCtx().commands;
+                this.retained.set(key, geometry);
             } finally {
-                Object.assign(getCtx(), saved);
+                Object.assign(this.getCtx(), saved);
             }
         }
         const transform = {
-            e11: getCtx().scale,
+            e11: this.getCtx().scale,
             e12: 0,
-            e13: -getCtx().cam * getCtx().scale,
+            e13: -this.getCtx().cam * this.getCtx().scale,
             e21: 0,
-            e22: getCtx().scale,
-            e23: getCtx().vertical * getCtx().scale,
+            e22: this.getCtx().scale,
+            e23: this.getCtx().vertical * this.getCtx().scale,
             e31: 0 as const,
             e32: 0 as const,
             e33: 1 as const,
         };
         const screenBounds = {
-            left: (bounds.left - getCtx().cam) * getCtx().scale,
-            top: (bounds.top + getCtx().vertical) * getCtx().scale,
-            right: (bounds.right - getCtx().cam) * getCtx().scale,
-            bottom: (bounds.bottom + getCtx().vertical) * getCtx().scale,
+            left: (bounds.left - this.getCtx().cam) * this.getCtx().scale,
+            top: (bounds.top + this.getCtx().vertical) * this.getCtx().scale,
+            right: (bounds.right - this.getCtx().cam) * this.getCtx().scale,
+            bottom:
+                (bounds.bottom + this.getCtx().vertical) * this.getCtx().scale,
         };
         const layer: LayerSpec = {
             key: `retained:${key}`,
             retained: { geometry: key, transform, bounds: screenBounds },
         };
-        getCtx().commands.push(
+        this.getCtx().commands.push(
             ...geometry.map((command) => ({ ...command, layer })),
         );
     };
-    const ripple: RenderCtx['ripple'] = (x, y, rx, ry, width, color) => {
+    private ripple: RenderCtx['ripple'] = (
+        x,
+        y,
+        rx,
+        ry,
+        {
+            width,
+            color,
+        }: {
+            width: number;
+            color: string;
+        },
+    ) => {
         const points: Vector[] = [];
         for (let i = 0; i <= 24; i++) {
-            const a = (i / 24) * TAU;
+            const a = (i / 24) * this.TAU;
             points.push([x + rx * Math.cos(a), y + ry * Math.sin(a)]);
         }
         for (let i = 24; i >= 0; i--) {
-            const a = (i / 24) * TAU;
+            const a = (i / 24) * this.TAU;
             points.push([
                 x + Math.max(0, rx - width) * Math.cos(a),
                 y + Math.max(0, ry - width * 0.35) * Math.sin(a),
             ]);
         }
-        getCtx().polygon(points, color);
+        this.getCtx().polygon(points, color);
     };
-    const tint: RenderCtx['tint'] = (hex, alpha) =>
-        hex +
-        Math.round(clamp(alpha, 0, 1) * 255)
-            .toString(16)
-            .padStart(2, '0');
-    const rect: RenderCtx['rect'] = (x, y, w, h, c) => {
-        getCtx().polygon(
+    private tint: RenderCtx['tint'] = (hex, alpha) => {
+        return (
+            hex +
+            Math.round(this.clamp(alpha, 0, 1) * 255)
+                .toString(16)
+                .padStart(2, '0')
+        );
+    };
+    private rect: RenderCtx['rect'] = (x, y, w, h, c) => {
+        this.getCtx().polygon(
             [
                 [x, y],
                 [x + w, y],
@@ -571,23 +630,47 @@ function drawingMethods(
             c,
         );
     };
-    const ellipse: RenderCtx['ellipse'] = (x, y, rx, ry, c, opts) => {
-        getCtx().polygon(
+    private ellipse: RenderCtx['ellipse'] = (
+        x,
+        y,
+        rx,
+        ry,
+        {
+            c,
+            opts,
+        }: {
+            c: string | Gradient;
+            opts: PathOptions | undefined;
+        },
+    ) => {
+        this.getCtx().polygon(
             Array.from({ length: 16 }, (_, i) => [
-                x + rx * Math.cos((i / 16) * TAU),
-                y + ry * Math.sin((i / 16) * TAU),
+                x + rx * Math.cos((i / 16) * this.TAU),
+                y + ry * Math.sin((i / 16) * this.TAU),
             ]),
             c,
             opts,
         );
     };
-    const rod: RenderCtx['rod'] = (x, y, xx, yy, w, c) => {
+    private rod: RenderCtx['rod'] = (
+        x,
+        y,
+        xx,
+        yy,
+        {
+            w,
+            c,
+        }: {
+            w: number;
+            c: string;
+        },
+    ) => {
         const dx = xx - x;
         const dy = yy - y;
         const l = Math.hypot(dx, dy) || 1;
         const nx = ((-dy / l) * w) / 2;
         const ny = ((dx / l) * w) / 2;
-        getCtx().polygon(
+        this.getCtx().polygon(
             [
                 [x + nx, y + ny],
                 [xx + nx, yy + ny],
@@ -597,25 +680,47 @@ function drawingMethods(
             c,
         );
     };
-    const measureText: RenderCtx['measureText'] = (
+    private measureText: RenderCtx['measureText'] = (
         content,
         size,
         font = SIGN_FONT,
-    ) => getCtx().textWidth(fitGlyphs(content), font) * size;
-    const pushText = (
+    ) => {
+        return this.getCtx().textWidth(fitGlyphs(content), font) * size;
+    };
+    private pushText: (
         content: string,
         cx: number,
         cy: number,
         size: number,
-        rotation: number,
-        fill: string,
-        opts: TextOptions = {},
+        {
+            rotation,
+            fill,
+            opts,
+        }: {
+            rotation: number;
+            fill: string;
+            opts?: TextOptions;
+        },
+    ) => void = (
+        content: string,
+        cx: number,
+        cy: number,
+        size: number,
+        {
+            rotation,
+            fill,
+            opts = {},
+        }: {
+            rotation: number;
+            fill: string;
+            opts?: TextOptions;
+        },
     ) => {
         const font = opts.font ?? SIGN_FONT;
         content = fitGlyphs(content);
         const outline = opts.outline?.width ?? 0;
         const halfWidth =
-            (getCtx().textWidth(content, font) * size) / 2 + outline;
+            (this.getCtx().textWidth(content, font) * size) / 2 + outline;
         const halfHeight = size * 0.6 + outline;
         const c = Math.cos(rotation);
         const s = Math.sin(rotation);
@@ -641,64 +746,106 @@ function drawingMethods(
             ...(opts.outline ? { outline: opts.outline } : {}),
             ...(opts.opacity !== undefined ? { opacity: opts.opacity } : {}),
         };
-        push({ kind: 'text', points: box, text });
+        this.push({ kind: 'text', points: box, text });
     };
-    const text: RenderCtx['text'] = (content, x, y, size, fill, opts) => {
-        const unit = getCtx().scale * getCtx().localScale;
-        const [cx, cy] = getCtx().screenPoint(x, y);
-        const outline = opts?.outline && {
-            width: opts.outline.width * unit,
-            color: opts.outline.color,
-        };
-        pushText(content, cx, cy, size * unit, getCtx().rotation, fill, {
-            ...opts,
-            outline,
-        });
-    };
-    const screenText: RenderCtx['screenText'] = (
+    private text: RenderCtx['text'] = (
         content,
         x,
         y,
         size,
-        fill,
-        opts,
-    ) => pushText(content, x, y, size, opts?.rotation ?? 0, fill, opts);
-    const label: RenderCtx['label'] = (
+        {
+            fill,
+            opts,
+        }: {
+            fill: string;
+            opts: TextOptions | undefined;
+        },
+    ) => {
+        const unit = this.getCtx().scale * this.getCtx().localScale;
+        const [cx, cy] = this.getCtx().screenPoint(x, y);
+        const outline = opts?.outline && {
+            width: opts.outline.width * unit,
+            color: opts.outline.color,
+        };
+        this.pushText(content, cx, cy, size * unit, {
+            rotation: this.getCtx().rotation,
+            fill,
+            opts: {
+                ...opts,
+                outline,
+            },
+        });
+    };
+    private screenText: RenderCtx['screenText'] = (
+        content,
+        x,
+        y,
+        size,
+        {
+            fill,
+            opts,
+        }: {
+            fill: string;
+            opts: TextOptions | undefined;
+        },
+    ) => {
+        return this.pushText(content, x, y, size, {
+            rotation: opts?.rotation ?? 0,
+            fill,
+            opts,
+        });
+    };
+    private label: RenderCtx['label'] = (
         text,
         x,
         y,
         size = 12,
-        color = '#333d4b',
-        font = LABEL_FONT,
+        {
+            color = '#333d4b',
+            font = LABEL_FONT,
+        }: {
+            color?: string | undefined;
+            font?: FontName | undefined;
+        } = {},
     ) => {
-        getCtx().text(text, x, y - size * 0.35, size, color, { font });
+        this.getCtx().text(text, x, y - size * 0.35, size, {
+            fill: color,
+            opts: { font },
+        });
     };
-
-    return {
-        withTransform,
-        withLayer,
-        screenPoint,
-        polygon,
-        rgb,
-        rgba,
-        gradientFill,
-        pathCommand,
-        effectPath,
-        strokePath,
-        radialFill,
-        beginLayer,
-        endLayer,
-        gradientPolygon,
-        visible,
-        retainedGroup,
-        ripple,
-        tint,
-        rect,
-        ellipse,
-        rod,
-        measureText,
-        text,
-        screenText,
-        label,
-    };
+    constructor(getCtx: () => RenderCtx, retained: Map<string, DrawCommand[]>) {
+        this.getCtx = getCtx;
+        this.retained = retained;
+        this.TAU = Math.PI * 2;
+        this.layers = [];
+    }
+    api() {
+        return {
+            withTransform: this.withTransform,
+            withLayer: this.withLayer,
+            screenPoint: this.screenPoint,
+            polygon: this.polygon,
+            rgb: this.rgb,
+            rgba: this.rgba,
+            gradientFill: this.gradientFill,
+            pathCommand: this.pathCommand,
+            effectPath: this.effectPath,
+            strokePath: this.strokePath,
+            radialFill: this.radialFill,
+            beginLayer: this.beginLayer,
+            endLayer: this.endLayer,
+            gradientPolygon: this.gradientPolygon,
+            visible: this.visible,
+            retainedGroup: this.retainedGroup,
+            ripple: this.ripple,
+            tint: this.tint,
+            rect: this.rect,
+            ellipse: this.ellipse,
+            rod: this.rod,
+            measureText: this.measureText,
+            text: this.text,
+            screenText: this.screenText,
+            label: this.label,
+        };
+    }
 }

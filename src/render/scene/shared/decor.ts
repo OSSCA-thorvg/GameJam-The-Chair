@@ -1,16 +1,23 @@
 import { LEVEL } from '../../../game/level';
 
 import type { RenderCtx } from '../../context';
-
 export function plant(ctx: RenderCtx, x: number): void {
     const F = ctx.F;
-    ctx.ellipse(x + 2, F - 10, 20, 3.2, '#515c6d40');
+    ctx.ellipse(x + 2, F - 10, 20, 3.2, {
+        c: '#515c6d40',
+    });
     ctx.rect(x - 14, F - 40, 28, 30, '#f2efe6');
     ctx.rect(x - 14, F - 40, 28, 3, '#ffffff');
     ctx.rect(x + 8, F - 37, 6, 25, '#dcd6c6');
     ctx.rect(x - 12, F - 42, 24, 3, '#4a3a2c');
-    ctx.rod(x - 1, F - 42, x - 1, F - 110, 6, '#6b5436');
-    ctx.rod(x - 1, F - 42, x - 1, F - 110, 3, '#4e3d26');
+    ctx.rod(x - 1, F - 42, x - 1, F - 110, {
+        w: 6,
+        c: '#6b5436',
+    });
+    ctx.rod(x - 1, F - 42, x - 1, F - 110, {
+        w: 3,
+        c: '#4e3d26',
+    });
     const green = '#3f6b3a';
     const greenHi = '#5a8a4a';
     const cream = '#e8e4b8';
@@ -19,10 +26,17 @@ export function plant(ctx: RenderCtx, x: number): void {
         cy: number,
         len: number,
         wid: number,
-        angle: number,
-        flip: number,
-        base: string,
-        hi: string,
+        {
+            angle,
+            flip,
+            base,
+            hi,
+        }: {
+            angle: number;
+            flip: number;
+            base: string;
+            hi: string;
+        },
     ) => {
         const c = Math.cos(angle);
         const s = Math.sin(angle);
@@ -77,32 +91,106 @@ export function plant(ctx: RenderCtx, x: number): void {
             ],
             bg,
         );
-        ctx.rod(
-            cx,
-            cy,
-            rot(len * 0.95, 0)[0],
-            rot(len * 0.95, 0)[1],
-            1.2,
-            '#2e4f2a',
-        );
+        ctx.rod(cx, cy, rot(len * 0.95, 0)[0], rot(len * 0.95, 0)[1], {
+            w: 1.2,
+            c: '#2e4f2a',
+        });
     };
-    drawLeaf(x - 1, F - 55, 26, 13, -2.5, 1, green, greenHi);
-    drawLeaf(x - 1, F - 60, 28, 14, -0.65, 1, green, greenHi);
-    drawLeaf(x - 1, F - 78, 30, 15, -2.3, 1, greenHi, cream);
-    drawLeaf(x - 1, F - 82, 30, 15, -0.85, 1, green, greenHi);
-    drawLeaf(x - 1, F - 100, 24, 12, -2.0, 1, green, greenHi);
-    drawLeaf(x - 1, F - 104, 26, 13, -1.15, 1, greenHi, cream);
-    drawLeaf(x - 1, F - 108, 20, 10, -1.57, 1, green, greenHi);
+    plantDetails(drawLeaf, x, F, green, {
+        greenHi,
+        cream,
+    });
 }
-
+function plantDetails(
+    drawLeaf: (
+        cx: number,
+        cy: number,
+        len: number,
+        wid: number,
+        {
+            angle,
+            flip,
+            base,
+            hi,
+        }: {
+            angle: number;
+            flip: number;
+            base: string;
+            hi: string;
+        },
+    ) => void,
+    x: number,
+    floor: number,
+    green: string,
+    {
+        greenHi,
+        cream,
+    }: {
+        greenHi: string;
+        cream: string;
+    },
+) {
+    drawLeaf(x - 1, floor - 55, 26, 13, {
+        angle: -2.5,
+        flip: 1,
+        base: green,
+        hi: greenHi,
+    });
+    drawLeaf(x - 1, floor - 60, 28, 14, {
+        angle: -0.65,
+        flip: 1,
+        base: green,
+        hi: greenHi,
+    });
+    drawLeaf(x - 1, floor - 78, 30, 15, {
+        angle: -2.3,
+        flip: 1,
+        base: greenHi,
+        hi: cream,
+    });
+    drawLeaf(x - 1, floor - 82, 30, 15, {
+        angle: -0.85,
+        flip: 1,
+        base: green,
+        hi: greenHi,
+    });
+    drawLeaf(x - 1, floor - 100, 24, 12, {
+        angle: -2.0,
+        flip: 1,
+        base: green,
+        hi: greenHi,
+    });
+    drawLeaf(x - 1, floor - 104, 26, 13, {
+        angle: -1.15,
+        flip: 1,
+        base: greenHi,
+        hi: cream,
+    });
+    drawLeaf(x - 1, floor - 108, 20, 10, {
+        angle: -1.57,
+        flip: 1,
+        base: green,
+        hi: greenHi,
+    });
+}
 export function desk(ctx: RenderCtx, x: number): void {
     const F = ctx.F;
     const C = ctx.C;
-    ctx.ellipse(x + 10, F - 25, 8, 2.1, '#515c6d46');
-    ctx.ellipse(x + 128, F - 25, 8, 2.1, '#515c6d46');
+    ctx.ellipse(x + 10, F - 25, 8, 2.1, {
+        c: '#515c6d46',
+    });
+    ctx.ellipse(x + 128, F - 25, 8, 2.1, {
+        c: '#515c6d46',
+    });
     ctx.rect(x, F - 105, 140, 9, C.wood);
-    ctx.rod(x + 10, F - 95, x + 10, F - 25, 6, C.steel);
-    ctx.rod(x + 128, F - 95, x + 128, F - 25, 6, C.steel);
+    ctx.rod(x + 10, F - 95, x + 10, F - 25, {
+        w: 6,
+        c: C.steel,
+    });
+    ctx.rod(x + 128, F - 95, x + 128, F - 25, {
+        w: 6,
+        c: C.steel,
+    });
     ctx.rect(x + 45, F - 165, 53, 40, '#495569');
     const phase = ctx.monitors.find((monitor) => monitor.desk === x);
     const screenColor = phase?.active
@@ -124,23 +212,21 @@ export function desk(ctx: RenderCtx, x: number): void {
             [x + 128, F - 108],
             [x + 15, F - 108],
         ],
-        ctx.gradientFill(
-            x + 71,
-            F - 160,
-            x + 71,
-            F - 108,
-            [
+        ctx.gradientFill(x + 71, F - 160, x + 71, F - 108, {
+            stops: [
                 [0, glowColor],
                 [1, glowColor + '00'],
             ],
-            flicker * (phase?.active ? 0.55 : 0.3),
-        ),
+            alpha: flicker * (phase?.active ? 0.55 : 0.3),
+        }),
     );
     ctx.rect(x + 52, F - 158, 39, 2, ctx.tint('#ffffff', flicker * 0.35));
-    ctx.rod(x + 70, F - 125, x + 70, F - 110, 5, C.steel);
+    ctx.rod(x + 70, F - 125, x + 70, F - 110, {
+        w: 5,
+        c: C.steel,
+    });
     ctx.rect(x + 40, F - 110, 63, 5, '#526274');
 }
-
 export function binBack(ctx: RenderCtx): void {
     const F = ctx.F;
     const bin = ctx.bin;
@@ -154,9 +240,10 @@ export function binBack(ctx: RenderCtx): void {
         ],
         '#687b7d',
     );
-    ctx.ellipse(bin.x, F - 8, 79, 12, '#303d44');
+    ctx.ellipse(bin.x, F - 8, 79, 12, {
+        c: '#303d44',
+    });
 }
-
 export function binFront(ctx: RenderCtx): void {
     const F = ctx.F;
     const bin = ctx.bin;
@@ -170,12 +257,16 @@ export function binFront(ctx: RenderCtx): void {
         '#8d9c96',
     );
     for (let x = bin.a + 23; x < bin.b - 10; x += 18) {
-        ctx.rod(x, F + 15, x + 4, bin.bottom - 12, 2, '#6e807c');
+        ctx.rod(x, F + 15, x + 4, bin.bottom - 12, {
+            w: 2,
+            c: '#6e807c',
+        });
     }
-    ctx.ellipse(bin.x, F + 3, 78, 7, '#a4b1a5');
+    ctx.ellipse(bin.x, F + 3, 78, 7, {
+        c: '#a4b1a5',
+    });
     ctx.rect(bin.x - 27, F + 35, 54, 29, '#d7dcc7');
 }
-
 export function practiceFloor(ctx: RenderCtx): void {
     if (ctx.cam > 340) {
         return;
@@ -214,12 +305,14 @@ export function practiceFloor(ctx: RenderCtx): void {
                 F - 9 - Math.sin((age / 1.3) * Math.PI) * (45 + (i % 3) * 15);
             ctx.rotation = age * (i % 2 ? 2 : -2);
             ctx.rect(-10, -5, 20, 10, C.paper);
-            ctx.rod(-6, -1, 5, -1, 1, '#a2aaa8');
+            ctx.rod(-6, -1, 5, -1, {
+                w: 1,
+                c: '#a2aaa8',
+            });
         }
         ctx.ox = ctx.oy = ctx.rotation = 0;
     }
 }
-
 export function checkpointFlag(
     ctx: RenderCtx,
     x: number,
@@ -231,7 +324,10 @@ export function checkpointFlag(
             ? ctx.clamp((1.5 - ctx.saveFlash) / 0.45, 0, 1)
             : 1;
     const height = active ? 25 + 55 * raising : 25;
-    ctx.rod(x, y, x, y - 93, 3, '#677d7e');
+    ctx.rod(x, y, x, y - 93, {
+        w: 3,
+        c: '#677d7e',
+    });
     ctx.polygon(
         [
             [x, y - height],
@@ -241,14 +337,21 @@ export function checkpointFlag(
         active ? '#b8d6a2' : '#b4bab3',
     );
     if (active) {
-        ctx.rod(x + 7, y - height + 10, x + 12, y - height + 15, 2, '#526d66');
-        ctx.rod(x + 12, y - height + 15, x + 21, y - height + 6, 2, '#526d66');
+        ctx.rod(x + 7, y - height + 10, x + 12, y - height + 15, {
+            w: 2,
+            c: '#526d66',
+        });
+        ctx.rod(x + 12, y - height + 15, x + 21, y - height + 6, {
+            w: 2,
+            c: '#526d66',
+        });
     }
     if (ctx.state.lossReason && active) {
-        ctx.ellipse(x, y + 4, 27, 5, '#d7cf9b');
+        ctx.ellipse(x, y + 4, 27, 5, {
+            c: '#d7cf9b',
+        });
     }
 }
-
 export function chairPictogram(
     ctx: RenderCtx,
     x: number,
@@ -261,12 +364,25 @@ export function chairPictogram(
     ctx.rect(x - 19, y + 12, 11, 24, '#557f78');
     ctx.rect(x - 18, y + 14, 3, 11, '#e2eee0');
     ctx.rect(x - 18, y + 23, 10, 3, '#e2eee0');
-    ctx.rod(x - 13, y + 26, x - 13, y + 30, 2, '#e2eee0');
-    ctx.rod(x - 17, y + 30, x - 9, y + 30, 2, '#e2eee0');
-    ctx.ellipse(x - 16, y + 33, 1.5, 1.5, '#e2eee0');
-    ctx.ellipse(x - 10, y + 33, 1.5, 1.5, '#e2eee0');
+    ctx.rod(x - 13, y + 26, x - 13, y + 30, {
+        w: 2,
+        c: '#e2eee0',
+    });
+    ctx.rod(x - 17, y + 30, x - 9, y + 30, {
+        w: 2,
+        c: '#e2eee0',
+    });
+    ctx.ellipse(x - 16, y + 33, 1.5, 1.5, {
+        c: '#e2eee0',
+    });
+    ctx.ellipse(x - 10, y + 33, 1.5, 1.5, {
+        c: '#e2eee0',
+    });
     if (kind === 'exit') {
-        ctx.rod(x + 3, y + 21, x + 26, y + 21, 4, '#e2eee0');
+        ctx.rod(x + 3, y + 21, x + 26, y + 21, {
+            w: 4,
+            c: '#e2eee0',
+        });
         ctx.polygon(
             [
                 [x + 18, y + 12],

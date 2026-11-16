@@ -1,9 +1,6 @@
 import type { RenderCtx } from '../../context';
-
 export const MAX_STAIN_LAYERS = 3;
-
 type Pt = [number, number];
-
 const SHIRT: Pt[] = [
     [-17, -63],
     [-6, -64],
@@ -54,19 +51,16 @@ const SEAT: Pt[] = [
     [32, -3],
     [-30, -3],
 ];
-
 const MUD = {
     rim: '#6d6143',
     body: '#8c7f57',
     light: '#a99c70',
     dark: '#4f4a35',
 };
-
 const hash = (n: number) => {
     const v = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return v - Math.floor(v);
 };
-
 function clipTo(poly: Pt[], clip: Pt[]): Pt[] {
     let out = poly;
     for (let i = 0; i < clip.length && out.length; i++) {
@@ -93,7 +87,6 @@ function clipTo(poly: Pt[], clip: Pt[]): Pt[] {
     }
     return out;
 }
-
 function splatShape(
     x: number,
     y: number,
@@ -119,21 +112,25 @@ function splatShape(
     }
     return points;
 }
-
 function fill(ctx: RenderCtx, poly: Pt[], color: string) {
     if (poly.length >= 3) {
         ctx.polygon(poly, color);
     }
 }
-
 function splat(
     ctx: RenderCtx,
     on: Pt[],
     x: number,
     y: number,
-    r: number,
-    seed: number,
-    drip = true,
+    {
+        r,
+        seed,
+        drip = true,
+    }: {
+        r: number;
+        seed: number;
+        drip?: boolean;
+    },
 ) {
     fill(ctx, clipTo(splatShape(x, y, r, seed), on), MUD.rim);
     fill(
@@ -186,32 +183,61 @@ function splat(
         );
     }
 }
-
 export function riderStains(ctx: RenderCtx, soaks: number): void {
     const level = Math.min(soaks, MAX_STAIN_LAYERS);
     if (level >= 1) {
-        splat(ctx, SHIRT, -6, -46, 5.2, 1);
-        splat(ctx, THIGH, 6, -21, 4.2, 2, false);
+        splat(ctx, SHIRT, -6, -46, {
+            r: 5.2,
+            seed: 1,
+        });
+        splat(ctx, THIGH, 6, -21, {
+            r: 4.2,
+            seed: 2,
+            drip: false,
+        });
     }
     if (level >= 2) {
-        splat(ctx, SHIRT, -12, -30, 4, 4);
-        splat(ctx, SHIN, 28, -6, 3.4, 5);
+        splat(ctx, SHIRT, -12, -30, {
+            r: 4,
+            seed: 4,
+        });
+        splat(ctx, SHIN, 28, -6, {
+            r: 3.4,
+            seed: 5,
+        });
     }
     if (level >= 3) {
-        splat(ctx, SHIRT, -11, -57, 4.4, 7);
-        splat(ctx, THIGH, 17, -20, 4.6, 8, false);
-        splat(ctx, SHIN, 30, 5, 2.8, 9, false);
+        splat(ctx, SHIRT, -11, -57, {
+            r: 4.4,
+            seed: 7,
+        });
+        splat(ctx, THIGH, 17, -20, {
+            r: 4.6,
+            seed: 8,
+            drip: false,
+        });
+        splat(ctx, SHIN, 30, 5, {
+            r: 2.8,
+            seed: 9,
+            drip: false,
+        });
     }
 }
-
 export function riderFaceStains(ctx: RenderCtx, soaks: number): void {
     const level = Math.min(soaks, MAX_STAIN_LAYERS);
     if (level >= 2) {
-        splat(ctx, FACE, 6, -73, 2.6, 11);
+        splat(ctx, FACE, 6, -73, {
+            r: 2.6,
+            seed: 11,
+        });
         fill(ctx, clipTo(splatShape(12, -79, 1.1, 12), FACE), MUD.rim);
     }
     if (level >= 3) {
-        splat(ctx, HAIR, 2, -93, 3.4, 13, false);
+        splat(ctx, HAIR, 2, -93, {
+            r: 3.4,
+            seed: 13,
+            drip: false,
+        });
         ctx.polygon(
             [
                 [-2, -88],
@@ -223,33 +249,37 @@ export function riderFaceStains(ctx: RenderCtx, soaks: number): void {
             '#2d323c',
         );
         const fall = (ctx.t * 1.3) % 1;
-        ctx.ellipse(3, -79 + fall * 9, 0.9, 1.3, MUD.body);
+        ctx.ellipse(3, -79 + fall * 9, 0.9, 1.3, {
+            c: MUD.body,
+        });
     }
 }
-
 export function chairStains(ctx: RenderCtx, soaks: number): void {
     const level = Math.min(soaks, MAX_STAIN_LAYERS);
     if (level >= 2) {
-        splat(ctx, BACK, -31, -48, 4.4, 21);
+        splat(ctx, BACK, -31, -48, {
+            r: 4.4,
+            seed: 21,
+        });
     }
     if (level >= 3) {
-        splat(ctx, SEAT, -22, -8, 4, 22, false);
+        splat(ctx, SEAT, -22, -8, {
+            r: 4,
+            seed: 22,
+            drip: false,
+        });
         for (let i = 0; i < 3; i++) {
             const fall = (ctx.t * 1.1 + i * 0.37) % 1;
-            ctx.ellipse(
-                -24 + i * 21,
-                -2 + fall * 22,
-                1,
-                1.5,
-                MUD.body +
+            ctx.ellipse(-24 + i * 21, -2 + fall * 22, 1, 1.5, {
+                c:
+                    MUD.body +
                     Math.round(255 * (1 - fall * 0.8))
                         .toString(16)
                         .padStart(2, '0'),
-            );
+            });
         }
     }
 }
-
 export function riderSplash(ctx: RenderCtx, life: number): void {
     const k = Math.max(0, Math.min(1, (1.7 - life) / 0.6));
     if (k <= 0 || k >= 1) {
@@ -260,15 +290,12 @@ export function riderSplash(ctx: RenderCtx, life: number): void {
         const d = 10 + 34 * k * (0.6 + 0.4 * hash(i * 3.3));
         const x = -4 + Math.cos(a) * d;
         const y = -30 + Math.sin(a) * d + 30 * k * k;
-        ctx.ellipse(
-            x,
-            y,
-            1.6 * (1 - k * 0.5),
-            2.2 * (1 - k * 0.5),
-            '#7f8f6a' +
+        ctx.ellipse(x, y, 1.6 * (1 - k * 0.5), 2.2 * (1 - k * 0.5), {
+            c:
+                '#7f8f6a' +
                 Math.round(200 * (1 - k))
                     .toString(16)
                     .padStart(2, '0'),
-        );
+        });
     }
 }

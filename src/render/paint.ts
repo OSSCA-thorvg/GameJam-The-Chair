@@ -7,27 +7,33 @@ import type { RenderCtx } from './context';
 import type { PaintPool } from './paint/thorvg';
 import type { LayerOverrides, RenderStats } from './perf';
 import type { Canvas, ThorVGNamespace } from '@thorvg/webcanvas';
-
 export {
     createPaintPool,
     thorvgTextWidth,
     type PaintPool,
 } from './paint/thorvg';
-
 export function paint(
     ctx: RenderCtx,
     tvg: ThorVGNamespace | null,
     canvas: Canvas | null,
     pool: PaintPool,
-    stats?: RenderStats,
-    overrides?: LayerOverrides,
+    {
+        stats,
+        overrides,
+    }: {
+        stats?: RenderStats;
+        overrides?: LayerOverrides;
+    } = {},
 ): void {
     const commands = applyLayerOverrides(ctx.commands, overrides);
     if (stats) {
         stats.commands = commands.length;
     }
     if (tvg && canvas) {
-        paintThorvg(ctx, tvg, canvas, pool, collect(commands), stats);
+        paintThorvg(ctx, tvg, canvas, pool, {
+            items: collect(commands),
+            stats,
+        });
     } else {
         const start = stats ? performance.now() : 0;
         const bg = ctx.bg;

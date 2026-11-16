@@ -3,27 +3,16 @@ import { STAGE_FIVE as C } from '../data';
 
 import type { Input, Player } from '../../../types';
 import type { OrbitState } from '../data';
-
 type Beam = (typeof C.satelliteLight.beams)[number];
 type Aim = { x: number; y: number };
-
 export function orbitStep(
     orbit: Readonly<OrbitState>,
     player: Readonly<Player>,
     keys: readonly Input[],
     dt: number,
 ): {
-    orbit: {
-        age: number;
-        phase: 'entry' | 'rings' | 'door' | 'parked';
-        z: number;
-        speed: number;
-        rings: number;
-        aims: ReadonlyArray<{ readonly x: number; readonly y: number }>;
-        freeze: number;
-        settled: number;
-    };
-    p: { x: number; y: number; vx: number; vy: number; a: number; w: number };
+    orbit: OrbitState;
+    p: Player;
     checkpoint: boolean;
     flag: number;
     satelliteLit: boolean;
@@ -54,50 +43,7 @@ export function orbitStep(
             spraying: true,
         };
     }
-    if (next.phase === 'entry' && next.age >= C.entryTime) {
-        next.phase = C.rings.length ? 'rings' : 'door';
-    }
-    const controlled = next.phase !== 'entry';
-    const auto = autopilot(next);
-    const steer = auto
-        ? 0
-        : controlled
-          ? 1
-          : Math.min(1, next.age / C.entryTime);
-    p.vx = steerAxis(
-        p.vx,
-        p.x,
-        (held('right') - held('left')) * steer,
-        -C.bounds.x,
-        C.bounds.x,
-        dt,
-    );
-    p.vy = steerAxis(
-        p.vy,
-        p.y,
-        (held('forward') - held('back')) * steer,
-        -C.bounds.y,
-        C.bounds.y,
-        dt,
-    );
-    p.a += (-p.vx * C.bankSlide - p.a) * Math.min(1, dt * C.bankResponse);
-    const top = gearAt(next.z).maxSpeed;
-    const landing = auto
-        ? Math.max(
-              C.autopilot.landing,
-              Math.min(C.cruise, (C.checkpoint.z - next.z) * C.autopilot.brake),
-          )
-        : 0;
-    if (auto) {
-        next.speed +=
-            (landing - next.speed) * (1 - Det.exp(-C.autopilot.response * dt));
-    } else if (controlled) {
-        next.speed =
-            next.speed < top
-                ? Math.min(top, next.speed + C.thrust * dt)
-                : next.speed;
-    }
-    next.aims = aimAt(next, p, dt);
+    const { controlled, auto, landing } = advanceOrbitPhase(next, p, held, dt);
     const beam = controlled ? satelliteLightOn(next, p, next.z) : null;
     if (beam) {
         satelliteLightShove(next, p, beam, dt);
@@ -129,7 +75,62 @@ export function orbitStep(
         spraying: !auto || next.speed < landing - 1,
     };
 }
-
+function advanceOrbitPhase(
+    next: OrbitState,
+    p: Player,
+    held: (key: Input) => 1 | 0,
+    dt: number,
+) {
+    if (next.phase === 'entry' && next.age >= C.entryTime) {
+        next.phase = C.rings.length ? 'rings' : 'door';
+    }
+    const controlled = next.phase !== 'entry';
+    const auto = autopilot(next);
+    const steer = auto
+        ? 0
+        : controlled
+          ? 1
+          : Math.min(1, next.age / C.entryTime);
+    p.vx = steerAxis(
+        p.vx,
+        p.x,
+        (held('right') - held('left')) * steer,
+        -C.bounds.x,
+        {
+            high: C.bounds.x,
+            dt,
+        },
+    );
+    p.vy = steerAxis(
+        p.vy,
+        p.y,
+        (held('forward') - held('back')) * steer,
+        -C.bounds.y,
+        {
+            high: C.bounds.y,
+            dt,
+        },
+    );
+    p.a += (-p.vx * C.bankSlide - p.a) * Math.min(1, dt * C.bankResponse);
+    const top = gearAt(next.z).maxSpeed;
+    const landing = auto
+        ? Math.max(
+              C.autopilot.landing,
+              Math.min(C.cruise, (C.checkpoint.z - next.z) * C.autopilot.brake),
+          )
+        : 0;
+    if (auto) {
+        next.speed +=
+            (landing - next.speed) * (1 - Det.exp(-C.autopilot.response * dt));
+    } else if (controlled) {
+        next.speed =
+            next.speed < top
+                ? Math.min(top, next.speed + C.thrust * dt)
+                : next.speed;
+    }
+    next.aims = aimAt(next, p, dt);
+    return { controlled, auto, landing };
+}
 export function gearAt(z: number): {
     from: number;
     maxSpeed: number;
@@ -145,27 +146,29 @@ export function gearAt(z: number): {
     }
     return { index, ...C.gears[index] };
 }
-
 export function autopilot(
     orbit: Readonly<Pick<OrbitState, 'phase' | 'z'>>,
 ): boolean {
     return orbit.phase === 'door' && orbit.z >= C.autopilot.from;
 }
-
 function steerAxis(
     v: number,
     at: number,
     input: number,
     low: number,
-    high: number,
-    dt: number,
+    {
+        high,
+        dt,
+    }: {
+        high: number;
+        dt: number;
+    },
 ) {
     const over = at > high ? at - high : at < low ? at - low : 0;
     const target = input * C.steer.speed - over * C.steer.edge;
     const rate = input !== 0 || over !== 0 ? C.steer.response : C.steer.release;
     return v + (target - v) * (1 - Det.exp(-rate * dt));
 }
-
 export function satelliteLightArrival(
     beam: Beam,
     z: number,
@@ -173,7 +176,6 @@ export function satelliteLightArrival(
 ): number {
     return (beam.from - z) / Math.max(C.cruise * 0.4, speed);
 }
-
 function aimAt(
     orbit: Readonly<OrbitState>,
     p: Readonly<Pick<Player, 'x' | 'y' | 'vx' | 'vy'>>,
@@ -203,7 +205,6 @@ function aimAt(
         return aim;
     });
 }
-
 export function satelliteLightLocked(
     beam: Beam,
     z: number,
@@ -211,7 +212,6 @@ export function satelliteLightLocked(
 ): boolean {
     return satelliteLightArrival(beam, z, speed) <= gearAt(beam.from).lock;
 }
-
 function overlap(aim: Aim, beam: Beam, p: Readonly<Pick<Player, 'x' | 'y'>>) {
     const r = C.satelliteLight.chairRadius;
     if (beam.shape === 'circle') {
@@ -225,7 +225,6 @@ function overlap(aim: Aim, beam: Beam, p: Readonly<Pick<Player, 'x' | 'y'>>) {
         y: beam.half.y + r - Math.abs(p.y - aim.y),
     };
 }
-
 export function satelliteLightOn(
     orbit: Readonly<Pick<OrbitState, 'aims'>>,
     p: Readonly<Pick<Player, 'x' | 'y'>>,
@@ -244,7 +243,6 @@ export function satelliteLightOn(
     }
     return null;
 }
-
 export function inSatelliteLight(
     orbit: Readonly<Pick<OrbitState, 'aims'>>,
     p: Readonly<Pick<Player, 'x' | 'y'>>,
@@ -252,7 +250,6 @@ export function inSatelliteLight(
 ): boolean {
     return satelliteLightOn(orbit, p, z) !== null;
 }
-
 function satelliteLightShove(
     next: OrbitState,
     p: Player,
@@ -269,7 +266,6 @@ function satelliteLightShove(
         p.vy += (p.y >= aim.y ? 1 : -1) * shove * dt;
     }
 }
-
 function advanceRings(next: OrbitState, p: Player) {
     const ring = C.rings.at(next.rings);
     if (!ring || next.z < ring.z) {
@@ -285,7 +281,6 @@ function advanceRings(next: OrbitState, p: Player) {
         next.speed = Math.min(next.speed, C.approachSpeed);
     }
 }
-
 function arriveAtDoor(next: OrbitState, p: Player) {
     if (next.phase !== 'door' || next.z < C.checkpoint.z) {
         return false;

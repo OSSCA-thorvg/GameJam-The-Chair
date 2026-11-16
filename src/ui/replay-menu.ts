@@ -5,7 +5,6 @@ import { copyText, downloadJson, replayData, stamp } from './replay-store';
 import type { Recorder, ReplayFile } from '../game/replay';
 import type { Locale, Message } from '../i18n';
 import type { ErrorLog } from './replay-store';
-
 type Hooks = {
     recorder: Recorder;
     errorLog: ErrorLog;
@@ -17,71 +16,143 @@ type Entry = {
     file: ReplayFile;
     download: () => void;
 };
-
 export function bindReplayMenu(
     root: HTMLElement,
     getLocale: () => Locale,
     hooks: Hooks,
-): { destroy(): void } {
-    const controller = new AbortController();
-    const options = { signal: controller.signal };
-    const message = root.querySelector<HTMLElement>('[data-replay-message]');
-    const list = root.querySelector<HTMLOListElement>('[data-replay-list]');
-    const menu = root.querySelector<HTMLDetailsElement>('[data-replay-menu]');
-    const pauseMenu = root.querySelector<HTMLElement>('[data-pause-menu]');
-    const t = (text: Message) => translate(text, getLocale());
-    const say = (text: Message) => {
-        if (message) {
-            message.textContent = t(text);
+): {
+    destroy(): void;
+} {
+    return new ReplayMenuBinding(root, getLocale, hooks).api();
+}
+class ReplayMenuBinding {
+    private root!: HTMLElement;
+    private getLocale!: () => Locale;
+    private hooks!: Hooks;
+    private controller!: AbortController;
+    private options!: {
+        signal: AbortSignal;
+    };
+    private message!: HTMLElement | null;
+    private list!: HTMLOListElement | null;
+    private menu!: HTMLDetailsElement | null;
+    private pauseMenu!: HTMLElement | null;
+    private t: (text: Message) => string = (text: Message) => {
+        return translate(text, this.getLocale());
+    };
+    private say: (text: Message) => void = (text: Message) => {
+        if (this.message) {
+            this.message.textContent = this.t(text);
         }
     };
-    const on = (selector: string, action: () => void) =>
-        root
+    private on: (selector: string, action: () => void) => void | undefined = (
+        selector: string,
+        action: () => void,
+    ) => {
+        return this.root
             .querySelector(selector)
-            ?.addEventListener('click', action, options);
-
-    const stageName = (stage: number) => {
-        const key = `stageLabel.stage${stage}`;
-        return isMessage(key) ? t(key) : String(stage);
+            ?.addEventListener('click', action, this.options);
     };
-    const seconds = (file: ReplayFile) =>
-        `${(replayLength(file) / 120).toFixed(1)}s`;
-    const clock = (time: string) => {
+    private stageName: (stage: number) => string = (stage: number) => {
+        const key = `stageLabel.stage${stage}`;
+        return isMessage(key) ? this.t(key) : String(stage);
+    };
+    private seconds: (file: ReplayFile) => string = (file: ReplayFile) => {
+        return `${(replayLength(file) / 120).toFixed(1)}s`;
+    };
+    private clock: (time: string) => string = (time: string) => {
         const date = new Date(time);
         return Number.isNaN(date.getTime())
             ? ''
-            : date.toLocaleTimeString(getLocale(), {
+            : date.toLocaleTimeString(this.getLocale(), {
                   hour: '2-digit',
                   minute: '2-digit',
               });
     };
-
-    function entries(): Entry[] {
-        const attempts = hooks.recorder.attempts().map((file, i): Entry => ({
-            label: [
-                `#${i + 1}`,
-                stageName(file.start.stage),
-                seconds(file),
-                i === 0 && hooks.recorder.recording ? t('replay.current') : '',
-                file.error ? t('replay.error') : '',
-            ]
-                .filter(Boolean)
-                .join(' · '),
-            error: !!file.error,
-            file,
-            download: () =>
-                downloadJson(
-                    `the-chair-replay-stage${file.start.stage}-${stamp()}.json`,
-                    file,
+    private observer!: MutationObserver;
+    constructor(root: HTMLElement, getLocale: () => Locale, hooks: Hooks) {
+        this.root = root;
+        this.getLocale = getLocale;
+        this.hooks = hooks;
+        this.controller = new AbortController();
+        this.options = { signal: this.controller.signal };
+        this.message = this.root.querySelector<HTMLElement>(
+            '[data-replay-message]',
+        );
+        this.list =
+            this.root.querySelector<HTMLOListElement>('[data-replay-list]');
+        this.menu =
+            this.root.querySelector<HTMLDetailsElement>('[data-replay-menu]');
+        this.pauseMenu =
+            this.root.querySelector<HTMLElement>('[data-pause-menu]');
+        this.menu?.addEventListener('toggle', this.render, this.options);
+        this.observer = new MutationObserver(this.render);
+        if (this.pauseMenu) {
+            this.observer.observe(this.pauseMenu, {
+                attributes: true,
+                attributeFilter: ['hidden'],
+            });
+        }
+        this.observer.observe(this.root, {
+            attributes: true,
+            attributeFilter: ['lang'],
+        });
+        this.on('[data-replay-watch]', () => {
+            const file = this.hooks.recorder.latest();
+            if (file) {
+                this.hooks.watch(file);
+            } else {
+                this.say('replay.none');
+            }
+        });
+        this.on('[data-replay-copy]', () => {
+            copyText(
+                JSON.stringify(
+                    replayData(this.hooks.recorder, this.hooks.errorLog),
                 ),
-        }));
-        const errors = [...hooks.errorLog.entries]
+            )
+                .then((copied) => {
+                    this.say(copied ? 'replay.copied' : 'replay.copyFailed');
+                })
+                .catch(() => this.say('replay.copyFailed'));
+        });
+        this.on('[data-replay-download]', () =>
+            downloadJson(
+                `the-chair-replay-data-${stamp()}.json`,
+                replayData(this.hooks.recorder, this.hooks.errorLog),
+            ),
+        );
+    }
+    private entries = (): Entry[] => {
+        const attempts = this.hooks.recorder
+            .attempts()
+            .map((file, i): Entry => ({
+                label: [
+                    `#${i + 1}`,
+                    this.stageName(file.start.stage),
+                    this.seconds(file),
+                    i === 0 && this.hooks.recorder.recording
+                        ? this.t('replay.current')
+                        : '',
+                    file.error ? this.t('replay.error') : '',
+                ]
+                    .filter(Boolean)
+                    .join(' · '),
+                error: !!file.error,
+                file,
+                download: () =>
+                    downloadJson(
+                        `the-chair-replay-stage${file.start.stage}-${stamp()}.json`,
+                        file,
+                    ),
+            }));
+        const errors = [...this.hooks.errorLog.entries]
             .reverse()
             .flatMap((entry): Entry[] =>
                 entry.replay
                     ? [
                           {
-                              label: `⚠ ${[clock(entry.time), stageName(entry.replay.start.stage), entry.message].filter(Boolean).join(' · ')}`,
+                              label: `⚠ ${[this.clock(entry.time), this.stageName(entry.replay.start.stage), entry.message].filter(Boolean).join(' · ')}`,
                               error: true,
                               file: entry.replay,
                               download: () =>
@@ -89,8 +160,8 @@ export function bindReplayMenu(
                                       `the-chair-replay-error-${stamp()}.json`,
                                       {
                                           ...replayData(
-                                              hooks.recorder,
-                                              hooks.errorLog,
+                                              this.hooks.recorder,
+                                              this.hooks.errorLog,
                                           ),
                                           attempts: [],
                                           errors: [entry],
@@ -101,23 +172,22 @@ export function bindReplayMenu(
                     : [],
             );
         return [...attempts, ...errors];
-    }
-
-    function render() {
-        if (!list || !menu?.open) {
+    };
+    private render = () => {
+        if (!this.list || !this.menu?.open) {
             return;
         }
         const button = (text: Message, symbol: string, action: () => void) => {
             const element = document.createElement('button');
             element.type = 'button';
             element.textContent = symbol;
-            element.title = t(text);
-            element.setAttribute('aria-label', t(text));
+            element.title = this.t(text);
+            element.setAttribute('aria-label', this.t(text));
             element.addEventListener('click', action);
             return element;
         };
-        list.replaceChildren(
-            ...entries().map((entry) => {
+        this.list.replaceChildren(
+            ...this.entries().map((entry) => {
                 const item = document.createElement('li');
                 item.classList.toggle('replay-error', entry.error);
                 const label = document.createElement('span');
@@ -126,50 +196,23 @@ export function bindReplayMenu(
                 item.append(
                     label,
                     button('replay.watchThis', '▶', () =>
-                        hooks.watch(entry.file),
+                        this.hooks.watch(entry.file),
                     ),
                     button('replay.downloadThis', '⬇', entry.download),
                 );
                 return item;
             }),
         );
+    };
+    api(): {
+        destroy(): void;
+    } {
+        return {
+            destroy: this.apiDestroy,
+        };
     }
-
-    menu?.addEventListener('toggle', render, options);
-    const observer = new MutationObserver(render);
-    if (pauseMenu) {
-        observer.observe(pauseMenu, {
-            attributes: true,
-            attributeFilter: ['hidden'],
-        });
-    }
-    observer.observe(root, { attributes: true, attributeFilter: ['lang'] });
-
-    on('[data-replay-watch]', () => {
-        const file = hooks.recorder.latest();
-        if (file) {
-            hooks.watch(file);
-        } else {
-            say('replay.none');
-        }
-    });
-    on('[data-replay-copy]', () => {
-        copyText(JSON.stringify(replayData(hooks.recorder, hooks.errorLog)))
-            .then((copied) => {
-                say(copied ? 'replay.copied' : 'replay.copyFailed');
-            })
-            .catch(() => say('replay.copyFailed'));
-    });
-    on('[data-replay-download]', () =>
-        downloadJson(
-            `the-chair-replay-data-${stamp()}.json`,
-            replayData(hooks.recorder, hooks.errorLog),
-        ),
-    );
-    return {
-        destroy() {
-            controller.abort();
-            observer.disconnect();
-        },
+    private apiDestroy = () => {
+        this.controller.abort();
+        this.observer.disconnect();
     };
 }

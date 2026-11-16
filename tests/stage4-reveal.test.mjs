@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { loadSource } from './support/load.mjs';
-
 const {
     SKY_DEPARTURE,
     revealChairOrbit,
@@ -34,7 +33,6 @@ const {
     export { endingGlasses } from './src/render/scene/sky/player-glasses';
     export { skyCoursePlatform } from './src/render/scene/sky/course-art';
 `);
-
 test('the stage four billboard slogan fills its space without covering the portrait', () => {
     const ems = {
         흔들리지: 4,
@@ -72,7 +70,6 @@ test('the stage four billboard slogan fills its space without covering the portr
                 y: text.y,
             }));
     };
-
     const ko = renderLabels('ko', 230);
     const en = renderLabels('en', 230);
     assert.deepEqual(
@@ -106,7 +103,6 @@ test('the stage four billboard slogan fills its space without covering the portr
         'the slogan uses the billboard height instead of shrinking into one line',
     );
 });
-
 test('the ending settles before turning and finishes on its timer regardless of held movement', () => {
     const input = {
         sky: { ...createSky(), phase: 'reveal' },
@@ -149,77 +145,11 @@ test('the ending settles before turning and finishes on its timer regardless of 
     assert.equal(end.won, true);
     assert.equal(input.sky.age, 0);
 });
-
 test('the ending draws no slogans, only the departing promotion flag and the attendance line', () => {
     const game = createGame();
     game.startStage(4);
-    const base = game.getSnapshot();
-    for (const locale of ['en', 'ko']) {
-        for (const width of [320, 1000]) {
-            const { hold } = STAGE_FOUR.reveal;
-            for (const [phase, age] of /** @type {const} */ ([
-                ['reveal', 1],
-                ['reveal', 5],
-                ['depth', 0],
-                ['depth', hold * 0.3],
-                ['depth', hold - 0.1],
-            ])) {
-                const state = structuredClone(base);
-                Object.assign(state.sky, { phase, age });
-                const transforms = [];
-                const ctx = createRenderCtx({
-                    save() {},
-                    restore() {},
-                    transform(...matrix) {
-                        transforms.push(matrix);
-                    },
-                });
-                Object.assign(ctx, {
-                    state,
-                    player: state.player,
-                    mode: 'play',
-                    locale,
-                    W: width,
-                    H: 510,
-                });
-                const before = structuredClone(state);
-                drawSky(ctx);
-                assert.deepEqual(
-                    state,
-                    before,
-                    'cinematic rendering leaves gameplay untouched',
-                );
-                const expected =
-                    phase === 'reveal' && age < 2
-                        ? [locale === 'ko' ? '승진' : 'PROMOTED']
-                        : phase === 'depth' && age > hold - 1.2
-                          ? [
-                                locale === 'ko'
-                                    ? '근태 확인됨.'
-                                    : 'Attendance confirmed.',
-                            ]
-                          : [];
-                assert.deepEqual(
-                    ctx.commands
-                        .filter((command) => command.text)
-                        .map((command) => command.text.content),
-                    expected,
-                );
-                assert.deepEqual(transforms, []);
-                assert.ok(ctx.commands.length > 100);
-                for (const command of ctx.commands) {
-                    for (const point of [
-                        ...command.points,
-                        ...(command.curves ?? []),
-                    ]) {
-                        assert.ok(point.every(Number.isFinite));
-                    }
-                }
-            }
-        }
-    }
+    verifyDetails(game);
 });
-
 test('the camera orbits from side to back while keeping the chair in frame', () => {
     for (const width of [320, 1000]) {
         for (const orbit of [0, 0.25, 0.5, 0.75, 1]) {
@@ -249,7 +179,6 @@ test('the camera orbits from side to back while keeping the chair in frame', () 
         'the full width of the backrest becomes visible',
     );
 });
-
 test('the rotating illustration keeps the original hair silhouette and smooth round details', () => {
     const view = createSkyProjection(1000, 510, 0);
     endingChair(view, 2);
@@ -274,7 +203,6 @@ test('the rotating illustration keeps the original hair silhouette and smooth ro
         'casters and spray use smooth curves',
     );
 });
-
 test('the crown stays covered by hair throughout the orbit', () => {
     const covers = ([x, y], vertices) => {
         let inside = false;
@@ -315,7 +243,6 @@ test('the crown stays covered by hair throughout the orbit', () => {
         }
     }
 });
-
 test('the rear hair has a swept crown and a tapered nape instead of a rectangular silhouette', () => {
     const view = createSkyProjection(1000, 510, 1);
     endingHair(view, 0);
@@ -354,7 +281,6 @@ test('the rear hair has a swept crown and a tapered nape instead of a rectangula
         assert.ok(Number.isFinite(x) && Number.isFinite(y));
     }
 });
-
 const isArm = (color) =>
     typeof color === 'string' &&
     color.length >= 7 &&
@@ -376,7 +302,6 @@ const lensBounds = (pane) => {
         height: Math.max(...ys) - Math.min(...ys),
     };
 };
-
 test('the 3D glasses have lenses on the front of the face only: none on the sides', () => {
     const side = createSkyProjection(1000, 510, 0);
     endingGlasses(side, 0);
@@ -438,7 +363,6 @@ test('the 3D glasses have lenses on the front of the face only: none on the side
         'an eye behind each lens',
     );
 });
-
 test('blue lenses never number more than two while turning, and do not face through the back of the head', () => {
     for (const orbit of [0, 0.25, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]) {
         const view = createSkyProjection(1000, 510, orbit);
@@ -462,7 +386,79 @@ test('blue lenses never number more than two while turning, and do not face thro
         'lens back faces are culled from behind',
     );
 });
-
+function verifyDetails(game) {
+    const base = game.getSnapshot();
+    for (const locale of ['en', 'ko']) {
+        for (const width of [320, 1000]) {
+            const { hold } = STAGE_FOUR.reveal;
+            for (const [phase, age] of /** @type {const} */ ([
+                ['reveal', 1],
+                ['reveal', 5],
+                ['depth', 0],
+                ['depth', hold * 0.3],
+                ['depth', hold - 0.1],
+            ])) {
+                const state = structuredClone(base);
+                Object.assign(state.sky, { phase, age });
+                const transforms = [];
+                verifyDetailsDetails(transforms, state, locale, width, {
+                    phase,
+                    age,
+                    hold,
+                });
+            }
+        }
+    }
+}
+function verifyDetailsDetails(
+    transforms,
+    state,
+    locale,
+    width,
+    { phase, age, hold },
+) {
+    const ctx = createRenderCtx({
+        save() {},
+        restore() {},
+        transform(...matrix) {
+            transforms.push(matrix);
+        },
+    });
+    Object.assign(ctx, {
+        state,
+        player: state.player,
+        mode: 'play',
+        locale,
+        W: width,
+        H: 510,
+    });
+    const before = structuredClone(state);
+    drawSky(ctx);
+    assert.deepEqual(
+        state,
+        before,
+        'cinematic rendering leaves gameplay untouched',
+    );
+    const expected =
+        phase === 'reveal' && age < 2
+            ? [locale === 'ko' ? '승진' : 'PROMOTED']
+            : phase === 'depth' && age > hold - 1.2
+              ? [locale === 'ko' ? '근태 확인됨.' : 'Attendance confirmed.']
+              : [];
+    assert.deepEqual(
+        ctx.commands
+            .filter((command) => command.text)
+            .map((command) => command.text.content),
+        expected,
+    );
+    assert.deepEqual(transforms, []);
+    assert.ok(ctx.commands.length > 100);
+    for (const command of ctx.commands) {
+        for (const point of [...command.points, ...(command.curves ?? [])]) {
+            assert.ok(point.every(Number.isFinite));
+        }
+    }
+}
 function renderFrame(stage, setup) {
     const game = createGame();
     game.startStage(stage);
@@ -573,7 +569,6 @@ test('the reveal turns steadily from the side to behind the chair, keeping it ce
         );
     }
 });
-
 test('the watchers stay out of the flat side view and turn up, without fading, as the view turns into 3D', () => {
     const { settle, turn } = STAGE_FOUR.reveal;
     const watch = (phase, age) =>
@@ -605,7 +600,6 @@ test('the watchers stay out of the flat side view and turn up, without fading, a
         'the far speck shows before stage five',
     );
 });
-
 test('the attendance bubble appears just before stage five and stays into its first moments', () => {
     const bubble = (commands) =>
         commands.filter(
@@ -636,7 +630,6 @@ test('the attendance bubble appears just before stage five and stays into its fi
         'gone once stage five is under way',
     );
 });
-
 test('the departure leaves scenery behind before the quiet side view and is seekable', () => {
     const scenery = (age) =>
         revealFrame('reveal', age).filter(
@@ -672,7 +665,6 @@ test('the departure leaves scenery behind before the quiet side view and is seek
         'backward seeking restores the departure scenery',
     );
 });
-
 test('arrival spray shortens and settles into the existing chair animation', () => {
     const chair = (time, spray, arrival) => {
         const view = createSkyProjection(1000, 510, 0);
@@ -714,7 +706,6 @@ const cloudBodies = (commands, tone) =>
             command.fill.stops[0][1].slice(0, 3).join() ===
                 hex(tone.top).join(),
     );
-
 test('the ending clouds are bread clouds, not flat pale ovals', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     for (const [phase, age] of /** @type {const} */ ([
@@ -737,7 +728,6 @@ test('the ending clouds are bread clouds, not flat pale ovals', () => {
         );
     }
 });
-
 test('ending clouds are bread from the start and none vanishes while the camera turns', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const bodies = (commands) =>
@@ -773,7 +763,6 @@ test('ending clouds are bread from the start and none vanishes while the camera 
         previous = clouds.length;
     }
 });
-
 test('the last ending frame shows the same bread clouds as the first frame of stage five', () => {
     const ending = cloudBodies(
         revealFrame('depth', STAGE_FOUR.reveal.hold),
@@ -786,7 +775,6 @@ test('the last ending frame shows the same bread clouds as the first frame of st
         stageFive.map(({ v, curves }) => ({ v, curves })),
     );
 });
-
 test('the last frame of the stage four reveal is the first frame of stage five', () => {
     const last = withoutBubble(revealFrame('depth', STAGE_FOUR.reveal.hold));
     const first = withoutBubble(renderFrame(5));

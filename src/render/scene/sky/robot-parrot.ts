@@ -1,24 +1,28 @@
 import type { SkyHazard, SkyRobot } from '../../../game/stages/sky/data';
 import type { RenderCtx } from '../../context';
-
 const CHROME: Array<[number, string]> = [
     [0, '#f7f9fb'],
     [0.35, '#c3ccd6'],
     [0.7, '#6b7889'],
     [1, '#2a313b'],
 ];
-
 function chrome(
     ctx: RenderCtx,
     x1: number,
     y1: number,
     x2: number,
-    y2: number,
-    stops = CHROME,
+    {
+        y2,
+        stops = CHROME,
+    }: {
+        y2: number;
+        stops?: Array<[number, string]>;
+    },
 ) {
-    return ctx.gradientFill(x1, y1, x2, y2, stops);
+    return ctx.gradientFill(x1, y1, x2, y2, {
+        stops,
+    });
 }
-
 function lensEye(
     ctx: RenderCtx,
     h: SkyHazard,
@@ -28,12 +32,8 @@ function lensEye(
 ) {
     const pulse = 0.8 + Math.sin(h.spin * 0.55) * 0.2;
     ctx.beginLayer({ key: `robot-eye-glow-${h.id}`, blur: r * ctx.scale });
-    ctx.ellipse(
-        x,
-        y,
-        r * 2.6,
-        r * 2.6,
-        ctx.radialFill(
+    ctx.ellipse(x, y, r * 2.6, r * 2.6, {
+        c: ctx.radialFill(
             x,
             y,
             r * 2.6,
@@ -44,22 +44,18 @@ function lensEye(
             ],
             pulse * 0.8,
         ),
-    );
+    });
     ctx.endLayer();
-    ctx.ellipse(
-        x,
-        y,
-        r * 1.3,
-        r * 1.3,
-        chrome(ctx, x - r, y - r, x + r, y + r),
-    );
-    ctx.ellipse(x, y, r * 1.05, r * 1.05, '#07080a');
-    ctx.ellipse(
-        x,
-        y,
-        r * 0.82,
-        r * 0.82,
-        ctx.radialFill(
+    ctx.ellipse(x, y, r * 1.3, r * 1.3, {
+        c: chrome(ctx, x - r, y - r, x + r, {
+            y2: y + r,
+        }),
+    });
+    ctx.ellipse(x, y, r * 1.05, r * 1.05, {
+        c: '#07080a',
+    });
+    ctx.ellipse(x, y, r * 0.82, r * 0.82, {
+        c: ctx.radialFill(
             x,
             y,
             r * 0.82,
@@ -72,10 +68,11 @@ function lensEye(
             ],
             pulse,
         ),
-    );
-    ctx.ellipse(x - r * 0.35, y - r * 0.4, r * 0.22, r * 0.14, '#ffffffaa');
+    });
+    ctx.ellipse(x - r * 0.35, y - r * 0.4, r * 0.22, r * 0.14, {
+        c: '#ffffffaa',
+    });
 }
-
 type Stops = Array<[number, string]>;
 const MIRROR: Stops = [
     [0, '#ffffff'],
@@ -84,7 +81,6 @@ const MIRROR: Stops = [
     [0.62, '#e8eef4'],
     [1, '#3a4452'],
 ];
-
 function dropletBody(ctx: RenderCtx, h: SkyHazard, gradient: Stops, eye = 4) {
     const flap = Math.sin(h.spin);
     const ripple = Math.sin(h.spin * 2.3) * 1.2;
@@ -94,7 +90,10 @@ function dropletBody(ctx: RenderCtx, h: SkyHazard, gradient: Stops, eye = 4) {
             [26, -6, 40, -6 + flap * 3, 52, -3 + flap * 3],
             [40, 2 + flap * 2, 26, 6, 13, 5],
         ],
-        chrome(ctx, 12, -6, 12, 6, gradient),
+        chrome(ctx, 12, -6, 12, {
+            y2: 6,
+            stops: gradient,
+        }),
     );
     ctx.effectPath(
         [2, -3],
@@ -102,7 +101,10 @@ function dropletBody(ctx: RenderCtx, h: SkyHazard, gradient: Stops, eye = 4) {
             [8, -16 * flap - 8, 16, -28 * flap - 6, 26, -24 * flap - 2],
             [18, -12 * flap - 1, 12, -2, 12, 1],
         ],
-        chrome(ctx, 0, -30, 26, 0, gradient),
+        chrome(ctx, 0, -30, 26, {
+            y2: 0,
+            stops: gradient,
+        }),
     );
     ctx.effectPath(
         [-22, -10],
@@ -112,7 +114,10 @@ function dropletBody(ctx: RenderCtx, h: SkyHazard, gradient: Stops, eye = 4) {
             [-6, 12, -14, 6, -18, 2],
             [-24, -2, -26, -6, -22, -10],
         ],
-        chrome(ctx, 0, -16, 0, 12, gradient),
+        chrome(ctx, 0, -16, 0, {
+            y2: 12,
+            stops: gradient,
+        }),
     );
     ctx.effectPath([-16, -12], [[-8, -15, 4, -11, 12, -6]], '#ffffffaa');
     ctx.effectPath(
@@ -121,7 +126,10 @@ function dropletBody(ctx: RenderCtx, h: SkyHazard, gradient: Stops, eye = 4) {
             [-28, -10, -33, -5, -31, 1],
             [-28, 0, -25, -1, -22, -1],
         ],
-        chrome(ctx, -33, -10, -22, 2, gradient),
+        chrome(ctx, -33, -10, -22, {
+            y2: 2,
+            stops: gradient,
+        }),
     );
     lensEye(ctx, h, -14, -5, eye);
     ctx.effectPath(
@@ -130,10 +138,12 @@ function dropletBody(ctx: RenderCtx, h: SkyHazard, gradient: Stops, eye = 4) {
             [8, 10 * flap + 2, 18, 12 * flap + 4, 24, 8 * flap + 8],
             [12, 8, 4, 6, -2, -1],
         ],
-        chrome(ctx, -2, -2, 24, 10, gradient),
+        chrome(ctx, -2, -2, 24, {
+            y2: 10,
+            stops: gradient,
+        }),
     );
 }
-
 function blackChrome(ctx: RenderCtx, h: SkyHazard) {
     const M: Stops = [
         [0, '#a8b2c0'],
@@ -149,17 +159,13 @@ function blackChrome(ctx: RenderCtx, h: SkyHazard) {
         [[-14, -17, 2, -12, 14, -5]],
         {
             width: 1.1,
-            color: ctx.gradientFill(
-                -22,
-                0,
-                14,
-                0,
-                [
+            color: ctx.gradientFill(-22, 0, 14, 0, {
+                stops: [
                     [0, '#ff3a1a'],
                     [1, '#ff3a1a00'],
                 ],
-                pulse,
-            ),
+                alpha: pulse,
+            }),
             cap: 'round',
         },
         { blend: 'add' },
@@ -171,7 +177,6 @@ function blackChrome(ctx: RenderCtx, h: SkyHazard) {
         { blend: 'add' },
     );
 }
-
 export function robotParrotArt(
     ctx: RenderCtx,
     h: SkyHazard,

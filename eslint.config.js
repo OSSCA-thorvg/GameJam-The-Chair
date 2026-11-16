@@ -222,12 +222,12 @@ export default tseslint.config(
             'no-else-return': ['error', { allowElseIf: false }],
             'one-var': ['error', 'never'],
             'max-lines-per-function': [
-                'warn',
+                'error',
                 { max: 100, skipBlankLines: true, skipComments: true },
             ],
-            'max-depth': ['warn', 4],
-            'max-params': ['warn', 5],
-            complexity: ['warn', 15],
+            'max-depth': ['error', 4],
+            'max-params': ['error', 5],
+            complexity: ['error', 15],
         },
     },
     {

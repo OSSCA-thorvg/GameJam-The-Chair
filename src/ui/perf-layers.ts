@@ -2,7 +2,6 @@ import { translate } from '../i18n';
 
 import type { Locale } from '../i18n';
 import type { LayerInfo, LayerOverrides } from '../render/perf';
-
 type Row = {
     el: HTMLElement;
     info: HTMLElement;
@@ -12,9 +11,7 @@ type Row = {
     seen: number;
 };
 type Action = 'hide' | 'flat';
-
 const KEEP_MS = 3000;
-
 export function createLayerPanel(
     getLocale: () => Locale,
     overrides: LayerOverrides,
@@ -32,21 +29,59 @@ export function createLayerPanel(
     keys: () => string[];
     destroy(): void;
 } {
-    const root = document.createElement('details');
-    root.className = 'perf-layers';
-    const summary = document.createElement('summary');
-    const label = document.createElement('span');
-    const reset = document.createElement('button');
-    reset.type = 'button';
-    reset.dataset.perfLayerReset = '';
-    summary.append(label, reset);
-    const list = document.createElement('div');
-    list.className = 'perf-layer-list';
-    root.append(summary, list);
-    const rows = new Map<string, Row>();
-
-    function row(key: string) {
-        let r = rows.get(key);
+    return new LayerPanelRuntime(getLocale, overrides).api();
+}
+class LayerPanelRuntime {
+    private getLocale!: () => Locale;
+    private overrides!: LayerOverrides;
+    private root!: HTMLDetailsElement;
+    private summary!: HTMLElement;
+    private label!: HTMLSpanElement;
+    private reset!: HTMLButtonElement;
+    private list!: HTMLDivElement;
+    private rows!: Map<string, Row>;
+    constructor(getLocale: () => Locale, overrides: LayerOverrides) {
+        this.getLocale = getLocale;
+        this.overrides = overrides;
+        this.root = document.createElement('details');
+        this.root.className = 'perf-layers';
+        this.summary = document.createElement('summary');
+        this.label = document.createElement('span');
+        this.reset = document.createElement('button');
+        this.reset.type = 'button';
+        this.reset.dataset.perfLayerReset = '';
+        this.summary.append(this.label, this.reset);
+        this.list = document.createElement('div');
+        this.list.className = 'perf-layer-list';
+        this.root.append(this.summary, this.list);
+        this.rows = new Map<string, Row>();
+        this.root.addEventListener('click', (event) => {
+            const button =
+                event.target instanceof Element
+                    ? event.target.closest('button')
+                    : null;
+            if (!button) {
+                return;
+            }
+            button.blur();
+            if (button.dataset.perfLayerReset !== undefined) {
+                event.preventDefault();
+                this.clear();
+                return;
+            }
+            const key = button.closest<HTMLElement>('.perf-layer')?.dataset.key;
+            const action = button.dataset.action as Action | undefined;
+            if (key && action) {
+                this.set(
+                    key,
+                    action,
+                    button.getAttribute('aria-pressed') !== 'true',
+                );
+            }
+        });
+    }
+    private row = (key: string) => {
+        let r = this.rows.get(key);
         if (r) {
             return r;
         }
@@ -67,94 +102,89 @@ export function createLayerPanel(
         const hide = button('hide');
         const flat = button('flat');
         el.append(name, info, hide, flat);
-        list.append(el);
+        this.list.append(el);
         r = { el, info, hide, flat, text: '', seen: 0 };
-        rows.set(key, r);
-        applyLocaleTo(r);
+        this.rows.set(key, r);
+        this.applyLocaleTo(r);
         return r;
-    }
-
-    function applyLocaleTo(r: Row) {
-        const locale = getLocale();
+    };
+    private applyLocaleTo = (r: Row) => {
+        const locale = this.getLocale();
         r.hide.textContent = translate('perf.hide', locale);
         r.hide.title = translate('perf.hideHint', locale);
         r.flat.textContent = translate('perf.flatten', locale);
         r.flat.title = translate('perf.flattenHint', locale);
-    }
-
-    function applyLocale() {
-        reset.textContent = translate('perf.resetLayers', getLocale());
-        for (const r of rows.values()) {
-            applyLocaleTo(r);
+    };
+    private applyLocale = () => {
+        this.reset.textContent = translate(
+            'perf.resetLayers',
+            this.getLocale(),
+        );
+        for (const r of this.rows.values()) {
+            this.applyLocaleTo(r);
         }
-    }
-
-    function set(key: string, action: Action, on: boolean) {
-        row(key);
-        const target = action === 'hide' ? overrides.hidden : overrides.flat;
-        const other = action === 'hide' ? overrides.flat : overrides.hidden;
+    };
+    private set = (key: string, action: Action, on: boolean) => {
+        this.row(key);
+        const target =
+            action === 'hide' ? this.overrides.hidden : this.overrides.flat;
+        const other =
+            action === 'hide' ? this.overrides.flat : this.overrides.hidden;
         if (on) {
             target.add(key);
             other.delete(key);
         } else {
             target.delete(key);
         }
-        syncButtons();
-    }
-
-    function clear() {
-        overrides.hidden.clear();
-        overrides.flat.clear();
-        syncButtons();
-    }
-
-    function syncButtons() {
-        for (const [key, r] of rows) {
+        this.syncButtons();
+    };
+    private clear = () => {
+        this.overrides.hidden.clear();
+        this.overrides.flat.clear();
+        this.syncButtons();
+    };
+    private syncButtons = () => {
+        for (const [key, r] of this.rows) {
             r.hide.setAttribute(
                 'aria-pressed',
-                String(overrides.hidden.has(key)),
+                String(this.overrides.hidden.has(key)),
             );
             r.flat.setAttribute(
                 'aria-pressed',
-                String(overrides.flat.has(key)),
+                String(this.overrides.flat.has(key)),
             );
             r.el.classList.toggle(
                 'off',
-                overrides.hidden.has(key) || overrides.flat.has(key),
+                this.overrides.hidden.has(key) || this.overrides.flat.has(key),
             );
         }
-    }
-
-    root.addEventListener('click', (event) => {
-        const button =
-            event.target instanceof Element
-                ? event.target.closest('button')
-                : null;
-        if (!button) {
-            return;
-        }
-        button.blur();
-        if (button.dataset.perfLayerReset !== undefined) {
-            event.preventDefault();
-            clear();
-            return;
-        }
-        const key = button.closest<HTMLElement>('.perf-layer')?.dataset.key;
-        const action = button.dataset.action as Action | undefined;
-        if (key && action) {
-            set(key, action, button.getAttribute('aria-pressed') !== 'true');
-        }
-    });
-
-    function update(
+    };
+    private update = (
         layers: LayerInfo[],
         canvasArea: number,
         renderMs: number,
         now: number,
+    ) => {
+        const merged = this.summarizeLayers(layers, now, canvasArea);
+        this.syncButtons();
+        const active = this.overrides.hidden.size + this.overrides.flat.size;
+        this.label.textContent =
+            `${translate('perf.layers', this.getLocale())} ${merged.size}` +
+            `${active ? ` · ${active} off` : ''} · render ${renderMs.toFixed(1)} ms`;
+    };
+    private summarizeLayers(
+        layers: LayerInfo[],
+        now: number,
+        canvasArea: number,
     ) {
         const merged = new Map<
             string,
-            { shapes: number; area: number; effects: Set<string>; uses: number }
+            {
+                shapes: number;
+                area: number;
+                effects: Set<string>;
+                uses: number;
+            }
         >();
         for (const layer of layers) {
             const m = merged.get(layer.key) ?? {
@@ -172,7 +202,7 @@ export function createLayerPanel(
             merged.set(layer.key, m);
         }
         for (const [key, m] of merged) {
-            const r = row(key);
+            const r = this.row(key);
             r.seen = now;
             const pct =
                 canvasArea > 0 ? Math.round((m.area / canvasArea) * 100) : 0;
@@ -182,9 +212,9 @@ export function createLayerPanel(
                 r.info.textContent = text;
             }
         }
-        for (const [key, r] of rows) {
+        for (const [key, r] of this.rows) {
             const overridden =
-                overrides.hidden.has(key) || overrides.flat.has(key);
+                this.overrides.hidden.has(key) || this.overrides.flat.has(key);
             if (overridden && !merged.has(key)) {
                 if (r.text !== '—') {
                     r.info.textContent = r.text = '—';
@@ -193,28 +223,42 @@ export function createLayerPanel(
             }
             if (!overridden && now - r.seen > KEEP_MS) {
                 r.el.remove();
-                rows.delete(key);
+                this.rows.delete(key);
             }
         }
-        syncButtons();
-        const active = overrides.hidden.size + overrides.flat.size;
-        label.textContent =
-            `${translate('perf.layers', getLocale())} ${merged.size}` +
-            `${active ? ` · ${active} off` : ''} · render ${renderMs.toFixed(1)} ms`;
+        return merged;
     }
-
-    return {
-        element: root,
-        update,
-        applyLocale,
-        set,
-        clear,
-        keys: () => [...rows.keys()],
-        destroy() {
-            for (const r of rows.values()) {
-                r.el.remove();
-            }
-            rows.clear();
-        },
+    api(): {
+        element: HTMLDetailsElement;
+        update: (
+            layers: LayerInfo[],
+            canvasArea: number,
+            renderMs: number,
+            now: number,
+        ) => void;
+        applyLocale: () => void;
+        set: (key: string, action: Action, on: boolean) => void;
+        clear: () => void;
+        keys: () => string[];
+        destroy(): void;
+    } {
+        return {
+            element: this.root,
+            update: this.update,
+            applyLocale: this.applyLocale,
+            set: this.set,
+            clear: this.clear,
+            keys: this.apiKeys,
+            destroy: this.apiDestroy,
+        };
+    }
+    private apiKeys = () => {
+        return [...this.rows.keys()];
+    };
+    private apiDestroy = () => {
+        for (const r of this.rows.values()) {
+            r.el.remove();
+        }
+        this.rows.clear();
     };
 }
