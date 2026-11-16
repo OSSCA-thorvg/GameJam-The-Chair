@@ -1,10 +1,10 @@
-import { startStage, setPlayer, type GameState } from '../../../state';
+import { startStage, setPlayer, type CoreState } from '../../../state';
 import type { GameEvent, Input } from '../../../types';
 import { STAGES } from '../../index';
 import { skyStep } from './decide';
 import { FOCUS_DAMAGE } from '../../../level';
 import { applyFocusHit, applyFocusRecovery } from '../../../systems/focus/apply';
-export function applySky(s: GameState, out: GameEvent[], dt: number) {
+export function applySky(s: CoreState, out: GameEvent[], dt: number) {
     const held = (input: Input) => s.keys.includes(input) ? 1 : 0;
     const r = skyStep({
         sky: s.sky, p: s.p, ground: s.ground, coyote: s.coyote, jumpQ: s.jumpQ, checkpoint: s.checkpoint, time: s.time,

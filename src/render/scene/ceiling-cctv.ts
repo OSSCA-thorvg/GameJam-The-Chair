@@ -32,8 +32,8 @@ function cctv(ctx: RenderCtx, x: number, index: number) {
         zoom: 480 * ctx.scale / focal, offsetX: sx - ctx.W / 2, centerY: sy / ctx.H, eyeY: -30,
     });
     const anchor: Point3 = [0, 15, 0];
-    const dx = ctx.p.x - x;
-    const dy = ctx.p.y - 45 - pivotY;
+    const dx = ctx.player.x - x;
+    const dy = ctx.player.y - 45 - pivotY;
     const sway = Math.sin(ctx.t * .6 + index) * .05;
     const yaw = aim(dx, ACROSS) + sway;
     const tilt = Math.max(.08, Math.min(1.1, Math.atan2(dy, Math.hypot(dx, ACROSS))));
@@ -47,7 +47,7 @@ function cctv(ctx: RenderCtx, x: number, index: number) {
     view.profile([[-12, 0], [12, 0], [12, 3], [-12, 3]], 9, '#9aa0b0', 0, { place: ([u, v, w]) => [u, 15 + DROP - 3 + v, w] });
     view.oval(anchor, [3.5, 3.5, 3.5], '#424f6d');
     const lamp = cctvModel(view, KIND, place);
-    const state = cctvLamp(x - ctx.p.x, ctx.t);
+    const state = cctvLamp(x - ctx.player.x, ctx.t);
     view.oval(lamp, [4.5 * SIZE, 4.5 * SIZE, 4.5 * SIZE], state === 'idle' ? '#a8423c' : '#ff5a4a');
     ctx.commands.push(...view.commands());
     glow(ctx, view.project(lamp), state);
@@ -56,7 +56,7 @@ function cctv(ctx: RenderCtx, x: number, index: number) {
 function glow(ctx: RenderCtx, [x, y]: [number, number], state: LampState) {
     if (state === 'idle') return;
     const radius = (state === 'flash' ? 22 : 9) * ctx.scale;
-    ctx.commands.push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
+    ctx.commands.push({ kind: 'path', points: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], fill: {
         from: [x, y], to: [x + radius, y], radius, stops: [[0, ctx.rgba('#ff6b57', .95)], [1, ctx.rgba('#ff6b57', 0)]],
     }, layer: { key: 'ceiling-cctv-light', blend: 'screen' } });
 }

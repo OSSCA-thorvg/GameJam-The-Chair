@@ -29,7 +29,7 @@ function keyRow(ctx: RenderCtx, faces: KeyFace[], centre: Vector, age: number) {
  */
 export function officeControlHints(ctx: RenderCtx) {
     if (ctx.mode !== 'play' || ctx.cutscene || ctx.cam > 340) return;
-    const { lessons } = ctx.state, tried = ctx.keysTried, p = ctx.p, age = ctx.t;
+    const { lessons } = ctx.state, tried = ctx.keysTried, p = ctx.player, age = ctx.t;
     const arrows = (['left', 'right'] as const).filter(key => !tried[key]);
     if (!lessons.moved && arrows.length) keyRow(ctx, arrows, ctx.screenPoint(p.x, p.y - 95), age);
     if (!lessons.jumped && !tried.jump) keyRow(ctx, ['up'], ctx.screenPoint(LEVEL.practicePaper.x, ctx.F - 40), age);
@@ -38,6 +38,6 @@ export function officeControlHints(ctx: RenderCtx) {
 /** Stage three: a Space keycap over the extinguisher, until Space is pressed or the chair has gone on past it. */
 export function rooftopSprayHint(ctx: RenderCtx) {
     const pickup = STAGE_THREE.pickup;
-    if (ctx.keysTried.spray || ctx.p.x >= 790 || !ctx.visible({ left: 560, top: 250, right: 640, bottom: 390 }, 40)) return;
+    if (ctx.keysTried.spray || ctx.player.x >= 790 || !ctx.visible({ left: 560, top: 250, right: 640, bottom: 390 }, 40)) return;
     keyRow(ctx, [{ text: SPRAY_KEY }], ctx.screenPoint(pickup.x, pickup.y - 92), ctx.t);
 }

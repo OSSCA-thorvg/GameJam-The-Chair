@@ -5,7 +5,7 @@ import { loadSource } from './support/load.mjs';
 const { createGame, createOpening, createRenderCtx, drawOpening, openingFrame, openingState, OPENING_BEATS, OPENING_DURATION, translate, previewScenes } = await loadSource(`
     export { createGame } from './src/game/game';
     export { createOpening } from './src/ui/opening';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { drawOpening, openingFrame, openingState, OPENING_BEATS, OPENING_DURATION } from './src/render/scene/opening';
     export { translate } from './src/i18n';
     export { previewScenes } from './src/preview-scenes';
@@ -57,14 +57,14 @@ function render(time, locale = 'ko') {
     const frame = openingFrame(time);
     const state = openingState(game.getSnapshot(), frame);
     Object.assign(ctx, {
-        state, p: state.player, mode: state.mode, locale, t: state.time, W: 800, H: 510, VW: 800 / frame.zoom, scale: frame.zoom,
+        state, player: state.player, mode: state.mode, locale, t: state.time, W: 800, H: 510, VW: 800 / frame.zoom, scale: frame.zoom,
         cam: state.player.x - 400 / frame.zoom, vertical: 0, LEN: state.level.length, GOAL: state.level.goal,
         solids: state.solids, people: state.people, cleaning: state.cleaning, bin: { ...state.bin, bottom: 520 },
         copier: { ...state.copier, flash: 0 }, papers: state.papers, monitors: [], urgentCopier: state.urgentCopier,
     });
     drawOpening(ctx, frame);
     for (const cmd of ctx.commands) {
-        for (const point of cmd.v) for (const n of point) assert.ok(Number.isFinite(n), `finite point at t=${time}`);
+        for (const point of cmd.points) for (const n of point) assert.ok(Number.isFinite(n), `finite point at t=${time}`);
         for (const curve of cmd.curves ?? []) for (const n of curve) assert.ok(Number.isFinite(n), `finite curve at t=${time}`);
     }
     const labels = ctx.commands.filter(cmd => cmd.text).map(({ text }) => ({ text: text.content, x: text.x, y: text.y, alpha: text.opacity ?? 1 }));
@@ -134,7 +134,7 @@ test('7 pm the chair creaks harder and faster; 8 pm the backrest bucks the worke
     const kick = render(B.kick + .5);
     assert.ok(!kick.commands.some(c => c.layer?.key === 'opening-anger'), 'no anger marks at 8 pm');
     for (const t of [B.riderOvertime + 1, B.chairHope + 1, B.creak + 1, B.kick + .5]) {
-        assert.ok(!render(t).commands.some(c => !c.text && c.stroke && typeof c.c === 'string' && c.c.startsWith('#f4f1ea')), `no keycap hints in the film at ${t}`);
+        assert.ok(!render(t).commands.some(c => !c.text && c.stroke && typeof c.fill === 'string' && c.fill.startsWith('#f4f1ea')), `no keycap hints in the film at ${t}`);
     }
 });
 
@@ -171,7 +171,7 @@ test('office frames light the scene and draw the bubbles with their words', () =
     const hope = render(B.chairHope + 2.5);
     const chairBubble = hope.commands.find(c => c.layer?.key === 'opening-bubble-0' && !c.text && c.stroke);
     const riderBubble = wide.commands.find(c => c.layer?.key === 'opening-bubble-0' && !c.text && c.stroke);
-    assert.notEqual(chairBubble.c, riderBubble.c, 'the chair and the worker have bubbles of their own colour');
+    assert.notEqual(chairBubble.fill, riderBubble.fill, 'the chair and the worker have bubbles of their own colour');
     assert.ok(hope.commands.some(c => c.layer?.key.endsWith('-glow') && c.layer.blur > 0), 'the chair bubble glows');
     assert.ok(hope.commands.some(c => c.layer?.key === 'opening-notes'));
     assert.ok(hope.commands.some(c => c.layer?.key.endsWith('-note')), 'the chair hums a drawn note in place of the missing ♪ glyph');
@@ -189,7 +189,7 @@ test('office frames light the scene and draw the bubbles with their words', () =
 });
 
 test('the opening preview is registered and seeks deterministically', () => {
-    const scene = previewScenes.find(scene => scene.id === 'opening');
+    const scene = previewScenes.find(scene => scene.id === 'opening')?.create();
     assert.ok(scene);
     assert.equal(scene.duration, OPENING_DURATION);
     assert.ok(scene.markers.some(marker => marker.at === B.rage));

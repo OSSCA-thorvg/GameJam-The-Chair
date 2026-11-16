@@ -14,10 +14,10 @@ const { FOCUS_DAMAGE, ORBIT_ENDING, orbitEnding, createGame, orbitStep, gearAt, 
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
     export { parseCommand } from './src/game/commands';
     export { previewScenes } from './src/preview-scenes';
-    export { orbitKeys } from './src/preview-orbit-driver';
+    export { orbitKeys } from './src/preview/autopilot';
     export { drawOrbit } from './src/render/scene/orbit';
     export { ORBIT_ENDING, orbitEnding } from './src/render/scene/orbit-ending';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
 `);
 /** How far the chair gets from a standing start in `t` seconds, chasing full steering speed. */
 const reach = t => STAGE_FIVE.steer.speed * (t - (1 - Math.exp(-STAGE_FIVE.steer.response * t)) / STAGE_FIVE.steer.response);
@@ -112,7 +112,7 @@ test('saved orbit movement resumes exactly and pause freezes it', () => {
 });
 
 test('the orbit preview reaches the Earth shadow, seeks backwards, and renders finite geometry on narrow screens', () => {
-    const scene = previewScenes.find(scene => scene.id === 'orbit-route');
+    const scene = previewScenes.find(scene => scene.id === 'orbit-route')?.create();
     assert.ok(scene);
     assert.equal(STAGE_FIVE.drawer, undefined);
     assert.ok(STAGE_FIVE.door);
@@ -134,12 +134,12 @@ test('the orbit preview reaches the Earth shadow, seeks backwards, and renders f
         } else {
             assert.ok(commands.length > 200);
             assert.ok(commands.reduce((n,c) => n+(c.curves?.length ?? 0), 0) <= 5000, 'cloud entry stays within its curve budget');
-            assert.ok(commands.filter(c => c.c && typeof c.c === 'object').length <= 140, 'cloud entry stays within its gradient budget');
+            assert.ok(commands.filter(c => c.fill && typeof c.fill === 'object').length <= 140, 'cloud entry stays within its gradient budget');
             assert.ok(commands.some(cmd => cmd.curves), 'clouds use vector curves');
         }
         assert.ok(!commands.some(cmd => cmd.stroke?.color === '#bff5bd'), 'no green hoops');
         assert.ok(commands.every(cmd => !cmd.layer?.blur && !cmd.layer?.motionBlur), 'the cloud entry uses no blur');
-        for (const cmd of commands) for (const point of [...cmd.v, ...(cmd.curves ?? [])]) assert.ok(point.every(Number.isFinite));
+        for (const cmd of commands) for (const point of [...cmd.points, ...(cmd.curves ?? [])]) assert.ok(point.every(Number.isFinite));
     }
 });
 
@@ -182,7 +182,7 @@ test('orbit recordings reproduce steering and thrust and support backwards seek'
 });
 
 test('repeated orbit frames do not accumulate previous drawing commands', () => {
-    const scene = previewScenes.find(scene => scene.id === 'orbit-route');
+    const scene = previewScenes.find(scene => scene.id === 'orbit-route')?.create();
     const state = scene.sample(3).state;
     const ctx = createRenderCtx({});
     Object.assign(ctx, { state, t: state.time, W: 1000, H: 510 });
@@ -259,7 +259,7 @@ test('the ending: the extinguisher floats off, the signal drops bar by bar, the 
     const at = t => endingFrame(t);
     // The extinguisher's red body on screen, or null once it has floated out of the picture.
     const extinguisher = frame => {
-        const points = frame.commands.filter(command => command.c === '#b75f4a' || command.c === '#c7765c').flatMap(command => command.v)
+        const points = frame.commands.filter(command => command.fill === '#b75f4a' || command.fill === '#c7765c').flatMap(command => command.points)
             .filter(([x, y]) => x > 0 && x < 1000 && y > 0 && y < frame.height);
         return points.length ? points : null;
     };
@@ -283,13 +283,13 @@ test('after the network is lost the camera circles the chair once, all the way r
     const { disconnect, spinFrom, spin } = ORBIT_ENDING;
     assert.ok(spinFrom > disconnect, 'the circle starts once the network is gone');
     // The rider's blue lenses are on the front of the face: hidden from behind, seen once the camera comes round.
-    const glasses = t => endingFrame(t).commands.some(command => command.c === '#83c8e4');
+    const glasses = t => endingFrame(t).commands.some(command => command.fill === '#83c8e4');
     assert.equal(glasses(spinFrom), false, 'it starts from behind');
     const round = Array.from({ length: 9 }, (_, i) => spinFrom + (spin - spinFrom) * (i + 1) / 10).map(glasses);
     assert.ok(round.filter(Boolean).length >= 2, `the rider's face comes into view on the way round (${round})`);
     // The camera ends behind where it started, but the chair has swivelled half round to face it.
     assert.equal(glasses(spin), true, 'and the chair ends turned towards the camera, the rider still on his screen');
-    const stars = t => endingFrame(t).commands.filter(command => typeof command.c === 'string' && command.c.startsWith('#ffffff') && command.v.length === 4 && !command.layer).map(command => command.v[0][0]);
+    const stars = t => endingFrame(t).commands.filter(command => typeof command.fill === 'string' && command.fill.startsWith('#ffffff') && command.points.length === 4 && !command.layer).map(command => command.points[0][0]);
     assert.notDeepEqual(stars(spinFrom), stars((spinFrom + spin) / 2), 'the stars swing past');
 });
 
@@ -333,7 +333,7 @@ test('the rider works on a laptop, not a monitor: a keyboard base under his hand
     const near = (color, target) => typeof color === 'string' && color.length >= 7
         && rgb(color).every((channel, i) => Math.abs(channel - rgb(target)[i]) <= 8);
     for (const [color, part] of [['#222c39', 'keyboard'], ['#465362', 'trackpad'], ['#9caaba', 'screen rim']]) {
-        assert.ok(over.commands.some(command => near(command.c, color)), `the ${part} shows over his shoulder`);
+        assert.ok(over.commands.some(command => near(command.fill, color)), `the ${part} shows over his shoulder`);
     }
 });
 
@@ -445,10 +445,10 @@ function flightFrame(setup) {
 }
 
 test('the edge of the play area shows on the chair itself, and speed lines only when fast', () => {
-    const tape = commands => commands.filter(command => typeof command.c === 'string' && /^#(f2c230|2b2b2b)/.test(command.c));
-    const puffs = commands => commands.filter(command => typeof command.c === 'string' && command.c.startsWith('#f6e6df')).length;
+    const tape = commands => commands.filter(command => typeof command.fill === 'string' && /^#(f2c230|2b2b2b)/.test(command.fill));
+    const puffs = commands => commands.filter(command => typeof command.fill === 'string' && command.fill.startsWith('#f6e6df')).length;
     const casters = commands => {
-        const xs = commands.filter(command => command.c === '#3f4650').flatMap(command => command.v.map(([x]) => x));
+        const xs = commands.filter(command => command.fill === '#3f4650').flatMap(command => command.points.map(([x]) => x));
         return xs.reduce((sum, x) => sum + x, 0) / xs.length;
     };
     const middle = flightFrame(), inside = flightFrame(state => { state.p.x = STAGE_FIVE.bounds.x - 100; });
@@ -461,7 +461,7 @@ test('the edge of the play area shows on the chair itself, and speed lines only 
     // The viewfinder brackets are the fence: even pressing on it, all four corners stay on screen.
     const brackets = pressing.filter(command => command.layer?.key === 'orbit-viewfinder' && command.stroke);
     assert.equal(brackets.length, 4, 'four corner brackets');
-    assert.ok(brackets.every(command => command.v.every(([x, y]) => x > 0 && x < 1000 && y > 0 && y < 510)), 'all on screen');
+    assert.ok(brackets.every(command => command.points.every(([x, y]) => x > 0 && x < 1000 && y > 0 && y < 510)), 'all on screen');
     const lines = commands => commands.filter(command => command.layer?.key === 'orbit-speed-lines');
     assert.equal(lines(middle).length, 0, 'no speed lines at cruise speed');
     assert.ok(lines(flightFrame(state => { state.orbit.speed = top; })).length > 10, 'streaks flat out');
@@ -469,7 +469,7 @@ test('the edge of the play area shows on the chair itself, and speed lines only 
 
 test('rushing forward pulls the camera back and streams air round the chair, more in each gear', () => {
     const casters = commands => {
-        const points = commands.filter(command => command.c === '#3f4650').flatMap(command => command.v);
+        const points = commands.filter(command => command.fill === '#3f4650').flatMap(command => command.points);
         const xs = points.map(([x]) => x), ys = points.map(([, y]) => y);
         return { width: Math.max(...xs) - Math.min(...xs), y: (Math.max(...ys) + Math.min(...ys)) / 2 };
     };
@@ -481,10 +481,10 @@ test('rushing forward pulls the camera back and streams air round the chair, mor
     assert.ok(Math.abs(casters(rushing).y - casters(cruise).y) < 30, 'but stays near the same height on screen');
     const first = frame(STAGE_FIVE.gears[0].maxSpeed, .24);
     assert.ok(casters(rushing).width < casters(first).width * .92, 'flat out in third gear the camera is further back than in first');
-    assert.ok(air(rushing).reduce((sum, c) => sum + parseInt(c.c.slice(7), 16), 0) > air(first).reduce((sum, c) => sum + parseInt(c.c.slice(7), 16), 0), 'and the air streams harder');
+    assert.ok(air(rushing).reduce((sum, c) => sum + parseInt(c.fill.slice(7), 16), 0) > air(first).reduce((sum, c) => sum + parseInt(c.fill.slice(7), 16), 0), 'and the air streams harder');
     assert.equal(air(slow).length, 0, 'no air streaks at a crawl');
     assert.ok(air(rushing).length > 10, 'streaks flat out');
-    const strength = commands => air(commands).reduce((sum, command) => sum + parseInt(command.c.slice(7), 16), 0);
+    const strength = commands => air(commands).reduce((sum, command) => sum + parseInt(command.fill.slice(7), 16), 0);
     assert.ok(strength(rushing) > strength(frame(third.maxSpeed, 0, z3)), 'stronger while the extinguisher pushes');
 });
 
@@ -495,7 +495,7 @@ test('the Earth sits below the chair: its horizon dips under eye level and curve
         const ctx = createRenderCtx({});
         Object.assign(ctx, { W: 1000, H: 510, t: 0, commands: [] });
         orbitEarth(ctx, z, level, 0, 1, 0);
-        return ctx.commands.find(command => command.layer?.key === 'orbit-earth-limb').v;
+        return ctx.commands.find(command => command.layer?.key === 'orbit-earth-limb').points;
     };
     const { air, space, shadow } = STAGE_FIVE.heights;
     assert.ok(earthAltitude(air) < earthAltitude(space) && earthAltitude(space) < earthAltitude(shadow), 'climbing all the way');
@@ -513,16 +513,16 @@ test('the Earth sits below the chair: its horizon dips under eye level and curve
         Object.assign(ctx, { W: 1000, H: 510, t: 0, commands: [] });
         orbitEarth(ctx, STAGE_FIVE.checkpoint.z, { ...level, pitch: .4 }, 0, 1, 1, spin);
         const light = ctx.commands.find(command => command.layer?.key === 'orbit-earth-lights');
-        return light.v.reduce((sum, [x]) => sum + x, 0) / light.v.length;
+        return light.points.reduce((sum, [x]) => sum + x, 0) / light.points.length;
     };
     assert.ok(ground(.05) < ground(0) - 10, `the ground slides left as the view turns right (${ground(0).toFixed(0)} to ${ground(.05).toFixed(0)})`);
 });
 
 test('in the ending Seoul glows on the night side ahead', () => {
     const night = endingFrame(.5);
-    const lights = night.layer('orbit-earth-lights').filter(command => command.c === '#fff6dc');
+    const lights = night.layer('orbit-earth-lights').filter(command => command.fill === '#fff6dc');
     assert.ok(lights.length > 5, 'city lights are on');
-    assert.ok(lights.some(({ v }) => v.every(([x, y]) => x > 0 && x < 1000 && y > 0 && y < 510)), 'and on screen');
+    assert.ok(lights.some(({ points }) => points.every(([x, y]) => x > 0 && x < 1000 && y > 0 && y < 510)), 'and on screen');
 });
 
 test('glows and streaks of a kind share one layer, so each is a single ThorVG Scene', () => {
@@ -553,7 +553,7 @@ test('a beam is announced, then drawn on the chair\'s plane exactly where it tou
         return ctx.commands.filter(command => command.layer?.key === 'orbit-satellite-light-plane');
     };
     const box = command => {
-        const xs = command.v.map(([x]) => x - 500), ys = command.v.map(([, y]) => 255 - y);
+        const xs = command.points.map(([x]) => x - 500), ys = command.points.map(([, y]) => 255 - y);
         return { left: Math.min(...xs), right: Math.max(...xs), bottom: Math.min(...ys), top: Math.max(...ys) };
     };
     assert.equal(frame(beam.from - speed * (warn + .5)).length, 0, 'nothing on the plane before it takes aim');
@@ -562,9 +562,9 @@ test('a beam is announced, then drawn on the chair\'s plane exactly where it tou
     assert.deepEqual(box(following[0]), { left: 60 - beam.half.x, right: 60 + beam.half.x, bottom: -40 - beam.half.y, top: -40 + beam.half.y }, 'round its aim');
     assert.equal(satelliteLightStage(beam, beam.from - speed * (lock - .1), speed).kind, 'lock', 'locked in its last second');
     const on = frame((beam.from + beam.to) / 2);
-    const lit = on.find(command => typeof command.c === 'string');
+    const lit = on.find(command => typeof command.fill === 'string');
     assert.deepEqual(box(lit), { left: 60 - beam.half.x, right: 60 + beam.half.x, bottom: -40 - beam.half.y, top: -40 + beam.half.y }, 'the lit rectangle is the one the course checks');
-    assert.ok(on.every(command => command.v.length === 4), 'no lines across it, just the rectangle');
+    assert.ok(on.every(command => command.points.length === 4), 'no lines across it, just the rectangle');
     const z = (beam.from + beam.to) / 2, state = { aims };
     assert.equal(satelliteLightOn(state, { x: 60 + beam.half.x + chairRadius - 5, y: -40 }, z), beam, 'the chair overlapping its edge is lit');
     assert.equal(satelliteLightOn(state, { x: 60 + beam.half.x + chairRadius + 5, y: -40 }, z), null, 'clear of it is dark');
@@ -582,7 +582,7 @@ test('the chair catches the light: warming near a beam, glowing inside it, plain
     assert.ok(warmth(edge + 40) > 0 && warmth(edge + 40) < 1, 'warming just outside the edge');
     assert.ok(warmth(edge + 40) > warmth(edge + 100), 'more the nearer it gets');
     const glow = x => flightFrame(state => { Object.assign(state.orbit, { z, age }); Object.assign(state.p, { x, vx: 0 }); })
-        .filter(command => command.c?.radius && command.c.stops?.[0]?.[1]?.[0] === 255 && command.c.stops[0][1][1] === 224).length;
+        .filter(command => command.fill?.radius && command.fill.stops?.[0]?.[1]?.[0] === 255 && command.fill.stops[0][1][1] === 224).length;
     assert.ok(glow(edge - 10) > 0, 'a warm glow round the chair inside the light');
     const rec = x => flightFrame(state => { Object.assign(state.orbit, { z, age }); Object.assign(state.p, { x, vx: 0 }); })
         .some(command => command.text?.content === 'REC');
@@ -595,7 +595,7 @@ test('the ending close-up finds the chair wherever in the shadow it parked', () 
             Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 + 10 });
             setup(state);
         });
-        const xs = commands.filter(command => command.text).map(command => command.v[0][0]);
+        const xs = commands.filter(command => command.text).map(command => command.points[0][0]);
         return xs.length ? xs.reduce((sum, x) => sum + x, 0) / xs.length : NaN;
     };
     const middle = laptop(() => {}), aside = laptop(state => Object.assign(state.p, { x: 520, y: -330, vx: 0, vy: 0 }));
@@ -609,9 +609,9 @@ test('the ending close-up finds the chair wherever in the shadow it parked', () 
         setup(state);
     });
     // Only the far city's slight parallax and the beacon (off screen by now) move with the chair's place aside.
-    const shapes = commands => commands.filter(command => typeof command.c === 'string' && !/^#(7d9fbb|fffaf0)/.test(command.c)).map(command => command.c + command.v.map(([x, y]) => `${Math.round(x)},${Math.round(y)}`).join(' '));
+    const shapes = commands => commands.filter(command => typeof command.fill === 'string' && !/^#(7d9fbb|fffaf0)/.test(command.fill)).map(command => command.fill + command.points.map(([x, y]) => `${Math.round(x)},${Math.round(y)}`).join(' '));
     assert.deepEqual(shapes(frame(turned)), shapes(frame(() => {})), 'the Earth below lies the same way round');
-    assert.equal(frame(turned).filter(command => command.c === '#f6e6df' || command.c?.startsWith?.('#f6e6df')).length, 0, 'and the fence no longer puffs at it');
+    assert.equal(frame(turned).filter(command => command.fill === '#f6e6df' || command.fill?.startsWith?.('#f6e6df')).length, 0, 'and the fence no longer puffs at it');
 });
 
 

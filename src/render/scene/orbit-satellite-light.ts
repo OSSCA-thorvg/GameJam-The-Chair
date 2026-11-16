@@ -1,6 +1,6 @@
 import type { RenderCtx } from '../context';
 import type { Player } from '../../game/types';
-import type { Color, DrawCommand, LayerSpec, Vector } from '../types';
+import type { Color, PathCommand, LayerSpec, Vector } from '../types';
 import { STAGE_FIVE } from '../../game/stages/orbit/data';
 import { gearAt, satelliteLightArrival } from '../../game/stages/orbit/course/decide';
 import type { RoutePoint } from './orbit-watch';
@@ -78,7 +78,7 @@ function hull(points: Vector[]) {
  * The shaft of light from the satellite down onto its rectangle, running ahead along the beam's depths. It shows
  * where the next beam is coming from before its rectangle shows on the chair's plane.
  */
-function shaft(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, aim: Aim, travel: number, speed: number, strength: number): DrawCommand | null {
+function shaft(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, aim: Aim, travel: number, speed: number, strength: number): PathCommand | null {
     const arrival = satelliteLightArrival(b, travel, speed);
     const near = Math.max(b.from, travel + 1);
     if (b.to <= near || arrival > P.warn + SHAFT_LEAD) return null;
@@ -94,15 +94,15 @@ function shaft(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam, 
     // Faint while it is still ahead, so a beam yet to come never reads as one already on the chair.
     const fade = strength * smooth((P.warn + SHAFT_LEAD - arrival) / 1.2) * (arrival > 0 ? .55 : .9);
     const stops: [number, Color][] = [[0, ctx.rgba(WARM, .45 * fade)], [.7, ctx.rgba(PALE, .22 * fade)], [1, ctx.rgba(PALE, .08 * fade)]];
-    return { v: hull(points), c: { from, to, stops }, layer: { key: 'orbit-satellite-light-beam', blend: 'screen' } };
+    return { kind: 'path', points: hull(points), fill: { from, to, stops }, layer: { key: 'orbit-satellite-light-beam', blend: 'screen' } };
 }
 
 /** A thin bright spike through `at` at `angle`, `length` long either way: one ray of a lens flare's star. */
-function spike(ctx: RenderCtx, at: Vector, angle: number, length: number, width: number, alpha: number): DrawCommand {
+function spike(ctx: RenderCtx, at: Vector, angle: number, length: number, width: number, alpha: number): PathCommand {
     const c = Math.cos(angle), s = Math.sin(angle);
     const tip = (k: number): Vector => [at[0] + c * length * k, at[1] + s * length * k];
     const side = (k: number): Vector => [at[0] - s * width * k, at[1] + c * width * k];
-    return { v: [tip(-1), side(1), tip(1), side(-1)], c: { from: at, to: tip(1), radius: length,
+    return { kind: 'path', points: [tip(-1), side(1), tip(1), side(-1)], fill: { from: at, to: tip(1), radius: length,
         stops: [[0, ctx.rgba('#ffffff', alpha)], [.35, ctx.rgba(WARM, alpha * .45)], [1, ctx.rgba(WARM, 0)]] },
         layer: { key: 'orbit-satellite-light-flare', blend: 'screen' } };
 }
@@ -111,8 +111,8 @@ function spike(ctx: RenderCtx, at: Vector, angle: number, length: number, width:
 function lensFlare(ctx: RenderCtx, at: Vector, strength: number) {
     if (strength <= .02) return;
     const breathe = 1 + .12 * Math.sin(ctx.t * 5), radius = 70 * breathe * (.5 + .5 * strength);
-    ctx.commands.push({ v: [[at[0] - radius, at[1] - radius], [at[0] + radius, at[1] - radius], [at[0] + radius, at[1] + radius], [at[0] - radius, at[1] + radius]],
-        c: { from: at, to: [at[0] + radius, at[1]], radius, stops: [[0, ctx.rgba('#ffffff', strength)], [.18, ctx.rgba(WARM, .8 * strength)], [1, ctx.rgba(PALE, 0)]] },
+    ctx.commands.push({ kind: 'path', points: [[at[0] - radius, at[1] - radius], [at[0] + radius, at[1] - radius], [at[0] + radius, at[1] + radius], [at[0] - radius, at[1] + radius]],
+        fill: { from: at, to: [at[0] + radius, at[1]], radius, stops: [[0, ctx.rgba('#ffffff', strength)], [.18, ctx.rgba(WARM, .8 * strength)], [1, ctx.rgba(PALE, 0)]] },
         layer: { key: 'orbit-satellite-light-flare', blend: 'screen' } });
     for (const [angle, length] of [[0, 180], [Math.PI / 2, 130], [Math.PI / 4, 60], [-Math.PI / 4, 60]]) {
         ctx.commands.push(spike(ctx, at, angle + ctx.t * .15, length * breathe * strength, 3.5, .85 * strength));
@@ -142,8 +142,8 @@ function rectangle(ctx: RenderCtx, plane: (x: number, y: number) => Vector, b: B
     const shrink = stage.kind === 'fold' ? smooth(stage.k) : 1;
     const hx = b.half.x * shrink, hy = b.half.y * shrink;
     const corners = outline(b, aim, shrink).map(at => plane(at.x, at.y));
-    const edge = (stroke: DrawCommand['stroke']) => ctx.commands.push({ v: corners, c: null, stroke, layer: PLANE });
-    const fill = (alpha: number) => ctx.commands.push({ v: corners, c: hex(GOLD, alpha * strength), layer: PLANE });
+    const edge = (stroke: PathCommand['stroke']) => ctx.commands.push({ kind: 'path', points: corners, fill: null, stroke, layer: PLANE });
+    const fill = (alpha: number) => ctx.commands.push({ kind: 'path', points: corners, fill: hex(GOLD, alpha * strength), layer: PLANE });
     if (stage.kind === 'track') {
         // Following the chair: a dashed outline, with a darker line under it so it reads over bright clouds too.
         const k = stage.k * strength;
@@ -157,7 +157,7 @@ function rectangle(ctx: RenderCtx, plane: (x: number, y: number) => Vector, b: B
         const k = stage.k, snap = k < .15 ? 1 - k / .15 : 0;
         if (snap > 0) {
             const flash = outline(b, aim, 1 + .18 * snap).map(at => plane(at.x, at.y));
-            ctx.commands.push({ v: flash, c: hex('#ffffff', .45 * snap * strength), stroke: { width: 6, color: hex('#ffffff', snap * strength) }, layer: PLANE });
+            ctx.commands.push({ kind: 'path', points: flash, fill: hex('#ffffff', .45 * snap * strength), stroke: { width: 6, color: hex('#ffffff', snap * strength) }, layer: PLANE });
         }
         fill(.16 * k);
         edge({ width: 4.5 + 1.5 * k, color: hex(SHADE, .35 * strength), dash: [16, 4], dashOffset: -ctx.t * 60, cap: 'round' });
@@ -165,7 +165,7 @@ function rectangle(ctx: RenderCtx, plane: (x: number, y: number) => Vector, b: B
         const out = (1 - k) * 50, L = Math.min(hx, hy) * .5;
         for (const [sx, sy] of [[-1, 1], [1, 1], [1, -1], [-1, -1]]) {
             const x = aim.x + sx * (hx + out), y = aim.y + sy * (hy + out);
-            ctx.commands.push({ v: [plane(x, y - sy * L), plane(x, y), plane(x - sx * L, y)], c: null, open: true,
+            ctx.commands.push({ kind: 'path', points: [plane(x, y - sy * L), plane(x, y), plane(x - sx * L, y)], fill: null, open: true,
                 stroke: { width: 3, color: hex(EDGE, strength), cap: 'round' }, layer: PLANE });
         }
         return;
@@ -184,13 +184,13 @@ function bigLens(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, b: Beam
     if (view.depth(centre) <= 30) return;
     const [cx, cy] = view.project(centre), edge = view.project(point(spot.x + EYE.radius, spot.y, spot.z));
     const r = Math.abs(edge[0] - cx), shown = strength * smooth((P.warn + SATELLITE_LEAD - arrival) / 1.5);
-    const ring = (radius: number, color: string, alpha: number) => ctx.commands.push({ v: Array.from({ length: 28 }, (_, i): Vector =>
-        [cx + radius * Math.cos(i * Math.PI / 14), cy + radius * Math.sin(i * Math.PI / 14)]), c: hex(color, alpha * shown) });
+    const ring = (radius: number, color: string, alpha: number) => ctx.commands.push({ kind: 'path', points: Array.from({ length: 28 }, (_, i): Vector =>
+        [cx + radius * Math.cos(i * Math.PI / 14), cy + radius * Math.sin(i * Math.PI / 14)]), fill: hex(color, alpha * shown) });
     ring(r * 1.25, '#8d96a6', 1);
     ring(r, '#1b1f27', 1);
     const lock = gearAt(b.from).lock;
     const charge = arrival <= 0 ? 1 : arrival <= lock ? .5 + .5 * (1 - arrival / lock) : arrival <= P.warn ? .25 : .1;
-    ctx.commands.push({ v: [[cx - r, cy - r], [cx + r, cy - r], [cx + r, cy + r], [cx - r, cy + r]], c: { from: [cx, cy], to: [cx + r, cy], radius: r * .8,
+    ctx.commands.push({ kind: 'path', points: [[cx - r, cy - r], [cx + r, cy - r], [cx + r, cy + r], [cx - r, cy + r]], fill: { from: [cx, cy], to: [cx + r, cy], radius: r * .8,
         stops: [[0, ctx.rgba('#ffffff', charge * shown)], [.4, ctx.rgba(WARM, .8 * charge * shown)], [1, ctx.rgba('#27344d', 0)]] } });
     ring(r * .12, '#ff4b52', .9);
 }
@@ -223,7 +223,7 @@ export function satelliteGlare(ctx: RenderCtx, chairAt: Vector, warmth: number, 
     const inside = warmth >= 1, alpha = inside ? .16 + .05 * pulse : .1 * warmth / .4;
     const radius = Math.hypot(ctx.W, ctx.H) * .6;
     const screen: Vector[] = [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]];
-    ctx.commands.push({ v: screen, c: { from: chairAt, to: [chairAt[0] + radius, chairAt[1]], radius,
+    ctx.commands.push({ kind: 'path', points: screen, fill: { from: chairAt, to: [chairAt[0] + radius, chairAt[1]], radius,
         stops: [[0, ctx.rgba('#ffffff', alpha)], [.35, ctx.rgba(WARM, alpha * .4)], [1, ctx.rgba(PALE, 0)]] },
         layer: { key: 'orbit-satellite-light-glare', blend: 'screen' } });
 }
@@ -279,6 +279,6 @@ export function satelliteChairGlow(ctx: RenderCtx, chair: SkyProjection, light: 
     const lean: Vector = [light.toward.x * radius * .35, -light.toward.y * radius * .35];
     const at: Vector = [x + lean[0], y + lean[1]];
     const alpha = light.warmth >= 1 ? .55 + .15 * pulse : .35 * light.warmth / .4;
-    ctx.commands.push({ v: [[at[0] - radius, at[1] - radius], [at[0] + radius, at[1] - radius], [at[0] + radius, at[1] + radius], [at[0] - radius, at[1] + radius]],
-        c: { from: at, to: [at[0] + radius, at[1]], radius, stops: [[0, ctx.rgba('#ffe08a', alpha)], [.55, ctx.rgba('#ffd66e', alpha * .4)], [1, ctx.rgba('#ffd66e', 0)]] } });
+    ctx.commands.push({ kind: 'path', points: [[at[0] - radius, at[1] - radius], [at[0] + radius, at[1] - radius], [at[0] + radius, at[1] + radius], [at[0] - radius, at[1] + radius]],
+        fill: { from: at, to: [at[0] + radius, at[1]], radius, stops: [[0, ctx.rgba('#ffe08a', alpha)], [.55, ctx.rgba('#ffd66e', alpha * .4)], [1, ctx.rgba('#ffd66e', 0)]] } });
 }

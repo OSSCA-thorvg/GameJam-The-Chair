@@ -92,13 +92,13 @@ export function createSkyProjection(width: number, height: number, orbit: number
         const v: Vector = [-Math.sin(angle) * minor, Math.cos(angle) * minor];
         const point = (x: number, y: number): Vector => [c[0] + u[0] * x + v[0] * y, c[1] + u[1] * x + v[1] * y];
         const k = .5522847498;
-        curves.push({ depth: depth(center), command: {
-            v: [point(1, 0)], curves: [
+        curves.push({ depth: depth(center), command: { kind: 'path',
+            points: [point(1, 0)], curves: [
                 [...point(1, k), ...point(k, 1), ...point(0, 1)],
                 [...point(-k, 1), ...point(-1, k), ...point(-1, 0)],
                 [...point(-1, -k), ...point(-k, -1), ...point(0, -1)],
                 [...point(k, -1), ...point(1, -k), ...point(1, 0)],
-            ], c: color,
+            ], fill: color,
         } });
     };
     const rod = (a: Point3, b: Point3, r: number, color: string) => {
@@ -128,7 +128,7 @@ export function createSkyProjection(width: number, height: number, orbit: number
                 const value = parseInt(face.color.slice(1 + i * 2, 3 + i * 2), 16);
                 return Math.round(value + (channel - value) * haze).toString(16).padStart(2, '0');
             }).join('') + face.color.slice(7);
-            return [{ depth: face.depth, command: { v, c } }];
+            return [{ depth: face.depth, command: { kind: 'path' as const, points: v, fill: c } }];
         });
         return [...flat, ...curves.filter(curve => keep(curve.depth))].sort((a, b) => b.depth - a.depth).map(item => item.command);
     };

@@ -17,4 +17,4 @@
 - `npm test`: runs the complete test suite.
 - `npm run test:fast`: skips gameplay fingerprints, determinism suites, and real-time replay tests.
 
-Preview scenes expose menu metadata without recording frames. Reading a scene’s frame data records only that scene and caches it for later seeks. Tests that need orbit steering import `src/preview-orbit-driver.ts` directly.
+Preview scenes expose menu metadata without recording frames. Calling a registration’s `create()` records only that scene and caches it for later selections and seeks. Tests that need orbit steering import `src/preview/autopilot.ts` directly.

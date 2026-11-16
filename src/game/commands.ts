@@ -1,4 +1,4 @@
-import { resetAttempt, startStage, type GameState } from './state';
+import { resetAttempt, startStage, type CoreState } from './state';
 import type { StageId } from './types';
 import type { GameEvent, Input } from './types';
 import { stageHooks } from './stages/hooks';
@@ -60,7 +60,7 @@ export function parseCommand(value: unknown): Command {
 
 // Commands take effect immediately, between fixed steps, even while paused. Writes into `s`;
 // stepGame/applyCommand in step.ts are the pure entry points.
-export function runCommand(s: GameState, command: Command, out: GameEvent[]) {
+export function runCommand(s: CoreState, command: Command, out: GameEvent[]) {
     switch (command.type) {
         case 'keys': s.keys = [...command.keys]; return;
         case 'jump': jump(s); return;
@@ -77,12 +77,12 @@ export function runCommand(s: GameState, command: Command, out: GameEvent[]) {
     }
 }
 
-function jump(s: GameState) {
+function jump(s: CoreState) {
     if (s.mode !== 'play' || stageHooks(s.stage).canJump?.(s) === false) return;
     s.jumpQ = PHYSICS.jump.buffer;
 }
 
-export function spray(s: GameState, out: GameEvent[]) {
+export function spray(s: CoreState, out: GameEvent[]) {
     const hooks = stageHooks(s.stage);
     if (s.mode !== 'play' || !s.hasExtinguisher || hooks.canSpray?.(s) === false || s.sprayCooldown > 0) return;
     const dx = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
@@ -98,7 +98,7 @@ export function spray(s: GameState, out: GameEvent[]) {
     hooks.onSpray?.(s, dx);
 }
 
-function pause(s: GameState) {
+function pause(s: CoreState) {
     if (s.mode !== 'play' && s.mode !== 'pause') return;
     s.mode = s.mode === 'play' ? 'pause' : 'play';
     s.keys = [];

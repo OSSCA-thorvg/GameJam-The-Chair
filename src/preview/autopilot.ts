@@ -1,16 +1,18 @@
-import type { GameState } from './game/game';
-import type { Input } from './game/types';
-import { orbitStep, satelliteLightOn } from './game/stages/orbit/course/decide';
+import { createGame } from '../game/game';
+import type { Input } from '../game/types';
+import { orbitStep, satelliteLightOn } from '../game/stages/orbit/course/decide';
 
-const PLAN = { seconds: 1.2, step: .1 };
-const TURNS: Input[][] = [['left'], [], ['right']];
-const CLIMBS: Input[][] = [['forward'], [], ['back']];
+export const PLAN = { seconds: 1.2, step: .1 };
+
+export const TURNS: Input[][] = [['left'], [], ['right']];
+
+export const CLIMBS: Input[][] = [['forward'], [], ['back']];
 
 /**
  * Steering for the stage five previews: try every way across and up for a moment with the real flight rules and take
  * the one that stays out of the beams and gets furthest on, spraying all the way.
  */
-export function orbitKeys(state: GameState): Input[] {
+export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSnapshot']>): Input[] {
     const orbit = state.orbit, p = state.player;
     if (!orbit) return [];
     let best = -Infinity, keys: Input[] = [];
@@ -29,4 +31,3 @@ export function orbitKeys(state: GameState): Input[] {
     }
     return keys;
 }
-

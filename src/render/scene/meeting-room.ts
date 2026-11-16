@@ -122,7 +122,7 @@ export function meetingRoom(ctx: RenderCtx) {
     }
     const pushing = Math.max(0, scene.age - 4.6) * 100;
     worker(ctx, x - 156 + pushing, 420, 'facilitator', 1,
-        scene.age > 4.6 ? [ctx.p.x - 31, ctx.p.y - 61] : undefined);
+        scene.age > 4.6 ? [ctx.player.x - 31, ctx.player.y - 61] : undefined);
     meetingSpeech(ctx, scene.age);
     player(ctx);
 }

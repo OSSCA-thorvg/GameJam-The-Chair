@@ -1,10 +1,10 @@
-import { setPlayer, type GameState } from '../../../state';
+import { setPlayer, type CoreState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { applyFocusHit } from '../../../systems/focus/apply';
 import { STAGES } from '../../index';
 import { STAGE_TWO } from '../data';
 import { canEnterMeeting, convoyLanding, corridorStep, liftRide, meetingExit, meetingStep } from './decide';
-export function applyConvoyLanding(s: GameState) {
+export function applyConvoyLanding(s: CoreState) {
     const r = convoyLanding(s.building.corridor, s.building.furniture, s.p, s.ground);
     if (!r) return;
     s.building.corridor.convoy = r.convoy;
@@ -12,7 +12,7 @@ export function applyConvoyLanding(s: GameState) {
 }
 
 // Returns true while the lift carries the rider down.
-export function applyLiftRide(s: GameState, out: GameEvent[], dt: number) {
+export function applyLiftRide(s: CoreState, out: GameEvent[], dt: number) {
     const r = liftRide(s.building.corridor.departure, dt);
     if (!r) return false;
     s.building.corridor.departure = r.departure;
@@ -32,7 +32,7 @@ export function applyLiftRide(s: GameState, out: GameEvent[], dt: number) {
     return true;
 }
 
-export function applyCorridor(s: GameState, out: GameEvent[], dt: number, previousX: number) {
+export function applyCorridor(s: CoreState, out: GameEvent[], dt: number, previousX: number) {
     const r = corridorStep({
         corridor: s.building.corridor, furniture: s.building.furniture, p: s.p, ground: s.ground,
         steering: s.keys.includes('left') || s.keys.includes('right'),
@@ -56,7 +56,7 @@ export function applyCorridor(s: GameState, out: GameEvent[], dt: number, previo
 }
 
 // Returns true while the meeting scene owns the rider.
-export function applyMeeting(s: GameState, dt: number) {
+export function applyMeeting(s: CoreState, dt: number) {
     if (s.building.corridor.room.kind === 'corridor') return false;
     const r = meetingStep(s.building.corridor.room, dt);
     s.building.corridor.room = r.room;
@@ -65,7 +65,7 @@ export function applyMeeting(s: GameState, dt: number) {
     return true;
 }
 
-export function applyLeaveMeeting(s: GameState, pushed = false) {
+export function applyLeaveMeeting(s: CoreState, pushed = false) {
     const room = s.building.corridor.room;
     if (room.kind === 'corridor') return;
     setPlayer(s, meetingExit(room.returnX, pushed));
@@ -76,11 +76,11 @@ export function applyLeaveMeeting(s: GameState, pushed = false) {
     s.actualSpeed = 0;
 }
 
-export function meetingReachable(s: Readonly<GameState>) {
+export function meetingReachable(s: Readonly<CoreState>) {
     return canEnterMeeting({ stage: s.stage, mode: s.mode, corridor: s.building.corridor, p: s.p, ground: s.ground });
 }
 
-export function applyInteract(s: GameState) {
+export function applyInteract(s: CoreState) {
     if (s.mode !== 'play') return;
     if (s.building.corridor.room.kind !== 'corridor') { applyLeaveMeeting(s); return; }
     if (!meetingReachable(s)) return;

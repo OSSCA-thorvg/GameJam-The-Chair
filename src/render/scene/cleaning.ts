@@ -294,7 +294,7 @@ export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
     const F = ctx.F;
     const cleaning = ctx.cleaning;
     const state = ctx.state;
-    const p = ctx.p;
+    const p = ctx.player;
     const motion = sampleCleaner(cleaning.spilled ? state.bucketAge : 0);
     const bucket = bucketPose(ctx, motion);
     const pose = cleaner ? cleanerPose(ctx, cleaner, motion, bucket) : undefined;

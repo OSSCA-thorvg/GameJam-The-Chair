@@ -1,8 +1,8 @@
-import type { GameState } from '../../../state';
+import type { CoreState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { applyFocusHit } from '../../../systems/focus/apply';
 import type { CleaningResult } from './decide';
-export function applyCleaning(s: GameState, out: GameEvent[], result: CleaningResult, dt: number) {
+export function applyCleaning(s: CoreState, out: GameEvent[], result: CleaningResult, dt: number) {
     s.office.cleaning = result.cleaning;
     s.office.bucket = result.bucket;
     if (result.splash) {

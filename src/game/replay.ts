@@ -4,7 +4,7 @@ import { parseCommand, type Command } from './commands';
 import { CONFIG_VERSION } from './stages/index';
 import { clonePlain, configHash, deepFreeze } from './data';
 import { SIMULATED, applyCommand, stepGame } from './step';
-import type { GameState } from './state';
+import type { CoreState } from './state';
 import type { GameEvent } from './types';
 import { assertGameState } from './validation';
 
@@ -76,7 +76,7 @@ export type ReplayFile = {
     format: typeof REPLAY_FORMAT;
     version: string;                  // CONFIG_VERSION of the build that recorded it
     seed: number | null;
-    start: GameState;                 // state when the attempt began
+    start: CoreState;                 // state when the attempt began
     commands: [tick: number, command: Command][];
     hashes: [tick: number, hash: string][];
     endTick: number;                  // last tick to simulate
@@ -84,7 +84,7 @@ export type ReplayFile = {
     error: ReplayError | null;        // first error in the attempt, if any
 };
 
-export function hashState(state: Readonly<GameState>): string {
+export function hashState(state: Readonly<CoreState>): string {
     return configHash(state);
 }
 
@@ -183,7 +183,7 @@ export function createRecorder(getSettings: () => ReplaySettings, seed: number |
         onAttemptStart(json: string) {
             finish();
             if (!getSettings().enabled) return;
-            const start = JSON.parse(json) as GameState;
+            const start = JSON.parse(json) as CoreState;
             current = { format: REPLAY_FORMAT, version: CONFIG_VERSION, seed, start, commands: [], hashes: [], endTick: start.tick, truncated: false, error: null };
         },
         onCommand(tick: number, command: Command) {
@@ -194,7 +194,7 @@ export function createRecorder(getSettings: () => ReplaySettings, seed: number |
             }
             current.commands.push([tick, clonePlain(command)]);
         },
-        onStep(state: Readonly<GameState>) {
+        onStep(state: Readonly<CoreState>) {
             if (!current || current.truncated || current.error) return;
             const lastTick = current.start.tick + REPLAY_FILE_LIMITS.ticks;
             if (state.tick > lastTick) {
@@ -229,7 +229,7 @@ export type Recorder = ReturnType<typeof createRecorder>;
 
 export type MarkerKind = 'checkpoint' | 'death' | 'reset' | 'clear' | 'error' | 'diverged';
 export type Marker = { tick: number; kind: MarkerKind };
-type Keyframe = { state: GameState; index: number };
+type Keyframe = { state: CoreState; index: number };
 
 export type Timeline = {
     file: ReplayFile;

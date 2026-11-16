@@ -1,5 +1,5 @@
 import type { Message } from '../../../i18n';
-import type { GameState } from '../../../game/game';
+import type { GameSnapshot } from '../../../game/game';
 
 // The opening cutscene is pure presentation: every frame is a function of the elapsed time only, so the
 // game page, the motion preview and the tests all see the same picture for the same `t`.
@@ -252,7 +252,7 @@ export function openingFocusY(frame: OpeningFrame, chairY: number) {
 }
 
 /** The game snapshot as the cutscene shows it: the chair performs and the rider keeps typing. */
-export function openingState(state: GameState, frame: OpeningFrame): GameState {
+export function openingState(state: GameSnapshot, frame: OpeningFrame): GameSnapshot {
     return {
         ...state,
         time: frame.t,

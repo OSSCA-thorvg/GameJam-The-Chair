@@ -70,8 +70,8 @@ export function drawTalk(ctx: RenderCtx, talk: SceneTalk) {
     if (mode === 'play' && state.stage !== 2 && reaction) {
         const lines = wrap(text => ctx.measureText(text, size, SPEECH_FONT), reaction.text, ctx.W * .8)
             .map(text => ({ text, size, color: INK }));
-        const bottom = Math.max(110, (ctx.p.y - 110 + vertical) * scale) - 8;
-        speechBubble(ctx, 'talk-reaction', lines, (ctx.p.x - cam) * scale, bottom, REACTION_LIFE - reaction.life, reaction.life);
+        const bottom = Math.max(110, (ctx.player.y - 110 + vertical) * scale) - 8;
+        speechBubble(ctx, 'talk-reaction', lines, (ctx.player.x - cam) * scale, bottom, REACTION_LIFE - reaction.life, reaction.life);
     }
     const speech = talk.speech;
     const speechX = speech ? (speech.x - cam) * scale : 0;

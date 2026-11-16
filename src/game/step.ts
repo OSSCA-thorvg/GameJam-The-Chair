@@ -1,6 +1,6 @@
 import { FIXED_STEP, PHYSICS } from './level';
 import type { DeepReadonly, GameEvent, Mode, Point } from './types';
-import { cloneState, resetAttempt, setPlayer, snapshot, type GameState } from './state';
+import { cloneState, resetAttempt, setPlayer, snapshot, type CoreState } from './state';
 import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages/index';
 import { stageHooks } from './stages/hooks';
 import { runCommand, spray, type Command } from './commands';
@@ -12,13 +12,13 @@ import * as Det from './math';
 // Modes in which fixed steps advance the game. Others wait for a command.
 export const SIMULATED: readonly Mode[] = ['play', 'impact', 'focuslost'];
 
-export type StepResult = { state: GameState; events: GameEvent[] };
+export type StepResult = { state: CoreState; events: GameEvent[] };
 
 /**
  * One fixed step (1/120 s): applies the commands that arrived before it, then advances the current mode.
  * Pure from the outside: `state` is never modified, so if anything throws the previous state stays intact.
  */
-export function stepGame(state: Readonly<GameState>, commands: readonly Command[] = []): StepResult {
+export function stepGame(state: Readonly<CoreState>, commands: readonly Command[] = []): StepResult {
     const s = cloneState(state);
     const events: GameEvent[] = [];
     for (const command of commands) runCommand(s, command, events);
@@ -27,14 +27,14 @@ export function stepGame(state: Readonly<GameState>, commands: readonly Command[
 }
 
 /** Applies one command between steps, without stepping. Pure like stepGame. */
-export function applyCommand(state: Readonly<GameState>, command: Command): StepResult {
+export function applyCommand(state: Readonly<CoreState>, command: Command): StepResult {
     const s = cloneState(state);
     const events: GameEvent[] = [];
     runCommand(s, command, events);
     return { state: s, events };
 }
 
-function advanceMode(s: GameState, out: GameEvent[]) {
+function advanceMode(s: CoreState, out: GameEvent[]) {
     switch (s.mode) {
         case 'play':
             s.tick++;
@@ -59,7 +59,7 @@ export type CommandLog = readonly (readonly [tick: number, command: Command])[];
  * Re-runs the commands recorded after `start` was saved, then steps on to `endTick`.
  * The log must start where the saved state was taken (see the createGame recording hooks).
  */
-export function replayCommands(start: Readonly<GameState>, log: CommandLog, endTick: number): StepResult {
+export function replayCommands(start: Readonly<CoreState>, log: CommandLog, endTick: number): StepResult {
     const s = cloneState(start);
     const events: GameEvent[] = [];
     const advanceTo = (tick: number) => {
@@ -78,7 +78,7 @@ export function replayCommands(start: Readonly<GameState>, log: CommandLog, endT
 // (stages/<stage>/hooks.ts) at fixed points, in this order:
 // timers → takeover → hazards → beforeDrive → jump (onJump) → drive → afterMove → collisions →
 // afterCollide → checkpoints → shared scoring → fall (onFall) → finish.
-function playStep(s: GameState, out: GameEvent[], dt: number) {
+function playStep(s: CoreState, out: GameEvent[], dt: number) {
     const hooks = stageHooks(s.stage);
     const stage = STAGES[s.stage];
     s.history.push(snapshot(s));
@@ -178,12 +178,12 @@ function playStep(s: GameState, out: GameEvent[], dt: number) {
     }
 }
 // Static terrain plus the practice pile, which stays until the first jump lesson is done.
-export function stageSolids(s: GameState): readonly DeepReadonly<Point[]>[] {
+export function stageSolids(s: CoreState): readonly DeepReadonly<Point[]>[] {
     const terrain = STAGES[s.stage].terrain;
     return STAGES[s.stage].practicePile && !s.lessons.jumped ? [...terrain, PRACTICE_PILE] : terrain;
 }
 
-function reachCheckpoints(s: GameState, out: GameEvent[]) {
+function reachCheckpoints(s: CoreState, out: GameEvent[]) {
     const stage = STAGES[s.stage];
     if (stage.checkpointRule === 'land' && !s.ground) return;
     for (let i = s.checkpoint + 1; i < stage.checkpoints.length; i++) {

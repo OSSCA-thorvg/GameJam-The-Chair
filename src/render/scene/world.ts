@@ -104,7 +104,7 @@ export function drawWorld(ctx: RenderCtx) {
     const bin = ctx.bin;
     const copier = ctx.copier;
     const papers = ctx.papers;
-    const p = ctx.p;
+    const p = ctx.player;
     const t = ctx.t;
     const GOAL = ctx.GOAL;
 
@@ -192,13 +192,11 @@ export function drawWorld(ctx: RenderCtx) {
     urgentCopierDraw(ctx);
     for (const z of papers) {
         if (z.volley >= URGENT_VOLLEY_ID) continue;
-        ctx.ox = z.x;
-        ctx.oy = z.y;
-        ctx.rotation = z.a;
-        ctx.rect(-10, -6, 20, 12, C.paper);
-        ctx.rod(-6, -2, 6, -2, 1, '#9a9e9d');
-        ctx.rod(-6, 2, 3, 2, 1, '#b3b3a7');
-        ctx.ox = ctx.oy = ctx.rotation = 0;
+        ctx.withTransform({ ox: z.x, oy: z.y, rotation: z.a }, () => {
+            ctx.rect(-10, -6, 20, 12, C.paper);
+            ctx.rod(-6, -2, 6, -2, 1, '#9a9e9d');
+            ctx.rod(-6, 2, 3, 2, 1, '#b3b3a7');
+        });
     }
     urgentPapersDraw(ctx, papers);
     monitorDraw(ctx);
@@ -249,11 +247,9 @@ export function drawWorld(ctx: RenderCtx) {
     officeControlHints(ctx);
     debugCollisions(ctx);
     for (const z of ctx.specks) {
-        ctx.ox = z.x;
-        ctx.oy = z.y;
-        ctx.rotation = z.a;
-        ctx.rect(-3, -2, 7, 4, z.color);
-        ctx.ox = ctx.oy = ctx.rotation = 0;
+        ctx.withTransform({ ox: z.x, oy: z.y, rotation: z.a }, () => {
+            ctx.rect(-3, -2, 7, 4, z.color);
+        });
     }
     if (ctx.glare > 0) {
         ctx.rect(cam, -vertical, VW, H / scale, '#fff7d5' + Math.round(Math.min(.22, ctx.glare * .16) * 255).toString(16).padStart(2, '0'));

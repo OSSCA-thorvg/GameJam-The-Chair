@@ -123,7 +123,7 @@ function restingLine(ctx: RenderCtx, surging: boolean) {
     ctx.strokePath(inside.start, inside.curves, { width: 2, color: '#f4fff6', cap: 'round' });
     if (!surging) {
         // Chevrons along the start of the line: roll this way.
-        if (ctx.p.x > 2150) for (let i = 0; i < 3; i++) {
+        if (ctx.player.x > 2150) for (let i = 0; i < 3; i++) {
             const k = (t * .8 + i / 3) % 1;
             const at = graphPointAt(k * GRAPH_CORNERS[3]);
             const alpha = Math.round(255 * Math.sin(k * Math.PI)).toString(16).padStart(2, '0');

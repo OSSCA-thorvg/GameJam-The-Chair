@@ -34,7 +34,7 @@ export function wrap(measure: (line: string) => number, text: string, maxWidth: 
 const easeOutBack = (u: number) => 1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2;
 
 export function bubbleAnchor(ctx: RenderCtx, bubble: OpeningBubble): Vector {
-    const p = ctx.p;
+    const p = ctx.player;
     return bubble.speaker === 'rider' ? ctx.screenPoint(p.x + 2, p.y - 104) : ctx.screenPoint(p.x - 38, p.y - 44);
 }
 

@@ -49,9 +49,9 @@ export const panoramaX = (x: number, spin: number) => {
 /** The sky darkens to indigo, then to the black of space, and the stars come out. `spin` turns the camera round the chair. */
 export function orbitHighSky(ctx: RenderCtx, h: Heights, yaw = 0, spin = 0, bottom = ctx.H) {
     // Opaque Earth covers the lower sky during the ending; keep the gradient's original full-height coordinates.
-    if (h.air > 0 && h.space < 1) ctx.commands.push({ v: screen(ctx, bottom), c: { from: [0, 0], to: [0, ctx.H],
+    if (h.air > 0 && h.space < 1) ctx.commands.push({ kind: 'path', points: screen(ctx, bottom), fill: { from: [0, 0], to: [0, ctx.H],
         stops: [[0, ctx.rgba('#1b2550', h.air)], [.55, ctx.rgba('#43578a', h.air)], [1, ctx.rgba('#8090b4', h.air)]] } });
-    if (h.space > 0) ctx.commands.push({ v: screen(ctx, bottom), c: { from: [0, 0], to: [0, ctx.H],
+    if (h.space > 0) ctx.commands.push({ kind: 'path', points: screen(ctx, bottom), fill: { from: [0, 0], to: [0, ctx.H],
         stops: [[0, ctx.rgba('#060a1a', h.space)], [1, ctx.rgba('#121c3e', h.space)]] } });
     const stars = Math.max(h.air * .5, h.space);
     if (stars <= 0) return;
@@ -60,7 +60,7 @@ export function orbitHighSky(ctx: RenderCtx, h: Heights, yaw = 0, spin = 0, bott
         // A whole number of screens per full turn, so the stars line up again after the camera's circle.
         const shift = yaw * .35 + spin / (Math.PI * 2) * PANORAMA;
         const x = (((star.x - shift) % 1 + 1) % 1) * ctx.W, y = star.y * ctx.H, r = star.r * (ctx.W / 1000);
-        ctx.commands.push({ v: [[x - r, y], [x, y - r], [x + r, y], [x, y + r]], c: '#ffffff' + alpha(stars * twinkle) });
+        ctx.commands.push({ kind: 'path', points: [[x - r, y], [x, y - r], [x + r, y], [x, y + r]], fill: '#ffffff' + alpha(stars * twinkle) });
     }
 }
 
@@ -70,11 +70,11 @@ const alpha = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 25
 export function orbitShadow(ctx: RenderCtx, h: Heights, sunrise: Vector) {
     const shadow = h.shadow;
     if (shadow <= 0) return;
-    ctx.commands.push({ v: screen(ctx), c: '#050914' + alpha(.55 * shadow), layer: { key: 'orbit-earth-shadow' } });
+    ctx.commands.push({ kind: 'path', points: screen(ctx), fill: '#050914' + alpha(.55 * shadow), layer: { key: 'orbit-earth-shadow' } });
     // A little left of straight ahead, where the sun is about to come up over the rim of the Earth.
     const rim: Vector = [sunrise[0] - ctx.W * .12, sunrise[1]];
     const glow = ctx.W * .22 * shadow;
-    ctx.commands.push({ v: [[rim[0] - glow, rim[1] - glow], [rim[0] + glow, rim[1] - glow], [rim[0] + glow, rim[1] + glow], [rim[0] - glow, rim[1] + glow]],
-        c: { from: rim, to: [rim[0] + glow, rim[1]], radius: glow, stops: [[0, ctx.rgba('#ffe2a0', .85 * shadow)], [1, ctx.rgba('#ffb86b', 0)]] },
+    ctx.commands.push({ kind: 'path', points: [[rim[0] - glow, rim[1] - glow], [rim[0] + glow, rim[1] - glow], [rim[0] + glow, rim[1] + glow], [rim[0] - glow, rim[1] + glow]],
+        fill: { from: rim, to: [rim[0] + glow, rim[1]], radius: glow, stops: [[0, ctx.rgba('#ffe2a0', .85 * shadow)], [1, ctx.rgba('#ffb86b', 0)]] },
         layer: { key: 'orbit-sunrise', blend: 'screen' } });
 }

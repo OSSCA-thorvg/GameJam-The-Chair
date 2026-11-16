@@ -5,7 +5,7 @@ import { loadSource } from './support/load.mjs';
 const { FIVE, createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, orbitWatchers, createSkyProjection, revealChairOrbit, revealGlideStart, revealTravel, STAGE_FOUR, attendanceBubble, orbitReaction } = await loadSource(`
     export { createGame } from './src/game/game';
     export { STAGE_FIVE as FIVE } from './src/game/stages/orbit/data';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { drawOrbit } from './src/render/scene/orbit';
     export { cctvLamp, ORBIT_WATCH, orbitWatchers } from './src/render/scene/orbit-watch';
     export { createSkyProjection } from './src/render/scene/sky-projection';
@@ -24,7 +24,7 @@ function orbitFrame(z, t, age = 10) {
     const state = structuredClone(game.getSnapshot());
     Object.assign(state.orbit, { z, age });
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state, p: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t });
+    Object.assign(ctx, { state, player: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t });
     drawOrbit(ctx);
     return ctx.commands;
 }
@@ -124,7 +124,7 @@ test('the rider answers each camera beat in one curved ThorVG bubble', () => {
 test('the far speck above the door twinkles from the first frame of stage five', () => {
     const specks = beats.map(t => orbitFrame(0, t * 8).find(command => command.layer?.key === 'orbit-beacon'));
     assert.ok(specks.every(Boolean));
-    const radii = specks.map(command => command.c.radius);
+    const radii = specks.map(command => command.fill.radius);
     assert.ok(Math.max(...radii) - Math.min(...radii) > 3, 'its glow grows and shrinks');
 });
 

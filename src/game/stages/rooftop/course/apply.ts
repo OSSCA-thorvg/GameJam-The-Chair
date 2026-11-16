@@ -1,11 +1,11 @@
-import { setPlayer, type GameState } from '../../../state';
+import { setPlayer, type CoreState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { entranceStep, flightStep, graphRideStep, rooftopStep } from './decide';
 import * as Det from '../../../math';
 import { FOCUS_DAMAGE } from '../../../level';
 import { applyFocusHit } from '../../../systems/focus/apply';
 // Returns true while the rooftop door scene owns the chair.
-export function applyRooftopEntrance(s: GameState, dt: number) {
+export function applyRooftopEntrance(s: CoreState, dt: number) {
     if (s.rooftop.entrance.kind !== 'opening') return false;
     const r = entranceStep(s.rooftop.entrance, dt);
     s.rooftop.entrance = r.entrance;
@@ -18,7 +18,7 @@ export function applyRooftopEntrance(s: GameState, dt: number) {
     return true;
 }
 
-export function applyRooftop(s: GameState, out: GameEvent[], dt: number) {
+export function applyRooftop(s: CoreState, out: GameEvent[], dt: number) {
     const r = rooftopStep({ p: s.p, ground: s.ground, hasExtinguisher: s.hasExtinguisher, firstFlight: s.rooftop.flight, ductReaction: s.rooftop.duct, time: s.time }, dt);
     setPlayer(s, r.p);
     s.ground = r.ground;
@@ -44,7 +44,7 @@ export function applyRooftop(s: GameState, out: GameEvent[], dt: number) {
 }
 
 // Returns 'flight' while riding the graph or climbing, 'arrived' on reaching the sky, false otherwise.
-export function applyFlight(s: GameState, dt: number): false | 'flight' | 'arrived' {
+export function applyFlight(s: CoreState, dt: number): false | 'flight' | 'arrived' {
     const flight = s.rooftop.flight;
     if (flight.kind === 'course') return false;
     if (flight.kind === 'ride') {
