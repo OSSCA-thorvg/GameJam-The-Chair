@@ -14,7 +14,7 @@ const CLOUDS = (() => {
 export type BasinAnchor = { x: number; y: number };
 
 export function orbitSky(ctx: RenderCtx) {
-    ctx.commands.push({ v: [[0,0],[ctx.W,0],[ctx.W,ctx.H],[0,ctx.H]], c: {
+    ctx.commands.push({ kind: 'path', points: [[0,0],[ctx.W,0],[ctx.W,ctx.H],[0,ctx.H]], fill: {
         from: [0,0], to: [0,ctx.H], stops: [[0,ctx.rgba('#7499b9')],[.55,ctx.rgba('#a7bdd0')],[1,ctx.rgba('#efd0bc')]],
     } });
 }

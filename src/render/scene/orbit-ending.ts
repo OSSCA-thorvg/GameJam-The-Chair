@@ -88,15 +88,15 @@ export function endingNebula(ctx: RenderCtx, strength: number, spin = 0, bottom 
         const cx = x * ctx.W, cy = y * ctx.H, radius = r * ctx.W;
         if (cy - radius >= bottom) continue;
         const lower = Math.min(cy + radius, bottom);
-        ctx.commands.push({ v: [[cx - radius, cy - radius], [cx + radius, cy - radius], [cx + radius, lower], [cx - radius, lower]],
-            c: { from: [cx, cy], to: [cx + radius, cy], radius, stops: [[0, ctx.rgba(color, opacity * strength)], [1, ctx.rgba(color, 0)]] }, layer });
+        ctx.commands.push({ kind: 'path', points: [[cx - radius, cy - radius], [cx + radius, cy - radius], [cx + radius, lower], [cx - radius, lower]],
+            fill: { from: [cx, cy], to: [cx + radius, cy], radius, stops: [[0, ctx.rgba(color, opacity * strength)], [1, ctx.rgba(color, 0)]] }, layer });
     }
     for (const [px, y] of [[.82, .12], [.62, .08], [.9, .34], [.45, .18]]) {
         const cx = panoramaX(px, spin) * ctx.W, cy = y * ctx.H, ray = ctx.W * .008;
         if (cy - ray >= bottom) continue;
         const c = '#ffffff' + alpha(.9 * strength);
-        ctx.commands.push({ v: [[cx - ray, cy], [cx, cy - ray * .12], [cx + ray, cy], [cx, cy + ray * .12]], c, layer });
-        ctx.commands.push({ v: [[cx, cy - ray], [cx + ray * .12, cy], [cx, cy + ray], [cx - ray * .12, cy]], c, layer });
+        ctx.commands.push({ kind: 'path', points: [[cx - ray, cy], [cx, cy - ray * .12], [cx + ray, cy], [cx, cy + ray * .12]], fill: c, layer });
+        ctx.commands.push({ kind: 'path', points: [[cx, cy - ray], [cx + ray * .12, cy], [cx, cy + ray], [cx - ray * .12, cy]], fill: c, layer });
     }
 }
 
@@ -107,15 +107,15 @@ export function endingChairLights(ctx: RenderCtx, chair: SkyProjection, e: Orbit
     if (light > 0) {
         // Between the screen and the rider's face.
         const [x, y] = chair.project([42, 14, 0]), r = ctx.H * .09;
-        ctx.commands.push({ v: [[x - r, y - r], [x + r, y - r], [x + r, y + r], [x - r, y + r]],
-            c: { from: [x, y], to: [x + r, y], radius: r, stops: [[0, ctx.rgba('#9fd4ff', .55 * light)], [1, ctx.rgba('#9fd4ff', 0)]] },
+        ctx.commands.push({ kind: 'path', points: [[x - r, y - r], [x + r, y - r], [x + r, y + r], [x - r, y + r]],
+            fill: { from: [x, y], to: [x + r, y], radius: r, stops: [[0, ctx.rgba('#9fd4ff', .55 * light)], [1, ctx.rgba('#9fd4ff', 0)]] },
             layer: { key: 'orbit-laptop-light', blend: 'screen' } });
     }
 }
 
 export function endingFade(ctx: RenderCtx, e: OrbitEndingState) {
     if (e.dark <= 0) return;
-    ctx.commands.push({ v: [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]], c: '#000000' + alpha(e.dark), layer: { key: 'orbit-ending-black' } });
+    ctx.commands.push({ kind: 'path', points: [[0, 0], [ctx.W, 0], [ctx.W, ctx.H], [0, ctx.H]], fill: '#000000' + alpha(e.dark), layer: { key: 'orbit-ending-black' } });
     if (e.title <= 0) return;
     ctx.screenText('THE END', ctx.W / 2, ctx.H / 2, ctx.clamp(ctx.H * .055, 16, 40), '#efe6d2', { font: LABEL_FONT, opacity: e.title });
 }
@@ -128,7 +128,7 @@ export function endingSignal(ctx: RenderCtx, head: Vector, e: OrbitEndingState) 
     const size = ctx.clamp(ctx.W / 55, 10, 20), [cx, cy] = [head[0] + size * 2.2, head[1] - size * .6];
     const lit = 3 - Math.floor(e.signalLost), flicker = e.signalLost % 1 > .55 && Math.floor(ctx.t * 8) % 2 === 0;
     const layer = { key: 'orbit-signal', opacity: show };
-    ctx.commands.push({ v: [[cx - size * .14, cy], [cx, cy - size * .14], [cx + size * .14, cy], [cx, cy + size * .14]], c: '#ffffff', layer });
+    ctx.commands.push({ kind: 'path', points: [[cx - size * .14, cy], [cx, cy - size * .14], [cx + size * .14, cy], [cx, cy + size * .14]], fill: '#ffffff', layer });
     for (let i = 0; i < 3; i++) {
         const r = size * (.42 + i * .36);
         const arc: Vector[] = Array.from({ length: 9 }, (_, k) => {
@@ -136,7 +136,7 @@ export function endingSignal(ctx: RenderCtx, head: Vector, e: OrbitEndingState) 
             return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
         });
         const on = i < lit && !(i === lit - 1 && flicker);
-        ctx.commands.push({ v: arc, open: true, c: null, stroke: { width: size * .16, color: on ? '#ffffff' : '#ffffff40', cap: 'round' }, layer });
+        ctx.commands.push({ kind: 'path', points: arc, open: true, fill: null, stroke: { width: size * .16, color: on ? '#ffffff' : '#ffffff40', cap: 'round' }, layer });
     }
 }
 

@@ -77,7 +77,7 @@ export function drawClock(ctx: RenderCtx, frame: OpeningFrame) {
     polygon(ctx, [[wx - 8, wy - 8], [wx + ww + 8, wy - 8], [wx + ww + 8, wy + wh + 8], [wx - 8, wy + wh + 8]], tinted(view.frame));
     ctx.endLayer();
     // The view through the window is clipped to the frame, so the setting sun sinks out of sight.
-    const pane = { v: [[wx, wy], [wx + ww, wy], [wx + ww, wy + wh], [wx, wy + wh]] as Vector[], c: '#ffffff' };
+    const pane = { kind: 'path' as const, points: [[wx, wy], [wx + ww, wy], [wx + ww, wy + wh], [wx, wy + wh]] as Vector[], fill: '#ffffff' };
     layer('sky', { clip: pane });
     polygon(ctx, [[wx, wy], [wx + ww, wy], [wx + ww, wy + wh], [wx, wy + wh]],
         linear(ctx, [0, wy], [0, wy + wh], [[0, tinted(view.skyTop)], [1, tinted(view.skyBottom)]]));

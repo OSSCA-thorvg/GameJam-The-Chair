@@ -56,7 +56,7 @@ function cctv(ctx: RenderCtx, x: number, index: number) {
 function glow(ctx: RenderCtx, [x, y]: [number, number], state: LampState) {
     if (state === 'idle') return;
     const radius = (state === 'flash' ? 22 : 9) * ctx.scale;
-    ctx.commands.push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
+    ctx.commands.push({ kind: 'path', points: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], fill: {
         from: [x, y], to: [x + radius, y], radius, stops: [[0, ctx.rgba('#ff6b57', .95)], [1, ctx.rgba('#ff6b57', 0)]],
     }, layer: { key: 'ceiling-cctv-light', blend: 'screen' } });
 }

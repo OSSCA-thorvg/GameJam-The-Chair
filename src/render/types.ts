@@ -53,9 +53,9 @@ export type LayerSpec = {
     blend?: Blend;
     opacity?: number;
     /** Screen-space path the whole layer is clipped to. */
-    clip?: DrawCommand;
+    clip?: PathCommand;
     /** Screen-space shape whose fill alpha masks the layer (ThorVG MaskMethod.Alpha). */
-    mask?: DrawCommand;
+    mask?: PathCommand;
     /** Keep the layer where the mask is transparent instead (ThorVG MaskMethod.InvAlpha). */
     maskInvert?: boolean;
     /**
@@ -89,17 +89,26 @@ export type SceneTalk = {
     reaction: { text: string; life: number } | null;
     speech: { name: string; text: string; x: number; life: number } | null;
 };
-export type DrawCommand = {
-    v: Vector[];
+export type DrawCommand = PathCommand | TextCommand;
+
+export type TextCommand = {
+    kind: 'text';
+    /** Screen bounds for clipping and inspection. */
+    points: Vector[];
+    text: TextSpec;
+    layer?: LayerSpec;
+};
+
+export type PathCommand = {
+    kind: 'path';
+    points: Vector[];
     curves?: Curve[];
     /** Fill; null draws the outline only (use with `stroke`). */
-    c: string | Gradient | null;
+    fill: string | Gradient | null;
     open?: boolean;
     stroke?: Stroke;
     /** Visible fraction of the path [begin, end]. */
     trim?: [number, number];
     blend?: Blend;
     layer?: LayerSpec;
-    /** Draw this text instead of the path; `v` is then only the text's screen box. */
-    text?: TextSpec;
 };

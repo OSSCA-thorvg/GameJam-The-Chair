@@ -142,7 +142,7 @@ function startSign(ctx: RenderCtx, time: number) {
     const u = h / 43;
     const icon = (px: number, py: number): Vector => [x + h * .18 + px * u, y + py * u];
     const block = (px: number, py: number, pw: number, ph: number, fill: string) =>
-        push(ctx, { v: [icon(px, py), icon(px + pw, py), icon(px + pw, py + ph), icon(px, py + ph)], c: fill });
+        push(ctx, { kind: 'path', points: [icon(px, py), icon(px + pw, py), icon(px + pw, py + ph), icon(px, py + ph)], fill: fill });
     // The pictogram exactly as the in-game sign draws it, in sign units (43 tall).
     block(0, 7, 19, 29, '#d5e6da');
     block(4, 12, 11, 24, '#557f78');
@@ -153,8 +153,8 @@ function startSign(ctx: RenderCtx, time: number) {
     for (const wx of [7, 13]) push(ctx, circleAt(...icon(wx, 33), 1.6 * u).command('#e2eee0'));
 
     const arrowLeft = x + w - h * .62, mid = y + h / 2;
-    push(ctx, { v: [[arrowLeft, mid - h * .05], [arrowLeft + h * .24, mid - h * .05], [arrowLeft + h * .24, mid + h * .05], [arrowLeft, mid + h * .05]], c: '#e2eee0' });
-    push(ctx, { v: [[arrowLeft + h * .18, mid - h * .2], [arrowLeft + h * .42, mid], [arrowLeft + h * .18, mid + h * .2]], c: '#e2eee0' });
+    push(ctx, { kind: 'path', points: [[arrowLeft, mid - h * .05], [arrowLeft + h * .24, mid - h * .05], [arrowLeft + h * .24, mid + h * .05], [arrowLeft, mid + h * .05]], fill: '#e2eee0' });
+    push(ctx, { kind: 'path', points: [[arrowLeft + h * .18, mid - h * .2], [arrowLeft + h * .42, mid], [arrowLeft + h * .18, mid + h * .2]], fill: '#e2eee0' });
 
     const label = translate('button.start', ctx.locale);
     const textLeft = x + h * .18 + 24 * u, textRight = arrowLeft - h * .12;

@@ -36,7 +36,7 @@ function cabinActors(ctx: RenderCtx, start: number) {
     const [left, top] = ctx.screenPoint(STAGE_TWO.lift - 1 - aperture * 99, 190);
     const [right, bottom] = ctx.screenPoint(STAGE_TWO.lift + aperture * 99, 420);
     const visible = ctx.commands.splice(start).flatMap(command => {
-        let points = command.v;
+        let points = command.points;
         for (const [axis, edge, direction] of [[0, left, 1], [0, right, -1], [1, top, 1], [1, bottom, -1]] satisfies [0 | 1, number, number][]) {
             const clipped: Vector[] = [];
             for (let i = 0; i < points.length; i++) {
@@ -52,7 +52,7 @@ function cabinActors(ctx: RenderCtx, start: number) {
             points = clipped;
         }
         if (points.length < 3 || aperture === 0) return [];
-        return [{ ...command, v: points }];
+        return [{ ...command, points }];
     });
     ctx.commands.push(...visible);
 }

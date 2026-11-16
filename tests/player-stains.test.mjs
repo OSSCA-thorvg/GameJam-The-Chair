@@ -25,5 +25,5 @@ test('every splash adds more stains, up to a cap', () => {
 });
 
 test('the same number of soakings always draws the same stains', () => {
-    assert.deepEqual(stains(4).map(command => command.v), stains(4).map(command => command.v));
+    assert.deepEqual(stains(4).map(command => command.points), stains(4).map(command => command.points));
 });

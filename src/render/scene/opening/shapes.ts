@@ -1,5 +1,5 @@
 import type { RenderCtx } from '../../context';
-import type { Curve, DrawCommand, Gradient, Stroke, Vector } from '../../types';
+import type { Curve, DrawCommand, PathCommand, Gradient, Stroke, Vector } from '../../types';
 
 // Screen-space path helpers for the cutscene. Unlike the RenderCtx helpers these ignore the world camera:
 // the clock, the bubbles and the full-screen lighting are laid out in canvas pixels.
@@ -30,8 +30,8 @@ export class PathBuilder {
         const [px, py] = this.at;
         return this.cubic(px + (cx - px) * K, py + (cy - py) * K, x + (cx - x) * K, y + (cy - y) * K, x, y);
     }
-    command(fill: string | Gradient | null, stroke?: Stroke, open = false): DrawCommand {
-        const cmd: DrawCommand = { v: [this.start], curves: this.curves, c: fill };
+    command(fill: string | Gradient | null, stroke?: Stroke, open = false): PathCommand {
+        const cmd: PathCommand = { kind: 'path', points: [this.start], curves: this.curves, fill: fill };
         if (stroke) cmd.stroke = stroke;
         if (open) cmd.open = true;
         return cmd;
@@ -61,7 +61,7 @@ export function push(ctx: RenderCtx, cmd: DrawCommand) {
 }
 
 export function polygon(ctx: RenderCtx, points: Vector[], fill: string | Gradient) {
-    push(ctx, { v: points, c: fill });
+    push(ctx, { kind: 'path', points: points, fill: fill });
 }
 
 export function screenRect(ctx: RenderCtx, fill: string | Gradient) {

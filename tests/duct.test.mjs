@@ -13,7 +13,7 @@ function tick(s, seconds) { for (let i = 0; i < Math.round(seconds * 120); i++) 
 function props(s) {
     const ctx = createRenderCtx({}); Object.assign(ctx, { state: viewState(s) }); rooftopDuct(ctx);
     const marks = Object.values(DUCT_PROP_COLORS);
-    return ctx.commands.filter(command => marks.includes(command.c)).map(command => command.v);
+    return ctx.commands.filter(command => marks.includes(command.fill)).map(command => command.points);
 }
 
 test('the duct sneezes first on a timer, wherever the rider is', () => {

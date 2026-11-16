@@ -40,8 +40,8 @@ export function orbitSpeedLines(ctx: RenderCtx, center: Vector, fast: number) {
         const r0 = reach * (.25 + .75 * k), r1 = r0 + reach * (.05 + .22 * k) * fast;
         const dx = Math.cos(line.angle), dy = Math.sin(line.angle), nx = -dy * line.width, ny = dx * line.width;
         const [cx, cy] = center;
-        ctx.commands.push({ v: [[cx + dx * r0, cy + dy * r0], [cx + dx * r1 + nx, cy + dy * r1 + ny], [cx + dx * r1 - nx, cy + dy * r1 - ny]],
-            c: '#ffffff' + alpha(.55 * k * fast), layer });
+        ctx.commands.push({ kind: 'path', points: [[cx + dx * r0, cy + dy * r0], [cx + dx * r1 + nx, cy + dy * r1 + ny], [cx + dx * r1 - nx, cy + dy * r1 - ny]],
+            fill: '#ffffff' + alpha(.55 * k * fast), layer });
     }
 }
 
@@ -77,7 +77,7 @@ export function orbitSlipstream(ctx: RenderCtx, chair: SkyProjection, strength: 
         const nx = -(ay - by) / len * width, ny = (ax - bx) / len * width;
         // Faint as it forms ahead, brightest alongside the chair, gone as it passes the camera.
         const fade = Math.min(1, k / .2) * Math.min(1, (1 - k) / .25);
-        const command: DrawCommand = { v: [[bx, by], [ax + nx, ay + ny], [ax - nx, ay - ny]], c: '#ffffff' + alpha(.6 * fade * strong), layer };
+        const command: DrawCommand = { kind: 'path', points: [[bx, by], [ax + nx, ay + ny], [ax - nx, ay - ny]], fill: '#ffffff' + alpha(.6 * fade * strong), layer };
         (chair.depth(a) > centreDepth ? behind : over).push(command);
     }
     return { behind, over };

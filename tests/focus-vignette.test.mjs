@@ -25,8 +25,8 @@ test('the vignette is one border band appended last, and skipped when idle', () 
     Object.assign(ctx, { state, player: state.player, mode: 'play', t: 0, cam: 0, W: 1000, H: 510, VW: 1000, scale: 1, vertical: 0 });
     focusVignette(ctx);
     assert.equal(ctx.commands.length, 1);
-    assert.ok(ctx.commands[0].c.radius, 'drawn with a ThorVG radial gradient');
-    assert.ok(ctx.commands[0].v.length > 4, 'the transparent centre is cut out of the path');
+    assert.ok(ctx.commands[0].fill.radius, 'drawn with a ThorVG radial gradient');
+    assert.ok(ctx.commands[0].points.length > 4, 'the transparent centre is cut out of the path');
 
     ctx.commands = [];
     ctx.state = { ...state, focusNotice: null };

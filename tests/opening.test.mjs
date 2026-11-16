@@ -64,7 +64,7 @@ function render(time, locale = 'ko') {
     });
     drawOpening(ctx, frame);
     for (const cmd of ctx.commands) {
-        for (const point of cmd.v) for (const n of point) assert.ok(Number.isFinite(n), `finite point at t=${time}`);
+        for (const point of cmd.points) for (const n of point) assert.ok(Number.isFinite(n), `finite point at t=${time}`);
         for (const curve of cmd.curves ?? []) for (const n of curve) assert.ok(Number.isFinite(n), `finite curve at t=${time}`);
     }
     const labels = ctx.commands.filter(cmd => cmd.text).map(({ text }) => ({ text: text.content, x: text.x, y: text.y, alpha: text.opacity ?? 1 }));
@@ -134,7 +134,7 @@ test('7 pm the chair creaks harder and faster; 8 pm the backrest bucks the worke
     const kick = render(B.kick + .5);
     assert.ok(!kick.commands.some(c => c.layer?.key === 'opening-anger'), 'no anger marks at 8 pm');
     for (const t of [B.riderOvertime + 1, B.chairHope + 1, B.creak + 1, B.kick + .5]) {
-        assert.ok(!render(t).commands.some(c => !c.text && c.stroke && typeof c.c === 'string' && c.c.startsWith('#f4f1ea')), `no keycap hints in the film at ${t}`);
+        assert.ok(!render(t).commands.some(c => !c.text && c.stroke && typeof c.fill === 'string' && c.fill.startsWith('#f4f1ea')), `no keycap hints in the film at ${t}`);
     }
 });
 
@@ -171,7 +171,7 @@ test('office frames light the scene and draw the bubbles with their words', () =
     const hope = render(B.chairHope + 2.5);
     const chairBubble = hope.commands.find(c => c.layer?.key === 'opening-bubble-0' && !c.text && c.stroke);
     const riderBubble = wide.commands.find(c => c.layer?.key === 'opening-bubble-0' && !c.text && c.stroke);
-    assert.notEqual(chairBubble.c, riderBubble.c, 'the chair and the worker have bubbles of their own colour');
+    assert.notEqual(chairBubble.fill, riderBubble.fill, 'the chair and the worker have bubbles of their own colour');
     assert.ok(hope.commands.some(c => c.layer?.key.endsWith('-glow') && c.layer.blur > 0), 'the chair bubble glows');
     assert.ok(hope.commands.some(c => c.layer?.key === 'opening-notes'));
     assert.ok(hope.commands.some(c => c.layer?.key.endsWith('-note')), 'the chair hums a drawn note in place of the missing ♪ glyph');

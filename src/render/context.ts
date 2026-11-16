@@ -2,7 +2,7 @@ import type { Locale } from '../i18n';
 import { LEVEL } from '../game/level';
 import type { GameSnapshot } from '../game/game';
 import type { DeepReadonly, Mode } from '../game/types';
-import type { Vector, Curve, Color, Gradient, DrawCommand, LayerSpec, Blend, Stroke, Bounds, TextSpec } from './types';
+import type { Vector, Curve, Color, Gradient, DrawCommand, PathCommand, LayerSpec, Blend, Stroke, Bounds, TextSpec } from './types';
 import { fitGlyphs, fontCss, LABEL_FONT, SIGN_FONT, type FontName } from './fonts';
 import { ART } from './art';
 import type { EffectsState } from './effects';
@@ -87,7 +87,7 @@ export type RenderCtx = {
     gradientFill(x1: number, y1: number, x2: number, y2: number, stops: [number, string][], alpha?: number): Gradient;
     effectPath(start: Vector, curves: Curve[], fill: Gradient | string, opts?: PathOptions): void;
     strokePath(start: Vector, curves: Curve[], stroke: StrokeInput, opts?: PathOptions & { closed?: boolean }): void;
-    pathCommand(start: Vector, curves: Curve[]): DrawCommand;
+    pathCommand(start: Vector, curves: Curve[]): PathCommand;
     radialFill(cx: number, cy: number, r: number, stops: [number, string][], alpha?: number): Gradient;
     withTransform(transform: Partial<Pick<RenderCtx, 'ox' | 'oy' | 'rotation' | 'localScale' | 'mirror'>>, draw: () => void): void;
     withLayer(spec: LayerSpec, draw: () => void): void;
@@ -175,7 +175,7 @@ function drawingMethods(getCtx: () => RenderCtx, { retained }: RenderResources) 
         getCtx().commands.push(cmd);
     };
     const polygon: RenderCtx['polygon'] = (points, color, opts) => {
-        push({ v: points.map(([x, y]) => getCtx().screenPoint(x, y)), c: color, ...opts });
+        push({ kind: 'path', points: points.map(([x, y]) => getCtx().screenPoint(x, y)), fill: color, ...opts });
     };
     const rgb: RenderCtx['rgb'] = (hex) => {
         const h = hex.slice(1);
@@ -187,14 +187,14 @@ function drawingMethods(getCtx: () => RenderCtx, { retained }: RenderResources) 
     const gradientFill: RenderCtx['gradientFill'] = (x1, y1, x2, y2, stops, alpha = 1) => {
         return { from: getCtx().screenPoint(x1, y1), to: getCtx().screenPoint(x2, y2), stops: stops.map(([at, c]) => [at, getCtx().rgba(c, alpha)]) };
     };
-    const pathCommand: RenderCtx['pathCommand'] = (start, curves) => ({
-        v: [getCtx().screenPoint(...start)],
+    const pathCommand: RenderCtx['pathCommand'] = (start, curves) => ({ kind: 'path',
+        points: [getCtx().screenPoint(...start)],
         curves: curves.map(c => [...getCtx().screenPoint(c[0], c[1]), ...getCtx().screenPoint(c[2], c[3]), ...getCtx().screenPoint(c[4], c[5])]),
-        c: null,
+        fill: null,
     });
     const effectPath: RenderCtx['effectPath'] = (start, curves, fill, opts) => {
         const cmd = getCtx().pathCommand(start, curves);
-        cmd.c = fill;
+        cmd.fill = fill;
         if (opts?.blend) cmd.blend = opts.blend;
         if (opts?.trim) cmd.trim = opts.trim;
         push(cmd);
@@ -247,7 +247,7 @@ function drawingMethods(getCtx: () => RenderCtx, { retained }: RenderResources) 
         }
     };
     const gradientPolygon: RenderCtx['gradientPolygon'] = (points, fill, opts) => {
-        push({ v: points.map(v => getCtx().screenPoint(...v)), c: fill, ...opts });
+        push({ kind: 'path', points: points.map(v => getCtx().screenPoint(...v)), fill: fill, ...opts });
     };
     const visible: RenderCtx['visible'] = (bounds, margin = 0) => {
         const left = getCtx().cam - margin, right = getCtx().cam + getCtx().VW + margin;
@@ -331,7 +331,7 @@ function drawingMethods(getCtx: () => RenderCtx, { retained }: RenderResources) 
             ...(opts.outline ? { outline: opts.outline } : {}),
             ...(opts.opacity !== undefined ? { opacity: opts.opacity } : {}),
         };
-        push({ v: box, c: fill, text });
+        push({ kind: 'text', points: box, text });
     };
     const text: RenderCtx['text'] = (content, x, y, size, fill, opts) => {
         const unit = getCtx().scale * getCtx().localScale;

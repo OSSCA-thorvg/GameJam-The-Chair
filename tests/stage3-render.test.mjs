@@ -14,9 +14,9 @@ test('the rooftop sales chart has no information banner above it', () => {
     drawRooftop(ctx);
 
     const banner = ctx.commands.find(command => {
-        if (command.c !== '#e9e2d2' || command.v.length !== 4) return false;
-        const xs = command.v.map(([x]) => x);
-        const ys = command.v.map(([, y]) => y);
+        if (command.fill !== '#e9e2d2' || command.points.length !== 4) return false;
+        const xs = command.points.map(([x]) => x);
+        const ys = command.points.map(([, y]) => y);
         return Math.max(...xs) - Math.min(...xs) > 450
             && Math.max(...ys) - Math.min(...ys) > 40
             && Math.max(...ys) <= -600;
@@ -34,11 +34,11 @@ test('the rooftop sales chart support ends cleanly at the top edge', () => {
 
     drawRooftop(ctx);
 
-    const braces = ctx.commands.filter(command => command.c === '#353e4d'
-        && command.v.some(([x]) => x < STAGE_THREE.edge)
-        && command.v.every(([x]) => x >= 2360 && x <= STAGE_THREE.edge + 5));
+    const braces = ctx.commands.filter(command => command.fill === '#353e4d'
+        && command.points.some(([x]) => x < STAGE_THREE.edge)
+        && command.points.every(([x]) => x >= 2360 && x <= STAGE_THREE.edge + 5));
     assert.ok(braces.length > 0, 'the chart support is rendered');
-    const top = Math.min(...braces.flatMap(command => command.v.map(([, y]) => y)));
+    const top = Math.min(...braces.flatMap(command => command.points.map(([, y]) => y)));
     assert.ok(top >= -620, `support protrudes above the chart: ${top}`);
 });
 
@@ -53,17 +53,17 @@ test('entrance replaces the falling chart with an employee board with an initial
         const labels = ctx.commands.filter(command => command.text).map(({ text }) => ({ text: text.content, x: text.x, y: text.y }));
         assert.ok(labels.some(label => label.text === (locale === 'en' ? 'EMPLOYEES OF THE MONTH' : '이달의 우수사원')));
         assert.ok(labels.every(label => label.text !== 'JIN' && label.text !== '진'));
-        const portraits = ctx.commands.filter(command => command.c === '#f4ecd7'
-            && command.v.length === 4 && command.v[1][0] - command.v[0][0] === 40
-            && command.v[2][1] - command.v[1][1] === 49);
-        assert.deepEqual(portraits.map(command => command.v[0]), [[62, 118], [111, 118], [160, 118]]);
+        const portraits = ctx.commands.filter(command => command.fill === '#f4ecd7'
+            && command.points.length === 4 && command.points[1][0] - command.points[0][0] === 40
+            && command.points[2][1] - command.points[1][1] === 49);
+        assert.deepEqual(portraits.map(command => command.points[0]), [[62, 118], [111, 118], [160, 118]]);
         assert.ok(!ctx.commands.some(command => command.layer?.key === 'sales-monitor-fall'));
         assert.ok(!ctx.commands.some(command => command.layer?.key === 'sales-monitor-flat'));
         const beam = ctx.commands.find(command => command.layer?.key === 'employee-board-light');
-        assert.ok(beam && typeof beam.c !== 'string');
-        assert.ok(Math.min(...beam.v.map(point => point[1])) < 82, 'light starts above the board');
-        assert.ok(Math.max(...beam.v.map(point => point[1])) >= 210, 'light reaches the board bottom');
-        assert.ok(ctx.commands.some(command => command.v.some(([x, y]) => x === -400 && y === -72)), 'entrance wall extends above the board and lamp');
+        assert.ok(beam && typeof beam.fill !== 'string');
+        assert.ok(Math.min(...beam.points.map(point => point[1])) < 82, 'light starts above the board');
+        assert.ok(Math.max(...beam.points.map(point => point[1])) >= 210, 'light reaches the board bottom');
+        assert.ok(ctx.commands.some(command => command.points.some(([x, y]) => x === -400 && y === -72)), 'entrance wall extends above the board and lamp');
     }
 });
 
@@ -80,12 +80,12 @@ test('the shut door jolts only the player portrait into a drop and swing, with r
         const ctx = createRenderCtx({});
         Object.assign(ctx, { state, player: state.player, mode: state.mode });
         drawRooftop(ctx);
-        return ctx.commands.filter(command => command.c === '#f4ecd7' && command.v.length === 4
-            && Math.abs(Math.hypot(command.v[1][0] - command.v[0][0], command.v[1][1] - command.v[0][1]) - 40) < 1e-8
-            && Math.abs(Math.hypot(command.v[2][0] - command.v[1][0], command.v[2][1] - command.v[1][1]) - 49) < 1e-8);
+        return ctx.commands.filter(command => command.fill === '#f4ecd7' && command.points.length === 4
+            && Math.abs(Math.hypot(command.points[1][0] - command.points[0][0], command.points[1][1] - command.points[0][1]) - 40) < 1e-8
+            && Math.abs(Math.hypot(command.points[2][0] - command.points[1][0], command.points[2][1] - command.points[1][1]) - 49) < 1e-8);
     };
     const angle = portraits => {
-        const [a, b] = portraits[2].v;
+        const [a, b] = portraits[2].points;
         return Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
     };
     const start = render(0);
@@ -93,7 +93,7 @@ test('the shut door jolts only the player portrait into a drop and swing, with r
     for (const tick of [132, 300]) assert.deepEqual(render(tick), start, 'photo stays in the row until the door shuts');
     assert.notEqual(angle(render(318)), 0, 'door impact rattles the photo');
     const pivotY = portraits => {
-        const [a, b] = portraits[2].v;
+        const [a, b] = portraits[2].points;
         return (a[1] + b[1]) / 2 + Math.cos(angle(portraits) * Math.PI / 180);
     };
     const falling = render(336);
@@ -141,16 +141,16 @@ test('rooftop renders the live course and first flight in both languages and nar
         });
         if (state.stage === 4) drawCloudStart(ctx);
         else drawRooftop(ctx);
-        assert.ok(ctx.commands.some(command => typeof command.c !== 'string'), 'ThorVG retains gradient fills');
-        const gradientHas = rgb => ctx.commands.some(command => command.c && typeof command.c !== 'string'
-            && command.c.stops.some(([, color]) => rgb.every((channel, index) => color[index] === channel)));
+        assert.ok(ctx.commands.some(command => typeof command.fill !== 'string'), 'ThorVG retains gradient fills');
+        const gradientHas = rgb => ctx.commands.some(command => command.fill && typeof command.fill !== 'string'
+            && command.fill.stops.some(([, color]) => rgb.every((channel, index) => color[index] === channel)));
         if (name === 'ascent-start') assert.ok(gradientHas([253, 248, 239]), 'the ascent starts with the stage-three cloud colour');
         if (name === 'ascent-half') assert.ok(gradientHas([251, 233, 190]), 'the cloud colour changes gradually halfway up');
         if (name === 'bread-clouds') assert.ok(gradientHas([248, 217, 141]), 'the transition ends at golden bread');
         if (state.stage === 3) assert.ok(ctx.commands.some(command => command.curves?.length), 'rooftop retains curved effects');
         for (const command of ctx.commands) {
-            for (const point of [...command.v, ...(command.curves ?? [])]) assert.ok(point.every(Number.isFinite));
-            if (command.c && typeof command.c !== 'string') assert.ok(command.c.stops.every(([, color]) => color.every(Number.isFinite)));
+            for (const point of [...command.points, ...(command.curves ?? [])]) assert.ok(point.every(Number.isFinite));
+            if (command.fill && typeof command.fill !== 'string') assert.ok(command.fill.stops.every(([, color]) => color.every(Number.isFinite)));
         }
         const labels = ctx.commands.filter(command => command.text).map(command => command.text.content);
         const [, playerY] = ctx.screenPoint(state.player.x, state.player.y);

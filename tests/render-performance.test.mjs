@@ -33,7 +33,7 @@ function stageContext(stage, camera = 0) {
 
 test('the stage three takeoff and the stage four sky draw no white sun disc', () => {
     // The old sun glow rendered as a hard white disc, like a moon hanging over the climb and the whole of stage four.
-    const disc = commands => commands.find(command => command.blend === 'screen' && command.c && typeof command.c !== 'string' && command.c.radius);
+    const disc = commands => commands.find(command => command.blend === 'screen' && command.fill && typeof command.fill !== 'string' && command.fill.radius);
     const sky = stageContext(4);
     drawSky(sky);
     assert.equal(disc(sky.commands), undefined, 'no sun in the stage four sky');
@@ -64,7 +64,7 @@ test('small projected clouds use fewer curves while retaining ThorVG gradients',
     const curves = ctx => ctx.commands.reduce((sum, command) => sum + (command.curves?.length ?? 0), 0);
 
     assert.ok(curves(distant) < curves(near), 'distant clouds have a smaller path payload');
-    assert.ok(distant.commands.some(command => command.c && typeof command.c !== 'string'), 'LOD retains gradient volume');
+    assert.ok(distant.commands.some(command => command.fill && typeof command.fill !== 'string'), 'LOD retains gradient volume');
 });
 
 test('retained groups build local geometry once and move it with an absolute Scene transform', () => {
@@ -81,6 +81,6 @@ test('retained groups build local geometry once and move it with an absolute Sce
     const second = ctx.commands[0];
 
     assert.equal(builds, 1);
-    assert.deepEqual(second.v, first.v, 'cached paths remain in local coordinates');
+    assert.deepEqual(second.points, first.points, 'cached paths remain in local coordinates');
     assert.notDeepEqual(second.layer.retained.transform, first.layer.retained.transform, 'camera movement changes only the Scene matrix');
 });

@@ -25,7 +25,7 @@ test('rider reactions and colleague remarks are ThorVG bubbles with Jua words', 
     assert.deepEqual(texts.map(text => text.content), ['이거 이번 달 실적인데...', '박 과장', '벌써 퇴근하는 거야?']);
     assert.ok(texts.every(text => text.font === SPEECH_FONT));
     assert.equal(ctx.commands.filter(command => command.layer?.key.startsWith('talk-')).length, 2, 'one paper bubble per speaker');
-    for (const command of ctx.commands) for (const point of [...command.v, ...(command.curves ?? [])]) assert.ok(point.every(Number.isFinite));
+    for (const command of ctx.commands) for (const point of [...command.points, ...(command.curves ?? [])]) assert.ok(point.every(Number.isFinite));
 });
 
 test('remarks stay quiet where the HUD kept them hidden', () => {

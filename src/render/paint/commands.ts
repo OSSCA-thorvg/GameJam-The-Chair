@@ -1,0 +1,93 @@
+import type { Blend, DrawCommand, PathCommand, LayerSpec, TextSpec } from '../types';
+
+export type Item = { cmd: PathCommand } | { text: TextSpec } | { layer: LayerSpec; key: string; cmds: PathCommand[] };
+
+/**
+ * Where a layer command touches the canvas, or null when it cannot leave a pixel there.
+ *
+ * ThorVG 1.1.3 (SW engine) sizes a layer's offscreen buffer, and any blur over it, from the union of its
+ * children's boxes. A child wholly off the canvas reports an empty box at the origin, which drags that
+ * union to the canvas's top-left corner, and hidden children still count. Off-canvas commands draw
+ * nothing anyway, so they are left out of layers.
+ */
+export function canvasBox(cmd: PathCommand, width: number, height: number, extent?: number[]): [number, number] | null {
+    if (cmd.fill === null && !cmd.stroke) return null;
+    // The polygon and Bézier control points enclose the whole path.
+    let xMin = Infinity, yMin = Infinity, xMax = -Infinity, yMax = -Infinity;
+    const take = (x: number, y: number) => {
+        if (x < xMin) xMin = x;
+        if (x > xMax) xMax = x;
+        if (y < yMin) yMin = y;
+        if (y > yMax) yMax = y;
+    };
+    for (const [x, y] of cmd.points) take(x, y);
+    for (const c of cmd.curves ?? []) {
+        take(c[0], c[1]); take(c[2], c[3]); take(c[4], c[5]);
+    }
+    const pad = (cmd.stroke?.width ?? 0) / 2 + 1;
+    if (xMax + pad <= 0 || yMax + pad <= 0 || xMin - pad >= width || yMin - pad >= height) return null;
+    // Profiling only: grow `extent` ([xMin, yMin, xMax, yMax]) by this command's on-canvas box.
+    if (extent) {
+        extent[0] = Math.min(extent[0], Math.max(0, xMin - pad));
+        extent[1] = Math.min(extent[1], Math.max(0, yMin - pad));
+        extent[2] = Math.max(extent[2], Math.min(width, xMax + pad));
+        extent[3] = Math.max(extent[3], Math.min(height, yMax + pad));
+    }
+    // A point that lies both on the canvas and inside this command's box.
+    return [Math.max(0, Math.min(width - 1, xMin)), Math.max(0, Math.min(height - 1, yMin))];
+}
+
+/**
+ * Whether a layer changes how its commands look. One without opacity, blend, blur, clip, mask or a retained
+ * transform paints exactly like its commands drawn on their own, so it is drawn without a ThorVG Scene, whose
+ * offscreen pass is what a layer costs (most of all on the GL renderer).
+ */
+function effective(spec: LayerSpec) {
+    return (spec.opacity !== undefined && spec.opacity < 1) || (!!spec.blend && spec.blend !== 'normal') || !!spec.blur
+        || (!!spec.motionBlur && spec.motionBlur.distance > .5) || !!spec.clip || !!spec.mask || !!spec.retained;
+}
+
+/** Blends whose result does not depend on paint order (up to overlaps between children). */
+const ORDERLESS: ReadonlySet<Blend> = new Set(['screen', 'add', 'multiply']);
+
+/**
+ * Whether a layer's only effect is an order-independent blend. Consecutive such layers with the same blend paint
+ * (nearly) the same in one Scene, and each Scene costs a full offscreen pass on the GL renderer whatever its size.
+ */
+function blendOnly(spec: LayerSpec) {
+    return !!spec.blend && ORDERLESS.has(spec.blend) && (spec.opacity === undefined || spec.opacity >= 1) && !spec.blur
+        && !(spec.motionBlur && spec.motionBlur.distance > .5) && !spec.clip && !spec.mask && !spec.retained && !spec.effectBudget;
+}
+
+const sharesScene = (a: LayerSpec, b: LayerSpec) => a === b || (a.blend === b.blend && blendOnly(a) && blendOnly(b));
+
+/** Group consecutive commands that share a layer (or blend the same way and nothing else) into one item. */
+export function collect(commands: DrawCommand[]): Item[] {
+    const items: Item[] = [];
+    const seen = new Map<string, number>();
+    let open: Extract<Item, { layer: LayerSpec }> | null = null;
+    for (const cmd of commands) {
+        // Text is always its own canvas paint, so it breaks a layer run; it never joins a layer Scene.
+        if (cmd.kind === 'text') {
+            open = null;
+            items.push({ text: cmd.text });
+            continue;
+        }
+        // A layer faded below one step of 8-bit alpha leaves no pixel; a layer with no effect paints as plain shapes.
+        if (cmd.layer && cmd.layer.opacity !== undefined && cmd.layer.opacity < 1 / 255) continue;
+        if (!cmd.layer || !effective(cmd.layer)) {
+            open = null;
+            items.push({ cmd: cmd.layer ? { ...cmd, layer: undefined } : cmd });
+            continue;
+        }
+        if (!open || !sharesScene(open.layer, cmd.layer)) {
+            const uses: number = seen.get(cmd.layer.key) ?? 0;
+            seen.set(cmd.layer.key, uses + 1);
+            open = { layer: cmd.layer, key: uses ? `${cmd.layer.key}#${uses}` : cmd.layer.key, cmds: [] };
+            items.push(open);
+        }
+        open.cmds.push(cmd);
+    }
+    return items;
+}
+

@@ -124,7 +124,7 @@ test('the rider answers each camera beat in one curved ThorVG bubble', () => {
 test('the far speck above the door twinkles from the first frame of stage five', () => {
     const specks = beats.map(t => orbitFrame(0, t * 8).find(command => command.layer?.key === 'orbit-beacon'));
     assert.ok(specks.every(Boolean));
-    const radii = specks.map(command => command.c.radius);
+    const radii = specks.map(command => command.fill.radius);
     assert.ok(Math.max(...radii) - Math.min(...radii) > 3, 'its glow grows and shrinks');
 });
 

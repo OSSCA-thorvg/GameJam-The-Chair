@@ -64,7 +64,7 @@ function fakeThorvg() {
     return { TVG, canvas: new Canvas(), log };
 }
 
-const square = (x, layer) => ({ v: [[x, 10], [x + 10, 10], [x + 10, 20], [x, 20]], c: '#336699', ...(layer ? { layer } : {}) });
+const square = (x, layer) => ({ kind: 'path', points: [[x, 10], [x + 10, 10], [x + 10, 20], [x, 20]], fill: '#336699', ...(layer ? { layer } : {}) });
 
 function frame(ctx, layerShapes, plainShapes) {
     // An effect makes it a real ThorVG Scene; a layer without one is painted as plain shapes.
@@ -261,7 +261,7 @@ test('ThorVG Text keeps its place in the command order so later shapes paint ove
     const pool = createPaintPool();
     const text = { content: '흔들리지', font: 'Black Han Sans', size: 40, x: 100, y: 50, rotation: .1, fill: '#fff0cc',
         outline: { width: 3, color: '#27344d' } };
-    ctx.commands = [square(10), { v: [[60, 30], [140, 30], [140, 70], [60, 70]], c: '#fff0cc', text }, square(100)];
+    ctx.commands = [square(10), { kind: 'text', points: [[60, 30], [140, 30], [140, 70], [60, 70]], text }, square(100)];
     paint(ctx, TVG, canvas, pool);
 
     const kinds = canvas.paints.map(paint => paint.constructor.name);
