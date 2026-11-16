@@ -10,7 +10,7 @@
 | `stage4-route.mjs` | 하늘 코스 driver. 테스트는 `tests/replays/stage4-route.json`에 녹화된 발사를 재생합니다. stage 4 게임플레이를 의도적으로 바꿨다면 `npm run route:update`로 다시 계획합니다 |
 | `realtime-replay.mjs` | `replay.test.mjs`와 `replay-stage3.test.mjs`가 함께 쓰는 실시간 replay 검사 |
 | `golden.mjs` | 플레이 지문 시나리오. `npm run golden:update`로 갱신합니다 |
-| `canonical-json.mjs` | 테스트용 JSON 정규화: 객체 키를 정렬하며 배열 순서와 값은 유지 |
+| `canonical-json.mjs` | 코어의 JSON 정규화 함수를 재사용: 객체 키를 정렬하며 배열 순서와 값은 유지 |
 | `input.mjs` | 입력 테스트용 브라우저 전역, 키 이벤트와 포인터 버튼. `t.after()`로 전역을 복원합니다 |
 | `until.mjs` | `runUntil(done, step, { maxSteps, message })`로 시뮬레이션 전환에 상한을 두고, 목표에 도달하지 못하면 실패합니다 |
 | `determinism.mjs` | 같은 입력과 저장 후 이어 실행의 결정성 공통 검사 |

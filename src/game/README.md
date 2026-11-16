@@ -46,6 +46,12 @@ Every value that affects gameplay belongs to one of these categories.
 
 `viewState` queries gameplay rules and terrain before projecting data. Shared projections accept only their selected input fields; stage projections live in `stages/<stage>/view.ts` and are exported through `stages/view.ts`. Each projection owns its returned objects and arrays. Raw sky and orbit data are cloned directly at the assembly boundary, without pass-through factory wrappers.
 
+## Hash ordering and replay compatibility
+
+`data.ts` serializes objects with recursively sorted keys before hashing configuration or game state. Array order stays significant, and hashing does not modify its input. Golden tests use the same canonical serializer.
+
+Replay format 5 uses these order-independent hashes. Older formats are rejected because their recorded hashes use a different ordering contract. Plain state serialization keeps its existing JSON representation.
+
 ## Write a system
 
 ```ts

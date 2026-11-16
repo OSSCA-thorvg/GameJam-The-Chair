@@ -8,8 +8,21 @@ export function deepFreeze<T>(value: T): DeepReadonly<T> {
     return value as DeepReadonly<T>;
 }
 
+export function canonicalJson(value: unknown): string {
+    return JSON.stringify(value, (_key, entry: unknown) => {
+        if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+            return entry;
+        }
+        return Object.fromEntries(
+            Object.entries(entry).sort(([a], [b]) =>
+                a < b ? -1 : a > b ? 1 : 0,
+            ),
+        );
+    });
+}
+
 export function configHash(config: unknown): string {
-    const text = JSON.stringify(config);
+    const text = canonicalJson(config);
     let hash = 0x811c9dc5;
     for (let i = 0; i < text.length; i++) {
         hash ^= text.charCodeAt(i);
