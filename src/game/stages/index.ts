@@ -1,5 +1,3 @@
-// The stage table: static data only. Each stage defines itself in stages/<stage>/definition.ts;
-// adding a stage adds one line here and one case in stages/hooks.ts and stages/attempt.ts.
 import { FIXED_STEP, FOCUS_DAMAGE, LEVEL, PHYSICS, RULES } from '../level';
 import { configHash, deepFreeze } from '../data';
 import type { DeepReadonly, Point, StageId } from '../types';
@@ -34,10 +32,7 @@ export function inCheckpointArea(mark: DeepReadonly<Checkpoint>, p: Point) {
     return p.x >= left && p.x < right && p.y > top && p.y < bottom;
 }
 
-// Everything that shapes a run besides state and commands. Replays record CONFIG_VERSION.
 export const GAME_CONFIG = deepFreeze({
-    // Which transcendental functions the core uses. 'deterministic-1' = src/game/math.ts (bit-exact in
-    // every engine); replays recorded with the browser's own Math functions are flagged as another version.
     math: 'deterministic-1',
     fixedStep: FIXED_STEP,
     rules: RULES,

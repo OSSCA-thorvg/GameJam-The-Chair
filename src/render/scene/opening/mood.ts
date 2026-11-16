@@ -3,9 +3,7 @@ import type { OpeningFrame } from './timeline';
 import { linear, radial, screenRect } from './shapes';
 import { officeTint } from '../window-view';
 
-// Office lighting for the cutscene (sunset → night) and the chair's moods (humming, rage).
 
-/** Low sun through the back windows: warm shafts that fade as the evening goes on. */
 export function drawSunbeams(ctx: RenderCtx, frame: OpeningFrame) {
     const strength = (1 - frame.dusk) * frame.lighting;
     if (strength <= 0) return;
@@ -19,7 +17,6 @@ export function drawSunbeams(ctx: RenderCtx, frame: OpeningFrame) {
     ctx.endLayer();
 }
 
-/** Multiply tint over the office, then the laptop's glow and a vignette on top of the darkness. */
 export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame) {
     const { dusk, lighting } = frame;
     if (lighting <= 0) return;
@@ -45,14 +42,12 @@ export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame) {
     }
 }
 
-/** The chair's moods around it: 6 pm joy, 7 pm creaks and the 9 pm rage. */
 export function drawChairMood(ctx: RenderCtx, frame: OpeningFrame) {
     if (frame.hum > 0) drawJoy(ctx, frame);
     if (frame.creakPulse > 0) drawCreak(ctx, frame);
     if (frame.rage > 0) drawRage(ctx, frame);
 }
 
-/** One musical note at the current origin, `big` doubling it into a pair of beamed quavers. */
 function note(ctx: RenderCtx, color: string, big: boolean) {
     ctx.ellipse(0, 0, 3.6, 2.7, color);
     ctx.rod(3, -1, 3, -13, 1.4, color);
@@ -64,7 +59,6 @@ function note(ctx: RenderCtx, color: string, big: boolean) {
     }
 }
 
-/** 6 pm: notes bubbling up on both sides and sparkles twinkling round the dancing chair. */
 function drawJoy(ctx: RenderCtx, frame: OpeningFrame) {
     const p = ctx.player, t = frame.t;
     ctx.beginLayer({ key: 'opening-notes', opacity: frame.hum });
@@ -87,7 +81,6 @@ function drawJoy(ctx: RenderCtx, frame: OpeningFrame) {
     ctx.endLayer();
 }
 
-/** 7 pm: strain lines flicking out from the wheels and the backrest joint with every creak, longer as it worsens. */
 function drawCreak(ctx: RenderCtx, frame: OpeningFrame) {
     const p = ctx.player, reach = 8 + 14 * frame.creak;
     ctx.beginLayer({ key: 'opening-creak', opacity: frame.creakPulse });
@@ -112,10 +105,6 @@ function angerMark(ctx: RenderCtx, x: number, y: number, scale: number) {
     ctx.localScale = 1;
 }
 
-/**
- * 9 pm: the chair trembles (its afterimages are drawn with it) under a throbbing anger mark by the backrest,
- * and dust jumps off the floor round its wheels.
- */
 function drawRage(ctx: RenderCtx, frame: OpeningFrame) {
     const p = ctx.player, t = frame.t;
     ctx.beginLayer({ key: 'opening-rage', opacity: frame.rage });
@@ -124,7 +113,6 @@ function drawRage(ctx: RenderCtx, frame: OpeningFrame) {
     floorDust(ctx, t, frame.rage);
 }
 
-/** Dust hopping off the floor round the trembling wheels. */
 function floorDust(ctx: RenderCtx, t: number, shake: number) {
     const p = ctx.player;
     ctx.beginLayer({ key: 'opening-floor-dust', opacity: shake });
@@ -136,7 +124,6 @@ function floorDust(ctx: RenderCtx, t: number, shake: number) {
     ctx.endLayer();
 }
 
-/** Hard white flash when the rage line hits. */
 export function drawRageFlash(ctx: RenderCtx, frame: OpeningFrame, since: number) {
     const age = frame.t - since;
     if (age < 0 || age > .25) return;

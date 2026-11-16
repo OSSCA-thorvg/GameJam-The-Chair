@@ -6,8 +6,6 @@ import type { SceneTalk } from '../types';
 import { wrap } from './opening/bubble';
 import { PathBuilder, push } from './opening/shapes';
 
-// Words people say during play and the stage title card, as ThorVG paths and Text in canvas pixels,
-// so they keep their size while the camera scales and stay in the scene's paint order.
 
 const PAPER = '#f7ecd8ed';
 const INK = '#4b493f';
@@ -18,12 +16,10 @@ const TITLE_TIME = 2.2;
 
 const easeOutBack = (u: number) => 1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2;
 
-/** Pops in from the tail over the first moments of `age`, and fades out over the last of `life`. */
 function presence(age: number, life: number) {
     return { scale: .55 + .45 * easeOutBack(Math.min(1, age / .2)), alpha: Math.min(1, life / .25, age / .08) };
 }
 
-/** A rounded speech box whose tail points down to `tip`, scaled about the tip. */
 function bubblePath(x: number, y: number, w: number, h: number, tip: [number, number], scale: number) {
     const r = Math.min(9, h / 2);
     const tw = 7;
@@ -39,7 +35,6 @@ function bubblePath(x: number, y: number, w: number, h: number, tip: [number, nu
 
 type Line = { text: string; size: number; color: string };
 
-/** A paper bubble holding `lines`, its tail at canvas x `tipX`, its bottom at canvas y `bottom`. */
 function speechBubble(ctx: RenderCtx, key: string, lines: Line[], tipX: number, bottom: number, age: number, life: number) {
     const { scale, alpha } = presence(age, life);
     if (alpha <= 0) return;
@@ -62,7 +57,6 @@ function speechBubble(ctx: RenderCtx, key: string, lines: Line[], tipX: number, 
     });
 }
 
-/** The rider's reaction over the chair, and outside stage 2 a colleague's remark at the floor line. */
 export function drawTalk(ctx: RenderCtx, talk: SceneTalk) {
     const { state, mode, cam, scale, vertical } = ctx;
     const size = ctx.W < 520 ? 13 : 15;
@@ -85,7 +79,6 @@ export function drawTalk(ctx: RenderCtx, talk: SceneTalk) {
     }
 }
 
-/** The stage's name drops in at the top, bounces once, and slips away. */
 export function drawStageTitle(ctx: RenderCtx) {
     const t = ctx.state.time;
     if (ctx.mode !== 'play' || t > TITLE_TIME) return;

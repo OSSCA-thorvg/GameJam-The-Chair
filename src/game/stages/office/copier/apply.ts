@@ -13,7 +13,6 @@ export function applyCopier(s: CoreState, out: GameEvent[], result: CopierResult
     if (s.office.bursts === 1) out.push({ type: 'cue', id: 'first-volley' });
 }
 
-// The executive printer: the first urgent volley makes the rider notice; every shot adds sheets.
 export function applyUrgentCopier(s: CoreState, out: GameEvent[], result: UrgentResult) {
     s.office.urgent = result.copier;
     if (result.started && result.copier.volley === 1) out.push({ type: 'cue', id: 'urgent-volley' });
@@ -25,12 +24,10 @@ export function applyPapers(s: CoreState, out: GameEvent[], result: { papers: Pa
     for (const hit of result.hits) {
         s.office.paperHits++;
         if (!applyFocusHit(s, out, hit.focus)) {
-            // Play stops at this sheet: later sheets keep their previous positions this tick.
             s.office.papers = [...result.papers.slice(0, hit.index + 1), ...s.office.papers.slice(hit.index + 1)];
             return false;
         }
         if (hit.heavy) {
-            // A stapled bundle shoves the chair back along its flight.
             s.p.vx = s.p.vx * .3 + hit.vx * .55;
             s.p.vy = Math.min(s.p.vy, -90);
             s.p.w += hit.vx * .002;

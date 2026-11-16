@@ -28,7 +28,6 @@ function drive(game, stop = state => state.mode !== 'play', options = {}) {
             }
         }
         const correction = -p.a * 12 - p.w * 4;
-        // The express convoy hops the cable covers and leaps the hole; with stayAboard it gets swept into the lift.
         const keys = (state.stage === 2 ? express(state, game) : null) ?? (hazardWait ? [] : ['right']);
         if (correction < -.4) keys.push('q');
         if (correction > .4) keys.push('e');

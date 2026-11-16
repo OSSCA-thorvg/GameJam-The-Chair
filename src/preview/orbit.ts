@@ -24,7 +24,6 @@ export function orbitRoute(): PreviewScene {
         const section = orbit.phase === 'parked' ? 'Ending' : orbit.z < air ? '5-1 clouds'
             : orbit.z < space ? '5-2 atmosphere' : orbit.z < shadow ? '5-3 space' : 'Earth shadow';
         if (section !== previous) { markers.push({ at: i / 60, label: section }); previous = section; }
-        // Keep recording through the whole ending, so the hand-off from 5-3 can be watched in one go.
         if (orbit.phase === 'parked' && i / 60 - (markers.at(-1)?.at ?? 0) > ORBIT_ENDING.end + 1) break;
     }
     return recordedScene('orbit-route', 'Orbit · 5-1 to 5-3 and the ending', 0, markers, frames);
@@ -35,9 +34,7 @@ export function orbitEndingScene(aside = false): PreviewScene {
     game.startStage(5);
     const parked = JSON.parse(game.serialize());
     Object.assign(parked.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1, age: 76 });
-    // The whole shadow is the goal, so in play the chair can park well off the middle of the route.
     if (aside) Object.assign(parked.p, { x: -STAGE_FIVE.bounds.x, y: STAGE_FIVE.bounds.y, vx: 0, vy: 0, a: 0 });
-    // As in play, the chair arrives well into the stage, long after the stage title has gone.
     parked.checkpoint = 1;
     parked.time = 76;
     game.restore(JSON.stringify(parked));

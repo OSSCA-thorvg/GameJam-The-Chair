@@ -1,10 +1,7 @@
-// Shared drivers for simulation tests. Uses only the public createGame API.
 import { load } from './load.mjs';
 
 export const { createGame, replayCommands, stepGame, applyCommand } = await load('src/game/game.ts');
 
-// A command is [tick, method, ...args]; it runs before the given fixed step.
-// start = { progress?, stage? } describes the state before the first step.
 export function begin(seed, start = {}) {
     const game = createGame({ seed, progress: start.progress });
     if (start.stage) game.startStage(start.stage);
@@ -30,7 +27,6 @@ export function runWith(seed, start, commands, ticks) {
     return play(begin(seed, start), commands, 0, ticks);
 }
 
-// A rough route: hold right, hop regularly, balance, and restart once after a failure.
 export function sampleCommands(ticks, { restartAt = Math.floor(ticks * .6), spray = false } = {}) {
     /** @type {[number, string, ...string[]][]} */
     const commands = [[0, 'setInput', 'right']];
@@ -45,7 +41,6 @@ export function sampleCommands(ticks, { restartAt = Math.floor(ticks * .6), spra
     return commands.sort((a, b) => a[0] - b[0]);
 }
 
-// Records the commands a state-aware policy issues, so a closed-loop run becomes a fixed command list.
 export function recordCommands(seed, start, ticks, policy) {
     const game = begin(seed, start);
     const commands = [];
@@ -61,8 +56,6 @@ export function recordCommands(seed, start, ticks, policy) {
     return commands;
 }
 
-// Holds right, keeps the chair upright, hops the office bin and waits out monitor light.
-// Geysers are driven through on purpose so their random spin gets exercised.
 export function balancePolicy(state, game) {
     const p = state.player;
     let wait = false;
@@ -82,9 +75,7 @@ export function balancePolicy(state, game) {
 }
 
 const EXPRESS = { pit: { left: 10650, right: 10990 } };
-// The orientation cables and sleepers before the express.
 const ORIENTATION = [4050, 4400, 4750, 5370, 5700, 5960, 6450, 6700, 6970, 7190, 7450, 7640, 7830, 8110, 8330, 8590, 8790, 8990];
-// Whether to hop now: the jump peaks over the nearest obstacle ahead.
 export function orientationHop(state) {
     const p = state.player;
     if (!state.ground) return false;
@@ -93,10 +84,6 @@ export function orientationHop(state) {
         return time > .36 && time < .44;
     });
 }
-// Rides the orientation convoy, hopping each obstacle, then the express convoy: jumps from the launch ramp,
-// then jumps off the convoy again with a push before the lift. With `stayAboard` it stays on the chairs and
-// gets swept into the lift.
-// Returns the keys to hold this tick, or null when the convoy is not involved.
 export function createExpressRider(stayAboard = false) {
     let off = false;
     return (state, game) => {
@@ -104,7 +91,6 @@ export function createExpressRider(stayAboard = false) {
         if (off) return ['right'];
         if (pace !== 'express' && state.stage === 2 && orientationHop(state)) game.jump();
         if (convoy === 'free') return null;
-        // Aboard, left and right roll between the chairs, so a rider who wants to stay lets go.
         if (pace !== 'express') return [];
         if (convoy !== 'carried' || !state.ground) return [];
         const toLip = EXPRESS.pit.left - p.x;
@@ -114,8 +100,6 @@ export function createExpressRider(stayAboard = false) {
     };
 }
 
-// Rides the building corridor: enters the meeting once, then rides the express convoy over the ramp and
-// off it again, unless `stayAboard`.
 export function corridorPolicy(stayAboard) {
     let entered = false;
     const express = createExpressRider(stayAboard);

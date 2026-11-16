@@ -1,4 +1,3 @@
-/** Installs the browser surface used by bindInput; cleanup also runs after setup failures. */
 export function installInputEnvironment(t) {
     const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];
     const saved = names.map(name => /** @type {const} */ ([name, Object.getOwnPropertyDescriptor(globalThis, name)]));

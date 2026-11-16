@@ -1,7 +1,6 @@
 import { translate, type Locale } from '../i18n';
 import { OPENING_DURATION, openingFrame, type OpeningFrame } from '../render/scene/opening/timeline';
 
-// The cutscene is presentation only: the game waits while the main loop draws `frame()`.
 
 export function createOpening(root: HTMLElement, getLocale: () => Locale) {
     let time: number | null = null;
@@ -26,7 +25,6 @@ export function createOpening(root: HTMLElement, getLocale: () => Locale) {
         if (!scene) return done();
         time = 0;
         onDone = done;
-        // A transparent layer over the scene: any click or Enter/Esc/Space skips to the game.
         screen = document.createElement('div');
         screen.className = 'opening-skip';
         screen.setAttribute('role', 'button');

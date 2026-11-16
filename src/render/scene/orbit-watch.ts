@@ -6,15 +6,12 @@ import type { Point3, SkyProjection } from './sky-projection';
 import type { SkyRobot } from '../../game/stages/sky/data';
 import { robotBirdModel } from './orbit-robot-bird';
 
-/** Maps a stage-five route point (x across, y up, z ahead) into a projection's coordinates. */
 export type RoutePoint = (x: number, y: number, z: number) => Point3;
 
-/** `appear`: how far the reveal's turn into 3D has gone (0 side, 1 behind) before this camera comes into view. */
 type Spot = { x: number; y: number; z: number; seed: number; kind: CctvKind; size: number; appear: number; bird?: SkyRobot };
 
 const pick = (random: () => number) => CCTV_KINDS[Math.floor(random() * CCTV_KINDS.length)];
 
-/** Free-floating cameras spread between the clouds along stage five, kept clear of the chair's lane and the door. */
 function routeCctvs(seed: number, count: number, from: number, to: number): Spot[] {
     const random = seeded(seed);
     return Array.from({ length: count }, (_, i) => ({
@@ -23,13 +20,10 @@ function routeCctvs(seed: number, count: number, from: number, to: number): Spot
     }));
 }
 
-// Where the reveal cameras sit on a 1000×510 screen once the camera is behind the chair: every edge and corner, none over the chair.
 const REVEAL_COLUMNS = [60, 210, 360, 640, 790, 940], REVEAL_ROWS = [50, 170, 300, 430];
 const REVEAL_VIEW = { focal: 841.5, centerY: 188.7, camera: 480 };
-// A few spots in the field are stage four's chrome robot parrots instead, staring at the chair along with the cameras.
 const REVEAL_BIRDS: Record<number, SkyRobot> = { 1: 'liquid', 6: 'black', 11: 'liquid', 16: 'black', 19: 'liquid' };
 
-/** Cameras hanging in the air all around the chair, turning up one by one as the view turns into 3D; `glide` later carries it past every one. */
 function revealCctvs(seed: number, glide: number): Spot[] {
     const random = seeded(seed);
     const count = REVEAL_ROWS.length * REVEAL_COLUMNS.length;
@@ -48,7 +42,6 @@ const GLIDE = 1600;
 
 type Glint = { x: number; y: number; red: boolean; rate: number; phase: number };
 
-/** Screen-space points on the low cloud floor and the two high clouds, clear of the chair in the middle. */
 function cloudGlints(seed: number): Glint[] {
     const random = seeded(seed);
     const floor = Array.from({ length: 16 }, (_, i) => {
@@ -59,41 +52,29 @@ function cloudGlints(seed: number): Glint[] {
         ({ ...spot, red: i % 3 === 0, rate: 1.6 + random() * 2.2, phase: random() * Math.PI * 2 }));
 }
 
-// The company keeps watching. Scenery only: nothing here collides or changes play.
 export const ORBIT_WATCH = {
-    // The stage four reveal glides the chair forward through this field before stage five begins at z = 0.
     glide: GLIDE,
     reveal: revealCctvs(4100, GLIDE),
     route: routeCctvs(5200, 10, 600, 4700),
     satelliteAppear: .35,
-    // A far speck in the sky above the office door, the last landing of the route.
     beacon: { x: 90, y: 760, z: 7400, appear: .55 },
-    // Lenses and lamps glinting out of the low cloud floor, from when the camera is behind the chair.
     glints: cloudGlints(6300),
     glintsFrom: .92,
     before: 200, after: 40, blink: 7,
 };
 
-/** idle: the slow REC blink every camera keeps up · flash: blinking while the chair passes · recorded: steady once it has gone by. */
 export type LampState = 'idle' | 'flash' | 'recorded';
-/** `glow`: a robot parrot's lens eye, always glowing like the stage four 2D lens; its world radius. */
 type Lamp = { at: Point3; state: LampState; glow?: number; rec?: boolean };
 
-/** Lamp state of a camera `ahead` route units in front of the chair. */
 export function cctvLamp(ahead: number, t: number): LampState {
     if (ahead > ORBIT_WATCH.before) return 'idle';
     if (ahead > -ORBIT_WATCH.after) return Math.floor(t * ORBIT_WATCH.blink) % 2 === 0 ? 'flash' : 'idle';
     return 'recorded';
 }
 
-/** Each camera's REC lamp blinks on its own beat, so the whole sky winks red out of step. */
 const recording = (t: number, seed: number) => (t * .8 + seed * .618) % 1 < .55;
 const lampColor = (state: LampState, rec: boolean) => state !== 'idle' || rec ? '#ff4a3a' : '#5e1d1a';
 
-/**
- * Within this distance ahead of the chair a camera swerves out past the edge of the view, so none ever comes
- * between the chair and the camera. The reveal field starts further out than this, so its framing is untouched.
- */
 const SWERVE = 200;
 
 function swerve(p: Point3, ahead: number): Point3 {
@@ -106,7 +87,6 @@ function swerve(p: Point3, ahead: number): Point3 {
 function floating(view: SkyProjection, point: RoutePoint, spot: Spot, travel: number, t: number): Lamp[] {
     const placed = point(spot.x, spot.y + Math.sin(t * .9 + spot.seed) * 8, spot.z);
     const anchor = swerve(placed, placed[0]);
-    // The lens keeps turning toward the chair at the projection's origin.
     const yaw = aim(-anchor[0], -anchor[2]) + Math.sin(t * .6 + spot.seed) * .05;
     const state = cctvLamp(spot.z - travel, t);
     if (spot.bird) {
@@ -132,7 +112,6 @@ function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: n
             view.profile(rect(u - 1, -24, u + 1, 24), .4, '#c9d6ee', 2.4, { place });
         }
     }
-    // Its lens is built into the body, looking down at the route.
     view.oval(place([0, -16, 29]), [9, 9, 3], '#27344d');
     view.oval(place([2, -13, 30]), [3, 3, 1], '#7d9fbb');
     const state = cctvLamp(z - travel, t);
@@ -142,12 +121,6 @@ function satellite(view: SkyProjection, point: RoutePoint, at: { x: number; y: n
     return { at: lamp, state, rec };
 }
 
-/**
- * Adds the watchers to `view`; returns their lamps for the glow pass. The reveal's field sits behind stage five's
- * start and the route's ahead of it, so both are always placed and the projection leaves out what is behind it.
- * `shown` is how far the reveal has turned into 3D; watchers that come later stay hidden. Satellites are placed with
- * `satelliteLightPoint`, the frame their beams are drawn in. Nothing the chair has passed is drawn.
- */
 export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: number, t: number, shown = 1, satelliteLightPoint = point,
     satellites: readonly { x: number; y: number; z: number }[] = []) {
     const lamps = [...ORBIT_WATCH.reveal, ...ORBIT_WATCH.route].filter(spot => spot.appear <= shown && point(spot.x, spot.y, spot.z)[0] > 0)
@@ -159,10 +132,7 @@ export function orbitWatchers(view: SkyProjection, point: RoutePoint, travel: nu
     return lamps;
 }
 
-/** Red light spills from every lamp: a small REC blink while waiting, a flash as the chair passes, then a steady glow. */
 export function orbitWatchGlow(ctx: RenderCtx, view: SkyProjection, lamps: Lamp[], alpha = 1) {
-    // All glows of a kind share one screen-blended layer (one ThorVG Scene each). Screen blending gives the same
-    // result in any order, so the REC blinks, the camera flashes and the robot eyes are painted kind by kind.
     const recLayer = { key: 'orbit-cctv-rec', blend: 'screen' as const }, lightLayer = { key: 'orbit-cctv-light', blend: 'screen' as const };
     const eyeLayer = { key: 'orbit-robot-eye', blend: 'screen' as const };
     const recs: DrawCommand[] = [], lights: DrawCommand[] = [], eyes: DrawCommand[] = [];
@@ -193,7 +163,6 @@ function eyeGlow(ctx: RenderCtx, view: SkyProjection, at: Point3, glow: number, 
     }, layer };
 }
 
-/** One small point twinkles high above the door, too far away to make out yet. */
 export function orbitBeacon(ctx: RenderCtx, view: SkyProjection, point: RoutePoint, alpha = 1) {
     const { x, y, z } = ORBIT_WATCH.beacon;
     const at = point(x, y, z);
@@ -211,11 +180,9 @@ export function orbitBeacon(ctx: RenderCtx, view: SkyProjection, point: RoutePoi
     ctx.commands.push({ kind: 'path', points: [[cx, cy - ray], [cx + thin, cy], [cx, cy + ray], [cx - thin, cy]], fill: color, layer });
 }
 
-/** White lens glints and red recording lamps blink out of the clouds. */
 export function orbitCloudGlints(ctx: RenderCtx, alpha = 1) {
     if (alpha <= 0) return;
-    // Plain alpha rather than a screen-blended Scene, which cost a full-canvas pass right where the Earth comes in.
-    // Each colour c is the one that paints over the bread clouds (d ≈ #e8b464) what c screened would: c + d(1 - c).
+    // Colours bake in the screen blend to avoid a full-canvas compositing pass.
     const layer = { key: 'orbit-cloud-glint' };
     for (const glint of ORBIT_WATCH.glints) {
         const wave = Math.sin(ctx.t * glint.rate + glint.phase);

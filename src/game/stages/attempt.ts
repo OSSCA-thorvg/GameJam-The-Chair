@@ -21,7 +21,6 @@ export function prepareStageAttempt(stage: StageId, attempt: Attempt, checkpoint
     }
 }
 
-// Every stage's own state for a fresh attempt (all four exist; only the current stage changes its own).
 export function createStageStates(checkpoint: number, appearanceSeed: number) {
     return {
         office: createOfficeState(),

@@ -15,7 +15,6 @@ const { FIVE, createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, orb
     export { orbitReaction } from './src/render/scene/orbit-reaction';
 `);
 
-/** The words drawn as ThorVG Text in a frame. */
 const words = commands => commands.filter(command => command.text).map(command => command.text.content);
 
 function orbitFrame(z, t, age = 10) {
@@ -56,14 +55,12 @@ test('the reveal glides forward to exactly where stage five starts', () => {
     assert.equal(revealTravel(settle + turn + hold, settle, ORBIT_WATCH.glide), 0);
     assert.ok(ORBIT_WATCH.reveal.every(spot => spot.z + ORBIT_WATCH.glide > ORBIT_WATCH.before),
         'every reveal camera waits unlit until the glide');
-    // The projection camera sits 480 behind the chair, so a camera this far back is out of view at stage five's start.
     assert.ok(ORBIT_WATCH.reveal.every(spot => spot.z + 480 < 30), 'every reveal camera is behind the view before stage five');
 });
 
 test('the cameras get time to sink in before the glide, which arrives at stage five already at cruise speed', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     const start = revealGlideStart(settle), end = settle + turn + hold;
-    // When the camera turn has brought a watcher of the given `appear` into view.
     const seen = appear => {
         for (let at = settle; at <= settle + turn; at += 1 / 120) if (revealChairOrbit(at, settle) >= appear) return at;
         return Infinity;
@@ -166,7 +163,6 @@ test('5-1: inside a beam\'s rectangle the chair is caught, and outside it nothin
         for (const [x, y] of [[first.half.x + r + 5, 0], [0, first.half.y + r + 5]]) assert.ok(!inSatelliteLight(aims, chairAt(x, y), z), `clear at ${x}, ${y}, z ${z}`);
     }
     assert.equal(inSatelliteLight(aims, chairAt(0), first.from - 300), false, 'no beam before its depths');
-    // Outside a beam the extinguisher speeds the chair up on its own; the keys never change that.
     const before = cruising(first.from - 400);
     for (const keys of [[], ['spray']]) {
         assert.ok(Math.abs(orbitStep(before, chairAt(0), keys, 1 / 120).orbit.speed - (STAGE_FIVE.cruise + STAGE_FIVE.thrust / 120)) < 1e-9);
@@ -181,7 +177,6 @@ test('nothing the chair has flown past is drawn between it and the camera', () =
     const route = ORBIT_WATCH.route[3];
     const lensAt = travel => watchers(travel).filter(lamp => Math.abs(lamp.at[0] - (route.z - travel)) < 60)
         .map(lamp => Math.hypot(lamp.at[1] - 15, lamp.at[2]));
-    // A camera the chair is about to pass swerves out of the way first.
     assert.ok(Math.min(...lensAt(route.z - 20)) > Math.min(...lensAt(route.z - 400)) + 400, 'swerves aside before the chair reaches it');
     assert.equal(lensAt(route.z + 20).length, 0, 'and is gone after');
 });

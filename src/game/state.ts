@@ -13,23 +13,21 @@ import type { GameEvent, Input, LossReason, Mode, Person, Player, Snapshot, Stag
 import { assertGameState } from './validation';
 
 
-// Survives a restart. Only stage selection and checkpoints change it.
+// Survives a restart.
 export type Progress = {
     stage: StageId;
-    // Index into STAGES[stage].checkpoints. 0 is the stage start.
+    // Index into STAGES[stage].checkpoints. Starts at 0.
     checkpoint: number;
     lessons: { moved: boolean; jumped: boolean };
     deaths: number;
     completedStage: 0 | StageId;
     skylineSeed: number;
-    // Fixed steps simulated since the game was created. Never resets, so recorded commands stay ordered.
+    // Never resets: recorded commands are ordered by this tick.
     tick: number;
 };
 
-// Rebuilt from Progress on every attempt.
 export type Attempt = {
     rng: Rng;
-    // Equipment and spray, shared by the stages that use the extinguisher.
     hasExtinguisher: boolean;
     sprayCooldown: number;
     sprayBurst: number;
@@ -43,7 +41,6 @@ export type Attempt = {
     coyote: number;
     /** Remaining jump buffer in seconds; the key is persisted in existing replays. */
     jumpQ: number;
-    // Seconds simulated in this attempt (fixed steps only).
     time: number;
     practiceJump: boolean;
     actualSpeed: number;
@@ -61,8 +58,6 @@ export type Attempt = {
     lossReason: LossReason | null;
     focusLossTime: number;
 
-    // Each stage's own values, defined in stages/<stage>/state.ts. All four exist in every attempt;
-    // only the current stage changes its own.
     office: OfficeState;
     building: BuildingState;
     rooftop: RooftopState;
@@ -70,7 +65,6 @@ export type Attempt = {
     orbit: OrbitState;
 };
 
-// Everything that decides how play continues. Plain JSON: save it and restore it to resume exactly.
 export type CoreState = Progress & Attempt;
 
 function createProgress(skylineSeed: number, deaths = 0, completedStage: 0 | StageId = 0): Progress {
@@ -122,7 +116,6 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
         ...createStageStates(checkpoint, appearanceSeed),
     };
 
-    // Stage-specific starting values live with each stage (stages/<stage>/attempt.ts).
     prepareStageAttempt(stage, attempt, checkpoint);
     return attempt;
 }
@@ -140,9 +133,7 @@ export function progressOf(s: CoreState): Progress {
     return { stage, checkpoint, lessons, deaths, completedStage, skylineSeed, tick };
 }
 
-// Starts a new attempt from the current progress. The core object keeps its identity.
 export function resetAttempt(s: CoreState, out: GameEvent[]) {
-    // Some stages show a fresh skyline on every attempt; the others keep theirs.
     if (STAGES[s.stage].newSkylineEachAttempt) s.skylineSeed = randomUint32(s.rng, 'cosmetic');
     Object.assign(s, createAttempt(progressOf(s), s.rng));
     out.push({ type: 'reset' });
@@ -165,13 +156,11 @@ export function parseState(json: string): CoreState {
     return value;
 }
 
-// Rewind frames are frozen: once recorded they are shared between states, never copied or edited.
+// Frozen rewind frames are shared between states; never mutate them.
 export function snapshot(s: CoreState): Snapshot {
     return Object.freeze({ p: Object.freeze({ ...s.p }) }) as Snapshot;
 }
 
-// Copy for the pure step. Plain recursive copy is several times faster than structuredClone here,
-// and the rewind history (most of the state) shares its frozen frames.
 export function cloneState(s: Readonly<CoreState>): CoreState {
     const { history, ...rest } = s;
     const copy = clonePlain(rest) as CoreState;
@@ -179,7 +168,7 @@ export function cloneState(s: Readonly<CoreState>): CoreState {
     return copy;
 }
 
-// Player updates keep the same object: the play step holds a reference to it for the whole tick.
+// Preserve player identity: the play step holds this reference throughout the tick.
 export function setPlayer(s: CoreState, p: Readonly<CoreState['p']>) {
     Object.assign(s.p, p);
 }

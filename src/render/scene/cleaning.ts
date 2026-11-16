@@ -272,7 +272,6 @@ function drawCleanerBody(ctx: RenderCtx, n: DeepReadonly<Person>, pose: CleanerP
 }
 
 function drawBucket(ctx: RenderCtx, bucket: BucketPose) {
-    // The water left inside drains as the bucket empties.
     const left = ctx.cleaning.spilled ? 1 - ctx.clamp(ctx.state.bucketAge / 1.2, 0, 1) : 1;
     ctx.ox = bucket.origin[0];
     ctx.oy = bucket.origin[1];

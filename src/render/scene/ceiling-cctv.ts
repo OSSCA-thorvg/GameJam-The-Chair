@@ -6,18 +6,11 @@ import { cctvLamp, type LampState } from './orbit-watch';
 const CEILING = 57;
 const DROP = 14;
 const SIZE = .62;
-// Every ceiling camera is the long-range model; TOP is its housing's height above its origin, where the stem meets it.
 const KIND: CctvKind = 'long';
 const TOP = 15;
-// The long model spans u = -46..38; squeeze it to the bullet camera's 60-unit length, centred on the stem.
 const LENGTH = 60 / 84, MIDDLE = -4;
-// How far toward the viewer a camera turns while it looks at the chair, in route units.
 const ACROSS = 260;
 
-/**
- * The stage five security cameras, already watching from the office ceiling: the same extruded
- * models hang at an even spacing, turn to follow the chair and blink as it passes underneath.
- */
 export function ceilingCctvs(ctx: RenderCtx, spacing: number, offset = 0) {
     const first = Math.floor((ctx.cam - 80 - offset) / spacing) + 1;
     for (let i = first; i * spacing + offset < ctx.cam + ctx.VW + 80; i++) cctv(ctx, i * spacing + offset, i);
@@ -26,7 +19,6 @@ export function ceilingCctvs(ctx: RenderCtx, spacing: number, offset = 0) {
 function cctv(ctx: RenderCtx, x: number, index: number) {
     const pivotY = CEILING + DROP;
     const [sx, sy] = ctx.screenPoint(x, pivotY);
-    // A side view looking slightly up at the ceiling, with world units matching the 2D scene.
     const focal = Math.min(ctx.H * 1.65, ctx.W * .94);
     const view = createSkyProjection(ctx.W, ctx.H, 0, {
         zoom: 480 * ctx.scale / focal, offsetX: sx - ctx.W / 2, centerY: sy / ctx.H, eyeY: -30,

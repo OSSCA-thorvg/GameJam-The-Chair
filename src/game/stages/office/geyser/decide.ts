@@ -13,7 +13,6 @@ export function geyserPhase(geyser: { period: number; offset: number }, t: numbe
 
 export type GeyserHit = { push: number; spin: number; rng: number; focus: FocusHit };
 
-// Which geysers launch the chair this tick. Each hit carries the physics stream state after its spin draw.
 export function geyserHits(p: Readonly<Point>, time: number, rng: number): GeyserHit[] {
     const hits: GeyserHit[] = [];
     for (let i = 0; i < LEVEL.geysers.length; i++) {

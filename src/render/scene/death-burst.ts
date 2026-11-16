@@ -6,16 +6,11 @@ import { PathBuilder, push } from './opening/shapes';
 
 const INK = '#2b2f3a';
 
-/** A stroke from `a` to `b` in a glyph box at `at`, `size` px tall. */
 function stroke(ctx: RenderCtx, at: Vector, size: number, a: Vector, b: Vector, width: number) {
     const p = (q: Vector): Vector => [at[0] + q[0] * size, at[1] + q[1] * size];
     push(ctx, new PathBuilder(...p(a)).line(...p(b)).command(null, { width: width * size, color: INK, cap: 'round' }, true));
 }
 
-/**
- * "쿵!" drawn as strokes: the sign font carries only the glyphs of its own copy, so the syllable is built from
- * its jamo (ㅋ over ㅜ over ㅇ) instead. `at` is the box's top-left; `size` its height.
- */
 function kungStrokes(ctx: RenderCtx, at: Vector, size: number) {
     const w = .12;
     stroke(ctx, at, size, [.18, .06], [.74, .06], w);
@@ -31,10 +26,6 @@ function kungStrokes(ctx: RenderCtx, at: Vector, size: number) {
     stroke(ctx, at, size, [1.12, .92], [1.12, .93], w * 1.1);
 }
 
-/**
- * The comic burst at the moment the head strikes, beside the worker's face (`head`, on screen). It pops in with an
- * overshoot and shakes, then fades; `u` runs 0..1 through it.
- */
 export function deathBurst(ctx: RenderCtx, head: Vector, u: number) {
     const pop = u < .2 ? .5 + .8 * Math.sin(u / .2 * Math.PI / 2) * 1.12 : 1.05 - .05 * Math.min(1, (u - .2) / .2);
     const alpha = u < .75 ? 1 : 1 - (u - .75) / .25;

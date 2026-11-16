@@ -17,23 +17,16 @@ export { createCore, parseState, type CoreState } from './state';
 export { CONFIG_VERSION } from './stages/index';
 
 export type GameOptions = {
-    // Same seed, start and commands always produce the same run. The browser passes a random seed.
     seed?: number;
     progress?: Partial<Pick<Progress, 'deaths' | 'completedStage'>>;
-    // Recording hooks. An attempt starts on creation and on every reset, including falls and stage changes
-    // inside a step; `state` is the serialized state at that moment. Commands that follow belong to it.
     onAttemptStart?: (state: string) => void;
     onCommand?: (tick: number, command: Command) => void;
-    // Called after every fixed step with the new state (read-only) and the events it produced.
     onStep?: (state: Readonly<CoreState>, events: readonly GameEvent[]) => void;
-    // Called when a step or command throws. The game keeps its previous state and rethrows.
     onError?: (error: GameError, cause: unknown) => void;
 };
 
-/** The few values UI code needs to decide what a key or button does. See Game.status(). */
 export type GameStatus = { mode: Mode; stage: StageId; completedStage: 0 | StageId; skyPhase: SkyState['phase'] };
 
-/** Fixed ticks run by one `advance()` call, and seconds of accumulated time discarded on a mode change. */
 export type AdvanceResult = { ticks: number; dropped: number };
 
 export type GameError = { tick: number; at: 'step' | 'command'; message: string; stack?: string; command?: Command };
@@ -42,12 +35,8 @@ function describe(error: unknown) {
     return error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
 }
 
-// Imperative shell around the deterministic core: holds the current state, turns real frame time into
-// fixed steps, records commands and buffers events for the presentation layer. Each step or command
-// produces a new state object; the shell only swaps which one it holds.
 export function createGame(options: GameOptions = {}) {
     let s: CoreState = createCore({ seed: options.seed ?? 0, deaths: options.progress?.deaths, completedStage: options.progress?.completedStage });
-    // Real frame time waiting to become fixed steps. Shell-only: it never reaches game state.
     let acc = 0;
     const pending: GameEvent[] = [];
 
@@ -89,7 +78,6 @@ export function createGame(options: GameOptions = {}) {
         options.onStep?.(s, result.events);
     }
 
-    // Preview-only scrubbing at arbitrary frame times. Never used by real play or replays.
     function preview(run: (next: CoreState, out: GameEvent[]) => void) {
         const next = cloneState(s);
         const out: GameEvent[] = [];
@@ -98,17 +86,14 @@ export function createGame(options: GameOptions = {}) {
         emit(out);
     }
 
-    // Cheap read for UI decisions (key handling, menus): no copy, primitives only.
     function status(): GameStatus {
         return { mode: s.mode, stage: s.stage, completedStage: s.completedStage, skyPhase: s.sky.phase };
     }
 
-    // Every call returns a copy the caller owns (UI and tests may edit it). States are never modified
-    // after a step, so a shared read-only view would be safe for the core, but it would change this contract.
+    // Returns a detached copy that callers may edit.
     function getSnapshot() {
         return viewState(s);
     }
-    /** Runs the fixed ticks that fit in `dt` and reports how many ran and how much time was discarded. */
     function advance(dt: number): AdvanceResult {
         if (!Number.isFinite(dt) || dt < 0) return { ticks: 0, dropped: 0 };
         if (!SIMULATED.includes(s.mode)) {
@@ -125,7 +110,6 @@ export function createGame(options: GameOptions = {}) {
             tick();
             ticks++;
             acc -= FIXED_STEP;
-            // A new mode starts counting from the next frame.
             if (s.mode !== mode) {
                 dropped += acc;
                 acc = 0;
@@ -155,12 +139,10 @@ export function createGame(options: GameOptions = {}) {
             if (s.keys.includes(input)) setKeys(s.keys.filter(key => key !== input));
         },
         clearInput: () => setKeys([]),
-        /** One fixed step (1/120 s). The argument is ignored and kept for older callers. */
         step: (_dt?: number) => tick(),
         advance,
         advanceImpact: (dt: number) => preview((next, out) => applyImpact(next, out, dt)),
         advanceFocusLoss: (dt: number) => preview((next, out) => applyFocusLoss(next, out, dt)),
-        /** Full game state as JSON. Restoring it into any game continues the run exactly. */
         serialize: () => serializeState(s),
         restore(json: string) {
             s = parseState(json);
@@ -174,7 +156,6 @@ export function createGame(options: GameOptions = {}) {
     };
 }
 
-/** The presentation view of a core state, as a detached copy. Used by the shell and the replay player. */
 export function viewState(s: Readonly<CoreState>) {
     return clonePlain({
         game: STAGES[s.stage].name,

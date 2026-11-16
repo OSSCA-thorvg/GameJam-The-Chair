@@ -30,7 +30,7 @@ export function stepGame(game: Game, effects: ReturnType<typeof createEffects>) 
     }
 }
 
-export /** Moves the chair across toward `x`. */
+export
 function moveToward(p: { x: number; vx: number }, x: number): Input[] {
     const error = x - (p.x + p.vx * .25);
     return error > 12 ? ['right'] : error < -12 ? ['left'] : [];

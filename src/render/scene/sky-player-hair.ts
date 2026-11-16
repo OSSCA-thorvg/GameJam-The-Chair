@@ -4,7 +4,6 @@ import { PLAYER_OUTLINES } from './player-art';
 
 const OUTLINE: Vector[] = [...PLAYER_OUTLINES.hair.slice(0, 3), [15, -92], [6, -91], [-2, -84], [-10, -77]];
 type Section = { z: number; crownDrop: number; napeLift: number; round: number };
-// Rounded temples and a slightly off-centre crown preserve the swept side silhouette from behind.
 const SECTIONS: Section[] = [
     { z: -14.2, crownDrop: 3.4, napeLift: 4, round: 2.3 },
     { z: -11, crownDrop: 1.2, napeLift: 1.5, round: .8 },
@@ -44,7 +43,6 @@ function sweptPart(view: SkyProjection, bob: number) {
         const p = vertex(section, [-15 + along * 10, -87 - along * 13], bob);
         return [p[0] - .2, p[1], p[2]];
     };
-    // A short diagonal lock sits on the rear surface, rather than floating above a flat end cap.
     for (let i = 1; i < 4; i++) {
         const u = .12 + (i - 1) * .13;
         view.polygon([point(SECTIONS[i], u), point(SECTIONS[i + 1], u + .13),

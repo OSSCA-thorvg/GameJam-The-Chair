@@ -2,7 +2,6 @@ import type { Vector } from '../types';
 import type { RenderCtx } from '../context';
 import { FOCUS_LOSS_DURATION } from '../../game/systems/focus/decide';
 
-// Each hit plays a single heartbeat. Lower focus makes it darker and reach further in from the edges.
 const BEAT_RATE = 1;
 const TIERS = [
     { below: 20, strength: .85, inner: .42 },
@@ -26,8 +25,6 @@ export function focusVignetteAlpha(focus: number, noticeLife: number | null, tim
     return { alpha, inner: tier.inner };
 }
 
-// A red heartbeat around the screen edges. The inner rectangle, where the gradient is fully transparent,
-// is cut out of the path so the renderer only rasterises the border band.
 export function focusVignette(ctx: RenderCtx) {
     const state = ctx.state;
     if (ctx.mode !== 'play') return;

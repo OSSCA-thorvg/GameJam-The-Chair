@@ -1,11 +1,8 @@
 import { STAGE_TWO, type Obstacle } from '../../game/stages/building/data';
 import type { RenderCtx } from '../context';
 
-// The orientation ride: power cables and colleagues asleep on the floor. The empty chairs hop each one
-// first, showing the rookie when to jump.
 const FLOOR = 420;
 const { obstacles } = STAGE_TWO.orientation;
-// Sleeping bag, hair and skin per sleeper, so a row of them reads as different colleagues.
 const SLEEPERS = [
     { bag: ['#4f7fb6', '#2f5683'], seam: '#86aee0', hair: '#3a2c28', skin: '#f0c8a0' },
     { bag: ['#c0623f', '#8c3f27'], seam: '#e79a78', hair: '#1f1c1c', skin: '#e2b48a' },
@@ -13,7 +10,6 @@ const SLEEPERS = [
     { bag: ['#7a5fa4', '#523c78'], seam: '#b39ad8', hair: '#b9b4ab', skin: '#eac09a' },
 ];
 
-// How far above the floor an empty chair at `x` hops while passing an obstacle.
 export function obstacleHop(x: number) {
     for (const obstacle of obstacles) {
         const span = obstacle.width + 110;
@@ -33,7 +29,6 @@ export function orientationFloor(ctx: RenderCtx) {
     }
 }
 
-// A cable snakes out of a wall socket and under a rubber cover.
 function cable(ctx: RenderCtx, { x, width, height }: Obstacle) {
     ctx.rect(x - 90, 380, 18, 22, '#e6e2d4');
     ctx.ellipse(x - 84, 391, 1.6, 3.5, '#5c6266');
@@ -44,7 +39,6 @@ function cable(ctx: RenderCtx, { x, width, height }: Obstacle) {
     for (let i = -1; i <= 1; i++) ctx.rod(x + i * 9 - 3, FLOOR - height + 3, x + i * 9 + 3, FLOOR - 2, 2, '#f2c14e');
 }
 
-// Overtime in a sleeping bag: it breathes, and the Zzz drift up out of it.
 function sleepingColleague(ctx: RenderCtx, { x, width, height }: Obstacle, look: typeof SLEEPERS[number], seed: number) {
     const breath = 1 + Math.sin(ctx.t * 1.7 + seed * 1.3) * .12;
     const w = width / 2, h = height * breath;

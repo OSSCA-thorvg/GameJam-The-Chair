@@ -1,6 +1,5 @@
 import type { RenderCtx } from '../context';
 
-// Office staff behind the floating facade. Local units: origin at the window's floor centre, facing right.
 type Look = { skin: string; shade: string; hair: string; shirt: string; fold: string; tie: string | null; pants: string; long: boolean };
 type Pose = 'typing' | 'phone' | 'stamping';
 
@@ -17,11 +16,9 @@ function head(ctx: RenderCtx, L: Look, x: number, y: number, look: number, close
     ctx.ellipse(x - 5.6, y + 1, 1.6, 2.2, L.shade);
     ctx.ellipse(x, y, 6.4, 7.4, L.skin);
     ctx.ellipse(x - 1.5, y + 4.2, 4.2, 2.6, L.shade + '55');
-    // Hair: a cap over the crown and back; long hair falls behind the ear.
     ctx.effectPath([x - 6.8, y + (L.long ? 7 : 1)], [[x - 8, y - 6, x - 3, y - 10.5, x + 3, y - 8.8], [x + 6.8, y - 7.6, x + 7.2, y - 4, x + 6, y - 3.2],
         [x + 2, y - 5.6, x - 2, y - 4.6, x - 4.2, y - 1], [x - 4.6, y + 2, x - 4.4, y + (L.long ? 6 : 2), x - 6.8, y + (L.long ? 7 : 1)]], L.hair);
     ctx.ellipse(x - 5.6, y + .8, 1.4, 2, L.skin);
-    // Nose, eye and mouth on the side facing right; the pupil follows the flying chair.
     ctx.polygon([[x + 6, y - 1], [x + 8.3, y + 2], [x + 6.2, y + 2.6]], L.skin);
     if (closed) ctx.rod(x + 2.4, y - .8, x + 5, y - .4, .7, '#2a2a30');
     else {
@@ -40,7 +37,6 @@ function torso(ctx: RenderCtx, L: Look, x: number, y: number, lean = 0) {
 }
 
 function seated(ctx: RenderCtx, L: Look, x: number) {
-    // Office chair, then thighs, shins and shoes.
     ctx.rect(x - 11, -44, 4, 22, '#2f3a4c');
     ctx.rect(x - 12, -23, 18, 3.5, '#2f3a4c');
     ctx.rod(x - 2, -20, x - 2, -6, 2, '#7e91a5');
@@ -66,7 +62,6 @@ function desk(ctx: RenderCtx, t: number, monitor: boolean) {
     ctx.rect(18, -43, 3.4, 15, '#2c3a50');
     ctx.rect(19.6, -28, 1.4, 2, '#455e76');
     ctx.rect(15, -26.6, 4, 1, '#3c4658');
-    // Screen light falls back onto the worker's face.
     ctx.beginLayer({ key: 'sky-office-screen', blend: 'add', opacity: .55 + Math.sin(t * 13) * .05 });
     ctx.ellipse(13, -36, 11, 10, ctx.radialFill(19, -36, 12, [[0, '#7fc8ff'], [1, '#7fc8ff00']]));
     ctx.endLayer();
@@ -81,7 +76,6 @@ function worker(ctx: RenderCtx, pose: Pose, L: Look, t: number, look: number) {
         arm(ctx, L, [-5, -44], [1, -34], [12, -28.5 + tap]);
         head(ctx, L, -6, -54, look);
     } else if (pose === 'phone') {
-        // Handset at the ear, scribbling the caller's demands on a memo pad.
         desk(ctx, t, false);
         ctx.rect(9, -27.6, 10, 1.6, '#fbf6e8');
         for (let i = 0; i < 3; i++) ctx.rod(10, -27 + i * .5, 11 + ((t * 3 + i) % 1) * 6, -27 + i * .5, .3, '#5d6d82');
@@ -101,7 +95,6 @@ function worker(ctx: RenderCtx, pose: Pose, L: Look, t: number, look: number) {
         arm(ctx, L, [-4, -44], [2, -33], [12 + scribble, -29]);
         ctx.rod(12 + scribble, -29, 14 + scribble, -33, .8, '#e0503f');
     } else {
-        // Approving a stack of documents one thump of the stamp at a time.
         desk(ctx, t, false);
         const cycle = (t * 1.6) % 1;
         const lift = cycle < .75 ? Math.sin(cycle / .75 * Math.PI / 2) : 1 - (cycle - .75) / .25;
@@ -122,7 +115,6 @@ function worker(ctx: RenderCtx, pose: Pose, L: Look, t: number, look: number) {
     }
 }
 
-// Only three of the twelve facade cells are windows, each with someone at work. Slots count left to right, upper row 1-6, lower row 7-12.
 const STAFF: Readonly<Record<number, { pose: Pose; look: number; dx: number }>> = {
     2: { pose: 'phone', look: 3, dx: -1 },
     5: { pose: 'typing', look: 1, dx: -2 },
@@ -134,7 +126,6 @@ export function hasWorker(slot: number) {
     return slot in STAFF;
 }
 
-/** The worker in window `slot`, if any. `left` is the window's left edge and `floor` the room's floor line in world space. */
 export function officeWorker(ctx: RenderCtx, slot: number, left: number, floor: number) {
     const staff = STAFF[slot];
     if (!staff) return;

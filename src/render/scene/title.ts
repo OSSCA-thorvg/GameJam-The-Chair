@@ -7,15 +7,10 @@ import { sprayPlume } from './spray';
 import { officeTint } from './window-view';
 import { PathBuilder, push, radial, screenRect } from './opening/shapes';
 
-// The title screen: the stage-one office after hours, the exit door thrown open and the chair blasting
-// toward it on its extinguisher while the worker keeps typing. Everything in it is the game's own art.
 
-/** Where the start sign sits, as fractions of the scene; the DOM start button covers the same box. */
 export const TITLE_SIGN = { left: .055, top: .73, width: .25, height: .15 } as const;
 
-/** How far left of the exit door the chair is caught mid-dash, in world units. */
 const DASH = 200;
-/** World width the title shows; the play view shows 1000. */
 const VIEW = 720;
 const QUIET = { from: 2.45, loop: 3 * Math.PI * 2 / 24 };
 
@@ -25,12 +20,10 @@ export function drawTitle(ctx: RenderCtx, time: number) {
         wheel: ctx.wheel, people: ctx.people, papers: ctx.papers, monitors: ctx.monitors,
     };
     const goal = ctx.GOAL;
-    // Closer than the play view, so the chair carries the frame with the open door at its right.
     ctx.VW = VIEW;
     ctx.scale = ctx.W / ctx.VW;
     ctx.cam = goal - DASH - ctx.VW * .5;
     ctx.vertical = ctx.H * .86 / ctx.scale - ctx.player.y;
-    // The scene clock loops inside a stretch where the floor geysers by the door rest, three typing beats long.
     ctx.t = QUIET.from + time % QUIET.loop;
     ctx.wheel = time * 9;
     ctx.player = { ...ctx.player, x: goal - DASH, a: -.1 - .015 * Math.sin(time * 9) };
@@ -40,7 +33,6 @@ export function drawTitle(ctx: RenderCtx, time: number) {
         hasExtinguisher: true,
         spray: { ...ctx.state.spray, burst: .2 + .03 * Math.sin(time * 23), dir: { x: -.96, y: .28 } },
     };
-    // Only the furniture stays: nobody else is in the office this late, and the monitors are off.
     ctx.people = [];
     ctx.papers = [];
     ctx.monitors = ctx.monitors.map(monitor => ({ ...monitor, active: false, warning: false }));
@@ -57,7 +49,6 @@ export function drawTitle(ctx: RenderCtx, time: number) {
     Object.assign(ctx, saved);
 }
 
-/** The night tint the opening ends on, so the title is the same office at the same late hour. */
 function afterHours(ctx: RenderCtx) {
     const tint = officeTint(1);
     ctx.beginLayer({ key: 'title-night', blend: 'multiply', opacity: tint.strength });
@@ -65,7 +56,6 @@ function afterHours(ctx: RenderCtx) {
     ctx.endLayer();
 }
 
-/** The exit door: the leaf swung in, the doorway full of light and the light spilling onto the floor. */
 function openDoor(ctx: RenderCtx, time: number) {
     const goal = ctx.GOAL, foot = ctx.F - 62, top = foot - 205;
     const pulse = .92 + .08 * Math.sin(time * 2.3);
@@ -82,7 +72,6 @@ function openDoor(ctx: RenderCtx, time: number) {
     ctx.rod(goal + 88, top + 92, goal + 88, top + 126, 4, '#3d4b4f');
 }
 
-/** Streaks left behind the chair, sliding back so it reads as moving even on a still frame. */
 function speedLines(ctx: RenderCtx, time: number) {
     const p = ctx.player;
     ctx.beginLayer({ key: 'title-speed', opacity: .75 });
@@ -95,7 +84,6 @@ function speedLines(ctx: RenderCtx, time: number) {
     ctx.endLayer();
 }
 
-/** The laptop stays lit in the dark, as in the opening's last hour. */
 function laptopGlow(ctx: RenderCtx) {
     const [lx, ly] = ctx.screenPoint(ctx.player.x + 44, ctx.player.y - 46);
     ctx.beginLayer({ key: 'title-laptop', blend: 'add', opacity: .7 });
@@ -110,7 +98,6 @@ function vignette(ctx: RenderCtx) {
     ctx.endLayer();
 }
 
-/** THE CHAIR, always in English, left aligned above the start sign and glowing like the exit sign. */
 function titleWords(ctx: RenderCtx) {
     const left = ctx.W * TITLE_SIGN.left;
     const size = Math.min(ctx.H * .2, ctx.W * .12);
@@ -126,10 +113,6 @@ function titleWords(ctx: RenderCtx) {
     }
 }
 
-/**
- * The start button drawn as the game's chair-only exit sign: the green plate, the chair pictogram and the
- * arrow, with the word to start in the current language. The DOM button over it takes the click.
- */
 function startSign(ctx: RenderCtx, time: number) {
     const x = ctx.W * TITLE_SIGN.left, y = ctx.H * TITLE_SIGN.top;
     const w = ctx.W * TITLE_SIGN.width, h = ctx.H * TITLE_SIGN.height;
@@ -143,7 +126,6 @@ function startSign(ctx: RenderCtx, time: number) {
     const icon = (px: number, py: number): Vector => [x + h * .18 + px * u, y + py * u];
     const block = (px: number, py: number, pw: number, ph: number, fill: string) =>
         push(ctx, { kind: 'path', points: [icon(px, py), icon(px + pw, py), icon(px + pw, py + ph), icon(px, py + ph)], fill: fill });
-    // The pictogram exactly as the in-game sign draws it, in sign units (43 tall).
     block(0, 7, 19, 29, '#d5e6da');
     block(4, 12, 11, 24, '#557f78');
     block(5, 14, 3, 11, '#e2eee0');

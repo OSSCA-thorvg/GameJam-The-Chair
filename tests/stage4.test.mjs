@@ -95,7 +95,6 @@ test('the headwind always pushes back and a warning breeze comes before every gu
 
 test('paper bundles ride the gusts and birds knock the chair backwards and cost focus', () => {
     const w = STAGE_FOUR.wind;
-    // In the calm the bundles have dropped below their lane or are still off to the right; a gust brings them in.
     const gust = skyHazards(w.period + w.calm + w.warn + .5).filter(h => h.kind === 'paper');
     const calm = skyHazards(w.period + w.calm - .1).filter(h => h.kind === 'paper');
     for (const [i, paper] of calm.entries()) assert.ok(paper.y > gust[i].y + 150 || paper.x > gust[i].x + 300, `${paper.id} sits out the calm`);
@@ -159,7 +158,6 @@ test('hazards never blink out on screen: they leave the view before their path r
         for (const [i, h] of now.entries()) {
             const before = previous[i];
             const jump = Math.hypot(h.x - before.x, h.y - before.y);
-            // A wrap back to the start is a teleport; both ends must be far from every platform's height band.
             if (jump > 60) {
                 assert.ok(before.y > -1300 || before.y < -2900 || before.x < 2300 || before.x > 5900, `${h.id} left the view at ${before.x},${before.y}`);
                 assert.ok(h.y < -2900 || h.x > before.x + 400, `${h.id} re-enters from out of view at ${h.x},${h.y}`);

@@ -1,16 +1,10 @@
 import { translate, type Locale } from '../i18n';
 import type { LayerInfo, LayerOverrides } from '../render/perf';
 
-/**
- * Layer list for the performance overlay. Each layer scene drawn recently gets a row with its size and
- * effects and two switches: hide (not drawn) and flatten (drawn as plain shapes, without the scene and its
- * opacity, blend, blur, clip or mask). Watching `render` while flipping them shows what a layer costs.
- */
 
 type Row = { el: HTMLElement; info: HTMLElement; hide: HTMLButtonElement; flat: HTMLButtonElement; text: string; seen: number };
 type Action = 'hide' | 'flat';
 
-/** Rows stay this long after their layer was last drawn, so short-lived layers can still be switched. */
 const KEEP_MS = 3000;
 
 export function createLayerPanel(getLocale: () => Locale, overrides: LayerOverrides) {
@@ -97,7 +91,6 @@ export function createLayerPanel(getLocale: () => Locale, overrides: LayerOverri
     root.addEventListener('click', event => {
         const button = event.target instanceof Element ? event.target.closest('button') : null;
         if (!button) return;
-        // Keep focus off overlay buttons so Space and arrows go back to the game.
         button.blur();
         if (button.dataset.perfLayerReset !== undefined) {
             event.preventDefault();
@@ -109,9 +102,7 @@ export function createLayerPanel(getLocale: () => Locale, overrides: LayerOverri
         if (key && action) set(key, action, button.getAttribute('aria-pressed') !== 'true');
     });
 
-    /** Refresh rows from this frame's layers (a few times a second). */
     function update(layers: LayerInfo[], canvasArea: number, renderMs: number, now: number) {
-        // A key drawn twice in one frame (a reused LayerSpec) is shown as one row.
         const merged = new Map<string, { shapes: number; area: number; effects: Set<string>; uses: number }>();
         for (const layer of layers) {
             const m = merged.get(layer.key) ?? { shapes: 0, area: 0, effects: new Set<string>(), uses: 0 };

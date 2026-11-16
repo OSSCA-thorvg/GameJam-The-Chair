@@ -1,5 +1,3 @@
-// Browser-side storage for the replay data: the error log survives reloads, and the latest data bundle is
-// kept so the replay tool (/replay.html) can open it from the same browser. Plus download/copy helpers.
 import { CONFIG_VERSION } from '../game/stages/index';
 import { REPLAY_FORMAT, parseReplayError, parseReplay, type Recorder, type ReplayData, type ReplayError, type ReplayErrorEntry, type ReplayFile } from '../game/replay';
 
@@ -10,7 +8,7 @@ function store(key: string, value: unknown) {
     try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
 }
 
-// Errors keep the replay of the attempt that failed. A crash may stop the game loop, so they are stored at once.
+// Persist errors immediately: a crash may stop the game loop.
 export function createErrorLog(max: number) {
     max = Number.isFinite(max) ? Math.max(0, Math.floor(max)) : 0;
     let entries: ReplayErrorEntry[] = [];
@@ -31,7 +29,6 @@ export function createErrorLog(max: number) {
         }
     } catch {}
     function persist() {
-        // Drop replays from the oldest entries first if storage is full.
         for (let keepReplays = entries.length; keepReplays >= 0; keepReplays--) {
             if (store(ERRORS_KEY, entries.map((entry, i) => i < entries.length - keepReplays ? { ...entry, replay: null } : entry))) return;
         }
@@ -60,7 +57,6 @@ export function replayData(recorder: Recorder, errorLog: ErrorLog): ReplayData {
     };
 }
 
-/** Keeps the newest data bundle in this browser for the replay tool. Replays are dropped if storage is full. */
 export function saveBrowserData(data: ReplayData) {
     if (store(BROWSER_DATA_KEY, data)) return;
     store(BROWSER_DATA_KEY, { ...data, attempts: data.attempts.slice(0, 1), errors: data.errors.map(entry => ({ ...entry, replay: null })) });
@@ -84,7 +80,6 @@ export async function copyText(text: string) {
         await navigator.clipboard.writeText(text);
         return true;
     } catch {
-        // Fallback for pages without clipboard permission.
         const area = document.createElement('textarea');
         area.value = text;
         area.style.position = 'fixed';

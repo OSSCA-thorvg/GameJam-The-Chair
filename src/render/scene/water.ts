@@ -4,7 +4,6 @@ import { WATER_GRAVITY, bucketMouth, pourLaunch } from '../bucket';
 
 type Path = { start: Vector; curves: Curve[] };
 
-// Dirty mop water: greenish grey body, pale highlights.
 const WATER = {
     body: ['#93a37f', '#788a68', '#62735a'] as const,
     core: '#c4cfa8',
@@ -17,7 +16,6 @@ const WATER = {
 
 const smooth = (u: number) => u * u * (3 - 2 * u);
 
-/** Catmull-Rom through the points as cubic Bézier segments. */
 function spline(points: Vector[], closed: boolean): Path {
     const n = points.length;
     const at = (i: number) => closed ? points[(i + n) % n] : points[Math.max(0, Math.min(n - 1, i))];
@@ -52,15 +50,10 @@ function ellipsePath(x: number, y: number, rx: number, ry: number): Path {
 
 export type PuddleShape = { cx: number; cy: number; rx: number; ry: number; outline: Path; clip: PathCommand };
 
-/**
- * The wet patch grows from where water actually landed and then spreads over
- * the slippery gameplay zone, so what the player sees matches where they slip.
- */
 export function puddleShape(ctx: RenderCtx): PuddleShape | null {
     const cleaning = ctx.cleaning;
     if (!cleaning.spilled) return null;
     const landed = ctx.waterPuddle;
-    // Spreads out from under the bucket until it covers the slippery zone.
     const zone = smooth(ctx.clamp((cleaning.age - .45) / 1.3, 0, 1));
     const zoneLeft = cleaning.x + zone * (cleaning.a - cleaning.x);
     const zoneRight = cleaning.x + zone * (cleaning.b - cleaning.x);
@@ -91,12 +84,6 @@ export function puddleShape(ctx: RenderCtx): PuddleShape | null {
     return { cx, cy, rx, ry, outline, clip: ctx.pathCommand(outline.start, outline.curves) };
 }
 
-/**
- * Floor puddle, built from three ThorVG scenes:
- * a Multiply scene that darkens the floor so it looks soaked rather than painted over,
- * a reflection scene clipped to the puddle with the actors mirrored into it,
- * and a Screen scene for sheen and stroked ripple rings.
- */
 export function drawPuddle(ctx: RenderCtx, shape: PuddleShape, reflect: () => void) {
     const { cx, cy, rx, ry, outline, clip } = shape;
     ctx.beginLayer({ key: 'puddle-wet', blend: 'multiply' });
@@ -112,12 +99,10 @@ export function drawPuddle(ctx: RenderCtx, shape: PuddleShape, reflect: () => vo
     ctx.endLayer();
 
     ctx.beginLayer({ key: 'puddle-shine', clip, blend: 'screen' });
-    // Ceiling light smeared across the surface, drifting a little with the camera.
     const drift = Math.sin(ctx.t * .45) * rx * .08 + (ctx.cam % 400) * .03;
     const band = ellipsePath(cx + drift, cy - ry * .25, rx * .72, ry * .32);
     ctx.effectPath(band.start, band.curves,
         ctx.gradientFill(cx, cy - ry * .6, cx, cy + ry * .1, [[0, '#00000000'], [.5, ctx.tint(WATER.sheen, .38)], [1, '#00000000']]));
-    // Window light reflected on the surface, sliding with the camera.
     for (const [dx, w] of [[-.4, .07], [-.26, .035], [.34, .05]] as const) {
         const x = cx + dx * rx - (ctx.cam - cx) * .04;
         ctx.polygon([[x, cy - ry * .9], [x + rx * w, cy - ry * .9], [x + rx * w - 5, cy + ry], [x - 5, cy + ry]], ctx.tint(WATER.sheen, .08));
@@ -134,15 +119,8 @@ export function drawPuddle(ctx: RenderCtx, shape: PuddleShape, reflect: () => vo
 type SheetPoint = { p: Vector; dir: Vector; w: number; te: number };
 type Sheet = { points: SheetPoint[]; attached: boolean; landed: boolean };
 
-/** Cheap deterministic noise in [-1, 1] for edge detail. */
 const wave = (v: number) => Math.sin(v) * .6 + Math.sin(v * 2.37 + 1.1) * .4;
 
-/**
- * The falling water as sheets. Every point is the water that left the bucket
- * `s` seconds ago, flown along its own ballistic arc, so the shape is always a
- * physically consistent curtain. Glugs only change the thickness, which then
- * travels down the curtain with the water.
- */
 function sheets(ctx: RenderCtx, age: number): Sheet[] {
     const { x, splashDir: side } = ctx.cleaning;
     const floor = ctx.F + 3;
@@ -171,12 +149,10 @@ function sheets(ctx: RenderCtx, age: number): Sheet[] {
         if (landedHere) {
             const prev = current[current.length - 1];
             if (!prev) break;
-            // Cut exactly at the floor.
             const k = (floor - prev.p[1]) / (p[1] - prev.p[1]);
             p = [prev.p[0] + (p[0] - prev.p[0]) * k, floor];
         }
         if (!current.length) attached = i === 0;
-        // Thick where much water left at once; thinner as gravity stretches it.
         const neck = ctx.clamp(Math.sqrt(Math.hypot(launch.vx, launch.vy) / speed), .5, 1);
         const ripple = 1 + .12 * wave(te * 61) + .05 * wave(te * 157);
         current.push({ p, dir: [vx / speed, vy / speed], w: (1.8 + 8 * launch.flow) * neck * ripple, te });
@@ -190,7 +166,6 @@ function sheets(ctx: RenderCtx, age: number): Sheet[] {
     return result;
 }
 
-/** Outline of a sheet: tapered where it has let go of the rim, torn into fingers at a free-falling front. */
 function sheetOutline(sheet: Sheet, age: number): { outline: Path; front: SheetPoint } {
     const pts = sheet.points;
     const n = pts.length;
@@ -209,7 +184,6 @@ function sheetOutline(sheet: Sheet, age: number): { outline: Path; front: SheetP
     const front = pts[n - 1];
     const bottom: Vector[] = [];
     if (!sheet.landed) {
-        // The leading edge tears into uneven fingers that shed drops.
         const nx = -front.dir[1];
         const ny = front.dir[0];
         const fw = front.w * .55;
@@ -227,13 +201,6 @@ function sheetOutline(sheet: Sheet, age: number): { outline: Path; front: SheetP
     return { outline: spline([...left, ...bottom, ...right.reverse()], true), front };
 }
 
-/**
- * Water in the air, as ThorVG scenes:
- * - the falling sheet, softened with a motion blur along the flow (no stripes to read as scales)
- *   and faded out at its torn front with an alpha mask;
- * - steady edge highlights in a Screen scene;
- * - spray and crowns in one scene; loose drops in a motion-blurred scene.
- */
 export function drawPour(ctx: RenderCtx) {
     const cleaning = ctx.cleaning;
     const age = ctx.state.bucketAge;
@@ -256,7 +223,6 @@ export function drawPour(ctx: RenderCtx) {
         }
         if (!curtains.length) [dx, dy] = mouth.out;
         const shapes = curtains.map(c => ({ sheet: c, ...sheetOutline(c, age) }));
-        // Fade the lowest free-falling front so it dissolves into the drops around it.
         const falling = shapes.filter(s => !s.sheet.landed).sort((a, b) => b.front.p[1] - a.front.p[1])[0];
         let mask: PathCommand | undefined;
         if (falling) {
@@ -274,7 +240,6 @@ export function drawPour(ctx: RenderCtx) {
             mask,
         });
         if (swell > 0) {
-            // The surface bulges over the rim just before it lets go.
             const [ox, oy] = mouth.out;
             const reach = 7 * swell;
             const end: Vector = [lx + ax * .4, ly + ay * .4];
@@ -283,10 +248,8 @@ export function drawPour(ctx: RenderCtx) {
         }
         for (const { sheet, outline, front } of shapes) {
             const top = sheet.points[0].p;
-            // Thin and see-through at the rim, denser where it gathers lower down.
             ctx.effectPath(outline.start, outline.curves, ctx.gradientFill(...top, ...front.p,
                 [[0, ctx.tint(WATER.body[0], .72)], [.35, ctx.tint(WATER.body[1], .92)], [1, ctx.tint(WATER.body[2], .88)]]));
-            // Light passing through the middle of the sheet.
             if (sheet.points.length > 2) {
                 const inner = sheet.points.map(q => [q.p[0] + q.dir[1] * q.w * .3 * side, q.p[1] - q.dir[0] * q.w * .3 * side] as Vector);
                 const line = spline(inner, false);
@@ -294,7 +257,6 @@ export function drawPour(ctx: RenderCtx) {
                 ctx.strokePath(line.start, line.curves, { width: w * .7, color: ctx.tint(WATER.core, .28), cap: 'round' }, { trim: [.05, .85] });
             }
             if (sheet.landed) {
-                // Foam where the sheet hammers the floor.
                 const w = front.w;
                 ctx.ellipse(front.p[0], ctx.F + 3, 5 + w * 1.8, 1.6 + w * .35, ctx.tint('#dfe3cd', .7));
             }
@@ -305,7 +267,6 @@ export function drawPour(ctx: RenderCtx) {
             ctx.beginLayer({ key: 'water-glint', blend: 'screen', opacity: .8 + .2 * wave(age * 31), mask });
             for (const { sheet } of shapes) {
                 if (sheet.points.length < 3) continue;
-                // A steady highlight along the upper edge; the sheet's motion blur does the flowing.
                 const edge = sheet.points.map(q => [q.p[0] + q.dir[1] * q.w * .72 * side, q.p[1] - q.dir[0] * q.w * .72 * side] as Vector);
                 const line = spline(edge, false);
                 ctx.strokePath(line.start, line.curves, { width: 1.1, color: ctx.tint(WATER.glint, .6), cap: 'round' },

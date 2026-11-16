@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { bundled } from './support/load.mjs';
 
-// Unit tests for pure system decisions: same input, same answer, no state writes.
 const sys = await bundled({
     stdin: { contents: `export * from './src/game/stages/office/geyser/decide'; export * from './src/game/stages/office/monitor/decide'; export * from './src/game/stages/office/bin/decide'; export { fellOffFloor } from './src/game/physics'; export * from './src/game/stages/office/cleaning/decide'; export * from './src/game/stages/office/copier/decide'; export * from './src/game/stages/rooftop/course/decide'; export * from './src/game/stages/sky/course/decide'; export * from './src/game/systems/focus/decide'; export * from './src/game/systems/impact/decide'; export * from './src/game/stages/building/corridor/decide';`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm',
@@ -10,7 +9,7 @@ const sys = await bundled({
 const F = 420;
 
 test('geyser launches only during a burst, near the vent and low enough', () => {
-    const burstAt = 3.2; // geyser 0: period 3.5, offset 0, burst from 3.1
+    const burstAt = 3.2;
     assert.equal(sys.geyserHits({ x: 2600, y: F - 28 }, 1, 7).length, 0, 'resting');
     assert.equal(sys.geyserHits({ x: 2700, y: F - 28 }, burstAt, 7).length, 0, 'too far');
     assert.equal(sys.geyserHits({ x: 2600, y: F - 200 }, burstAt, 7).length, 0, 'too high');
@@ -23,7 +22,7 @@ test('geyser launches only during a burst, near the vent and low enough', () => 
 });
 
 test('a lit monitor pushes the chair back the way it came', () => {
-    const lit = 1; // monitor 0: active from .8 to 2.1
+    const lit = 1;
     assert.equal(sys.monitorContact({ x: 2110, y: 392 }, 2100, .2), null, 'warning only');
     assert.equal(sys.monitorContact({ x: 2110, y: 200 }, 2100, lit), null, 'above the screens');
     assert.deepEqual(sys.monitorContact({ x: 2110, y: 392 }, 2100, lit), { index: 0, x: 2065, vx: -65, focus: { kind: 'light', id: 0, damage: 30 } });
@@ -147,7 +146,6 @@ test('the sky hovers in and lands on the arrival roof without touching its input
     }
     assert.ok(landed, 'the chair settles on the arrival roof');
     assert.equal(r.checkpoint, 0, 'the only flag waits halfway along the course');
-    // Past the end of the depth hold (5 s), whatever its exact length.
     const depth = sys.skyStep({ ...base, sky: { ...sky, phase: 'depth', age: 6 } }, 1 / 120);
     assert.equal(depth.won, true);
     assert.equal(depth.speed, 0);

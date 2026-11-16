@@ -9,7 +9,6 @@ on:
 permissions:
   contents: read
 
-# Pull requests cancel their older runs. Every main run finishes, so each main commit keeps its result.
 concurrency:
   group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -41,7 +40,6 @@ jobs:
         if: env.DEPLOY == 'true'
         id: pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
-      # Typecheck already ran above, so build with vite directly instead of `npm run build`.
       - name: Build
         env:
           BASE_PATH: ${{ steps.pages.outputs.base_path }}

@@ -124,7 +124,6 @@ test('7 pm the chair creaks harder and faster; 8 pm the backrest bucks the worke
     for (const t of [B.creak + 1, B.kick + .5]) assert.equal(at(t).shot, 'office');
     assert.equal(at(B.spinToEight + .5).shot, 'clock');
     assert.equal(at(B.creak + 1).zoom, at(B.rage).zoom, 'both are close-ups on the chair');
-    // The loudest creak late in the hour is harder than the loudest early on.
     const loudest = (from, to) => Math.max(...Array.from({ length: 120 }, (_, i) => at(from + (to - from) * i / 120).creakPulse));
     assert.ok(loudest(B.creakClose - 1.2, B.creakClose - .2) > loudest(B.creak, B.creak + 1) + .2);
     assert.equal(at(B.kick - .1).chair.backrest, 0);

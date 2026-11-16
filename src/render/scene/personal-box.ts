@@ -2,7 +2,6 @@ import type { RenderCtx } from '../context';
 import { PERSONAL_BOX, personalBoxPose } from '../personal-box-motion';
 import { personalBoxBadge } from './personal-box-badge';
 
-// A desk cleared in a hurry: personal belongings, open flaps and a clipped badge lanyard.
 export function personalBox(ctx: RenderCtx) {
     const { ox, oy, rotation, localScale } = ctx;
     ctx.ox = PERSONAL_BOX.x;

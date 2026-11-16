@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-// Runs every test file except the long simulation suites (gameplay fingerprints, determinism and
-// real-time replay). CI and `npm test` still run everything.
 import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 

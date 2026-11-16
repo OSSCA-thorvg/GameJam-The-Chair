@@ -1,5 +1,3 @@
-// Behaviour fingerprints for the step 6-7 refactor: per-tick mode, player and events, plus the final snapshot.
-// Any change in gameplay order or numbers changes a hash.
 import { createHash } from 'node:crypto';
 import { balancePolicy, corridorPolicy, createGame, sampleCommands } from './harness.mjs';
 import { driveStageThree } from './stage3-route.mjs';

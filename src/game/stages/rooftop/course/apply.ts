@@ -4,7 +4,6 @@ import { entranceStep, flightStep, graphRideStep, rooftopStep } from './decide';
 import * as Det from '../../../math';
 import { FOCUS_DAMAGE } from '../../../level';
 import { applyFocusHit } from '../../../systems/focus/apply';
-// Returns true while the rooftop door scene owns the chair.
 export function applyRooftopEntrance(s: CoreState, dt: number) {
     if (s.rooftop.entrance.kind !== 'opening') return false;
     const r = entranceStep(s.rooftop.entrance, dt);
@@ -43,7 +42,6 @@ export function applyRooftop(s: CoreState, out: GameEvent[], dt: number) {
     }
 }
 
-// Returns 'flight' while riding the graph or climbing, 'arrived' on reaching the sky, false otherwise.
 export function applyFlight(s: CoreState, dt: number): false | 'flight' | 'arrived' {
     const flight = s.rooftop.flight;
     if (flight.kind === 'course') return false;
@@ -52,7 +50,6 @@ export function applyFlight(s: CoreState, dt: number): false | 'flight' | 'arriv
         s.rooftop.flight = r.flight;
         setPlayer(s, r.p);
         s.ground = false;
-        // The extinguisher roars backwards along the line like a booster.
         s.sprayBurst = .24;
         s.sprayDir = { x: -r.p.vx / Math.max(1, Det.hypot(r.p.vx, r.p.vy)), y: -r.p.vy / Math.max(1, Det.hypot(r.p.vx, r.p.vy)) };
         return 'flight';

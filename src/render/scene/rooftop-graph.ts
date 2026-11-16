@@ -3,11 +3,6 @@ import type { RenderCtx } from '../context';
 import type { Curve, Vector } from '../types';
 import { graphTarget } from './graph-target';
 
-// The company's rooftop billboard. A steel tower on the roof and struts from the facade hold a sales
-// board that starts at the roof edge and hangs out over the street, with a maintenance catwalk
-// underneath and floodlights shining up at it. Its line already climbs toward an
-// arrow; once the chair rolls onto it the line lights up behind the chair, draws itself just ahead
-// (ThorVG trim path), then ends above the board while the chair keeps climbing.
 const ROOF = -144;
 const EDGE = STAGE_THREE.edge;
 const PANEL = { left: EDGE, right: 2920, top: -620, bottom: -150 };
@@ -27,7 +22,6 @@ function quad(left: number, top: number, right: number, bottom: number) {
     return [[left, top], [right, top], [right, bottom], [left, bottom]] as Vector[];
 }
 
-// Steel lattice tower on the roof behind the board, and struts from the facade under the overhang.
 function structure(ctx: RenderCtx) {
     const steel = '#4a5568', dark = '#353e4d';
     for (const x of [TOWER.left, TOWER.right - 6]) ctx.rect(x, TOWER.top, 8, ROOF - TOWER.top, steel);
@@ -41,14 +35,11 @@ function structure(ctx: RenderCtx) {
     }
     ctx.rod(TOWER.left + 4, TOWER.top, TOWER.right - 2, TOWER.top, 4, steel);
     for (const x of [TOWER.left - 6, TOWER.right - 14]) ctx.rect(x, ROOF - 6, 20, 6, '#2c3442');
-    // Facade brackets and struts carrying the overhanging board.
     ctx.rect(EDGE, ROOF + 96, 14, 26, dark);
     for (const x of [2640, 2830]) ctx.rod(EDGE + 6, ROOF + 108, x, PANEL.bottom + 6, 6, steel);
-    // Stay cables from the tower top to the board's free end.
     ctx.rod(TOWER.left + 4, TOWER.top + 4, PANEL.right - 10, TOWER.top + 10, 1.6, '#7c8799');
 }
 
-// The catwalk under the board: grating, toe board and an end guard rail.
 function catwalk(ctx: RenderCtx) {
     const right = EDGE + 480;
     ctx.rect(EDGE, ROOF, right - EDGE, 12, '#3e4859');
@@ -58,8 +49,6 @@ function catwalk(ctx: RenderCtx) {
     ctx.rect(right - 6, ROOF - 46, 6, 4, '#f3bf70');
 }
 
-// Floodlights on arms below the catwalk, washing the board with light. They glow while the board waits
-// and clack on one by one at full blast the moment the chair boards (`since` is seconds since boarding).
 function floodlights(ctx: RenderCtx, since: number | null) {
     const t = ctx.t;
     LAMPS.forEach((x, i) => {
@@ -101,7 +90,6 @@ function board(ctx: RenderCtx, surging: boolean) {
         ctx.gradientFill(0, PANEL.top, 0, PANEL.bottom, [[0, '#101a2b'], [1, '#1b2a3e']]));
     for (let x = PANEL.left + 40; x < PANEL.right; x += 40) ctx.rod(x, PANEL.top + 8, x, PANEL.bottom - 4, 1, '#2b3d55');
     for (let y = PANEL.top + 50; y < PANEL.bottom; y += 50) ctx.rod(PANEL.left + 4, y, PANEL.right - 4, y, 1, '#2b3d55');
-    // Rising sales bars; they shoot up once the chair is riding.
     for (let i = 0; i < 12; i++) {
         const x = PANEL.left + 16 + i * 38;
         const calm = 24 + i * 16;
@@ -112,7 +100,6 @@ function board(ctx: RenderCtx, surging: boolean) {
 
 function restingLine(ctx: RenderCtx, surging: boolean) {
     const t = ctx.t;
-    // A crisp centre stays aligned with the fixed ride surface under the halo.
     const inside = lineCurves(0, INSIDE);
     const pulse = .55 + .45 * Math.abs(Math.sin(t * 2.6));
     ctx.beginLayer({ key: 'graph-rest-glow', blur: 3, blend: 'add', opacity: (surging ? .35 : .75) * pulse,
@@ -122,7 +109,6 @@ function restingLine(ctx: RenderCtx, surging: boolean) {
     ctx.strokePath(inside.start, inside.curves, { width: 5, color: '#73e6a2', cap: 'round' });
     ctx.strokePath(inside.start, inside.curves, { width: 2, color: '#f4fff6', cap: 'round' });
     if (!surging) {
-        // Chevrons along the start of the line: roll this way.
         if (ctx.player.x > 2150) for (let i = 0; i < 3; i++) {
             const k = (t * .8 + i / 3) % 1;
             const at = graphPointAt(k * GRAPH_CORNERS[3]);
@@ -134,7 +120,6 @@ function restingLine(ctx: RenderCtx, surging: boolean) {
 }
 
 function surgeLine(ctx: RenderCtx, shown: number) {
-    // The surge: the whole line, bright up to just ahead of the chair.
     const whole = lineCurves(0, INSIDE + 1);
     const trim: [number, number] = [0, Math.min(1, shown / GRAPH_CORNERS[INSIDE + 1])];
     ctx.beginLayer({ key: 'graph-glow', blur: 5, blend: 'add', opacity: .9,
@@ -145,7 +130,6 @@ function surgeLine(ctx: RenderCtx, shown: number) {
     ctx.strokePath(whole.start, whole.curves, { width: 3, color: '#f4fff6', cap: 'round' }, { trim });
 }
 
-// A finite arrow ends just above the sign; camera movement never extends it.
 function chartTip(ctx: RenderCtx, surging: boolean) {
     const tail = lineCurves(INSIDE, INSIDE + 1);
     const last = graphPointAt(GRAPH_CORNERS[INSIDE + 1]);
@@ -157,7 +141,6 @@ function chartTip(ctx: RenderCtx, surging: boolean) {
     tipArrow(ctx, last, '#c9ff6a');
 }
 
-// The arrow head at the end of a chart line, pointing along it.
 function tipArrow(ctx: RenderCtx, at: { x: number; y: number; tx: number; ty: number }, color: string, size = 1) {
     const nx = -at.ty * size, ny = at.tx * size, fx = at.tx * size, fy = at.ty * size;
     const tip: Vector = [at.x + fx * 16, at.y + fy * 16];

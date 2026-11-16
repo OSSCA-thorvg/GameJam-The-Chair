@@ -1,13 +1,11 @@
 import type { Vector } from '../types';
 import type { Point3, SkyProjection } from './sky-projection';
 
-// Floating security cameras, extruded from side silhouettes like the stage four 3D chair.
-// Every model looks along its local +u axis and returns where its red lamp sits.
 
 export const CCTV_KINDS = ['bullet', 'dome', 'ptz', 'webcam', 'long'] as const;
 export type CctvKind = typeof CCTV_KINDS[number];
 
-/** Local silhouette space (u across, v up, w out of the face) turned by `yaw` and moved to `anchor`. */
+// Models face +u; v points up and w out of the silhouette plane.
 export function placer(anchor: Point3, yaw: number, scale = 1) {
     const cos = Math.cos(yaw), sin = Math.sin(yaw);
     return ([u, v, w]: Point3): Point3 =>
@@ -15,7 +13,6 @@ export function placer(anchor: Point3, yaw: number, scale = 1) {
 }
 export type Place = ReturnType<typeof placer>;
 
-/** Yaw that turns a silhouette's local `u` axis toward `(ahead, across)` in projection space. */
 export const aim = (ahead: number, across: number) => Math.atan2(-across, ahead);
 export const rect = (u0: number, v0: number, u1: number, v1: number): Vector[] => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
 
@@ -26,7 +23,6 @@ function lens(view: SkyProjection, place: Place, u: number, v: number, radius: n
     view.oval(place([u + 1, v + radius * .25, 0]), [radius * .25, radius * .35, radius * .35], '#7d9fbb');
 }
 
-/** The classic box camera with a sun hood. */
 const bullet: Model = (view, place) => {
     view.profile([[-24, -8], [14, -10], [20, -7], [20, 7], [14, 10], [-24, 8], [-28, 4], [-28, -4]], 9, '#dcd7cf', 0, { place });
     view.profile([[-26, 9], [24, 11], [30, 16], [-26, 15]], 11, '#b9b6bb', 0, { place });
@@ -36,7 +32,6 @@ const bullet: Model = (view, place) => {
     return place([-14, 21, 0]);
 };
 
-/** A ceiling dome with no ceiling: a smoked glass bubble under a round plate. */
 const dome: Model = (view, place) => {
     view.profile([[-20, 6], [20, 6], [22, 10], [-22, 10]], 20, '#c9ccd4', 0, { place });
     view.oval(place([0, 0, 0]), [17, 13, 17], '#3a455f');
@@ -45,7 +40,6 @@ const dome: Model = (view, place) => {
     return place([-14, 14, 0]);
 };
 
-/** A pan-tilt camera: a ball base with a squat head on top. */
 const ptz: Model = (view, place) => {
     view.oval(place([0, -6, 0]), [14, 12, 14], '#f2ede4');
     view.oval(place([0, -16, 0]), [9, 3, 9], '#69738c');
@@ -55,7 +49,6 @@ const ptz: Model = (view, place) => {
     return place([-6, 23, 0]);
 };
 
-/** A round desk webcam on a little stand, its lamp right beside the lens. */
 const webcam: Model = (view, place) => {
     view.profile([[-6, -12], [6, -12], [10, -22], [-10, -22]], 7, '#424f6d', 0, { place });
     view.oval(place([0, 0, 0]), [7, 13, 13], '#3a455f');
@@ -64,7 +57,6 @@ const webcam: Model = (view, place) => {
     return place([5, 9, 7]);
 };
 
-/** A long-range camera with a deep hood. */
 const long: Model = (view, place) => {
     view.profile([[-40, -7], [22, -8], [26, -5], [26, 5], [22, 8], [-40, 7]], 8, '#c9ccd4', 0, { place });
     view.profile([[-42, 9], [30, 11], [38, 16], [-42, 14]], 10, '#9aa0b0', 0, { place });
@@ -75,7 +67,6 @@ const long: Model = (view, place) => {
 
 const MODELS: Record<CctvKind, Model> = { bullet, dome, ptz, webcam, long };
 
-/** Draws one camera model; returns where its lamp goes. */
 export function cctvModel(view: SkyProjection, kind: CctvKind, place: Place) {
     return MODELS[kind](view, place);
 }

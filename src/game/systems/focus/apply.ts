@@ -2,7 +2,6 @@ import type { CoreState } from '../../state';
 import { stageHooks } from '../../stages/hooks';
 import type { GameEvent } from '../../types';
 import { focusAfterHit, focusLossStep, focusRecovery, type FocusHit } from './decide';
-// Returns false once play has stopped, so callers skip the rest of their effects.
 export function applyFocusHit(s: CoreState, out: GameEvent[], hit: FocusHit) {
     if (s.mode !== 'play') return false;
     const r = focusAfterHit(s, hit);
@@ -36,7 +35,6 @@ export function applyFocusLoss(s: CoreState, out: GameEvent[], dt: number) {
     }
 }
 
-/** Whether focus recovery is paused right now by the current stage's distractions (StageHooks.focusBlocked). */
 export function focusBlockedIn(s: Readonly<CoreState>) {
     return stageHooks(s.stage).focusBlocked?.(s) ?? false;
 }

@@ -9,15 +9,10 @@ import { applyFocusLoss, applyFocusRecovery } from './systems/focus/apply';
 import { applyHeadHit, applyImpact } from './systems/impact/apply';
 import * as Det from './math';
 
-// Modes in which fixed steps advance the game. Others wait for a command.
 export const SIMULATED: readonly Mode[] = ['play', 'impact', 'focuslost'];
 
 export type StepResult = { state: CoreState; events: GameEvent[] };
 
-/**
- * One fixed step (1/120 s): applies the commands that arrived before it, then advances the current mode.
- * Pure from the outside: `state` is never modified, so if anything throws the previous state stays intact.
- */
 export function stepGame(state: Readonly<CoreState>, commands: readonly Command[] = []): StepResult {
     const s = cloneState(state);
     const events: GameEvent[] = [];
@@ -26,7 +21,6 @@ export function stepGame(state: Readonly<CoreState>, commands: readonly Command[
     return { state: s, events };
 }
 
-/** Applies one command between steps, without stepping. Pure like stepGame. */
 export function applyCommand(state: Readonly<CoreState>, command: Command): StepResult {
     const s = cloneState(state);
     const events: GameEvent[] = [];
@@ -55,10 +49,7 @@ function advanceMode(s: CoreState, out: GameEvent[]) {
 
 export type CommandLog = readonly (readonly [tick: number, command: Command])[];
 
-/**
- * Re-runs the commands recorded after `start` was saved, then steps on to `endTick`.
- * The log must start where the saved state was taken (see the createGame recording hooks).
- */
+// The command log must start at the tick of the saved state.
 export function replayCommands(start: Readonly<CoreState>, log: CommandLog, endTick: number): StepResult {
     const s = cloneState(start);
     const events: GameEvent[] = [];
@@ -74,10 +65,6 @@ export function replayCommands(start: Readonly<CoreState>, log: CommandLog, endT
     return { state: s, events };
 }
 
-// One tick of normal play, shared by every stage. Stage behaviour plugs in through its hooks
-// (stages/<stage>/hooks.ts) at fixed points, in this order:
-// timers → takeover → hazards → beforeDrive → jump (onJump) → drive → afterMove → collisions →
-// afterCollide → checkpoints → shared scoring → fall (onFall) → finish.
 function playStep(s: CoreState, out: GameEvent[], dt: number) {
     const hooks = stageHooks(s.stage);
     const stage = STAGES[s.stage];
@@ -116,7 +103,6 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
     const expressJump = tweak.expressJump ?? false;
     const slip = tweak.slip ?? false;
     const balancing = s.keys.includes('q') || s.keys.includes('e');
-    // Air steering follows the held direction even when a stage overrides wheel drive (a hop off the chair convoy).
     const tilt = (s.keys.includes('e') ? 1 : 0) - (s.keys.includes('q') ? 1 : 0) + (was || balancing ? 0 : inputDir);
     setPlayer(s, drivePlayer(p, { grounded: was, slip, dir, tilt, upright: p.x < PHYSICS.upright.tutorialUntilX || stage.alwaysUpright, convoyJump, expressJump }, dt));
     if (hooks.afterMove?.(s, out, dt, prev)) return;
@@ -177,7 +163,6 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
         out.push({ type: 'cue', id: 'stage-clear' });
     }
 }
-// Static terrain plus the practice pile, which stays until the first jump lesson is done.
 export function stageSolids(s: CoreState): readonly DeepReadonly<Point[]>[] {
     const terrain = STAGES[s.stage].terrain;
     return STAGES[s.stage].practicePile && !s.lessons.jumped ? [...terrain, PRACTICE_PILE] : terrain;

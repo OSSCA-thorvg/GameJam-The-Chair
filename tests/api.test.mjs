@@ -3,7 +3,6 @@ import test from 'node:test';
 import { createGame } from './support/harness.mjs';
 import { bundled } from './support/load.mjs';
 
-// The public surface that UI, preview scenes and tests depend on. Keep it stable through the core refactor.
 const PUBLIC_API = [
     'reset', 'restart', 'startStage', 'jump', 'spray', 'interact', 'leaveMeeting', 'pause',
     'setInput', 'press', 'release', 'clearInput',

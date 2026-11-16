@@ -5,7 +5,7 @@ import { createEffects } from '../render/effects';
 import { type PreviewScene } from './types';
 import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
 
-export // A stage two game with the rider carried in the convoy at `x`, about to say orientation `line`.
+export
 function convoyRide(x: number, line: number, said = false): Game {
     const game = createGame();
     game.startStage(2);
@@ -24,7 +24,7 @@ function convoyRide(x: number, line: number, said = false): Game {
     return game;
 }
 
-export // Hop when the jump will peak over the next orientation obstacle.
+export
 function orientationHop(state: GameSnapshot) {
     if (!state.ground) return false;
     const p = state.player;
@@ -34,7 +34,7 @@ function orientationHop(state: GameSnapshot) {
     });
 }
 
-export // Rides the orientation convoy from `x`, the chairs about to say `line`.
+export
 function orientationRun(id: string, label: string, x: number, line: number, hop: boolean, frameCount: number, markers: PreviewScene['markers']): PreviewScene {
     const game = convoyRide(x, line);
     const effects = createEffects();
@@ -71,7 +71,7 @@ export function expressRun(id: string, label: string, rampJump: boolean, markers
     return { ...recordedScene(id, label, STAGE_TWO.express.ramp.start, markers, frames), follow: true };
 }
 
-export /** The meeting room on the `visit`-th walk in; the chairs grumble a different set of lines each time. */
+export
 function meetingVisit(visit = 1): PreviewScene {
     const game = createGame({ seed: 8 });
     game.startStage(2);
@@ -82,7 +82,6 @@ function meetingVisit(visit = 1): PreviewScene {
     game.restore(JSON.stringify(saved));
     game.interact();
     const effects = createEffects();
-    // Earlier visits, as the effects would have counted them walking in and out of the room.
     for (let i = 1; i < visit; i++) {
         const state = game.getSnapshot();
         for (const kind of ['entering', 'corridor']) effects.observe({ ...state, corridor: { ...state.corridor, room: { kind } } });

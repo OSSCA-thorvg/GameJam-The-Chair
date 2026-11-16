@@ -80,7 +80,6 @@ test('open-air wind preview has no wind strokes, remains finite and supports rev
 
 test('billboard copy is ThorVG Text inside the scene, in both languages, never on the label canvas', () => {
     for (const locale of ['en', 'ko']) {
-        // A base canvas that throws on any drawing: building commands never paints directly.
         const ctx = createRenderCtx(new Proxy({}, { get: (_, key) => key === 'measureText' ? undefined : () => assert.fail(`bg.${String(key)}`) }));
         Object.assign(ctx, { locale, cam: 4400, vertical: 2500 });
         skyCoursePlatform(ctx, { id: 'last-sign', kind: 'sign', x: 4770, y: -2310, width: 230, angle: -.1 });

@@ -8,7 +8,6 @@ const { createGame, createRenderCtx, officeControlHints, rooftopSprayHint } = aw
     export { officeControlHints, rooftopSprayHint } from './src/render/scene/control-hints';
 `);
 
-/** Keycap tops are the light face colour, with the hint's opacity appended. */
 const keyTops = commands => commands.filter(command => typeof command.fill === 'string' && command.fill.startsWith('#f4f1ea'));
 
 function frame(stage, setup = state => {}) {

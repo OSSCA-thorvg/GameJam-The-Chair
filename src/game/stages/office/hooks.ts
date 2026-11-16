@@ -45,16 +45,13 @@ export const officeHooks: StageHooks = {
     afterCollide(s, out, _dt, previousX) {
         applyMonitorContact(s, out, monitorContact(s.p, previousX, s.time));
     },
-    // Spray specks while sliding fast on the wet floor (30 per second).
     afterScore(s, out, dt) {
         if (s.office.slip && Math.abs(s.p.vx) > 90 && Math.floor(s.time * 30) !== Math.floor((s.time - dt) * 30)) {
             out.push({ type: 'speck', x: s.p.x - 15, vx: -s.p.vx * .2 });
         }
     },
-    // Focus does not recover right after a paper or light hit, or while standing in fresh spilled water.
     focusBlocked: s => s.office.paperPenaltyRemaining > 0 || s.office.lightPenaltyRemaining > 0
         || waterExposure(s.office.bucket.age, s.p, s.office.cleaning.x),
-    // There is no floor below the office: a fall ends in the bin.
     onFall(s, out) {
         applyBinFall(s, out);
     },

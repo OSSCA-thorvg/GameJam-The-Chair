@@ -168,7 +168,6 @@ export function headImpact(): PreviewScene {
     const effects = createEffects();
     effects.observe(game.getSnapshot());
     const frames = [capture(game, effects)];
-    // Long enough for the slow-motion replay, the BONK and the close-up easing back.
     for (let i = 0; i < Math.ceil(deathShotLength('head') / FRAME_TIME) + 12; i++) {
         if (game.getSnapshot().mode === 'impact') game.advanceImpact(FRAME_TIME);
         effects.observe(game.getSnapshot());
@@ -207,7 +206,6 @@ export function focusLoss(): PreviewScene {
     game.reset();
     const base = game.getSnapshot();
     const effects = createEffects().snapshot();
-    // The focus-loss glance (1.7 s), then the close-up on the eyes easing back before the game-over panel.
     const duration = deathShotLength('focus');
     const focusX = 500;
     return {
@@ -291,7 +289,6 @@ export function focusHitVignette(): PreviewScene {
 export function extinguisherSpray(): PreviewScene {
     const game = createGame();
     game.startStage(3);
-    // Reach the pickup through the real course before recording recoil.
     for (let i = 0; i < 1440 && !game.getSnapshot().hasExtinguisher; i++) {
         const state = game.getSnapshot();
         game.setInput('right');

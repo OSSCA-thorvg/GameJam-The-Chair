@@ -3,10 +3,8 @@ import type { RenderCtx } from '../context';
 import { CLOUD_TONES, puffCloud } from './cloud-art';
 import { roofFor, roofShape } from './skyline';
 
-// The dusk over the roof, and the day sky of stage four it turns into on the climb.
 const DUSK: [number, string][] = [[0, '#8798b5'], [.45, '#ccb0b9'], [.8, '#f3c8a6'], [1, '#ffddac']];
 const DAY: [number, string][] = [[0, '#658eaf'], [.45, '#90bacb'], [.8, '#b6cfd4'], [1, '#c6d5d6']];
-// From the top of the billboard to the sky stage's height the sky turns from dusk to day.
 const DAY_FROM = -650, DAY_AT = -1820;
 
 function mixHex(a: string, b: string, k: number) {
@@ -20,7 +18,6 @@ export function rooftopSky(ctx: RenderCtx) {
     const eased = day * day * (3 - 2 * day);
     ctx.gradientPolygon([[ctx.cam, top], [ctx.cam + ctx.VW, top], [ctx.cam + ctx.VW, bottom], [ctx.cam, bottom]],
         ctx.gradientFill(0, top, 0, bottom, DUSK.map(([at, color], i) => [at, mixHex(color, DAY[i][1], eased)] as [number, string])));
-    // The skyline recedes in three layers as the chair climbs out of the city.
     for (let layer = 0; layer < 3; layer++) {
         const spacing = 88 + layer * 23, parallax = .12 + layer * .11;
         const offset = ctx.cam * (1 - parallax);
@@ -29,7 +26,6 @@ export function rooftopSky(ctx: RenderCtx) {
         for (let i = first; i < first + Math.ceil(ctx.VW / spacing) + 3; i++) {
             const seed = Math.abs(Math.imul(i + 121, 1597) ^ layer * 157);
             const h = 65 + seed % (120 + layer * 42);
-            // Towers like the opening's: widths, spacing and roof shapes vary with the same seed as the height.
             const nudge = ((seed >>> 4) % 9 - 4) / 4 * spacing * .2;
             const x = i * spacing + offset + nudge, y = horizon - h, w = spacing * (.55 + seed % 7 * .06);
             const body = ['#bbafb5', '#9c9aa9', '#7c899d'][layer];
@@ -73,10 +69,8 @@ function column(ctx: RenderCtx, x: number, top: number, bottom: number) {
     }
 }
 
-// Lamps stay inside the machine room.
 const CEILING_LAMPS = [-180, -30, 120, 270];
 
-// Drawn after the entrance door and cabinets so the beams fall across them instead of being cut off.
 export function rooftopCeilingLight(ctx: RenderCtx) {
     for (const x of CEILING_LAMPS) {
         ctx.gradientPolygon([[x - 4, -39], [x + 70, -39], [x + 117, 312], [x - 51, 312]],
@@ -93,7 +87,6 @@ export function rooftopWalls(ctx: RenderCtx) {
         ctx.rect(x - 5, -54, 76, 15, '#26394f');
         ctx.rect(x, -50, 66, 5, '#f8d8a2');
     }
-    // Closed equipment cabinets and conduits keep the room visibly unoccupied.
     for (const x of [-110, 218]) {
         ctx.rect(x, 258, 61, 145, '#233a53');
         ctx.rect(x + 4, 262, 53, 137, '#506984');
@@ -103,11 +96,9 @@ export function rooftopWalls(ctx: RenderCtx) {
     }
     column(ctx, 423, -72, 420);
 
-    // The shaft walls run up to a concrete ceiling; the chair's head just fits under it.
     wallPanels(ctx, 1240, -556, 540, 952);
     column(ctx, 1204, -650, 396);
     column(ctx, 1770, -144, 396);
-    // Cable runs terminate at junction boxes instead of looking like extra ledges.
     for (const x of [1450, 1470]) {
         ctx.rod(x, -440, x, 345, 3, '#293e55');
         for (let y = -400; y < 320; y += 100) ctx.rod(x - 5, y, x + 5, y, 2, '#74869a');
@@ -129,8 +120,6 @@ function shelf(ctx: RenderCtx, x: number, y: number, width: number) {
     }
 }
 
-// A lagged steam main sticking out of the wall: round body, flanges and a wall bracket.
-// `from` is 1 when it leaves the left wall, -1 for the right wall.
 function steamPipe(ctx: RenderCtx, x: number, y: number, width: number, height: number, from: number) {
     ctx.gradientPolygon([[x, y], [x + width, y], [x + width, y + height], [x, y + height]],
         ctx.gradientFill(0, y, 0, y + height, [[0, '#d5dbe1'], [.3, '#a3b0bf'], [.75, '#617389'], [1, '#3f5068']]));
@@ -139,19 +128,16 @@ function steamPipe(ctx: RenderCtx, x: number, y: number, width: number, height: 
         ctx.rect(fx, y - 2, 6, height + 4, '#8697ab');
         ctx.rect(fx + 1, y - 2, 2, height + 4, '#c4ccd5');
     }
-    // The free end is capped; the wall end sits on a bracket.
     const cap = from > 0 ? x + width : x;
     ctx.rect(cap - 3, y - 3, 6, height + 6, '#5d6f86');
     const wall = from > 0 ? x : x + width;
     ctx.polygon([[wall, y + height], [wall + from * 22, y + height], [wall, y + height + 22]], '#33485f');
-    // A pressure gauge in the red: the whole shaft is under pressure.
     const gx = x + width / 2;
     ctx.rod(gx, y, gx, y - 7, 3, '#5d6f86');
     ctx.ellipse(gx, y - 12, 6, 6, '#e9e4d6');
     ctx.rod(gx, y - 12, gx + 3.5, y - 15.5, 1.5, '#c8352b');
 }
 
-// The roof edge parapet: concrete with a hazard-striped cap, leaving only a slot under the ceiling.
 function parapet(ctx: RenderCtx, x: number, y: number, width: number, height: number) {
     ctx.gradientPolygon([[x, y], [x + width, y], [x + width, y + height], [x, y + height]],
         ctx.gradientFill(x, 0, x + width, 0, [[0, '#8091a5'], [.5, '#5b6f88'], [1, '#3c516a']]));
@@ -160,7 +146,6 @@ function parapet(ctx: RenderCtx, x: number, y: number, width: number, height: nu
     for (let sy = y + 50; sy < y + height - 10; sy += 46) ctx.rect(x + 3, sy, width - 6, 3, '#2f455c');
 }
 
-// Concrete ceiling over the duct shaft, with a dim caged lamp.
 function shaftCeiling(ctx: RenderCtx) {
     ctx.gradientPolygon([[1200, -640], [1806, -640], [1806, -552], [1200, -552]],
         ctx.gradientFill(0, -640, 0, -552, [[0, '#2a3e55'], [1, '#4f6782']]));
@@ -176,8 +161,8 @@ export function rooftopPlatforms(ctx: RenderCtx) {
     if (ctx.visible({ left: 1180, top: -660, right: 1820, bottom: -420 }, 40)) shaftCeiling(ctx);
     for (const b of STAGE_THREE.blocks) {
         if (b.x > ctx.cam + ctx.VW + 80 || b.x + b.width < ctx.cam - 80) continue;
-        if (b.id === 'shaft-left') continue; // The matching structural column was drawn with the wall.
-        if (b.id === 'catwalk') continue; // Drawn with the billboard (rooftop-graph.ts).
+        if (b.id === 'shaft-left') continue;
+        if (b.id === 'catwalk') continue;
         if (b.id.endsWith('pad') || b.id === 'duct') {
             shelf(ctx, b.x, b.y, b.width);
             continue;

@@ -10,7 +10,6 @@ const { messageTexts, fitGlyphs, SIGN_FONT, LABEL_FONT, SPEECH_FONT, entries } =
     export const entries = keys => keys.filter(isMessage).flatMap(key => [translate(key, 'en'), translate(key, 'ko')]);
 `);
 
-/** Code points mapped by a TrueType font's Unicode cmap (formats 4 and 12). */
 function codepoints(path) {
     const view = new DataView(readFileSync(path).buffer.slice(0));
     const tables = view.getUint16(4);
@@ -52,7 +51,6 @@ const FILES = {
 const KEYS = [...readFileSync('src/i18n.ts', 'utf8').matchAll(/^\s*'([\w.]+)':\s*\{ en:/gm)].map(([, key]) => key);
 const keysWith = (...prefixes) => KEYS.filter(key => prefixes.some(prefix => key.startsWith(prefix)));
 
-// Which copy each face draws in the scene; the ♪ is drawn as a vector note, never as a glyph.
 const ROLES = {
     [SIGN_FONT]: keysWith('copier.', 'opening.', 'button.start'),
     [LABEL_FONT]: keysWith('world.', 'interact.', 'building.meeting', 'stageLabel.'),

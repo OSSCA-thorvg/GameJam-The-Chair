@@ -3,7 +3,6 @@ import { ART } from '../art';
 import type { RenderCtx } from '../context';
 import type { Vector } from '../types';
 
-// Presentation only: use the same clock as the headwind without changing contacts or steering.
 export function skyWindResponse(ctx: Pick<RenderCtx, 'state' | 't'>) {
     if (ctx.state.stage !== 4 || ctx.state.sky.phase !== 'course' || ctx.state.mode !== 'play') {
         return { chairTilt: 0, plumeDrift: 0 };

@@ -24,7 +24,6 @@ test('stepGame never writes into the state it is given', () => {
     assert.ok(state.tick > 0);
 });
 
-// The policy only needs a few snapshot fields.
 function stepView(s) {
     const geysers = [{ period: 3.5, offset: 0, wall: 2110 }, { period: 3.5, offset: 2.1, wall: 2560 }, { period: 3.5, offset: 1, wall: 2980 }];
     const monitors = geysers.map(m => {

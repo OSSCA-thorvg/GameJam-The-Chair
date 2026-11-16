@@ -4,7 +4,6 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadSource } from './support/load.mjs';
 
-// src/game/math.ts replaces the engine-approximated Math functions so every browser computes the same bits.
 const Det = await loadSource(`export * as Det from './src/game/math';`).then(module => module.Det);
 
 const bits = x => {
@@ -12,7 +11,6 @@ const bits = x => {
     view.setFloat64(0, x);
     return view.getBigUint64(0).toString(16).padStart(16, '0');
 };
-/** Distance in units in the last place between two finite doubles of the same sign. */
 const ulps = (a, b) => {
     if (a === b) return 0;
     const view = new DataView(new ArrayBuffer(16));
@@ -22,7 +20,6 @@ const ulps = (a, b) => {
 };
 
 test('results are pinned bit for bit, so any engine replays the same physics', () => {
-    // Computed once; a change here changes every replay and golden trace.
     /** @type {[string, number[], string][]} */
     const pinned = [
         ['sin', [0.1], '3fb98eaecb8bcb2c'],

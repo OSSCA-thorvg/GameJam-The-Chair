@@ -4,18 +4,12 @@ import { STAGE_FOUR } from '../../sky/data';
 import * as Det from '../../../math';
 
 export type RooftopEntrance = { kind: 'opening'; age: number } | { kind: 'ready' };
-// 'course' is normal play; 'ride' carries the chair up the sales graph (`dist` along the line);
-// 'flight' is the climb from the graph's tip up to the sky stage.
 export type FirstFlight = { kind: 'course' } | { kind: 'ride'; dist: number; speed: number; age: number } | { kind: 'flight'; age: number };
-// The duct sneezes on a timer, never because of the rider. `rest` counts seconds: while idle, since the
-// attempt began (the first sneeze comes at `firstSneezeAt`); once done, since the last sneeze (the next
-// gust comes after `gustPeriod`).
 export type DuctReaction = { kind: 'idle'; rest: number } | { kind: 'reacting'; age: number; shots: number; bursts: DuctBurst[] } | { kind: 'done'; shots: number; rest: number };
 
 const cloneReaction = (reaction: Readonly<DuctReaction>): DuctReaction =>
     reaction.kind === 'reacting' ? { ...reaction, bursts: reaction.bursts.map(burst => ({ ...burst })) } : { ...reaction };
 
-// The hinged rooftop door opens and the chair rolls out on its own; controls wait until it closes.
 export function entranceStep(entrance: { kind: 'opening'; age: number }, dt: number): { entrance: RooftopEntrance; pose: Player; done: boolean } {
     const e = STAGE_THREE.entrance;
     const age = Math.min(e.duration, entrance.age + dt);
@@ -36,17 +30,13 @@ const DUCT_STEAM_ID = 1_000_000;
 export type RooftopInput = { p: Readonly<Player>; ground: boolean; hasExtinguisher: boolean; firstFlight: Readonly<FirstFlight>; ductReaction: Readonly<DuctReaction>; time: number };
 export type RooftopResult = { p: Player; ground: boolean; firstFlight: FirstFlight; ductReaction: DuctReaction; pickup: boolean; steamHits: number[] };
 
-// After collisions on the rooftop: the duct's sneeze, the steam vents, the extinguisher pickup, the ceiling
-// and the catch onto the sales graph.
 export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
     const duct = ductReactionStep(input.ductReaction, input.p, dt);
     const p = duct.p;
     const steamHits: number[] = [];
-    // The duct's sneeze is steam too; each sneeze counts once, keyed by its shot number.
     if (duct.knocked && duct.reaction.kind !== 'idle') steamHits.push(DUCT_STEAM_ID + duct.reaction.shots);
     for (const [index, vent] of STAGE_THREE.vents.entries()) {
         if (ventPhase(vent, input.time).kind !== 'blow' || !inVentBlast(vent, p)) continue;
-        // Each blast is its own distraction: vent index plus the cycle it belongs to.
         steamHits.push(index * 100000 + Math.floor((input.time - vent.offset) / vent.period));
         if (vent.axis === 'x') p.vx += vent.dir * vent.force * dt;
         else p.vy += vent.dir * vent.force * dt;
@@ -58,20 +48,16 @@ export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
         p.vy = Math.max(0, p.vy);
     }
     let firstFlight: FirstFlight = { ...input.firstFlight };
-    // Rolling right onto the sales graph (or landing on it) starts the ride.
     const caught = firstFlight.kind === 'course' && input.hasExtinguisher && (p.vx > 20 || p.vy >= 0) ? graphCatch(p) : null;
     if (caught !== null) firstFlight = { kind: 'ride', dist: caught, speed: Math.max(STAGE_THREE.graph.startSpeed, Math.abs(p.vx)), age: 0 };
     return { p, ground, firstFlight, ductReaction: duct.reaction, pickup, steamHits };
 }
 
-// The chair rides the surging sales graph: it sticks to the line, speeds up, and leaves the tip
-// heading straight up into the climb.
 export function graphRideStep(ride: Readonly<Extract<FirstFlight, { kind: 'ride' }>>, p: Readonly<Player>, dt: number): { flight: FirstFlight; p: Player } {
     const g = STAGE_THREE.graph;
     const speed = Math.min(g.topSpeed, ride.speed + g.accel * dt);
     const dist = ride.dist + speed * dt;
     const at = graphPointAt(dist);
-    // The chair turns smoothly into each corner; the seat sits above the line along its own tilt.
     const target = Math.max(-g.maxTilt, Math.min(g.maxTilt, Det.atan2(at.ty, at.tx)));
     const a = p.a + (target - p.a) * (1 - Det.exp(-10 * dt));
     const next = { ...p, x: at.x + Det.sin(a) * 28, y: at.y - Det.cos(a) * 28, vx: at.tx * speed, vy: at.ty * speed, a, w: 0 };
@@ -80,7 +66,6 @@ export function graphRideStep(ride: Readonly<Extract<FirstFlight, { kind: 'ride'
     return { flight: { kind: 'flight', age: 0 }, p: next };
 }
 
-// The straight climb from the graph's tip up to the sky stage.
 export function flightStep(flight: { kind: 'flight'; age: number }, p: Readonly<Player>, dt: number): { flight: FirstFlight; p: Player; arrived: boolean } {
     const next = { ...p };
     next.vx *= Det.exp(-3 * dt);
@@ -104,7 +89,7 @@ function ductReactionStep(input: Readonly<DuctReaction>, player: Readonly<Player
     } else if (reaction.kind === 'done') {
         reaction.rest += dt;
         if (reaction.rest < duct.gustPeriod) return { reaction, p, knocked: false };
-        // Age 10 keeps the first sneeze's junk settled where it landed.
+        // Age 10 keeps debris from the first sneeze settled.
         reaction = { kind: 'reacting', age: 10, shots: reaction.shots + 1, bursts: [{ kind: 'gust', age: reaction.rest - duct.gustPeriod }] };
     }
     if (reaction.kind !== 'reacting') return { reaction, p, knocked: false };

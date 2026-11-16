@@ -7,7 +7,6 @@ export const sky: StageDefinition = {
     length: STAGE_FOUR.length,
     goal: STAGE_FOUR.goal,
     terrain: [],
-    // Saved by landing on platforms in the sky course, not by area.
     checkpoints: STAGE_FOUR.checkpoints.map(startMark),
     checkpointRule: 'pass',
     people: [],

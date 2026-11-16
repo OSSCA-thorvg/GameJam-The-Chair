@@ -12,7 +12,6 @@ import { officeAppearance, typingWorker } from './building-workers';
 import { meetingDoor, meetingRoom } from './meeting-room';
 import { dispatchRoom } from './dispatch-room';
 
-// Typing bubbles stay in the band above the chair chatter (y >= 193) so the two never overlap.
 const OFFICE_BUBBLE_TOP = 70;
 function chair(ctx: RenderCtx, x: number, y: number) {
     const shadowStart = ctx.commands.length;

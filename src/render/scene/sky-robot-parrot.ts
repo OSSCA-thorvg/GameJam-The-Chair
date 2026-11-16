@@ -1,7 +1,6 @@
 import type { SkyHazard, SkyRobot } from '../../game/stages/sky/data';
 import type { RenderCtx } from '../context';
 
-// Both robot parrots face left, centred on the hazard, roughly 60 local units wide.
 
 const CHROME: [number, string][] = [[0, '#f7f9fb'], [.35, '#c3ccd6'], [.7, '#6b7889'], [1, '#2a313b']];
 
@@ -9,7 +8,6 @@ function chrome(ctx: RenderCtx, x1: number, y1: number, x2: number, y2: number, 
     return ctx.gradientFill(x1, y1, x2, y2, stops);
 }
 
-// A calm red camera lens in a black bezel and a brushed ring, glowing softly in a blurred ThorVG layer.
 function lensEye(ctx: RenderCtx, h: SkyHazard, x: number, y: number, r: number) {
     const pulse = .8 + Math.sin(h.spin * .55) * .2;
     ctx.beginLayer({ key: `robot-eye-glow-${h.id}`, blur: r * ctx.scale });
@@ -25,7 +23,6 @@ function lensEye(ctx: RenderCtx, h: SkyHazard, x: number, y: number, r: number) 
 type Stops = [number, string][];
 const MIRROR: Stops = [[0, '#ffffff'], [.25, '#cfe2f2'], [.5, '#7d8ea3'], [.62, '#e8eef4'], [1, '#3a4452']];
 
-// The smooth liquid-metal silhouette both robots share: tapering tail, swept far wing, droplet body, near wing.
 function dropletBody(ctx: RenderCtx, h: SkyHazard, M: Stops, eye = 4) {
     const flap = Math.sin(h.spin);
     const ripple = Math.sin(h.spin * 2.3) * 1.2;
@@ -39,7 +36,6 @@ function dropletBody(ctx: RenderCtx, h: SkyHazard, M: Stops, eye = 4) {
     ctx.effectPath([-2, -1], [[8, 10 * flap + 2, 18, 12 * flap + 4, 24, 8 * flap + 8], [12, 8, 4, 6, -2, -1]], chrome(ctx, -2, -2, 24, 10, M));
 }
 
-// Black chrome: smoked mirror finish, the red lens reflected as a red rim along the head and back.
 function blackChrome(ctx: RenderCtx, h: SkyHazard) {
     const M: Stops = [[0, '#a8b2c0'], [.22, '#2a2f38'], [.5, '#0b0d10'], [.62, '#4a525f'], [1, '#07080a']];
     dropletBody(ctx, h, M, 4.4);
@@ -48,7 +44,6 @@ function blackChrome(ctx: RenderCtx, h: SkyHazard) {
     ctx.strokePath([-31, 1], [[-28, 0, -25, -1, -22, -1]], { width: .8, color: ctx.tint('#ff3a1a', pulse), cap: 'round' }, { blend: 'add' });
 }
 
-// Liquid metal: one mirror-polished body with sky highlights; the smoked black-chrome twin wears a red rim.
 export function robotParrotArt(ctx: RenderCtx, h: SkyHazard, robot: SkyRobot) {
     ctx.ox = h.x; ctx.oy = h.y; ctx.localScale = 1.45;
     if (robot === 'liquid') dropletBody(ctx, h, MIRROR);

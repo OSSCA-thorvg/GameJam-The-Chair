@@ -12,8 +12,6 @@ const value = document.querySelector<HTMLOutputElement>('#time-value')!;
 const playButton = document.querySelector<HTMLButtonElement>('#play')!;
 const markers = document.querySelector<HTMLElement>('#markers')!;
 const backend = document.querySelector<HTMLElement>('#renderer')!;
-// `?lang=ko` or `?lang=en` picks the language of the copy drawn in the scene (speech bubbles, the stage-four
-// billboard); without it the preview follows the language last chosen in the game.
 const locale: Locale = browserLocale();
 keepLangOnLinks();
 const renderer = createRenderer(root, () => locale);

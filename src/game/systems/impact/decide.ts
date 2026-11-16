@@ -5,12 +5,10 @@ export type Impact = { frames: Snapshot[]; elapsed: number; point: Point };
 const REWIND_SPEED = .25;
 const HOLD_AFTER = .35;
 
-// The last ~0.35 s before the hit, replayed in slow motion.
 export function impactReplay(history: readonly Readonly<Snapshot>[], p: Readonly<Player>, point: Readonly<Point>): Impact {
     return { frames: history.slice(-42).map(frame => ({ p: { ...frame.p } })).concat({ p: { ...p } }), elapsed: 0, point: { ...point } };
 }
 
-// Advances the slow-motion replay. `pose` is the interpolated chair, `done` once the replay has held.
 export function impactStep(impact: Readonly<Impact>, dt: number): { impact: Impact; pose: Player | null; done: boolean } {
     const elapsed = impact.elapsed + dt;
     const frames = impact.frames;

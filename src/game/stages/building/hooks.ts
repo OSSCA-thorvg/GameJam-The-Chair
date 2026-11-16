@@ -7,7 +7,6 @@ export const buildingHooks: StageHooks = {
     takeover(s, out, dt) {
         return applyMeeting(s, dt) || applyLiftRide(s, out, dt);
     },
-    // Jumping from anywhere in the convoy keeps its speed for a long leap.
     onJump(s) {
         const corridor = s.building.corridor;
         const lip = STAGE_TWO.express.pit.left;
@@ -15,7 +14,6 @@ export const buildingHooks: StageHooks = {
             && (corridor.convoy === 'carried' || corridor.convoy === 'leading')) {
             s.p.vy = -STAGE_TWO.express.launch;
         }
-        // The held direction at take-off hops over the neighbouring chair.
         if (corridor.pace === 'casual' && inOrientation(s.p.x) && (corridor.convoy === 'carried' || corridor.convoy === 'leading')) {
             s.p.vx += ((s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0)) * STAGE_TWO.hopShift;
         }
@@ -25,7 +23,6 @@ export const buildingHooks: StageHooks = {
     drive(s, inputDir) {
         const convoyJump = (s.building.corridor.convoy === 'airborne' || s.building.corridor.convoy === 'leading-airborne') && !s.ground;
         const joined = s.building.corridor.convoy === 'carried' || s.building.corridor.convoy === 'leading';
-        // During orientation a hop from the convoy is just a hop: left and right only tilt it in the air.
         const hop = convoyJump && s.building.corridor.pace === 'casual' && inOrientation(s.p.x);
         return {
             dir: joined || hop ? 0 : inputDir,

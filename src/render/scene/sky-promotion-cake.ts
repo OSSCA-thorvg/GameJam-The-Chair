@@ -3,9 +3,6 @@ import type { Curve, Vector } from '../types';
 import type { Point3, SkyProjection } from './sky-projection';
 import { SIGN_FONT } from '../fonts';
 
-// The strawberry shortcake slice on the last desk, drawn in "cake units": x runs from the low cream end (-130)
-// to the high, decorated end (+130), y is down with the cake's base at -10. The 2D course art and the 3D departure
-// both map these units into their own space, so the slice that turns solid is the one the player landed beside.
 const INK = '#7a2f2a';
 const CREAM = '#fff6f4';
 const BLUSH = '#f6b7c1';
@@ -37,7 +34,6 @@ const LEAVES = [[132, -176, 25], [70, -214, -30]] as const;
 const BERRY = { x: 56, y: -206, scale: 1.55 };
 const FLAG = { pole: 46, top: -306, length: 112, width: 146, height: 66 };
 
-/** The cake's local units mapped into the course art's local space. */
 type Place = (x: number, y: number) => Vector;
 
 const line = (points: Vector[]): Curve[] => points.slice(1).concat([points[0]]).map(([x, y]): Curve => [x, y, x, y, x, y]);
@@ -77,7 +73,6 @@ function flag2d(ctx: RenderCtx, place: Place, s: number) {
     ctx.text(word, px - w / 2 - s, y0 + h / 2 + 2 * s + flap / 2, size, '#fff5d8');
 }
 
-/** The shortcake slice and its promotion flag standing on the right half of the finish desk. */
 export function promotionCake(ctx: RenderCtx, width: number) {
     const s = .52, cx = width / 2 - 92;
     const place: Place = (x, y) => [cx + x * s, -9 + (y - BODY.base) * s];
@@ -97,7 +92,6 @@ export function promotionCake(ctx: RenderCtx, width: number) {
     }
     const body = quad(left, right, 0, 1);
     ctx.strokePath(body[0], line(body), { width: 4.5 * s, color: INK }, { closed: true });
-    // An ink pass a little larger than the cream, then the cream itself, so the whipped mass reads as one outline.
     const base = CREAM_BASE.map(([x, y]) => place(x, y));
     ctx.strokePath(base[0], line(base), { width: 9 * s, color: INK }, { closed: true });
     for (const b of BLOBS) { const [x, y] = place(b.x, b.y); ctx.ellipse(x, y, (b.r + 4.5) * s, (b.r + 4.5) * s, INK); }
@@ -150,10 +144,6 @@ export function promotionCake(ctx: RenderCtx, width: number) {
     ctx.ellipse(hx, hy, 5 * s, 8 * s, '#ffffff73');
 }
 
-/**
- * The same slice, now solid, on the departing ledge. It turns a little as it drifts away so its depth shows:
- * the flat cake from the course was a real one all along. `place` carries the ledge's retreat.
- */
 export function departureCake(ctx: RenderCtx, view: SkyProjection, place: (p: Point3) => Point3, progress: number) {
     const s = .55, cx = 168, floor = -80, z0 = -70, half = 36;
     const turn = -.75 * Math.min(1, progress * 1.8) ** 2 * (3 - 2 * Math.min(1, progress * 1.8));

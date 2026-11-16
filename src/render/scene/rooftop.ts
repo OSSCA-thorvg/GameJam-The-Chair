@@ -30,7 +30,6 @@ export function drawRooftop(ctx: RenderCtx) {
     if (ctx.visible({ left: 2260, top: -1060, right: 3050, bottom: 50 }, 120)) rooftopGraphSign(ctx);
     if (state.firstFlight.kind === 'flight') ascentClouds(ctx);
 
-    // Empty entrance recess sits behind the hinged door and the existing player.
     const entranceVisible = ctx.visible({ left: 35, top: 200, right: 215, bottom: 430 }, 60);
     if (entranceVisible) {
         ctx.rect(46, 221, 159, 199, '#71869d');
@@ -40,7 +39,6 @@ export function drawRooftop(ctx: RenderCtx) {
         ctx.rod(62, 417, 195, 417, 5, '#b8b9ad');
     }
 
-    // Pictograms introduce the controls where they are useful.
     if (!state.hasExtinguisher && ctx.visible({ left: 560, top: 270, right: 640, bottom: 390 }, 40)) {
         const pickup = STAGE_THREE.pickup;
         ctx.rect(pickup.x - 17, pickup.y - 82, 34, 65, '#566477');
@@ -70,7 +68,6 @@ export function drawRooftop(ctx: RenderCtx) {
     rooftopSprayHint(ctx);
 }
 
-// Three charges above the chair: one goes dark per burst in the air, all refill on touching down.
 function airSprayGauge(ctx: RenderCtx) {
     const state = ctx.state;
     if (!state.hasExtinguisher || state.firstFlight.kind !== 'course' || (state.ground && state.airSprays === 0)) return;
@@ -97,7 +94,6 @@ function entranceDoor(ctx: RenderCtx) {
     const width = Math.cos(angle) * 143;
     const depth = Math.sin(angle) * 32;
     const edge = hingeX + width;
-    // The projecting edge follows the same hinge as the door face.
     ctx.polygon([[hingeX, top], [edge, top + depth], [edge, bottom + depth], [hingeX, bottom]], '#aab2ba');
     ctx.polygon([[edge, top + depth], [edge + 5, top + depth - 2], [edge + 5, bottom + depth - 2], [edge, bottom + depth]], '#626f80');
     const panelX = hingeX + width * .12;

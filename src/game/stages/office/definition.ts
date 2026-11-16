@@ -4,7 +4,6 @@ import { startMark, type StageDefinition } from '../types';
 
 const F = LEVEL.floor;
 
-// Stage 1 · Office. Layout and hazard positions live in level.ts (LEVEL).
 export const office: StageDefinition = {
     id: 1,
     name: 'office-stage-one',
@@ -16,7 +15,6 @@ export const office: StageDefinition = {
     ],
     checkpoints: [
         startMark({ x: 100, y: F - 28 }),
-        // The safe approach before the bin.
         { x: 1400, y: F - 28, area: { left: 1400, right: LEVEL.bin.a - 25, top: -Infinity, bottom: Infinity } },
     ],
     checkpointRule: 'pass',

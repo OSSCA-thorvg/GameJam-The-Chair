@@ -15,7 +15,6 @@ export function player(ctx: RenderCtx) {
     chairAfterimages(ctx);
     playerChair(ctx);
     chairStains(ctx, ctx.soaks);
-    // Bucked by the backrest in the opening, the worker leaves the seat for a moment (and keeps typing).
     if (ctx.chairPose.riderPop) shiftLocal(ctx, ctx.chairPose.riderPop / 8, -ctx.chairPose.riderPop);
     riderBody(ctx);
     const lift = focusTension(ctx).lift;
@@ -31,10 +30,6 @@ export function player(ctx: RenderCtx) {
     ctx.localScale = 1;
 }
 
-/**
- * Shaking with rage in the opening, the chair leaves faint copies of itself either side, a little apart and
- * flickering on its own beat, so it reads as trembling without any lines drawn round it.
- */
 function chairAfterimages(ctx: RenderCtx) {
     const shiver = ctx.chairPose.shiver;
     if (shiver <= 0) return;
@@ -50,8 +45,6 @@ function chairAfterimages(ctx: RenderCtx) {
     ctx.endLayer();
 }
 
-// How far the rider is from snapping out of work: drifting eyes below 60%, sweat and stalled typing below 40%,
-// a raised head and a puzzled "...?" below 20%. Focus loss itself has its own glance.
 function focusTension(ctx: RenderCtx) {
     const state = ctx.state;
     const live = ctx.mode !== 'intro' && state.lossReason !== 'focus';
@@ -82,8 +75,8 @@ function riderWorry(ctx: RenderCtx) {
     }
     if (tension.critical > 0) {
         const pop = .5 + .5 * Math.sin(ctx.t * 6);
+        // Keep invisible dots to avoid paint-order rebuilds when blinking.
         for (let i = 0; i < 3; i++) {
-            // Hidden dots stay in the command list so the paint order is not rebuilt when they blink.
             const on = (ctx.t * 2.4 - i * .35) % 1.6 < 1.1;
             ctx.ellipse(-4 + i * 6, -108 - i * 1.5, 1.8, 1.8, ctx.tint('#f5eddc', on ? tension.critical : 0));
         }
@@ -101,7 +94,6 @@ function riderBody(ctx: RenderCtx) {
     ctx.polygon([[26, 11], [33, 10], [35, 15], [26, 16]], '#383f4e');
 
     ctx.polygon(PLAYER_OUTLINES.shirt, C.shirt);
-    // Dirty bucket water soaks into the clothes themselves, under the collar, tie and arms.
     riderStains(ctx, ctx.soaks);
     ctx.polygon([[-17, -62], [-11, -61], [-11, -24], [-17, -23]], '#d9d6c5');
     ctx.polygon([[-7, -70], [4, -68], [5, -60], [1, -56], [-7, -62]], '#d5b18b');
@@ -121,8 +113,6 @@ function riderHead(ctx: RenderCtx) {
     const tension = focusTension(ctx);
     const glance = Math.max(notice, tension.drift, tension.lift);
     ctx.ellipse(-7, -81, 2.7, 3.4, C.skin);
-    // Side on, as in the 3D view, the glasses' lens is edge-on: a thin blue line just in front of the face, with the
-    // frame at its ends and the arm running back to the ear. The eye is on the face behind it.
     ctx.rect(10.4 - glance * 5, -84, 1.3, 2.2, '#446d82');
     ctx.rod(-5, -83.4, 14.8, -84.6, 1.2, '#3a414b');
     ctx.rod(15.2, -87.6, 15.2, -79, 1.4, '#83c8e4');

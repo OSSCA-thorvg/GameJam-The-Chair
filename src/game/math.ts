@@ -1,21 +1,10 @@
-// Deterministic transcendental functions for the game core.
-//
-// ECMAScript leaves Math.sin, Math.cos, Math.tan, Math.exp, Math.atan2 and Math.hypot
-// "implementation-approximated": V8 (Chrome, Node), SpiderMonkey (Firefox) and JavaScriptCore (Safari)
-// may return different last bits for the same input. The physics is chaotic enough that one bit
-// changes a whole run, so a replay recorded in one browser drifted when played in another.
-//
-// These versions use only operations IEEE 754 defines exactly (+, -, *, /, Math.sqrt, Math.round,
-// Math.abs) in a fixed order, so every engine computes the same bits. Accuracy is within about one
-// unit in the last place. The algorithms and coefficients follow fdlibm (Sun Microsystems, freely
-// distributable).
+// Use exactly rounded operations to keep replays identical across engines; coefficients follow Sun Microsystems fdlibm.
 
 const PIO4 = 7.85398163397448278999e-01;
 const PI = 3.14159265358979311600e+00;
 const PI_LO = 1.22464679914735317720e-16;
 const PIO2_HI = 1.57079632679489655800e+00;
 
-// --- argument reduction: x = n·π/2 + (y0 + y1) with |y0 + y1| ≤ π/4 ---------------------------------
 
 const INV_PIO2 = 6.36619772367581382433e-01;
 // π/2 split into parts whose products with n (|n| < 2^20) are exact.
@@ -29,8 +18,7 @@ const reduced = { n: 0, y0: 0, y1: 0 };
 
 function reduce(x: number) {
     const n = Math.round(x * INV_PIO2);
-    // Three-step Cody–Waite reduction (fdlibm __ieee754_rem_pio2, medium range, always all steps).
-    // n·PIO2_1 is exact; PIO2_2(+2T) and PIO2_3(+3T) refine the PIO2_1T tail in two more steps.
+    // Cody–Waite reduction: always apply all three fdlibm refinement steps.
     let r = x - n * PIO2_1;
     let t = r;
     let w = n * PIO2_2;
@@ -46,7 +34,6 @@ function reduce(x: number) {
     reduced.y1 = (r - y0) - w;
 }
 
-// --- kernels on [-π/4, π/4] (fdlibm __kernel_sin / __kernel_cos) --------------------------------------
 
 const S1 = -1.66666666666666324348e-01;
 const S2 = 8.33333333332248946124e-03;
@@ -107,7 +94,6 @@ export function tan(x: number): number {
     return sin(x) / cos(x);
 }
 
-// --- exp (fdlibm __ieee754_exp) -----------------------------------------------------------------------
 
 const LN2_HI = 6.93147180369123816490e-01;
 const LN2_LO = 1.90821492927058770002e-10;
@@ -120,7 +106,6 @@ const P5 = 4.13813679705723846039e-08;
 const EXP_MAX = 7.09782712893383973096e+02;
 const EXP_MIN = -7.45133219101941108420e+02;
 
-/** 2^k for an integer k in [-1074, 1023], built from exact doublings. */
 function pow2(k: number) {
     let result = 1;
     let base = k < 0 ? .5 : 2;
@@ -152,7 +137,6 @@ export function exp(x: number): number {
     return y * pow2(k);
 }
 
-// --- atan / atan2 (fdlibm s_atan / e_atan2) -----------------------------------------------------------
 
 const ATAN_HI = [4.63647609000806093515e-01, 7.85398163397448278999e-01, 9.82793723247329054082e-01, 1.57079632679489655800e+00];
 const ATAN_LO = [2.26987774529616870924e-17, 3.06161699786838301793e-17, 1.39033110312309984516e-17, 6.12323399573676603587e-17];
@@ -208,7 +192,6 @@ export function atan2(y: number, x: number): number {
     return y < 0 ? -result : result;
 }
 
-/** √(x² + y²) without overflow, using only exactly rounded operations. */
 export function hypot(x: number, y: number): number {
     let a = Math.abs(x);
     let b = Math.abs(y);
