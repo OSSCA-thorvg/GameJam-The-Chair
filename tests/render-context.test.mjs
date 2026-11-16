@@ -25,7 +25,7 @@ test('frame construction supplies valid state and retains only reusable geometry
     game.startStage(3);
     const next = createRenderCtx(resources, game.getSnapshot(), effects.snapshot());
     assert.equal(next.state.stage, 3);
-    assert.equal(next.p, next.state.player);
+    assert.equal(next.player, next.state.player);
     assert.equal(next.LEN, next.state.level.length);
     assert.equal(next.ox, 0);
     assert.equal(next.cutscene, false);

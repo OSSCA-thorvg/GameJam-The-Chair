@@ -1,5 +1,5 @@
 import type { StageId } from '../game/types';
-import type { GameState } from '../game/game';
+import type { GameSnapshot } from '../game/game';
 
 type StagePresentation = {
     scene: 'office' | 'building' | 'rooftop' | 'sky' | 'orbit';
@@ -16,7 +16,7 @@ export const STAGE_PRESENTATION = {
     5: { scene: 'orbit', controls: { flight: true, meeting: false, spray: true }, hud: { jump: false, balance: false, manualSpray: false, focusAlert: false }, camera: { width: 1, followVertical: true, followWhenWon: false } },
 } satisfies Record<StageId, StagePresentation>;
 
-export function stageCamera(state: GameState) {
+export function stageCamera(state: GameSnapshot) {
     const policy = STAGE_PRESENTATION[state.stage];
     const centred = (policy.scene === 'rooftop' && state.firstFlight.kind !== 'course')
         || (policy.scene === 'sky' && state.sky.phase === 'arrival');
@@ -27,7 +27,7 @@ export function stageCamera(state: GameState) {
     return { ...policy.camera, lead: centred ? .5 : .35, focusY };
 }
 
-export function hideStageHud(state: GameState) {
+export function hideStageHud(state: GameSnapshot) {
     const { scene } = STAGE_PRESENTATION[state.stage];
     return (scene === 'sky' && (state.sky.phase === 'reveal' || state.sky.phase === 'depth'))
         || (scene === 'orbit' && state.orbit?.phase === 'parked');

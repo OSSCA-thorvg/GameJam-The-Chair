@@ -1,4 +1,4 @@
-import { createGame, type Game, type GameState } from './game/game';
+import { createGame, type Game, type GameSnapshot } from './game/game';
 import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
@@ -28,7 +28,7 @@ export type PreviewScene = {
     // Follow the chair with the camera (centred) instead of holding it at `focusX`.
     follow?: boolean;
     markers: readonly { at: number; label: string }[];
-    sample(time: number): { state: GameState; effects: EffectsState };
+    sample(time: number): { state: GameSnapshot; effects: EffectsState };
     // Cutscene frames draw with their own camera and overlays instead of the stage scene.
     opening?(time: number): OpeningFrame;
     // Spoken lines shown over the scene at this time.
@@ -37,7 +37,7 @@ export type PreviewScene = {
     title?: boolean;
 };
 
-type PreviewFrame = { state: GameState; effects: EffectsState };
+type PreviewFrame = { state: GameSnapshot; effects: EffectsState };
 const FRAME_TIME = 1 / 60;
 
 function recordedScene(id: string, label: string, focusX: number, markers: PreviewScene['markers'], frames: PreviewFrame[]): PreviewScene {
@@ -51,7 +51,7 @@ function recordedScene(id: string, label: string, focusX: number, markers: Previ
     };
 }
 
-function capture(game: Game, effects: ReturnType<typeof createEffects>, state: GameState = game.getSnapshot()): PreviewFrame {
+function capture(game: Game, effects: ReturnType<typeof createEffects>, state: GameSnapshot = game.getSnapshot()): PreviewFrame {
     return { state, effects: structuredClone(effects.snapshot()) };
 }
 
@@ -262,7 +262,7 @@ function personalBelongings(): PreviewScene {
         const time = tick * FIXED_STEP;
         const x = time < 1 ? 1000 : time < 3 ? 1000 + (time - 1) * 265
             : time < 4 ? 1530 + (time - 3) * 170 : time < 5 ? 1700 : 1700 - Math.min(1, (time - 5) / 2) * 700;
-        const state: GameState = { ...base, time, hasExtinguisher: true, rooftopEntrance: { kind: 'ready' },
+        const state: GameSnapshot = { ...base, time, hasExtinguisher: true, rooftopEntrance: { kind: 'ready' },
             player: { ...base.player, x, y: 368 },
         };
         effects.observe(state);
@@ -471,7 +471,7 @@ function convoyRide(x: number, line: number, said = false): Game {
 }
 
 // Hop when the jump will peak over the next orientation obstacle.
-function orientationHop(state: GameState) {
+function orientationHop(state: GameSnapshot) {
     if (!state.ground) return false;
     const p = state.player;
     return STAGE_TWO.orientation.obstacles.some(obstacle => {
@@ -985,7 +985,7 @@ function sceneTalk(): PreviewScene {
     const game = createGame();
     game.reset();
     const effects = createEffects().snapshot();
-    const frames: GameState[] = [];
+    const frames: GameSnapshot[] = [];
     for (let frame = 0; frame * FRAME_TIME <= 4.2; frame++) {
         frames.push(game.getSnapshot());
         for (let i = 0; i < 2; i++) game.step(FIXED_STEP);

@@ -1,7 +1,7 @@
 import { STAGE_PRESENTATION, hideStageHud } from '../presentation/stages';
 import { isStageUnlocked } from '../game/progression';
 import { translate, type Locale, type Message } from '../i18n';
-import type { GameState } from '../game/game';
+import type { GameSnapshot } from '../game/game';
 import type { Mode } from '../game/types';
 import type { FeedbackState } from './feedback';
 import type { EffectsState } from '../render/effects';
@@ -23,7 +23,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
     let focusIntroduced = false;
     let introduceUntil = 0;
     // `cutscene`: the opening is playing over a fresh game, so every game HUD element stays out of the way.
-    function draw(state: GameState, feedback: FeedbackState, effects: EffectsState, cutscene = false) {
+    function draw(state: GameSnapshot, feedback: FeedbackState, effects: EffectsState, cutscene = false) {
         const t = (message: Message) => translate(message, getLocale());
         const { mode, focus } = state;
         const active = mode === 'play' && !cutscene;

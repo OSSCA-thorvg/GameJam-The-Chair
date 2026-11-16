@@ -9,7 +9,7 @@ test('the rooftop sales chart has no information banner above it', () => {
     game.startStage(3);
     const state = game.getSnapshot();
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state, p: state.player, mode: state.mode, W: 3500, VW: 3500 });
+    Object.assign(ctx, { state, player: state.player, mode: state.mode, W: 3500, VW: 3500 });
 
     drawRooftop(ctx);
 
@@ -30,7 +30,7 @@ test('the rooftop sales chart support ends cleanly at the top edge', () => {
     const state = game.getSnapshot();
     const ctx = createRenderCtx({});
     // This structural assertion asks for the whole chart, so use a viewport wide enough to include it.
-    Object.assign(ctx, { state, p: state.player, mode: state.mode, W: 3500, VW: 3500 });
+    Object.assign(ctx, { state, player: state.player, mode: state.mode, W: 3500, VW: 3500 });
 
     drawRooftop(ctx);
 
@@ -48,7 +48,7 @@ test('entrance replaces the falling chart with an employee board with an initial
     const state = game.getSnapshot();
     for (const locale of ['en', 'ko']) for (const width of [540, 1000]) {
         const ctx = createRenderCtx({});
-        Object.assign(ctx, { state, p: state.player, mode: state.mode, locale, VW: width, W: width });
+        Object.assign(ctx, { state, player: state.player, mode: state.mode, locale, VW: width, W: width });
         drawRooftop(ctx);
         const labels = ctx.commands.filter(command => command.text).map(({ text }) => ({ text: text.content, x: text.x, y: text.y }));
         assert.ok(labels.some(label => label.text === (locale === 'en' ? 'EMPLOYEES OF THE MONTH' : '이달의 우수사원')));
@@ -78,7 +78,7 @@ test('the shut door jolts only the player portrait into a drop and swing, with r
     const render = tick => {
         const state = frames.get(tick);
         const ctx = createRenderCtx({});
-        Object.assign(ctx, { state, p: state.player, mode: state.mode });
+        Object.assign(ctx, { state, player: state.player, mode: state.mode });
         drawRooftop(ctx);
         return ctx.commands.filter(command => command.c === '#f4ecd7' && command.v.length === 4
             && Math.abs(Math.hypot(command.v[1][0] - command.v[0][0], command.v[1][1] - command.v[0][1]) - 40) < 1e-8
@@ -135,7 +135,7 @@ test('rooftop renders the live course and first flight in both languages and nar
     assert.equal(frames.size, 11);
     for (const [name, state] of frames) for (const locale of ['en', 'ko']) for (const width of [540, 1000]) {
         const ctx = createRenderCtx({});
-        Object.assign(ctx, { state, p: state.player, mode: state.mode, locale, t: state.time,
+        Object.assign(ctx, { state, player: state.player, mode: state.mode, locale, t: state.time,
             cam: Math.max(0, Math.min(state.player.x - width * .35, state.level.length - width)),
             vertical: Math.max(0, 330 - state.player.y), VW: width, W: width, H: 510,
         });

@@ -79,7 +79,7 @@ test('the ending draws no slogans, only the departing promotion flag and the att
             Object.assign(state.sky, { phase, age });
             const transforms = [];
             const ctx = createRenderCtx({ save() {}, restore() {}, transform(...matrix) { transforms.push(matrix); } });
-            Object.assign(ctx, { state, p: state.player, mode: 'play', locale, W: width, H: 510 });
+            Object.assign(ctx, { state, player: state.player, mode: 'play', locale, W: width, H: 510 });
             const before = structuredClone(state);
             drawSky(ctx);
             assert.deepEqual(state, before, 'cinematic rendering leaves gameplay untouched');
@@ -219,7 +219,7 @@ function renderFrame(stage, setup) {
     const state = structuredClone(game.getSnapshot());
     setup?.(state);
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state, p: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t: 0 });
+    Object.assign(ctx, { state, player: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t: 0 });
     (stage === 4 ? drawSky : drawOrbit)(ctx);
     return ctx.commands;
 }

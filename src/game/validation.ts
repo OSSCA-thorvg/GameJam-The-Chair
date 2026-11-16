@@ -1,4 +1,4 @@
-import type { GameState } from './state';
+import type { CoreState } from './state';
 import { STAGES } from './stages';
 import { exactFields, record, exact, array, finite, integer, boolean, string, choice, point, player, person, impact } from './validation/primitives';
 import { office, building, rooftop, sky, orbit } from './stages/validation';
@@ -7,9 +7,9 @@ const STAGE_IDS = Object.values(STAGES).map(stage => stage.id);
 const MAX_CHECKPOINT = Math.max(...Object.values(STAGES).map(stage => stage.checkpoints.length - 1));
 
 /** Validates the complete serialized core state before untrusted data enters replay logic. */
-export function assertGameState(value: unknown, path = 'state'): asserts value is GameState {
+export function assertGameState(value: unknown, path = 'state'): asserts value is CoreState {
     const data = record(value, path);
-    exactFields<GameState>(data, { stage: true, checkpoint: true, lessons: true, deaths: true, completedStage: true, skylineSeed: true, tick: true, rng: true, hasExtinguisher: true, sprayCooldown: true, sprayBurst: true, sprayDir: true, mode: true, p: true, keys: true, ground: true, coyote: true, jumpQ: true, time: true, practiceJump: true, actualSpeed: true, rollCooldown: true, reverseCooldown: true, people: true, history: true, impact: true, focus: true, focusClock: true, focusEvents: true, focusNotice: true, lossReason: true, focusLossTime: true, office: true, building: true, rooftop: true, sky: true, orbit: true }, path);
+    exactFields<CoreState>(data, { stage: true, checkpoint: true, lessons: true, deaths: true, completedStage: true, skylineSeed: true, tick: true, rng: true, hasExtinguisher: true, sprayCooldown: true, sprayBurst: true, sprayDir: true, mode: true, p: true, keys: true, ground: true, coyote: true, jumpQ: true, time: true, practiceJump: true, actualSpeed: true, rollCooldown: true, reverseCooldown: true, people: true, history: true, impact: true, focus: true, focusClock: true, focusEvents: true, focusNotice: true, lossReason: true, focusLossTime: true, office: true, building: true, rooftop: true, sky: true, orbit: true }, path);
     choice(data.stage, STAGE_IDS, `${path}.stage`);
     integer(data.checkpoint, `${path}.checkpoint`, 0, MAX_CHECKPOINT);
     const lessons = record(data.lessons, `${path}.lessons`);

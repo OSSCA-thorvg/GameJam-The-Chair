@@ -1,8 +1,8 @@
-import type { GameState } from '../../../state';
+import type { CoreState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { applyFocusHit } from '../../../systems/focus/apply';
 import type { GeyserHit } from './decide';
-export function applyGeyserHits(s: GameState, out: GameEvent[], hits: readonly GeyserHit[]) {
+export function applyGeyserHits(s: CoreState, out: GameEvent[], hits: readonly GeyserHit[]) {
     for (const hit of hits) {
         s.p.vy = -520;
         s.p.vx += hit.push;

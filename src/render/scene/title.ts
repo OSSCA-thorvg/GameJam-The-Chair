@@ -21,7 +21,7 @@ const QUIET = { from: 2.45, loop: 3 * Math.PI * 2 / 24 };
 
 export function drawTitle(ctx: RenderCtx, time: number) {
     const saved = {
-        cam: ctx.cam, VW: ctx.VW, scale: ctx.scale, vertical: ctx.vertical, p: ctx.p, state: ctx.state, t: ctx.t,
+        cam: ctx.cam, VW: ctx.VW, scale: ctx.scale, vertical: ctx.vertical, p: ctx.player, state: ctx.state, t: ctx.t,
         wheel: ctx.wheel, people: ctx.people, papers: ctx.papers, monitors: ctx.monitors,
     };
     const goal = ctx.GOAL;
@@ -29,14 +29,14 @@ export function drawTitle(ctx: RenderCtx, time: number) {
     ctx.VW = VIEW;
     ctx.scale = ctx.W / ctx.VW;
     ctx.cam = goal - DASH - ctx.VW * .5;
-    ctx.vertical = ctx.H * .86 / ctx.scale - ctx.p.y;
+    ctx.vertical = ctx.H * .86 / ctx.scale - ctx.player.y;
     // The scene clock loops inside a stretch where the floor geysers by the door rest, three typing beats long.
     ctx.t = QUIET.from + time % QUIET.loop;
     ctx.wheel = time * 9;
-    ctx.p = { ...ctx.p, x: goal - DASH, a: -.1 - .015 * Math.sin(time * 9) };
+    ctx.player = { ...ctx.player, x: goal - DASH, a: -.1 - .015 * Math.sin(time * 9) };
     ctx.state = {
         ...ctx.state,
-        player: ctx.p,
+        player: ctx.player,
         hasExtinguisher: true,
         spray: { ...ctx.state.spray, burst: .2 + .03 * Math.sin(time * 23), dir: { x: -.96, y: .28 } },
     };
@@ -84,7 +84,7 @@ function openDoor(ctx: RenderCtx, time: number) {
 
 /** Streaks left behind the chair, sliding back so it reads as moving even on a still frame. */
 function speedLines(ctx: RenderCtx, time: number) {
-    const p = ctx.p;
+    const p = ctx.player;
     ctx.beginLayer({ key: 'title-speed', opacity: .75 });
     for (let i = 0; i < 6; i++) {
         const y = p.y - 112 + i * 21;
@@ -97,7 +97,7 @@ function speedLines(ctx: RenderCtx, time: number) {
 
 /** The laptop stays lit in the dark, as in the opening's last hour. */
 function laptopGlow(ctx: RenderCtx) {
-    const [lx, ly] = ctx.screenPoint(ctx.p.x + 44, ctx.p.y - 46);
+    const [lx, ly] = ctx.screenPoint(ctx.player.x + 44, ctx.player.y - 46);
     ctx.beginLayer({ key: 'title-laptop', blend: 'add', opacity: .7 });
     screenRect(ctx, radial(ctx, lx, ly, 120 * ctx.scale, [[0, '#9fd2ff'], [.25, '#6fa9e099'], [1, '#2a3b6000']]));
     ctx.endLayer();

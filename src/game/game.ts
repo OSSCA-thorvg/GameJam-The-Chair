@@ -2,7 +2,7 @@ import { FIXED_STEP, LEVEL, PHYSICS } from './level';
 import type { Input, DeepReadonly, GameEvent, Mode, StageId } from './types';
 import type { SkyState } from './stages/sky/data';
 import { clonePlain } from './data';
-import { cloneState, createCore, parseState, serializeState, type GameState as CoreState, type Progress } from './state';
+import { cloneState, createCore, parseState, serializeState, type CoreState, type Progress } from './state';
 import type { Command } from './commands';
 import { SIMULATED, applyCommand, stageSolids, stepGame } from './step';
 import { STAGES } from './stages/index';
@@ -13,7 +13,7 @@ import { monitorsView } from './stages/view';
 
 export type { Command } from './commands';
 export { stepGame, applyCommand, replayCommands, type CommandLog, type StepResult } from './step';
-export { createCore, parseState, type GameState as CoreState } from './state';
+export { createCore, parseState, type CoreState } from './state';
 export { CONFIG_VERSION } from './stages/index';
 
 export type GameOptions = {
@@ -236,4 +236,4 @@ export function viewState(s: Readonly<CoreState>) {
 }
 
 export type Game = ReturnType<typeof createGame>;
-export type GameState = ReturnType<Game['getSnapshot']>;
+export type GameSnapshot = ReturnType<Game['getSnapshot']>;

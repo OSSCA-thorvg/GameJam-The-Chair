@@ -15,7 +15,7 @@ const scene = previewScenes.find(scene => scene.id === 'sky-wind-feedback');
 function context(time, over = {}) {
     const { state } = scene.sample(time);
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state: { ...state, ...over }, p: state.player, mode: 'play', t: time,
+    Object.assign(ctx, { state: { ...state, ...over }, player: state.player, mode: 'play', t: time,
         cam: state.player.x - 380, vertical: 330 - state.player.y });
     return ctx;
 }

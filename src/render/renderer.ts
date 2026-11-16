@@ -4,7 +4,7 @@ import type { Locale } from '../i18n';
 import type { Canvas, ThorVGNamespace } from '@thorvg/webcanvas';
 import { loadThorvg, thorvgRenderer } from './thorvg';
 import { createGpuTimer, type GpuTimer } from './gpu-timer';
-import type { GameState } from '../game/game';
+import type { GameSnapshot } from '../game/game';
 import type { EffectsState } from './effects';
 import { createRenderCtx, createRenderResources, type RenderCtx } from './context';
 import { drawOrbit } from './scene/orbit';
@@ -88,7 +88,7 @@ function setup(
     size();
 
     let lastWaterLife = 0;
-    function draw(next: GameState, effects: EffectsState, camera?: number, opening?: OpeningFrame, talk?: SceneTalk, titleTime?: number) {
+    function draw(next: GameSnapshot, effects: EffectsState, camera?: number, opening?: OpeningFrame, talk?: SceneTalk, titleTime?: number) {
         ctx = createRenderCtx(resources, next, effects);
         Object.assign(ctx, viewport, cameraState);
         ctx.locale = getLocale();
@@ -147,9 +147,9 @@ function setup(
     function openingCamera(frame: OpeningFrame, baseWidth: number, baseVertical: number) {
         const width = baseWidth / frame.zoom;
         const scale = ctx.W / width;
-        const cam = ctx.p.x - width / 2;
-        const vertical = ctx.H / (2 * scale) - openingFocusY(frame, ctx.p.y);
-        const playCam = ctx.clamp(ctx.p.x - baseWidth * .35, 0, Math.max(0, ctx.LEN - baseWidth));
+        const cam = ctx.player.x - width / 2;
+        const vertical = ctx.H / (2 * scale) - openingFocusY(frame, ctx.player.y);
+        const playCam = ctx.clamp(ctx.player.x - baseWidth * .35, 0, Math.max(0, ctx.LEN - baseWidth));
         const u = frame.handoff;
         ctx.VW = width + (baseWidth - width) * u;
         ctx.scale = ctx.W / ctx.VW;
@@ -160,8 +160,8 @@ function setup(
 
     /** A point on the worker (chair-local, as the player is drawn) in world space, turning with the chair. */
     function riderPoint([lx, ly]: [number, number]): [number, number] {
-        const c = Math.cos(ctx.p.a), s = Math.sin(ctx.p.a);
-        return [ctx.p.x + lx * c - ly * s, ctx.p.y + lx * s + ly * c];
+        const c = Math.cos(ctx.player.a), s = Math.sin(ctx.player.a);
+        return [ctx.player.x + lx * c - ly * s, ctx.player.y + lx * s + ly * c];
     }
 
     /**

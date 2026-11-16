@@ -13,7 +13,7 @@ import { rooftopSprayHint } from './control-hints';
 
 export function drawRooftop(ctx: RenderCtx) {
     const state = ctx.state;
-    const p = ctx.p;
+    const p = ctx.player;
 
     ctx.commands = [];
     ctx.ox = ctx.oy = ctx.rotation = 0;
@@ -75,7 +75,7 @@ function airSprayGauge(ctx: RenderCtx) {
     const state = ctx.state;
     if (!state.hasExtinguisher || state.firstFlight.kind !== 'course' || (state.ground && state.airSprays === 0)) return;
     const left = STAGE_THREE.airSprayLimit - state.airSprays;
-    const x = ctx.p.x, y = ctx.p.y - 112;
+    const x = ctx.player.x, y = ctx.player.y - 112;
     ctx.rect(x - 24, y - 7, 48, 14, '#1d2c3fa8');
     for (let i = 0; i < STAGE_THREE.airSprayLimit; i++) {
         const cx = x - 14 + i * 14;

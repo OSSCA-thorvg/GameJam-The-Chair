@@ -13,7 +13,7 @@ const { createGame, createRenderCtx, drawBuilding } = await bundled({ stdin: {
 const escape = s => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 function render(state, locale, width) {
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state, p: state.player, mode: state.mode, locale, t: state.time,
+    Object.assign(ctx, { state, player: state.player, mode: state.mode, locale, t: state.time,
         cam: Math.max(0, Math.min(state.player.x - width * .35, state.level.length - width)),
         VW: width, W: width, H: 510, LEN: state.level.length, GOAL: state.level.goal,
         solids: state.solids, soaked: state.soaked, dirty: state.dirty,

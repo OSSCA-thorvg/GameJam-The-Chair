@@ -17,7 +17,7 @@ function frame(stage, setup = state => {}) {
     const state = game.getSnapshot();
     setup(state);
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state, p: state.player, mode: 'play', W: 1000, H: 510, VW: 1000, cam: 0, t: 1, commands: [] });
+    Object.assign(ctx, { state, player: state.player, mode: 'play', W: 1000, H: 510, VW: 1000, cam: 0, t: 1, commands: [] });
     return ctx;
 }
 

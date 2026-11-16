@@ -57,7 +57,7 @@ function render(time, locale = 'ko') {
     const frame = openingFrame(time);
     const state = openingState(game.getSnapshot(), frame);
     Object.assign(ctx, {
-        state, p: state.player, mode: state.mode, locale, t: state.time, W: 800, H: 510, VW: 800 / frame.zoom, scale: frame.zoom,
+        state, player: state.player, mode: state.mode, locale, t: state.time, W: 800, H: 510, VW: 800 / frame.zoom, scale: frame.zoom,
         cam: state.player.x - 400 / frame.zoom, vertical: 0, LEN: state.level.length, GOAL: state.level.goal,
         solids: state.solids, people: state.people, cleaning: state.cleaning, bin: { ...state.bin, bottom: 520 },
         copier: { ...state.copier, flash: 0 }, papers: state.papers, monitors: [], urgentCopier: state.urgentCopier,

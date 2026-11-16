@@ -17,9 +17,9 @@ export function skyWindResponse(ctx: Pick<RenderCtx, 'state' | 't'>) {
 
 export function sprayOrigin(ctx: RenderCtx): Vector {
     const wind = skyWindResponse(ctx);
-    if (wind.plumeDrift === 0) return [ctx.p.x - 45, ctx.p.y - 15];
-    const angle = ctx.p.a + wind.chairTilt;
+    if (wind.plumeDrift === 0) return [ctx.player.x - 45, ctx.player.y - 15];
+    const angle = ctx.player.a + wind.chairTilt;
     const x = -45 * ART.player.scale, y = -15 * ART.player.scale;
-    return [ctx.p.x + ART.player.offsetX + x * Math.cos(angle) - y * Math.sin(angle),
-        ctx.p.y + ART.player.offsetY + x * Math.sin(angle) + y * Math.cos(angle)];
+    return [ctx.player.x + ART.player.offsetX + x * Math.cos(angle) - y * Math.sin(angle),
+        ctx.player.y + ART.player.offsetY + x * Math.sin(angle) + y * Math.cos(angle)];
 }

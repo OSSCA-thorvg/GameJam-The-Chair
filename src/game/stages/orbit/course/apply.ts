@@ -1,11 +1,11 @@
-import { setPlayer, type GameState } from '../../../state';
+import { setPlayer, type CoreState } from '../../../state';
 import type { GameEvent } from '../../../types';
 import { orbitStep } from './decide';
 import { STAGE_FIVE } from '../data';
 import { FOCUS_DAMAGE } from '../../../level';
 import { applyFocusHit, applyFocusRecovery } from '../../../systems/focus/apply';
 
-export function applyOrbit(s: GameState, out: GameEvent[], dt: number) {
+export function applyOrbit(s: CoreState, out: GameEvent[], dt: number) {
     const result = orbitStep(s.orbit, s.p, s.keys, dt);
     s.orbit = result.orbit;
     setPlayer(s, result.p);

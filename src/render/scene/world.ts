@@ -104,7 +104,7 @@ export function drawWorld(ctx: RenderCtx) {
     const bin = ctx.bin;
     const copier = ctx.copier;
     const papers = ctx.papers;
-    const p = ctx.p;
+    const p = ctx.player;
     const t = ctx.t;
     const GOAL = ctx.GOAL;
 

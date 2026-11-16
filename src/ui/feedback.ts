@@ -1,7 +1,7 @@
 import { translate, type Locale, type Message } from '../i18n';
 import type { GameEvent } from '../game/types';
 import { REACTION_LIFE, SPEECH_LIFE, type Reaction, type Speech } from './types';
-import type { GameState } from '../game/game';
+import type { GameSnapshot } from '../game/game';
 import { ART } from '../render/art';
 const NPC_COPY = {
     manager: { name: 'person.manager', text: 'npc.manager.leave' },
@@ -31,7 +31,7 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
         reaction = null;
         panel = { k, title, desc, button };
     }
-    function receive(event: GameEvent, state: GameState) {
+    function receive(event: GameEvent, state: GameSnapshot) {
         if (event.type === 'reset') {
             reaction = null;
             speech = null;

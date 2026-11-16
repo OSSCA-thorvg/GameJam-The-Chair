@@ -18,7 +18,7 @@ function stageContext(stage, camera = 0) {
     const ctx = createRenderCtx({});
     Object.assign(ctx, {
         state,
-        p: state.player,
+        player: state.player,
         mode: state.mode,
         t: state.time,
         cam: camera,

@@ -1,9 +1,9 @@
 import { RULES } from '../../../level';
-import type { GameState } from '../../../state';
+import type { CoreState } from '../../../state';
 import type { GameEvent, Paper } from '../../../types';
 import { applyFocusHit } from '../../../systems/focus/apply';
 import { paperShot, trimPapers, urgentShot, type CopierResult, type PaperHit, type UrgentResult } from './decide';
-export function applyCopier(s: GameState, out: GameEvent[], result: CopierResult) {
+export function applyCopier(s: CoreState, out: GameEvent[], result: CopierResult) {
     s.office.copier = result.copier;
     s.office.volley = result.volley;
     if (!result.fire) return;
@@ -14,14 +14,14 @@ export function applyCopier(s: GameState, out: GameEvent[], result: CopierResult
 }
 
 // The executive printer: the first urgent volley makes the rider notice; every shot adds sheets.
-export function applyUrgentCopier(s: GameState, out: GameEvent[], result: UrgentResult) {
+export function applyUrgentCopier(s: CoreState, out: GameEvent[], result: UrgentResult) {
     s.office.urgent = result.copier;
     if (result.started && result.copier.volley === 1) out.push({ type: 'cue', id: 'urgent-volley' });
     if (!result.fire) return;
     s.office.papers.push(...urgentShot(s.office.urgent));
 }
 
-export function applyPapers(s: GameState, out: GameEvent[], result: { papers: Paper[]; hits: readonly PaperHit[] }, dt: number) {
+export function applyPapers(s: CoreState, out: GameEvent[], result: { papers: Paper[]; hits: readonly PaperHit[] }, dt: number) {
     for (const hit of result.hits) {
         s.office.paperHits++;
         if (!applyFocusHit(s, out, hit.focus)) {

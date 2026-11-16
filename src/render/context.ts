@@ -1,6 +1,6 @@
 import type { Locale } from '../i18n';
 import { LEVEL } from '../game/level';
-import type { GameState } from '../game/game';
+import type { GameSnapshot } from '../game/game';
 import type { DeepReadonly, Mode } from '../game/types';
 import type { Vector, Curve, Color, Gradient, DrawCommand, LayerSpec, Blend, Stroke, Bounds, TextSpec } from './types';
 import { fitGlyphs, fontCss, LABEL_FONT, SIGN_FONT, type FontName } from './fonts';
@@ -39,17 +39,17 @@ export type RenderCtx = {
 
     commands: DrawCommand[];
 
-    state: GameState;
-    p: GameState['player'];
+    state: GameSnapshot;
+    player: GameSnapshot['player'];
     mode: Mode;
-    monitors: (GameState['monitors'][number] & typeof ART.monitors[number])[];
-    cleaning: GameState['cleaning'];
-    bin: GameState['bin'] & { bottom: number };
-    copier: GameState['copier'] & { flash: number };
-    urgentCopier: GameState['urgentCopier'];
-    people: GameState['people'];
-    solids: GameState['solids'];
-    papers: GameState['papers'];
+    monitors: (GameSnapshot['monitors'][number] & typeof ART.monitors[number])[];
+    cleaning: GameSnapshot['cleaning'];
+    bin: GameSnapshot['bin'] & { bottom: number };
+    copier: GameSnapshot['copier'] & { flash: number };
+    urgentCopier: GameSnapshot['urgentCopier'];
+    people: GameSnapshot['people'];
+    solids: GameSnapshot['solids'];
+    papers: GameSnapshot['papers'];
     inBin: boolean;
     soaked: boolean;
     /** How many times the dirty bucket water has splashed the rider this attempt; each adds a layer of stains. */
@@ -130,7 +130,7 @@ export function createRenderResources(bg: CanvasRenderingContext2D) {
 }
 export type RenderResources = ReturnType<typeof createRenderResources>;
 
-export function createRenderCtx(resources: RenderResources, state: GameState, effects: EffectsState): RenderCtx {
+export function createRenderCtx(resources: RenderResources, state: GameSnapshot, effects: EffectsState): RenderCtx {
     const ctx: RenderCtx = {
         bg: resources.bg,
         textWidth: (content, font) => resources.textWidth(content, font),
@@ -138,7 +138,7 @@ export function createRenderCtx(resources: RenderResources, state: GameState, ef
         clamp: (v, a, b) => Math.max(a, Math.min(b, v)),
         W: 800, H: 510, scale: 1, VW: 800, vertical: 0, dpr: 1, cam: 0, wheel: 0,
         ox: 0, oy: 0, rotation: 0, localScale: 1, mirror: null, layer: null, commands: [],
-        state, p: state.player, mode: state.mode,
+        state, player: state.player, mode: state.mode,
         monitors: state.monitors.map((monitor, index) => ({ ...monitor, ...ART.monitors[index] })),
         cleaning: state.cleaning, bin: { ...state.bin, bottom: ART.binBottom },
         copier: { ...state.copier, flash: effects.copierFlash }, urgentCopier: state.urgentCopier,

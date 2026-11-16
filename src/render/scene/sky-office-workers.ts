@@ -139,7 +139,7 @@ export function officeWorker(ctx: RenderCtx, slot: number, left: number, floor: 
     const staff = STAFF[slot];
     if (!staff) return;
     const x = left + 27.5 + staff.dx;
-    const look = Math.max(-1, Math.min(1, (ctx.p.x - x) / 120));
+    const look = Math.max(-1, Math.min(1, (ctx.player.x - x) / 120));
     ctx.ox = x; ctx.oy = floor; ctx.rotation = 0; ctx.localScale = SCALE;
     worker(ctx, staff.pose, LOOKS[staff.look], ctx.t + slot * 1.37, look);
     ctx.ox = ctx.oy = 0; ctx.localScale = 1;

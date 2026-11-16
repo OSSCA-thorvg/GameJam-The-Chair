@@ -11,7 +11,7 @@ const { createGame, createRenderCtx, drawTalk, drawStageTitle, SPEECH_FONT, LABE
 
 function context(state, overrides = {}) {
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state, p: state.player, mode: 'play', locale: 'ko', t: state.time, W: 1000, H: 510, VW: 1000, scale: 1, cam: 0, vertical: 0 }, overrides);
+    Object.assign(ctx, { state, player: state.player, mode: 'play', locale: 'ko', t: state.time, W: 1000, H: 510, VW: 1000, scale: 1, cam: 0, vertical: 0 }, overrides);
     return ctx;
 }
 

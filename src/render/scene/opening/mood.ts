@@ -28,7 +28,7 @@ export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame) {
     screenRect(ctx, tint.color);
     ctx.endLayer();
 
-    const p = ctx.p;
+    const p = ctx.player;
     if (dusk > 0) {
         const [lx, ly] = ctx.screenPoint(p.x + 44, p.y - 46);
         const r = 130 * ctx.scale;
@@ -66,7 +66,7 @@ function note(ctx: RenderCtx, color: string, big: boolean) {
 
 /** 6 pm: notes bubbling up on both sides and sparkles twinkling round the dancing chair. */
 function drawJoy(ctx: RenderCtx, frame: OpeningFrame) {
-    const p = ctx.p, t = frame.t;
+    const p = ctx.player, t = frame.t;
     ctx.beginLayer({ key: 'opening-notes', opacity: frame.hum });
     for (let i = 0; i < 5; i++) {
         const u = (t * .9 + i / 5) % 1, side = i % 2 ? 1 : -1;
@@ -89,7 +89,7 @@ function drawJoy(ctx: RenderCtx, frame: OpeningFrame) {
 
 /** 7 pm: strain lines flicking out from the wheels and the backrest joint with every creak, longer as it worsens. */
 function drawCreak(ctx: RenderCtx, frame: OpeningFrame) {
-    const p = ctx.p, reach = 8 + 14 * frame.creak;
+    const p = ctx.player, reach = 8 + 14 * frame.creak;
     ctx.beginLayer({ key: 'opening-creak', opacity: frame.creakPulse });
     for (const [x, y, aim] of [[-30, 26, Math.PI * .85], [30, 26, Math.PI * .15], [-30, -16, Math.PI * 1.1]]) {
         for (const spread of [-.45, 0, .45]) {
@@ -117,7 +117,7 @@ function angerMark(ctx: RenderCtx, x: number, y: number, scale: number) {
  * and dust jumps off the floor round its wheels.
  */
 function drawRage(ctx: RenderCtx, frame: OpeningFrame) {
-    const p = ctx.p, t = frame.t;
+    const p = ctx.player, t = frame.t;
     ctx.beginLayer({ key: 'opening-rage', opacity: frame.rage });
     angerMark(ctx, p.x - 50, p.y - 8, 1 + .22 * Math.max(0, Math.sin(t * 13)));
     ctx.endLayer();
@@ -126,7 +126,7 @@ function drawRage(ctx: RenderCtx, frame: OpeningFrame) {
 
 /** Dust hopping off the floor round the trembling wheels. */
 function floorDust(ctx: RenderCtx, t: number, shake: number) {
-    const p = ctx.p;
+    const p = ctx.player;
     ctx.beginLayer({ key: 'opening-floor-dust', opacity: shake });
     for (let i = 0; i < 6; i++) {
         const u = (t * 2.6 + i / 6) % 1, side = i % 2 ? 1 : -1;

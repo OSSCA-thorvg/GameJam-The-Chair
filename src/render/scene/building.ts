@@ -212,7 +212,7 @@ export function drawBuilding(ctx: RenderCtx) {
     liftShaft(ctx);
     corridorExit(ctx);
     if (departure.kind !== 'lost' && !(departure.kind === 'descending' && departure.reason === 'abduction')) {
-        ctx.ellipse(ctx.p.x, 425, 45, 5, '#61747544');
+        ctx.ellipse(ctx.player.x, 425, 45, 5, '#61747544');
     }
     liftForeground(ctx);
     chairSpeech(ctx);

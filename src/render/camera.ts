@@ -14,18 +14,18 @@ export function gameplayCamera(ctx: RenderCtx, lastTime: number, lastStage: numb
     const dt = Math.max(0, t - lastTime);
     const lead = policy.lead;
     if (t < lastTime || next.stage !== lastStage) {
-        ctx.cam = ctx.clamp(ctx.p.x - ctx.VW * lead, 0, Math.max(0, ctx.LEN - ctx.VW));
+        ctx.cam = ctx.clamp(ctx.player.x - ctx.VW * lead, 0, Math.max(0, ctx.LEN - ctx.VW));
         ctx.wheel = 0;
     }
     if (camera !== undefined) {
         ctx.cam = ctx.clamp(camera, 0, Math.max(0, ctx.LEN - ctx.VW));
     } else if (ctx.mode === 'play' || (policy.followWhenWon && ctx.mode === 'won')) {
-        const focusX = ctx.p.x - ctx.VW * lead;
+        const focusX = ctx.player.x - ctx.VW * lead;
         const targetCamera = ctx.clamp(focusX, 0, Math.max(0, ctx.LEN - ctx.VW));
         ctx.cam += (targetCamera - ctx.cam) * Math.min(1, dt * 7);
-        ctx.wheel += ctx.p.vx * dt / 8;
+        ctx.wheel += ctx.player.vx * dt / 8;
     }
     const baseVertical = Math.max(0, ctx.H / ctx.scale - VIEW_HEIGHT) * .7;
-    ctx.vertical = policy.followVertical ? baseVertical + Math.max(0, policy.focusY - ctx.p.y) : baseVertical;
+    ctx.vertical = policy.followVertical ? baseVertical + Math.max(0, policy.focusY - ctx.player.y) : baseVertical;
     return baseVertical;
 }

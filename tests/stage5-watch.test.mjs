@@ -24,7 +24,7 @@ function orbitFrame(z, t, age = 10) {
     const state = structuredClone(game.getSnapshot());
     Object.assign(state.orbit, { z, age });
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state, p: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t });
+    Object.assign(ctx, { state, player: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t });
     drawOrbit(ctx);
     return ctx.commands;
 }
