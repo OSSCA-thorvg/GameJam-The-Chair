@@ -4,12 +4,9 @@ import type { GameEvent } from '../../types';
 import { focusAfterHit, focusLossStep, focusRecovery, type FocusHit } from './decide';
 export function applyFocusHit(s: CoreState, out: GameEvent[], hit: FocusHit) {
     if (s.mode !== 'play') return false;
-    const r = focusAfterHit(s, hit);
+    const r = focusAfterHit(s.focus, hit);
     if (!r) return true;
-    s.focus = r.focus;
-    s.focusClock = r.focusClock;
-    s.focusEvents = [...r.focusEvents];
-    s.focusNotice = r.focusNotice;
+    s.focus = { value: r.value, recoveryClock: r.recoveryClock, processedEvents: r.processedEvents, notice: r.notice };
     if (r.lost) applyFocusFailure(s, out);
     return s.mode === 'play';
 }
@@ -18,8 +15,8 @@ function applyFocusFailure(s: CoreState, out: GameEvent[]) {
     s.mode = 'focuslost';
     s.lossReason = 'focus';
     s.focusLossTime = 0;
-    s.focus = 0;
-    s.focusClock = 0;
+    s.focus.value = 0;
+    s.focus.recoveryClock = 0;
     s.deaths++;
     s.keys = [];
     out.push({ type: 'cue', id: 'focus-lost' });
@@ -40,5 +37,5 @@ export function focusBlockedIn(s: Readonly<CoreState>) {
 }
 
 export function applyFocusRecovery(s: CoreState, dt: number) {
-    Object.assign(s, focusRecovery(s, focusBlockedIn(s), dt));
+    Object.assign(s.focus, focusRecovery(s.focus, focusBlockedIn(s), dt));
 }

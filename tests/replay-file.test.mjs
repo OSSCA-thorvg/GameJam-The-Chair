@@ -142,6 +142,11 @@ test('replay parser rejects files that exceed synchronous playback limits', () =
     assert.throws(() => R.buildTimeline({ ...base, endTick: base.start.tick + R.REPLAY_FILE_LIMITS.ticks + 1 }), /too long/);
 });
 
+test('replays with the previous flat state format are rejected', () => {
+    const file = replayFile({ format: 3 });
+    assert.throws(() => R.parseReplay(JSON.stringify(file)), /unknown format/);
+});
+
 test('checked-in replay files still play back exactly', () => {
     for (const name of ['office-route.json']) {
         const file = R.parseReplay(readFileSync(new URL(`./replays/${name}`, import.meta.url), 'utf8'));

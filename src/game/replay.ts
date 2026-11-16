@@ -6,7 +6,7 @@ import type { CoreState } from './state';
 import type { GameEvent } from './types';
 import { assertGameState } from './validation';
 
-export const REPLAY_FORMAT = 3;
+export const REPLAY_FORMAT = 4;
 
 export type ReplaySettings = {
     enabled: boolean;

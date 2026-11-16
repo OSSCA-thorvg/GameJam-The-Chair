@@ -6,8 +6,6 @@ import type { Bucket, Cleaning } from './cleaning/decide';
 export type OfficeState = {
     copier: Copier;
     urgent: UrgentCopier;
-    volley: number;
-    bursts: number;
     papers: Paper[];
     paperHits: number;
     paperPenaltyRemaining: number;
@@ -30,10 +28,8 @@ export type OfficeState = {
 
 export function createOfficeState(): OfficeState {
     return {
-        copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1 },
+        copier: { ...LEVEL.copier, cool: 0, burst: 0, next: 0, dir: -1, volley: 0, bursts: 0 },
         urgent: createUrgentCopier(),
-        volley: 0,
-        bursts: 0,
         papers: [],
         paperHits: 0,
         paperPenaltyRemaining: 0,

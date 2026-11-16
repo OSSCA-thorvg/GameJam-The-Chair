@@ -18,7 +18,7 @@ export function applyRooftopEntrance(s: CoreState, dt: number) {
 }
 
 export function applyRooftop(s: CoreState, out: GameEvent[], dt: number) {
-    const r = rooftopStep({ p: s.p, ground: s.ground, hasExtinguisher: s.hasExtinguisher, firstFlight: s.rooftop.flight, ductReaction: s.rooftop.duct, time: s.time }, dt);
+    const r = rooftopStep({ p: s.p, ground: s.ground, hasExtinguisher: s.extinguisher.owned, firstFlight: s.rooftop.flight, ductReaction: s.rooftop.duct, time: s.time }, dt);
     setPlayer(s, r.p);
     s.ground = r.ground;
     s.rooftop.duct = r.ductReaction;
@@ -28,14 +28,14 @@ export function applyRooftop(s: CoreState, out: GameEvent[], dt: number) {
     if (s.rooftop.flight.kind === 'course' && r.firstFlight.kind === 'ride') {
         s.keys = [];
         s.jumpQ = 0;
-        s.sprayBurst = .24;
-        s.sprayDir = { x: -1, y: 0 };
+        s.extinguisher.burst = .24;
+        s.extinguisher.direction = { x: -1, y: 0 };
         s.ground = false;
         out.push({ type: 'cue', id: 'checkpoint' });
     }
     s.rooftop.flight = r.firstFlight;
     if (r.pickup) {
-        s.hasExtinguisher = true;
+        s.extinguisher.owned = true;
         s.checkpoint = 1;
         out.push({ type: 'cue', id: 'extinguisher-pickup' });
         out.push({ type: 'cue', id: 'checkpoint' });
@@ -50,14 +50,14 @@ export function applyFlight(s: CoreState, dt: number): false | 'flight' | 'arriv
         s.rooftop.flight = r.flight;
         setPlayer(s, r.p);
         s.ground = false;
-        s.sprayBurst = .24;
-        s.sprayDir = { x: -r.p.vx / Math.max(1, Det.hypot(r.p.vx, r.p.vy)), y: -r.p.vy / Math.max(1, Det.hypot(r.p.vx, r.p.vy)) };
+        s.extinguisher.burst = .24;
+        s.extinguisher.direction = { x: -r.p.vx / Math.max(1, Det.hypot(r.p.vx, r.p.vy)), y: -r.p.vy / Math.max(1, Det.hypot(r.p.vx, r.p.vy)) };
         return 'flight';
     }
     const r = flightStep(flight, s.p, dt);
     s.rooftop.flight = r.flight;
     setPlayer(s, r.p);
-    s.sprayBurst = .24;
-    s.sprayDir = { x: 0, y: 1 };
+    s.extinguisher.burst = .24;
+    s.extinguisher.direction = { x: 0, y: 1 };
     return r.arrived ? 'arrived' : 'flight';
 }

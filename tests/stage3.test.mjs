@@ -164,7 +164,9 @@ test('a steam blast costs focus once per blast', async () => {
     runUntil(() => ventPhase(vent, blowAt + dt).kind === 'blow', () => { blowAt += dt; }, { maxSteps: 120 * 120, message: 'Vent never entered its blow phase' });
     const game = createGame(); game.startStage(3);
     const state = JSON.parse(game.serialize());
-    Object.assign(state, { focus: 100, mode: 'play', time: blowAt, hasExtinguisher: true, ground: false });
+    Object.assign(state, { mode: 'play', time: blowAt, ground: false });
+    state.focus.value = 100;
+    state.extinguisher.owned = true;
     state.rooftop.entrance = { kind: 'ready' };
     Object.assign(state.p, { x: vent.x - 40, y: vent.y, vx: 0, vy: 0 });
     game.restore(JSON.stringify(state));
@@ -181,7 +183,9 @@ test('the duct sneeze steam costs focus when it knocks the chair back', async ()
     const duct = STAGE_THREE.duct;
     const game = createGame(); game.startStage(3);
     const state = JSON.parse(game.serialize());
-    Object.assign(state, { focus: 100, mode: 'play', hasExtinguisher: true, ground: true });
+    Object.assign(state, { mode: 'play', ground: true });
+    state.focus.value = 100;
+    state.extinguisher.owned = true;
     state.rooftop.entrance = { kind: 'ready' };
     state.rooftop.duct = { kind: 'idle', rest: duct.firstSneezeAt - dt / 2 };
     game.restore(JSON.stringify(state));

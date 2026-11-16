@@ -60,3 +60,52 @@ test('the game core has no hidden time or randomness sources', () => {
         assert.doesNotMatch(source, /Math\.random|Date\.|new Date|performance\.|requestAnimationFrame|localStorage/, path);
     }
 });
+
+test('restoring grouped state preserves play data and restart resets attempt systems', () => {
+    const game = createGame({ seed: 17 });
+    game.startStage(1);
+    const state = JSON.parse(game.serialize());
+    state.focus = { value: 45, recoveryClock: 1.2, processedEvents: ['paper:2'], notice: { kind: 'paper', life: .8 } };
+    state.extinguisher = { owned: true, cooldown: .1, burst: .2, direction: { x: -1, y: 0 } };
+    Object.assign(state.office.copier, { volley: 3, bursts: 7 });
+    game.restore(JSON.stringify(state));
+    assert.deepEqual(JSON.parse(game.serialize()), state);
+    const view = game.getSnapshot();
+    assert.equal(view.focus, 45);
+    assert.equal(view.focusNotice.kind, 'paper');
+    assert.equal(view.hasExtinguisher, true);
+    assert.deepEqual(view.spray, { burst: .2, cooldown: .1, dir: { x: -1, y: 0 } });
+    assert.equal(view.bursts, 7);
+    game.reset();
+    const restarted = JSON.parse(game.serialize());
+    assert.equal(restarted.focus.value, 100);
+    assert.deepEqual(restarted.focus.processedEvents, []);
+    assert.equal(restarted.focus.notice, null);
+    assert.equal(restarted.extinguisher.owned, false);
+    assert.equal(restarted.extinguisher.cooldown, 0);
+    assert.equal(restarted.office.copier.volley, 0);
+    assert.equal(restarted.office.copier.bursts, 0);
+});
+
+test('restore rejects malformed grouped state without replacing the current state', () => {
+    const game = createGame({ seed: 17 });
+    const saved = game.serialize();
+    const invalid = [
+        state => { state.focus.value = '100'; },
+        state => { state.focus.recoveryClock = null; },
+        state => { state.focus.processedEvents = [123]; },
+        state => { state.focus.notice = { kind: 'invalid', life: 1 }; },
+        state => { state.extinguisher.owned = 1; },
+        state => { state.extinguisher.cooldown = '0'; },
+        state => { delete state.extinguisher.direction.y; },
+        state => { state.extinguisher.extra = true; },
+        state => { state.office.copier.volley = .5; },
+        state => { state.office.copier.bursts = -1; },
+    ];
+    for (const change of invalid) {
+        const state = JSON.parse(saved);
+        change(state);
+        assert.throws(() => game.restore(JSON.stringify(state)));
+        assert.equal(game.serialize(), saved);
+    }
+});

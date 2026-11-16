@@ -9,7 +9,7 @@ export function applySky(s: CoreState, out: GameEvent[], dt: number) {
     const r = skyStep({
         sky: s.sky, p: s.p, ground: s.ground, coyote: s.coyote, jumpQ: s.jumpQ, checkpoint: s.checkpoint, time: s.time,
         direction: held('right') - held('left'),
-        length: STAGES[s.stage].length, sprayBurst: s.sprayBurst, sprayDir: s.sprayDir,
+        length: STAGES[s.stage].length, sprayBurst: s.extinguisher.burst, sprayDir: s.extinguisher.direction,
     }, dt);
     s.sky = r.sky;
     setPlayer(s, r.p);
@@ -17,12 +17,12 @@ export function applySky(s: CoreState, out: GameEvent[], dt: number) {
     s.coyote = r.coyote;
     s.jumpQ = r.jumpQ;
     s.checkpoint = r.checkpoint;
-    s.sprayBurst = r.sprayBurst;
-    s.sprayDir = r.sprayDir;
+    s.extinguisher.burst = r.sprayBurst;
+    s.extinguisher.direction = r.sprayDir;
     if (r.speed !== null) s.actualSpeed = r.speed;
     if (r.reached) {
-        s.focus = 100;
-        s.focusClock = 0;
+        s.focus.value = 100;
+        s.focus.recoveryClock = 0;
         out.push({ type: 'cue', id: 'checkpoint' });
     }
     if (r.hit) {

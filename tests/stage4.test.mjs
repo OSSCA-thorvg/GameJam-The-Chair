@@ -121,7 +121,8 @@ test('a monitor, keyboard, mouse and tower PC float over the course and knock th
     const game = createGame(); game.startStage(4);
     const state = JSON.parse(game.serialize());
     const tower = skyHazards(state.time + 1 / 120).find(h => h.item === 'tower');
-    Object.assign(state, { focus: 100, mode: 'play', ground: false });
+    Object.assign(state, { mode: 'play', ground: false });
+    state.focus.value = 100;
     Object.assign(state.sky, { phase: 'course', lift: 1, knock: 0, knockKind: null, standing: null });
     Object.assign(state.p, { x: tower.x, y: tower.y + 20, vx: 120, vy: 0 });
     game.restore(JSON.stringify(state));
@@ -174,7 +175,8 @@ test('a bird or paper hit costs focus once per pass and running out of focus end
     const bird = skyHazards(time).find(h => h.kind === 'bird' && h.x > 4000 && h.x < 4400);
     const place = (s, t, focus) => {
         const target = skyHazards(t).find(h => h.id === bird.id);
-        Object.assign(s, { time: t - 1 / 120, focus, mode: 'play' });
+        Object.assign(s, { time: t - 1 / 120, mode: 'play' });
+        s.focus.value = focus;
         Object.assign(s.sky, { phase: 'course', lift: 1, knock: 0, knockKind: null, standing: null });
         Object.assign(s.p, { x: target.x, y: target.y + 20, vx: 0, vy: 0 });
         s.ground = false;

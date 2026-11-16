@@ -23,7 +23,7 @@ export const rooftopHooks: StageHooks = {
         applyRooftop(s, out, dt);
         if (s.ground) s.rooftop.airSprays = 0;
     },
-    checkpointsOpen: s => s.hasExtinguisher,
+    checkpointsOpen: s => s.extinguisher.owned,
     canJump: s => s.rooftop.entrance.kind !== 'opening',
     canSpray: s => s.rooftop.flight.kind === 'course' && s.rooftop.airSprays < STAGE_THREE.airSprayLimit,
     onSpray: s => { s.rooftop.airSprays++; },

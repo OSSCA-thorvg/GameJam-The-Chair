@@ -5,12 +5,11 @@ import { applyFocusHit } from '../../../systems/focus/apply';
 import { paperShot, trimPapers, urgentShot, type CopierResult, type PaperHit, type UrgentResult } from './decide';
 export function applyCopier(s: CoreState, out: GameEvent[], result: CopierResult) {
     s.office.copier = result.copier;
-    s.office.volley = result.volley;
     if (!result.fire) return;
-    s.office.papers.push(...paperShot(s.office.copier, s.office.volley, s.office.bursts));
-    s.office.bursts++;
+    s.office.papers.push(...paperShot(s.office.copier));
+    s.office.copier.bursts++;
     out.push({ type: 'volley' });
-    if (s.office.bursts === 1) out.push({ type: 'cue', id: 'first-volley' });
+    if (s.office.copier.bursts === 1) out.push({ type: 'cue', id: 'first-volley' });
 }
 
 export function applyUrgentCopier(s: CoreState, out: GameEvent[], result: UrgentResult) {
