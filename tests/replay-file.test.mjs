@@ -370,3 +370,30 @@ test('replay data bundles, single files and old error logs all open as replay li
         /usable replay/,
     );
 });
+
+test('replay hashes tolerate reordered nested keys in the starting state', () => {
+    const { game, recorder } = recordedGame();
+    game.startStage(1);
+    game.setInput('right');
+    for (let i = 0; i < 240; i++) game.step();
+    const file = recorder.latest();
+    file.start = JSON.parse(
+        JSON.stringify(file.start, (_key, value) => {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) {
+                return value;
+            }
+            return Object.fromEntries(Object.entries(value).reverse());
+        }),
+    );
+    const timeline = R.buildTimeline(R.parseReplay(JSON.stringify(file)));
+    assert.equal(timeline.divergedAt, null);
+    assert.equal(timeline.error, null);
+    assert.equal(timeline.endTick, file.endTick);
+});
+
+test('replay parsing rejects the previous order-dependent hash format', () => {
+    assert.throws(
+        () => R.parseReplay(JSON.stringify(replayFile({ format: 4 }))),
+        /unknown format/,
+    );
+});
