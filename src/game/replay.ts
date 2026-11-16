@@ -211,6 +211,8 @@ export function createRecorder(getSettings: () => ReplaySettings, seed: number |
             // A failing step happens on the next tick: simulate up to it so playback reproduces the error.
             if (error.at === 'step') current.endTick = error.tick + 1;
         },
+        /** Whether an attempt is being recorded; it is then the first of `attempts()`. */
+        get recording() { return !!current; },
         /** The attempt in progress and the finished ones kept, newest first, as detached copies. */
         attempts(): ReplayFile[] {
             return [current, ...finished.slice().reverse()].filter((file): file is ReplayFile => !!file).map(file => clonePlain(file));
