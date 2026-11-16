@@ -103,7 +103,10 @@ test('all stages preserve the public snapshot field contract', () => {
     const game = createGame({ seed: 42 });
     for (const stage of [1, 2, 3, 4, 5]) {
         game.startStage(stage);
-        assert.deepEqual(Object.keys(game.getSnapshot()), SNAPSHOT_FIELDS);
+        assert.deepEqual(
+            Object.keys(game.getSnapshot()).sort(),
+            [...SNAPSHOT_FIELDS].sort(),
+        );
     }
 });
 

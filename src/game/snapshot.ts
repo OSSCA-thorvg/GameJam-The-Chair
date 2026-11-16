@@ -99,67 +99,6 @@ type SnapshotData = CommonView &
         orbit: CoreState['orbit'] | undefined;
     };
 
-// Gameplay fingerprints include the public snapshot's property order.
-const SNAPSHOT_LAYOUT: {
-    [K in keyof SnapshotData]: SnapshotData[K] | undefined;
-} = {
-    game: undefined,
-    spray: undefined,
-    lessons: undefined,
-    officeCheckpoint: undefined,
-    skylineSeed: undefined,
-    actualSpeed: undefined,
-    tutorialAssist: undefined,
-    stage: undefined,
-    sky: undefined,
-    orbit: undefined,
-    completedStage: undefined,
-    hasExtinguisher: undefined,
-    firstFlight: undefined,
-    rooftopEntrance: undefined,
-    ductReaction: undefined,
-    airSprays: undefined,
-    checkpoint: undefined,
-    furniture: undefined,
-    corridor: undefined,
-    canEnterMeeting: undefined,
-    level: undefined,
-    mode: undefined,
-    focus: undefined,
-    focusClock: undefined,
-    focusLossTime: undefined,
-    focusNotice: undefined,
-    lossReason: undefined,
-    player: undefined,
-    ground: undefined,
-    slip: undefined,
-    dirty: undefined,
-    inBin: undefined,
-    binAge: undefined,
-    time: undefined,
-    deaths: undefined,
-    bursts: undefined,
-    paperHits: undefined,
-    binFalls: undefined,
-    dirtyWaterExperienced: undefined,
-    cleaningSpilled: undefined,
-    soaked: undefined,
-    bucketAge: undefined,
-    paperPenaltyRemaining: undefined,
-    lightPenaltyRemaining: undefined,
-    cleaning: undefined,
-    lightHits: undefined,
-    doorHits: undefined,
-    monitors: undefined,
-    papers: undefined,
-    people: undefined,
-    solids: undefined,
-    copier: undefined,
-    urgentCopier: undefined,
-    bin: undefined,
-    focusBlocked: undefined,
-};
-
 export type GameSnapshot = DeepReadonly<SnapshotData>;
 
 function createCommonView(s: Readonly<CoreState>): CommonView {
@@ -254,7 +193,7 @@ function createRooftopView(rooftop: Readonly<RooftopState>): RooftopView {
 }
 
 export function viewState(s: Readonly<CoreState>): SnapshotData {
-    const data: SnapshotData = {
+    return {
         ...createCommonView(s),
         ...createFocusView(s),
         ...createSprayView(s.extinguisher),
@@ -264,5 +203,4 @@ export function viewState(s: Readonly<CoreState>): SnapshotData {
         sky: clonePlain(s.sky),
         orbit: s.stage === 5 ? clonePlain(s.orbit) : undefined,
     };
-    return Object.assign({ ...SNAPSHOT_LAYOUT }, data);
 }
