@@ -1,5 +1,5 @@
 import { FIXED_STEP } from './level';
-import type { Input, DeepReadonly, GameEvent, Mode, StageId } from './types';
+import type { Input, GameEvent, Mode, StageId } from './types';
 import type { SkyState } from './stages/sky/data';
 import {
     cloneState,
@@ -13,7 +13,9 @@ import type { Command } from './commands';
 import { SIMULATED, applyCommand, stepGame } from './step';
 import { applyFocusLoss } from './systems/focus/apply';
 import { applyImpact } from './systems/impact/apply';
-import { viewState } from './snapshot';
+import { viewState, type GameSnapshot } from './snapshot';
+
+export type { GameSnapshot } from './snapshot';
 
 export { viewState } from './snapshot';
 
@@ -145,8 +147,8 @@ export function createGame(options: GameOptions = {}) {
         };
     }
 
-    // Returns a detached copy that callers may edit.
-    function getSnapshot() {
+    // Returns a detached presentation snapshot.
+    function getSnapshot(): GameSnapshot {
         return viewState(s);
     }
     function advance(dt: number): AdvanceResult {
@@ -210,9 +212,7 @@ export function createGame(options: GameOptions = {}) {
             acc = 0;
         },
         status,
-        getSnapshot: getSnapshot as () => DeepReadonly<
-            ReturnType<typeof viewState>
-        >,
+        getSnapshot,
         drainEvents() {
             return pending.splice(0);
         },
@@ -220,4 +220,3 @@ export function createGame(options: GameOptions = {}) {
 }
 
 export type Game = ReturnType<typeof createGame>;
-export type GameSnapshot = ReturnType<Game['getSnapshot']>;

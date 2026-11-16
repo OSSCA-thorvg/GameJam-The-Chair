@@ -31,7 +31,28 @@ const smooth = (value: number) => {
     return t * t * (3 - 2 * t);
 };
 
-export function orbitEnding(orbit: Readonly<OrbitState>) {
+export type OrbitEndingState = {
+    parked: boolean;
+    t: number;
+    calm: number;
+    centre: number;
+    focus: number;
+    wide: number;
+    spin: number;
+    swivel: number;
+    recline: number;
+    message: number;
+    read: number;
+    rest: number;
+    lightsOut: number;
+    dark: number;
+    title: number;
+    loose: number;
+    signalLost: number;
+    still: number;
+};
+
+export function orbitEnding(orbit: Readonly<OrbitState>): OrbitEndingState {
     const t = orbit.phase === 'parked' ? Math.max(0, orbit.settled - 1) : 0;
     const E = ORBIT_ENDING;
     const wide = smooth((t - E.wideFrom) / (E.wide - E.wideFrom));
@@ -57,7 +78,6 @@ export function orbitEnding(orbit: Readonly<OrbitState>) {
         still: Math.max(0, t - E.handsStop),
     };
 }
-export type OrbitEndingState = ReturnType<typeof orbitEnding>;
 
 const alpha = (value: number) =>
     Math.round(Math.max(0, Math.min(1, value)) * 255)
