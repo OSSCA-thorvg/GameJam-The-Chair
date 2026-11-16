@@ -1,3 +1,4 @@
+import { STAGE_PRESENTATION } from '../presentation/stages';
 import { gameplayCamera } from './camera';
 import type { Locale } from '../i18n';
 import type { Canvas, ThorVGNamespace } from '@thorvg/webcanvas';
@@ -113,16 +114,9 @@ function setup(
         } else if (title) {
             // The title loops on the page clock; the motion preview passes its own time.
             drawTitle(ctx, titleTime ?? performance.now() / 1000);
-        } else if (next.stage === 5) {
-            drawOrbit(ctx);
-        } else if (next.stage === 4) {
-            drawCloudStart(ctx);
-        } else if (next.stage === 3) {
-            drawRooftop(ctx);
-        } else if (next.stage === 2) {
-            drawBuilding(ctx);
         } else {
-            drawWorld(ctx);
+            const scenes = { office: drawWorld, building: drawBuilding, rooftop: drawRooftop, sky: drawCloudStart, orbit: drawOrbit };
+            scenes[STAGE_PRESENTATION[next.stage].scene](ctx);
         }
         if (!opening && !title) {
             const burst = effects.deathShot ? deathShotBurst(effects.deathShot) : null;
