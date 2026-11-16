@@ -12,7 +12,8 @@ const { FOCUS_DAMAGE, ORBIT_ENDING, orbitEnding, createGame, orbitStep, gearAt, 
     export { createSkyProjection } from './src/render/scene/sky-projection';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
     export { parseCommand } from './src/game/commands';
-    export { previewScenes, orbitKeys } from './src/preview-scenes';
+    export { previewScenes } from './src/preview-scenes';
+    export { orbitKeys } from './src/preview/autopilot';
     export { drawOrbit } from './src/render/scene/orbit';
     export { ORBIT_ENDING, orbitEnding } from './src/render/scene/orbit-ending';
     export { createRenderCtx } from './tests/support/render-context';
@@ -110,7 +111,7 @@ test('saved orbit movement resumes exactly and pause freezes it', () => {
 });
 
 test('the orbit preview reaches the Earth shadow, seeks backwards, and renders finite geometry on narrow screens', () => {
-    const scene = previewScenes.find(scene => scene.id === 'orbit-route');
+    const scene = previewScenes.find(scene => scene.id === 'orbit-route')?.create();
     assert.ok(scene);
     assert.equal(STAGE_FIVE.drawer, undefined);
     assert.ok(STAGE_FIVE.door);
@@ -180,7 +181,7 @@ test('orbit recordings reproduce steering and thrust and support backwards seek'
 });
 
 test('repeated orbit frames do not accumulate previous drawing commands', () => {
-    const scene = previewScenes.find(scene => scene.id === 'orbit-route');
+    const scene = previewScenes.find(scene => scene.id === 'orbit-route')?.create();
     const state = scene.sample(3).state;
     const ctx = createRenderCtx({});
     Object.assign(ctx, { state, t: state.time, W: 1000, H: 510 });

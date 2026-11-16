@@ -69,7 +69,7 @@ test('the final arrow ends just above the sign and never grows with the camera',
 });
 
 test('the real takeoff preview crosses the check and single target shift and seeks backward', () => {
-    const scene = previewScenes.find(scene => scene.id === 'rooftop-takeoff');
+    const scene = previewScenes.find(scene => scene.id === 'rooftop-takeoff')?.create();
     const markers = scene.markers.filter(marker => /First peak|Target/.test(marker.label));
     assert.equal(markers.length, 3);
     const poses = markers.map(marker => graphTargetPose(scene.sample(marker.at).state.firstFlight.dist));

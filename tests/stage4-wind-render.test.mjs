@@ -11,7 +11,7 @@ const { createRenderCtx, player, sprayPlume, drawSky, skyWindResponse, previewSc
     export { previewScenes } from './src/preview-scenes';
     export { skyCoursePlatform } from './src/render/scene/sky-course-art';
 `);
-const scene = previewScenes.find(scene => scene.id === 'sky-wind-feedback');
+const scene = previewScenes.find(scene => scene.id === 'sky-wind-feedback')?.create();
 function context(time, over = {}) {
     const { state } = scene.sample(time);
     const ctx = createRenderCtx({});

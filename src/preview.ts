@@ -23,7 +23,7 @@ const splash = createSplashPlayer(splashCanvas);
 for (const scene of previewScenes) select.add(new Option(scene.label, scene.id));
 const requested = new URLSearchParams(location.search).get('motion');
 const requestedTime = Number(new URLSearchParams(location.search).get('t'));
-let scene: PreviewScene = previewScenes.find(item => item.id === requested) ?? previewScenes[0];
+let scene: PreviewScene = (previewScenes.find(item => item.id === requested) ?? previewScenes[0]).create();
 let time = 0;
 let playing = false;
 let previousFrame: number | null = null;
@@ -97,7 +97,7 @@ function frame(ms: number) {
 
 select.addEventListener('change', () => {
     const next = previewScenes.find(item => item.id === select.value);
-    if (next) selectScene(next);
+    if (next) selectScene(next.create());
 });
 slider.addEventListener('input', () => { pause(); seek(slider.valueAsNumber); });
 document.querySelector('#previous')!.addEventListener('click', () => { pause(); seek(time - 1 / 60); });

@@ -189,7 +189,7 @@ test('office frames light the scene and draw the bubbles with their words', () =
 });
 
 test('the opening preview is registered and seeks deterministically', () => {
-    const scene = previewScenes.find(scene => scene.id === 'opening');
+    const scene = previewScenes.find(scene => scene.id === 'opening')?.create();
     assert.ok(scene);
     assert.equal(scene.duration, OPENING_DURATION);
     assert.ok(scene.markers.some(marker => marker.at === B.rage));
