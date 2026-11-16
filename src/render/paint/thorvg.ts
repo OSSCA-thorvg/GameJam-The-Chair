@@ -114,9 +114,9 @@ function tracePath(s: Shape, cmd: PathCommand) {
 }
 
 function applyShape(
-    ctx: RenderCtx,
+    ctx: Pick<RenderCtx, 'rgba'>,
     TVG: ThorVGNamespace,
-    pool: PaintPool,
+    styled: PaintPool['styled'],
     s: Shape,
     cmd: PathCommand,
 ) {
@@ -130,7 +130,7 @@ function applyShape(
         s.fill(g);
         g.dispose();
     }
-    const style = pool.styled.get(s) ?? {
+    const style = styled.get(s) ?? {
         stroked: false,
         trimmed: false,
         blended: false,
@@ -170,12 +170,16 @@ function applyShape(
         style.blended = false;
     }
     if (style.stroked || style.trimmed || style.blended) {
-        pool.styled.set(s, style);
-    } else pool.styled.delete(s);
+        styled.set(s, style);
+    } else styled.delete(s);
     s.visible(true);
 }
 
-function applyText(ctx: RenderCtx, slot: TextSlot, spec: TextSpec) {
+function applyText(
+    ctx: Pick<RenderCtx, 'rgba'>,
+    slot: TextSlot,
+    spec: TextSpec,
+) {
     if (slot.font !== spec.font) {
         slot.back.font(spec.font);
         slot.front.font(spec.font);
@@ -224,15 +228,20 @@ function applyText(ctx: RenderCtx, slot: TextSlot, spec: TextSpec) {
     }
 }
 
+type LayerMetrics = {
+    shapeCount: number;
+    activeCount: number;
+    area: number;
+    effectScale: number;
+};
+
 function recordLayerStats(
     stats: RenderStats,
     spec: LayerSpec,
-    shapeCount: number,
-    activeCount: number,
-    area: number,
-    effectScale: number,
-    blurred: boolean,
+    { shapeCount, activeCount, area, effectScale }: LayerMetrics,
 ) {
+    const blurred =
+        !!spec.blur || (!!spec.motionBlur && spec.motionBlur.distance > 0.5);
     stats.layers++;
     stats.layerShapes += shapeCount;
     stats.parkedShapes += shapeCount - activeCount;
@@ -265,7 +274,7 @@ function recordLayerStats(
 }
 
 function applyLayerEffects(
-    ctx: RenderCtx,
+    ctx: Pick<RenderCtx, 'rgba'>,
     TVG: ThorVGNamespace,
     slot: LayerSlot,
     spec: LayerSpec,
@@ -321,7 +330,7 @@ function applyLayerEffects(
 }
 
 function syncLayer(
-    ctx: RenderCtx,
+    ctx: Pick<RenderCtx, 'rgba' | 'W' | 'H'>,
     TVG: ThorVGNamespace,
     pool: PaintPool,
     item: Extract<Item, { layer: LayerSpec }>,
@@ -341,8 +350,6 @@ function syncLayer(
     }
     const { scene, shapes } = slot;
     const spec = item.layer;
-    const blurred =
-        !!spec.blur || (!!spec.motionBlur && spec.motionBlur.distance > 0.5);
     const extent =
         stats || spec.effectBudget
             ? [Infinity, Infinity, -Infinity, -Infinity]
@@ -373,7 +380,7 @@ function syncLayer(
             shapes.push(s);
             scene.add(s);
         }
-        if (!retainedReady) applyShape(ctx, TVG, pool, s, cmd);
+        if (!retainedReady) applyShape(ctx, TVG, pool.styled, s, cmd);
         i++;
     }
     if (spec.retained) {
@@ -395,18 +402,15 @@ function syncLayer(
           )
         : 1;
     if (stats) {
-        recordLayerStats(
-            stats,
-            spec,
-            shapes.length,
-            i,
+        recordLayerStats(stats, spec, {
+            shapeCount: shapes.length,
+            activeCount: i,
             area,
             effectScale,
-            blurred,
-        );
+        });
     }
     for (; i < shapes.length; i++) {
-        applyShape(ctx, TVG, pool, shapes[i], {
+        applyShape(ctx, TVG, pool.styled, shapes[i], {
             kind: 'path',
             points: [
                 [px, py],
@@ -475,7 +479,7 @@ export function paintThorvg(
     for (const item of items) {
         if ('cmd' in item) {
             const s = pool.top[topIndex++];
-            applyShape(ctx, TVG, pool, s, item.cmd);
+            applyShape(ctx, TVG, pool.styled, s, item.cmd);
             order.push(s);
             continue;
         }

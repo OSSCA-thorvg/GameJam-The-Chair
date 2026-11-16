@@ -307,16 +307,17 @@ function updateConvoy(
         for (const chair of furniture) chair.vx = 360;
         p.vx = 360;
     }
-    return captiveBoarding;
 }
 
 function moveChairs(
     c: Corridor,
     furniture: Furniture[],
     p: Player,
-    length: number,
-    previousX: number,
-    dt: number,
+    {
+        length,
+        previousX,
+        dt,
+    }: { length: number; previousX: number; dt: number },
 ) {
     const front = furniture[0];
     const minimumSpeed = 70;
@@ -369,27 +370,29 @@ function moveChairs(
     }
 }
 
-function carryRider(
+type ConvoyMovement = Pick<
+    CorridorInput,
+    'ground' | 'steering' | 'steer' | 'length'
+> & { previousX: number; dt: number };
+
+function moveConvoy(
     c: Corridor,
     furniture: Furniture[],
     p: Player,
-    input: CorridorInput,
-    previousX: number,
-    frontX: number,
-    middleX: number,
-    captiveBoarding: boolean,
-    dt: number,
+    { ground, steering, steer, length, previousX, dt }: ConvoyMovement,
 ) {
     const front = furniture[0],
         back = furniture[2];
-    const ground = input.ground;
+    const frontX = front.x;
+    const middleX = furniture[1].x;
+    moveChairs(c, furniture, p, { length, previousX, dt });
+    const captiveBoarding =
+        c.departure.kind === 'boarding' && c.departure.reason === 'abduction';
     const followsBoarding =
-        captiveBoarding && c.convoy === 'airborne' && !input.steering;
+        captiveBoarding && c.convoy === 'airborne' && !steering;
     if (isJoinedConvoy(c.convoy) || followsBoarding) {
         const shuffle =
-            isJoinedConvoy(c.convoy) && ground
-                ? input.steer * STAGE_TWO.shuffle
-                : 0;
+            isJoinedConvoy(c.convoy) && ground ? steer * STAGE_TWO.shuffle : 0;
         const nextX = previousX + front.x - frontX + shuffle * dt;
         const behindMiddle = previousX < middleX;
         let low: number;
@@ -462,9 +465,11 @@ function updateChairChat(
     c: Corridor,
     furniture: Furniture[],
     p: Player,
-    allReleased: boolean,
-    nearby: boolean,
-    dt: number,
+    {
+        allReleased,
+        nearby,
+        dt,
+    }: { allReleased: boolean; nearby: boolean; dt: number },
 ) {
     const front = furniture[0],
         back = furniture[2];
@@ -552,9 +557,11 @@ function updateDeparture(
     c: Corridor,
     furniture: Furniture[],
     p: Player,
-    ground: boolean,
-    allReleased: boolean,
-    dt: number,
+    {
+        ground,
+        allReleased,
+        dt,
+    }: { ground: boolean; allReleased: boolean; dt: number },
 ) {
     const front = furniture[0],
         back = furniture[2];
@@ -662,24 +669,22 @@ export function corridorStep(
     const allReleased = furniture.every((chair) => chair.released);
     const front = furniture[0],
         back = furniture[2];
-    const frontX = front.x,
-        middleX = furniture[1].x;
     const nearby = p.x > back.x - 240 && p.x < front.x + 240;
-    const captiveBoarding = updateConvoy(c, furniture, p, ground, allReleased);
-    moveChairs(c, furniture, p, input.length, previousX, dt);
-    carryRider(
-        c,
-        furniture,
-        p,
-        input,
+    updateConvoy(c, furniture, p, ground, allReleased);
+    moveConvoy(c, furniture, p, {
+        ground,
+        steering: input.steering,
+        steer: input.steer,
         previousX,
-        frontX,
-        middleX,
-        captiveBoarding,
+        length: input.length,
         dt,
-    );
+    });
     const { kick, tripped } = tripRider(c, p, front.vx);
-    updateChairChat(c, furniture, p, allReleased, nearby, dt);
-    const stopRider = updateDeparture(c, furniture, p, ground, allReleased, dt);
+    updateChairChat(c, furniture, p, { allReleased, nearby, dt });
+    const stopRider = updateDeparture(c, furniture, p, {
+        ground,
+        allReleased,
+        dt,
+    });
     return { corridor: c, furniture, p, rng: seed, stopRider, kick, tripped };
 }
