@@ -1,5 +1,3 @@
-// Pause-menu replay actions for players and testers: watch, copy or download recorded replays. Read-only:
-// nothing here changes how replays are recorded. Developers open the exported data in /replay.html.
 import { replayLength, type Recorder, type ReplayFile } from '../game/replay';
 import { isMessage, translate, type Locale, type Message } from '../i18n';
 import { copyText, downloadJson, replayData, stamp, type ErrorLog } from './replay-store';
@@ -40,7 +38,6 @@ export function bindReplayMenu(root: HTMLElement, getLocale: () => Locale, hooks
             label: `⚠ ${[clock(entry.time), stageName(entry.replay.start.stage), entry.message].filter(Boolean).join(' · ')}`,
             error: true,
             file: entry.replay,
-            // An error keeps its message and stack, so it goes out as a data bundle holding just that error.
             download: () => downloadJson(`the-chair-replay-error-${stamp()}.json`, { ...replayData(hooks.recorder, hooks.errorLog), attempts: [], errors: [entry] }),
         }] : []);
         return [...attempts, ...errors];
@@ -69,7 +66,6 @@ export function bindReplayMenu(root: HTMLElement, getLocale: () => Locale, hooks
     }
 
     menu?.addEventListener('toggle', render, options);
-    // Re-list whenever the pause menu reopens or the language changes, since both happen with the menu left open.
     const observer = new MutationObserver(render);
     if (pauseMenu) observer.observe(pauseMenu, { attributes: true, attributeFilter: ['hidden'] });
     observer.observe(root, { attributes: true, attributeFilter: ['lang'] });

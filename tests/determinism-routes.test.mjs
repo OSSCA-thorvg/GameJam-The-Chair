@@ -3,8 +3,6 @@ import test from 'node:test';
 import { balancePolicy, begin, play, recordCommands, runWith } from './support/harness.mjs';
 import { determinismTests } from './support/determinism.mjs';
 
-// Closed-loop runs that reach the office geysers (physics randomness) and the corridor typing bubbles.
-// Each route is recorded once and reused by every test below.
 const OFFICE_TICKS = 120 * 45;
 const office = recordCommands(31, { stage: 1 }, OFFICE_TICKS, balancePolicy);
 const BUILDING_TICKS = 120 * 30;
@@ -25,7 +23,6 @@ test('the office route reaches the geysers and replays them exactly', () => {
 });
 
 test('different seeds change physics randomness', () => {
-    // Compare just before the focus loss that follows the geysers; later resets hide the difference.
     const player = seed => JSON.stringify(runWith(seed, { stage: 1 }, office, 1790).getSnapshot().player);
     assert.notEqual(player(31), player(32), 'geyser spin depends on the physics stream');
 });

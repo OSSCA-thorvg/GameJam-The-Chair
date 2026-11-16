@@ -3,16 +3,9 @@ import type { DrawCommand, Vector } from '../types';
 import { seeded } from './cloud-art';
 import type { Point3, SkyProjection } from './sky-projection';
 
-// What makes stage five read as flight through space: puffs at the edge of the play area, speed lines when the
-// chair is fast and air streaming round it. Scenery only.
 
 const alpha = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0');
 
-/**
- * At the edge of the play area the chair pushes back on its own: the extinguisher coughs puffs outward (the
- * recoil carries it back in) and the chair shudders. `edge` is how hard it is pressing out, `out` which way
- * (across, up). Drawn in the chair's own model, so the puffs sort with the chair.
- */
 export function orbitEdgePuffs(chair: SkyProjection, edge: number, out: { x: number; y: number }, t: number) {
     if (edge <= .02) return;
     const len = Math.hypot(out.x, out.y) || 1, dz = out.x / len, dy = out.y / len;
@@ -28,12 +21,9 @@ const LINES = (() => {
     return Array.from({ length: 30 }, () => ({ angle: random() * Math.PI * 2, phase: random(), rate: .9 + random() * .8, width: .8 + random() * 1.4 }));
 })();
 
-/** Streaks rushing out from the vanishing point when the chair goes fast; `fast` 0 slow to 1 flat out. */
 export function orbitSpeedLines(ctx: RenderCtx, center: Vector, fast: number) {
     if (fast <= .02) return;
     const reach = Math.hypot(ctx.W, ctx.H) * .55;
-    // White screen-blended over anything is plain alpha blending, so the streaks need no ThorVG Scene: the layer
-    // only names them, and the fade is folded into each streak's alpha.
     const layer = { key: 'orbit-speed-lines' };
     for (const line of LINES) {
         const k = (line.phase + ctx.t * line.rate * (.6 + fast)) % 1;
@@ -47,23 +37,15 @@ export function orbitSpeedLines(ctx: RenderCtx, center: Vector, fast: number) {
 
 const SLIPSTREAM = (() => {
     const random = seeded(9931);
-    // A tight ring hugging the chair and a looser one around it, spread round the whole outline.
     return Array.from({ length: 30 }, (_, i) => {
         const inner = i < 14, angle = (i / (inner ? 14 : 16)) * Math.PI * 2 + random() * .3;
         return { angle, radius: inner ? 52 + random() * 12 : 78 + random() * 50, phase: random(), rate: .8 + random() * .6, length: inner ? .6 : 1 };
     });
 })();
 
-/**
- * Air rushing past the chair: streaks come from ahead, slide along its outline and stream back past the camera.
- * `chair` maps the chair's own model (x ahead, y up, z across). Returns the streaks ahead of the chair, to paint
- * behind it, and those beside and behind it, to paint over it, so the air wraps round the chair.
- */
 export function orbitSlipstream(ctx: RenderCtx, chair: SkyProjection, strength: number) {
     const behind: DrawCommand[] = [], over: DrawCommand[] = [];
     if (strength <= .01) return { behind, over };
-    // Stage five keeps clear of blur effects (they cost too much on the software renderer); thin white streaks that
-    // taper to a point read as soft enough. Like the speed lines they are plain alpha, without a layer Scene.
     const layer = { key: 'orbit-slipstream' }, strong = Math.min(1, strength);
     const centreDepth = chair.depth([0, 8, 0]);
     for (const streak of SLIPSTREAM) {
@@ -75,7 +57,6 @@ export function orbitSlipstream(ctx: RenderCtx, chair: SkyProjection, strength: 
         const [ax, ay] = chair.project(a), [bx, by] = chair.project(b);
         const width = ctx.clamp(700 / chair.depth(a), .6, 3.2), len = Math.hypot(ax - bx, ay - by) || 1;
         const nx = -(ay - by) / len * width, ny = (ax - bx) / len * width;
-        // Faint as it forms ahead, brightest alongside the chair, gone as it passes the camera.
         const fade = Math.min(1, k / .2) * Math.min(1, (1 - k) / .25);
         const command: DrawCommand = { kind: 'path', points: [[bx, by], [ax + nx, ay + ny], [ax - nx, ay - ny]], fill: '#ffffff' + alpha(.6 * fade * strong), layer };
         (chair.depth(a) > centreDepth ? behind : over).push(command);

@@ -8,9 +8,7 @@ const { paint, createPaintPool, createRenderCtx, createRenderStats, resetRenderS
     export { createRenderCtx } from './tests/support/render-context';
 `);
 
-// A stand-in for ThorVG WebCanvas that keeps only what this bug needs. In ThorVG 1.1.3, removing a scene
-// that is on the canvas and got new children since the last update fails with "RuntimeError: null function";
-// paint() then left the canvas empty until the layer set changed again, so the picture blinked out.
+// ThorVG 1.1.3 throws when removing an on-canvas scene with children added since its last update.
 function fakeThorvg() {
     const log = [];
     const chain = function () { return this; };
@@ -67,7 +65,6 @@ function fakeThorvg() {
 const square = (x, layer) => ({ kind: 'path', points: [[x, 10], [x + 10, 10], [x + 10, 20], [x, 20]], fill: '#336699', ...(layer ? { layer } : {}) });
 
 function frame(ctx, layerShapes, plainShapes) {
-    // An effect makes it a real ThorVG Scene; a layer without one is painted as plain shapes.
     const layer = { key: 'water-body', opacity: .9 };
     ctx.commands = [
         ...Array.from({ length: layerShapes }, (_, i) => square(20 + i * 12, layer)),
@@ -83,7 +80,6 @@ test('a layer that gains children on a reordering frame does not blank the canva
 
     frame(ctx, 2, 3);
     paint(ctx, TVG, canvas, pool);
-    // Water spreads (more shapes in the layer) while more plain shapes appear, so the paint order is rebuilt.
     frame(ctx, 12, 5);
     assert.doesNotThrow(() => paint(ctx, TVG, canvas, pool));
     assert.ok(canvas.paints.length > 0, 'the canvas still holds the scene after the rebuild');
@@ -94,7 +90,6 @@ test('a failed rebuild is retried on the next frame instead of leaving the canva
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
-    // Plain shapes before the layer, so the signature records how many come first.
     const plainFirst = plain => {
         frame(ctx, 2, 0);
         ctx.commands = [...Array.from({ length: plain }, (_, i) => square(200 + i * 12)), ...ctx.commands];
@@ -103,7 +98,6 @@ test('a failed rebuild is retried on the next frame instead of leaving the canva
     paint(ctx, TVG, canvas, pool);
     paint(ctx, TVG, canvas, pool);
 
-    // One rebuild fails after the canvas was already emptied (as ThorVG does when it throws mid-removal).
     const remove = canvas.remove;
     canvas.remove = function () {
         canvas.remove = remove;
@@ -113,7 +107,6 @@ test('a failed rebuild is retried on the next frame instead of leaving the canva
     plainFirst(3);
     assert.throws(() => paint(ctx, TVG, canvas, pool));
     assert.equal(canvas.paints.length, 0);
-    // Same picture next frame: it must be put back on the canvas.
     paint(ctx, TVG, canvas, pool);
     assert.ok(canvas.paints.length > 0, 'the next frame rebuilds the emptied canvas');
 });
@@ -141,18 +134,15 @@ test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds w
     assert.equal(stats.blurAmount, 10);
     assert.equal(stats.masks, 1);
     assert.equal(stats.clips, 1);
-    // Two 10×10 squares at x 20 and 40 (each padded by 1 px): x 19–51, y 9–21.
     assert.equal(stats.blurArea, 32 * 12);
     assert.deepEqual(stats.layerList, [{ key: 'glow', shapes: 2, area: 32 * 12, effects: ['blur4', 'motion', 'clip', 'mask'] }]);
     assert.ok(stats.syncMs >= 0 && stats.renderMs >= 0);
 
-    // The frame after the pool grew rebuilds once more; a steady layout after that does not.
     resetRenderStats(stats);
     paint(ctx, TVG, canvas, pool, stats);
     resetRenderStats(stats);
     paint(ctx, TVG, canvas, pool, stats);
     assert.equal(stats.reorder, false);
-    // One layer child gone: it is parked inside the scene, not removed.
     ctx.commands = [square(20, blurred), square(200), square(220), square(1000)];
     resetRenderStats(stats);
     paint(ctx, TVG, canvas, pool, stats);
@@ -184,13 +174,11 @@ test('debug layer overrides hide a layer or draw it as plain shapes, and leave o
     overrides.hidden.clear();
     overrides.flat.clear();
     assert.deepEqual(run(), { keys: ['sun', 'fog'], top: 1, commands: 4 });
-    // The scene's own commands are never changed by an override.
     assert.equal(ctx.commands[0].layer, sun);
 });
 
 test('a layer that drops its mask or clip gets a fresh scene instead of a pass-through stand-in', () => {
-    // ThorVG cannot detach a mask or clip. The old stand-in (a huge white rect) made the GL renderer smear a
-    // Screen-blended water layer over the frame once its mask ended, only when frames were drawn in sequence.
+    // ThorVG cannot detach masks; a transparent stand-in caused GL smearing.
     const { TVG, canvas } = fakeThorvg();
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });

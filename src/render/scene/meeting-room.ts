@@ -6,7 +6,6 @@ import { head, officeAppearance, worker } from './building-workers';
 import { player } from './player';
 import { entryDoorOpening, doorPanel } from './meeting-doors';
 
-/** What the three chairs grumble, one set per visit to the room; after the last set it starts over. */
 const COMPLAINTS = [
     ['building.chairStuck', 'building.chairMinutes', 'building.chairOvertime'],
     ['building.chairBackAgain', 'building.chairInMinutes', 'building.chairHeavier'],
@@ -82,7 +81,6 @@ function meetingBoard(ctx: RenderCtx, x: number) {
     ctx.rect(x - 208, 112, 446, 121, '#f0ecd9');
     ctx.label(translate('building.meetingPrompt', ctx.locale), x + 15, 148, 16, '#48605d');
     for (let i = 0; i < 3; i++) ctx.rod(x - 180, 177 + i * 16, x + 65 - i * 32, 177 + i * 16, 3, '#9ba9a0');
-    // The end of the meeting moves forward while the agenda stays exactly the same.
     const extensions = Math.floor(ctx.state.corridor.room.kind === 'meeting' ? ctx.state.corridor.room.age / 2 : 0);
     ctx.label(`21:${String(30 + extensions * 5).padStart(2, '0')}`, x + 170, 208, 19, '#a76e56');
 }

@@ -1,7 +1,6 @@
 import { createCursor, type Timeline } from '../game/replay';
 import { createPersonalBoxObserver, type PersonalBoxReaction } from '../render/personal-box-motion';
 
-// Keep only the few reaction transitions, so seeking past the box preserves its blank badge.
 export function buildPersonalBoxTrack(timeline: Timeline) {
     const observer = createPersonalBoxObserver();
     const entries: { tick: number; reaction: PersonalBoxReaction }[] = [];
@@ -18,7 +17,7 @@ export function buildPersonalBoxTrack(timeline: Timeline) {
         try {
             cursor.next();
         } catch {
-            break; // buildTimeline has already recorded this replay's error boundary.
+            break;
         }
         capture();
     }

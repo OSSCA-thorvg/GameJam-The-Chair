@@ -1,14 +1,10 @@
 import { STAGE_TWO } from '../../game/stages/building/data';
 import type { RenderCtx } from '../context';
 
-// The rush-hour corridor: a plank launch ramp in front of a construction hole. At express speed the empty
-// chairs fly off the ramp and over the hole together; the rider only flies with them while it rides the convoy.
 const FLOOR = 420;
 const { pit, ramp, launch } = STAGE_TWO.express;
 const EXPRESS_SPEED = 360, GRAVITY = 950;
 
-// How far above the floor an empty chair is drawn at `x`: up the ramp, then the same arc the launched
-// rider flies over the hole.
 export function chairLift(x: number) {
     if (x >= ramp.start && x < pit.left) return (x - ramp.start) / (pit.left - ramp.start) * ramp.rise;
     if (x >= pit.left) {
@@ -22,7 +18,6 @@ export function expressFloor(ctx: RenderCtx) {
     const { cam, VW, t } = ctx;
     if (ramp.start > cam + VW + 120 || pit.right < cam - 120) return;
 
-    // The hole: an opening in the floor, darker with depth.
     ctx.gradientPolygon([[pit.left, FLOOR], [pit.right, FLOOR], [pit.right, FLOOR + 400], [pit.left, FLOOR + 400]],
         ctx.gradientFill(0, FLOOR, 0, FLOOR + 260, [[0, '#3b4448'], [.25, '#1c2226'], [1, '#0b0e10']]));
     for (const x of [pit.left, pit.right]) ctx.rect(x - 4, FLOOR, 8, 400, '#5d6b6c');
@@ -30,7 +25,6 @@ export function expressFloor(ctx: RenderCtx) {
     for (let i = 1; i < 6; i++) ctx.rod(pit.left + i * width / 6, FLOOR + 70 + (i % 2) * 18, pit.left + i * width / 6 + 14, FLOOR + 160, 2, '#4a3b30');
     ctx.strokePath([pit.left + 20, FLOOR + 30], [[pit.left + 120, FLOOR + 160, pit.right - 140, FLOOR + 40, pit.right - 30, FLOOR + 120]], { width: 3, color: '#20262a', cap: 'round' });
 
-    // The launch ramp: a plank on a sawhorse, its lip springing a little while chairs take off.
     const lip = FLOOR - ramp.rise;
     const spring = Math.sin(t * 24) * (ctx.state.corridor.pace === 'express' ? 1.5 : 0);
     ctx.rod(pit.left - 46, lip + 6, pit.left - 58, FLOOR, 5, '#6b5034');
@@ -40,7 +34,6 @@ export function expressFloor(ctx: RenderCtx) {
         { width: 10, color: '#8a6a45', cap: 'round' });
     ctx.strokePath([ramp.start, FLOOR - 4], [[ramp.start + 60, FLOOR - 8, pit.left - 50, lip - 1 + spring, pit.left + 2, lip - 4 + spring]],
         { width: 3, color: '#b48a5a', cap: 'round' });
-    // Chevrons painted on the plank point the way.
     for (let i = 0; i < 3; i++) {
         const x = ramp.start + 40 + i * 36, y = FLOOR - (x - ramp.start) / (pit.left - ramp.start) * ramp.rise - 5;
         ctx.polygon([[x - 6, y - 4], [x + 4, y], [x - 6, y + 2]], '#f2c14e');

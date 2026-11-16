@@ -4,7 +4,6 @@ import { hasWorker, officeWorker } from './sky-office-workers';
 export function skyBuilding(ctx: RenderCtx) {
     if (3450 < ctx.cam - 100 || 3000 > ctx.cam + ctx.VW + 100) return;
     const y = -1780 - ctx.state.sky.lift * 80;
-    // Telescoping supports end in midair, above the arrival roof.
     for (const x of [3020, 3070, 3360, 3410]) {
         ctx.gradientPolygon([[x, y - 94], [x + 12, y - 94], [x + 12, -1650], [x, -1650]],
             ctx.gradientFill(x, 0, x + 12, 0, [[0, '#a7b4c1'], [.25, '#485b75'], [1, '#485b75']]));
@@ -28,7 +27,6 @@ export function skyBuilding(ctx: RenderCtx) {
             const slot = row * 6 + i + 1;
             const a = y + top, b = y + floor;
             if (!hasWorker(slot)) {
-                // Cells nobody works in are plain facade panels.
                 ctx.gradientPolygon([[x, a], [x + 55, a], [x + 55, b], [x, b]],
                     ctx.gradientFill(x, a, x + 55, b, [[0, '#4d6680'], [1, '#3a5270']]));
                 ctx.rect(x, (a + b) / 2, 55, 1.2, '#304962');
@@ -36,7 +34,6 @@ export function skyBuilding(ctx: RenderCtx) {
                 for (const rx of [x + 4, x + 51]) for (const ry of [a + 4, b - 4]) ctx.ellipse(rx, ry, 1.2, 1.2, '#7e91a5');
                 continue;
             }
-            // A warm, lit office behind the glass, its worker, then the tinted pane over them.
             ctx.gradientPolygon([[x, a], [x + 55, a], [x + 55, b], [x, b]],
                 ctx.gradientFill(x, a, x, b, [[0, '#f3e6c8'], [.7, '#d9c6a0'], [1, '#b7a07c']]));
             ctx.rect(x, b - 14, 55, 14, '#a8957a');
@@ -66,7 +63,6 @@ export function skyFlag(ctx: RenderCtx, x: number, y: number, saved: boolean) {
     ctx.rod(x - 55, y + 28, x - 55, y - 15, 3, '#bbc5c6');
     ctx.rod(x - 56, y + 27, x - 56, y - 15, .8, '#f7e5c6');
     ctx.ellipse(x - 55, y - 16, 2.5, 2.5, '#bbc5c6');
-    // Flags stream back against the course with the headwind.
     const flap = Math.sin(ctx.t * 9 + x) * 2;
     ctx.effectPath([x - 56, y - 15], [[x - 65, y - 19 + flap, x - 71, y - 11 - flap, x - 80, y - 9 + flap],
         [x - 70, y - 7, x - 65, y - 4, x - 56, y - 1]], color);

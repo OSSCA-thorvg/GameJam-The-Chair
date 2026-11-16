@@ -6,7 +6,6 @@ import { office, building, rooftop, sky, orbit } from './stages/validation';
 const STAGE_IDS = Object.values(STAGES).map(stage => stage.id);
 const MAX_CHECKPOINT = Math.max(...Object.values(STAGES).map(stage => stage.checkpoints.length - 1));
 
-/** Validates the complete serialized core state before untrusted data enters replay logic. */
 export function assertGameState(value: unknown, path = 'state'): asserts value is CoreState {
     const data = record(value, path);
     exactFields<CoreState>(data, { stage: true, checkpoint: true, lessons: true, deaths: true, completedStage: true, skylineSeed: true, tick: true, rng: true, hasExtinguisher: true, sprayCooldown: true, sprayBurst: true, sprayDir: true, mode: true, p: true, keys: true, ground: true, coyote: true, jumpQ: true, time: true, practiceJump: true, actualSpeed: true, rollCooldown: true, reverseCooldown: true, people: true, history: true, impact: true, focus: true, focusClock: true, focusEvents: true, focusNotice: true, lossReason: true, focusLossTime: true, office: true, building: true, rooftop: true, sky: true, orbit: true }, path);

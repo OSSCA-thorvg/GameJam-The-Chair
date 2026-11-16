@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-// Re-runs the gameplay fingerprint scenarios and rewrites EXPECTED in tests/golden.test.mjs.
-// Use only for an intended gameplay change, and say why in the PR.
-// Usage: npm run golden:update            (write new values)
-//        npm run golden:update -- --check (only report differences; exit 1 if any)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { GOLDEN_SCENARIOS } from '../tests/support/golden.mjs';
 

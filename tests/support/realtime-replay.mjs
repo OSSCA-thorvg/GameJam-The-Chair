@@ -1,10 +1,7 @@
-// Real-time replay check shared by replay.test.mjs and replay-stage3.test.mjs (split so the slow stage 3 run
-// goes in parallel with the others).
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { balancePolicy, createGame, replayCommands } from './harness.mjs';
 
-// Plays like the browser does: irregular frame times through advance(), menu commands and a pause.
 function playRecorded(seed, stage, frames) {
     const session = { start: null, log: [] };
     const attempt = { start: null, log: [] };

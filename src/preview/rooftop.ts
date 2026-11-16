@@ -62,7 +62,7 @@ export function graphTargetMarkers(frames: PreviewFrame[]): PreviewScene['marker
     }));
 }
 
-export // `startTime` shifts the attempt clock so the vents' cycle begins where the scene wants it.
+export
 function shaftHazards(id: string, label: string, at: { x: number; y: number }, startTime: number, markers: PreviewScene['markers']): PreviewScene {
     const game = createGame();
     game.startStage(3);

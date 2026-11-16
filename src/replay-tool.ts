@@ -1,5 +1,3 @@
-// Replay tool (/replay.html): a developer page to open replay data exported from the game (or saved in this
-// browser), play it back with seek and frame steps, check hashes and errors, and inspect the state.
 import { FIXED_STEP } from './game/level';
 import { normalizeReplaySettings, readReplaySources, REPLAY_DEFAULTS, type ReplaySettings, type ReplaySource } from './game/replay';
 import { CONFIG_VERSION } from './game/stages/index';
@@ -37,7 +35,6 @@ const renderer = (() => {
 })();
 const player = createReplayPlayer(root, () => locale, () => settings, () => {}, { closable: false });
 
-// Viewer options only change how this page plays a replay, never the recording.
 const viewerInputs = { keyframeInterval: $<HTMLInputElement>('#keyframe'), warmupSeconds: $<HTMLInputElement>('#warmup'), playbackSpeed: $<HTMLInputElement>('#speed') };
 for (const [key, input] of Object.entries(viewerInputs)) {
     input.value = String(settings[key as keyof typeof viewerInputs]);
@@ -109,7 +106,6 @@ function fill(list: HTMLElement, facts: [string, string][]) {
     }));
 }
 
-// Commands around the current tick; the next one to apply is highlighted. Click to jump there.
 function showCommands(tick: number) {
     if (!selected) return;
     const commands = selected.file.commands;
@@ -194,5 +190,4 @@ function frame(ms: number) {
 requestAnimationFrame(frame);
 if (loadBrowserData()) loadBrowser();
 
-// Debug handle for automated checks.
 (window as Window & { replayTool?: unknown }).replayTool = { load, player, sources: () => sources };

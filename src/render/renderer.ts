@@ -22,14 +22,9 @@ import { deathShotBurst, deathShotCloseness, DEATH_SHOT, type DeathShot } from '
 import { deathBurst } from './scene/death-burst';
 import { resetRenderStats, type LayerOverrides, type RenderStats } from './perf';
 
-/**
- * Logical game view. The scene keeps this aspect ratio and scales uniformly to fill the screen, so a
- * bigger window shows the same framing larger instead of revealing more of the level.
- */
 export const VIEW_WIDTH = 1000;
 export const VIEW_HEIGHT = 510;
 
-/** The worker's face and eyes, chair-local as the player is drawn. */
 const HEAD: [number, number] = [4, -74];
 const EYES: [number, number] = [9, -83];
 
@@ -57,7 +52,6 @@ function setup(
     let soaks = 0;
     let lastTime = 0;
     let lastStage = 0;
-    /** The view the end-of-run close-up started from, and how far into the shot the last frame was. */
     let closeUpFrom: { cam: number } | null = null;
     let closeUpAge = -1;
     const pool = createPaintPool();
@@ -65,9 +59,7 @@ function setup(
     let tvg: Canvas | null = null;
     let renderer = 'canvas2d';
     let renderError: string | null = null;
-    // Set only while the developer performance overlay is open.
     let stats: RenderStats | null = null;
-    // GPU timer queries on the WebGL2 canvas; only while profiling, and null when unsupported.
     let gpuTimer: GpuTimer | null = null;
     let gpuTimerTried = false;
     let overrides: LayerOverrides | null = null;
@@ -112,7 +104,6 @@ function setup(
         if (opening) {
             drawOpening(ctx, opening);
         } else if (title) {
-            // The title loops on the page clock; the motion preview passes its own time.
             drawTitle(ctx, titleTime ?? performance.now() / 1000);
         } else {
             const scenes = { office: drawWorld, building: drawBuilding, rooftop: drawRooftop, sky: drawCloudStart, orbit: drawOrbit };
@@ -140,10 +131,6 @@ function setup(
         return { cam: ctx.cam, scale: ctx.scale, vertical: ctx.vertical, width: ctx.W };
     }
 
-    /**
-     * Cutscene camera: the chair stays at the centre while the view zooms (a narrower world width), then
-     * blends back to the gameplay framing on handoff so the first playable frame matches.
-     */
     function openingCamera(frame: OpeningFrame, baseWidth: number, baseVertical: number) {
         const width = baseWidth / frame.zoom;
         const scale = ctx.W / width;
@@ -158,22 +145,15 @@ function setup(
         ctx.wheel = 0;
     }
 
-    /** A point on the worker (chair-local, as the player is drawn) in world space, turning with the chair. */
     function riderPoint([lx, ly]: [number, number]): [number, number] {
         const c = Math.cos(ctx.player.a), s = Math.sin(ctx.player.a);
         return [ctx.player.x + lx * c - ly * s, ctx.player.y + lx * s + ly * c];
     }
 
-    /**
-     * End-of-run close-up: from the usual framing the view narrows onto the worker's face (his eyes for a focus
-     * loss), then eases back. The screen centre and the visible width blend between the two framings.
-     */
     function deathCamera(shot: DeathShot) {
-        // Outside play the camera is not recomputed each frame, so the shot works from where it found the view.
         if (!closeUpFrom || shot.age < closeUpAge) closeUpFrom = { cam: ctx.cam };
         closeUpAge = shot.age;
         const u = deathShotCloseness(shot);
-        // It pushes in from the play framing the run ended in and eases back to exactly that framing.
         ctx.cam = closeUpFrom.cam;
         if (u <= 0) return;
         const width0 = ctx.VW, scale0 = ctx.scale;
@@ -188,11 +168,9 @@ function setup(
         ctx.vertical = ctx.H / (2 * ctx.scale) - cy;
     }
 
-    /** The GPU timer, created on first use once the WebGL2 canvas exists. */
     function gpuTiming() {
         if (!gpuTimerTried && tvg && tvg.renderer === 'gl') {
             gpuTimerTried = true;
-            // ThorVG already owns a WebGL2 context on this canvas; asking again returns that same context.
             gpuTimer = createGpuTimer(cn.getContext('webgl2'));
         }
         return gpuTimer;
@@ -225,7 +203,6 @@ function setup(
         },
         ready,
         info: () => ({ renderer, renderError, commands: ctx?.commands.length ?? 0 }),
-        /** Start (or with null, stop) filling render counters each frame. */
         profile(next: RenderStats | null) {
             stats = next;
             if (!next) {
@@ -234,21 +211,17 @@ function setup(
                 gpuTimerTried = false;
             }
         },
-        /** Debug-only layer hiding and flattening; null draws every layer normally. */
         layerOverrides(next: LayerOverrides | null) {
             overrides = next;
         },
-        /** Backend and canvas size for the performance overlay. */
         surface: () => ({
             backend: tvg ? `thorvg-${tvg.renderer}` : renderer,
-            /** The backend that was requested; differs from `backend` when ThorVG failed to start. */
             requested: `thorvg-${thorvgRenderer()}`,
             gpuTimer: !tvg || tvg.renderer !== 'gl' ? 'n/a' as const : gpuTimer ? 'on' as const : gpuTimerTried ? 'unsupported' as const : 'idle' as const,
             renderError,
             width: viewport.W,
             height: viewport.H,
             dpr: viewport.dpr,
-            // The pixels actually rasterized. ThorVG scales its canvas by its own DPR (1 + (dpr - 1) × 0.75).
             raster: tvg ? { width: cn.width, height: cn.height, dpr: tvg.dpr } : { width: base.width, height: base.height, dpr: viewport.dpr },
         }),
         destroy() {

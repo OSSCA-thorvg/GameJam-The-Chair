@@ -6,9 +6,6 @@ import type { RenderCtx } from '../context';
 import { SIGN_FONT } from '../fonts';
 import type { Vector } from '../types';
 
-// The executive multifunction printer in urgent-report mode. Before each volley its scanner light sweeps
-// the glass (the warning) and the output tray of the coming pattern glows: the low tray for skimming
-// sheets, the high tray for lobs, both for the mix, the stapler door for a bundle.
 export function urgentCopierDraw(ctx: RenderCtx) {
     const c = ctx.urgentCopier;
     const F = ctx.F, t = ctx.t, x = c.x;
@@ -22,7 +19,6 @@ export function urgentCopierDraw(ctx: RenderCtx) {
     const bx = x + shake;
 
     ctx.ellipse(x + 4, F - 4, 86, 6, '#515c6d60');
-    // Body: a taller, darker machine with brass trim, standing on casters.
     for (const wx of [-58, 58]) ctx.ellipse(bx + wx, F - 7, 7, 7, '#2c333f');
     ctx.gradientPolygon([[bx - 74, F - 172], [bx + 74, F - 172], [bx + 74, F - 12], [bx - 74, F - 12]],
         ctx.gradientFill(bx - 74, 0, bx + 74, 0, [[0, '#4a5262'], [.5, '#5d6677'], [1, '#3b4250']]));
@@ -31,7 +27,6 @@ export function urgentCopierDraw(ctx: RenderCtx) {
     ctx.rect(bx + 18, F - 160, 46, 22, '#1f2530');
     ctx.rect(bx + 22, F - 156, 38, 14, awake ? '#ff6a5c' : '#7fb79a');
 
-    // Output trays on the side it faces; the coming pattern's tray glows during the scan.
     const side = c.dir < 0 ? -1 : 1;
     const trayX = bx + side * 74;
     const glow = scanning ? .45 + .55 * Math.abs(Math.sin(t * 18)) : 0;
@@ -43,7 +38,6 @@ export function urgentCopierDraw(ctx: RenderCtx) {
     ctx.rect(bx - 44, F - 94, 56, 44, pattern === 'bundle' && scanning ? ctx.tint('#ffb347', .4 + glow * .6) : '#4b5463');
     for (const sx of [-30, -6]) ctx.rect(bx + sx, F - 76, 14, 4, '#9aa2ae');
 
-    // Scanner lid lifts and a light bar sweeps the glass.
     const lid = scanning ? Math.min(1, progress * 4) * .35 : 0;
     ctx.rect(bx - 70, F - 186, 140, 14, '#d9d7cc');
     const hingeX = bx + 70;
@@ -59,7 +53,6 @@ export function urgentCopierDraw(ctx: RenderCtx) {
         ctx.endLayer();
     }
 
-    // The red warning lamp turns while it is awake.
     const lampY = F - 206;
     ctx.rect(bx - 6, lampY + 6, 12, 10, '#2c333f');
     ctx.ellipse(bx, lampY, 11, 9, awake ? '#ff4b3e' : '#7a3b38');
@@ -81,7 +74,6 @@ export function urgentCopierDraw(ctx: RenderCtx) {
         ctx.endLayer();
     }
 
-    // "URGENT!" burst while it scans, like the office copier's spit.
     if (scanning && ctx.mode === 'play') speechBurst(ctx, x, F - 262, translate('copier.urgent', ctx.locale), Math.min(1, progress * 6));
 }
 
@@ -110,7 +102,6 @@ function speechBurst(ctx: RenderCtx, x: number, y: number, line: string, pop: nu
     ctx.label(line, x, y + 6, 18, '#a3221a', SIGN_FONT);
 }
 
-// Urgent sheets in flight get a ThorVG motion blur along their path; bundles are thick and stapled.
 export function urgentPapersDraw(ctx: RenderCtx, papers: readonly DeepReadonly<Paper>[]) {
     const flying = papers.filter(z => z.volley >= URGENT_VOLLEY_ID && !z.landed && z.kind === 'sheet');
     if (flying.length) {

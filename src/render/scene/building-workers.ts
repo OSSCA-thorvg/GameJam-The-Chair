@@ -60,8 +60,6 @@ export function head(ctx: RenderCtx, x: number, y: number, facing: number, hair:
     shape(HAIR_SHAPES[hairstyle], hair);
     shape([[7, -2], [11, -2], [11, 0], [7, 0]], '#4c4951');
     if (glasses) {
-        // Side on the lens is edge-on: a thin line just in front of the face, frame tips at its ends, and the arm
-        // running back to the ear (as the 3D rider's glasses look from the side).
         const rod = (ax: number, ay: number, bx: number, by: number, width: number, color: string) =>
             ctx.rod(x + facing * ax, y + ay, x + facing * bx, y + by, width, color);
         rod(-8, -4, 14.6, -3, 1.6, '#374958');

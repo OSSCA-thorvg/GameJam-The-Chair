@@ -14,11 +14,8 @@ type LayerSlot = {
     retainedGeometry: string | null;
 };
 
-/** A pooled line of ThorVG Text: `back` carries the outline under `front`'s fill, like strokeText then fillText. */
 type TextSlot = { back: Text; front: Text; font: string; content: string };
 
-// Shapes are pooled and reused; these bits remember which non-default
-// styles a pooled shape carries so they can be cleared when it is reused.
 const STROKED = 1;
 const TRIMMED = 2;
 const BLENDED = 4;
@@ -36,14 +33,12 @@ export function createPaintPool(): PaintPool {
     return { top: [], texts: [], layers: new Map(), styled: new Map(), signature: '' };
 }
 
-/** Whether a pooled layer scene carries a clip or mask this frame's layer no longer has (or a flipped mask mode). */
 function staleSlot(slot: LayerSlot, spec: LayerSpec) {
     if (slot.clip && !spec.clip) return true;
     if (slot.mask && (!spec.mask || slot.maskInvert !== !!spec.maskInvert)) return true;
     return false;
 }
 
-/** Measures text with ThorVG's own layout, so bubbles and bursts fit the glyphs ThorVG draws. */
 export function thorvgTextWidth(TVG: ThorVGNamespace) {
     const probe = new TVG.Text();
     const cache = new Map<string, number>();
@@ -159,8 +154,6 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
         }
     };
 
-    // The canvas paint order only has to be rebuilt when a layer or a text line appears,
-    // disappears, or moves relative to the plain shapes around it.
     let topCount = 0;
     let textCount = 0;
     let signature = '';
@@ -174,16 +167,12 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
         signature += '+';
     }
     while (pool.texts.length < textCount) {
-        // Centre-anchored, so the command's (x, y) and rotation act about the middle of the line.
         const make = () => new TVG.Text().align(.5, .5);
         pool.texts.push({ back: make(), front: make(), font: '', content: '' });
         signature += '+';
     }
     signature += `${pool.top.length}/${pool.texts.length}`;
-    // ThorVG cannot take a clip or mask off a scene. A stand-in that lets everything through (a huge rect) is
-    // drawn wrongly by the GL renderer: a Screen-blended, masked water layer smeared other actors across the
-    // frame once its mask ended. A layer that loses its clip or mask, or flips its mask mode, starts over with
-    // a fresh scene, and the canvas order is rebuilt because the old scene leaves it.
+    // ThorVG cannot detach clips or masks; replace the scene to avoid GL smearing.
     for (const item of items) {
         if (!('layer' in item)) continue;
         const slot = pool.layers.get(item.key);
@@ -192,9 +181,7 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
             pool.signature = '';
         }
     }
-    // ThorVG 1.1.3 crashes ("null function") when a scene that is already on the canvas gets new children and
-    // is then removed before the next update. Empty the canvas first, so this frame's new children are only
-    // ever added to scenes that are off the canvas.
+    // Empty the canvas before adding children: ThorVG 1.1.3 crashes if such a scene is then removed.
     const reorder = signature !== pool.signature;
     if (reorder) {
         pool.signature = '';
@@ -256,8 +243,7 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
             scene.transform(spec.retained.transform);
             slot.retainedGeometry = spec.retained.geometry;
         }
-        // Spare shapes stay in the scene (re-adding leaks a ThorVG reference each time) but are parked as a
-        // near-transparent pixel inside the drawn area: hiding them or emptying them would widen the region.
+        // Re-adding shapes leaks ThorVG references; park unused shapes inside the drawn area.
         const [px, py] = anchor ?? [0, 0];
         const area = extent && extent[2] > extent[0] && extent[3] > extent[1]
             ? (extent[2] - extent[0]) * (extent[3] - extent[1]) : 0;
@@ -298,7 +284,6 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
         }
         scene.blend(blendOf(spec.blend));
         scene.opacity(Math.round(Math.max(0, Math.min(1, spec.opacity ?? 1)) * 255));
-        // A slot never keeps a clip or mask its layer dropped: staleSlot() replaced it before this loop.
         if (spec.clip) {
             if (!slot.clip) {
                 slot.clip = new TVG.Shape();
@@ -336,8 +321,7 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
         for (const paint of order) tvg.add(paint);
         for (let i = topIndex; i < pool.top.length; i++) tvg.add(pool.top[i]);
         for (let i = textIndex; i < pool.texts.length; i++) tvg.add(pool.texts[i].back).add(pool.texts[i].front);
-        // Only a completed rebuild counts: if anything above throws, the next frame rebuilds again instead of
-        // drawing an empty canvas until the layer set happens to change.
+        // Commit the signature only after success so a failed rebuild is retried.
         pool.signature = signature;
     }
     if (stats) {

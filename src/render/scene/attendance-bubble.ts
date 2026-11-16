@@ -4,19 +4,14 @@ import type { Vector } from '../types';
 import { PathBuilder, push } from './opening/shapes';
 import { SPEECH_FONT } from '../fonts';
 
-// The worker's laptop answers the cameras just before stage five: a tail-less bubble like the opening's,
-// a ThorVG path in screen space with its words in ThorVG Text.
 export const ATTENDANCE = {
-    /** Seconds before stage five starts that the bubble pops up, at the end of the stage four reveal. */
     lead: 1.2,
-    /** Seconds after it appears that it starts to fade, and how long the fade takes; stage five is running by then. */
     fade: 3, out: .6,
 };
 
 const TYPE_SPEED = 28;
 const easeOutBack = (u: number) => 1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2;
 
-/** A rounded box, grown from `anchor` by `scale` as it pops up. */
 function bubblePath(anchor: Vector, x: number, y: number, w: number, h: number, size: number, scale: number) {
     const s = (px: number, py: number): Vector => [anchor[0] + (px - anchor[0]) * scale, anchor[1] + (py - anchor[1]) * scale];
     const r = Math.min(h / 2, size * .9);
@@ -27,7 +22,6 @@ function bubblePath(anchor: Vector, x: number, y: number, w: number, h: number, 
         .line(...s(x, y + r)).corner(...s(x, y), ...s(x + r, y));
 }
 
-/** Draws "Attendance confirmed." over the worker's head, `age` seconds after it appeared, just above `anchor`. */
 export function attendanceBubble(ctx: RenderCtx, anchor: Vector, age: number, message: Message = 'orbit.attendance') {
     if (age < 0 || age > ATTENDANCE.fade + ATTENDANCE.out) return;
     const alpha = 1 - ctx.clamp((age - ATTENDANCE.fade) / ATTENDANCE.out, 0, 1);
@@ -40,7 +34,6 @@ export function attendanceBubble(ctx: RenderCtx, anchor: Vector, age: number, me
     const scale = .45 + .55 * easeOutBack(Math.min(1, age / .22));
     ctx.beginLayer({ key: 'attendance-bubble', opacity: alpha });
     push(ctx, bubblePath(anchor, x, y, w, h, size, scale).command('#ffffff', { width: 2, color: '#2b2f3a', cap: 'round' }));
-    // Words in ThorVG Text, typed out from the left edge of where the whole line will sit, in the bubble's layer.
     const shown = [...text].slice(0, Math.max(0, Math.floor(age * TYPE_SPEED))).join('');
     if (shown) {
         const grow = (px: number, py: number): Vector => [anchor[0] + (px - anchor[0]) * scale, anchor[1] + (py - anchor[1]) * scale];

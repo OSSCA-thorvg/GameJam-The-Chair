@@ -19,7 +19,6 @@ function advance(reaction: PersonalBoxReaction, input: PersonalBoxInput): Person
     if (reaction.kind === 'idle') {
         if (Math.abs(dx) < 190 && dy < 130) return { kind: 'approaching', side: dx > 0 ? 1 : -1 };
     } else if (reaction.kind === 'approaching' && dy < 150) {
-        // A radius enclosing the rider, chair and laptop also covers a tilted chair.
         const cleared = reaction.side < 0
             ? input.player.x - PERSONAL_BOX.chairRadius > PERSONAL_BOX.right
             : input.player.x + PERSONAL_BOX.chairRadius < PERSONAL_BOX.left;
@@ -28,7 +27,6 @@ function advance(reaction: PersonalBoxReaction, input: PersonalBoxInput): Person
     return reaction;
 }
 
-// Observes fixed-step presentation inputs only; it never writes back into the game.
 export function createPersonalBoxObserver() {
     let reaction: PersonalBoxReaction = { kind: 'idle' };
     let previous: PersonalBoxInput | null = null;

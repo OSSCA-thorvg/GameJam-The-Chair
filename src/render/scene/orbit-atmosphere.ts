@@ -10,7 +10,6 @@ const CLOUDS = (() => {
     })).sort((a,b) => b.z-a.z);
 })();
 
-/** Where the chair sits in the stage-five cloud basin; the stage-four ending passes the origin. */
 export type BasinAnchor = { x: number; y: number };
 
 export function orbitSky(ctx: RenderCtx) {
@@ -21,28 +20,13 @@ export function orbitSky(ctx: RenderCtx) {
 
 export type CloudBankOptions = {
     anchor?: BasinAnchor;
-    /**
-     * Draw only these cloud seeds. They skip stage five's clear-centre rule, because the caller already chose
-     * them as the clouds that stay on screen; the stage-four ending passes the clouds of stage five's first frame.
-     */
     only?: ReadonlySet<number>;
-    /** Clouds nearer the camera than this are skipped and fade in beyond it; the ending camera passes close to some. */
     nearDepth?: number;
-    /**
-     * Place each cloud by its stage five start position minus `travel`, without wrapping round the loop, so clouds
-     * gliding in before stage five (negative travel) stay continuous with its first frame.
-     */
     unwrapped?: boolean;
-    /** Which way the camera faces (radians, 0 along the route): the cloud field turns round the chair by it. */
     turn?: number;
-    /**
-     * Fades the whole bank. Folded into every cloud's own alpha rather than a layer opacity, which would cost a
-     * full-canvas offscreen pass; the clouds are translucent anyway, so their overlaps read the same.
-     */
     alpha?: number;
 };
 
-/** Route distance ahead of the chair over which a cloud fades out as the chair flies into it. */
 const PASS_FADE = 260;
 
 type PlacedCloud = { seed: number; x: number; y: number; size: number; opacity: number };
@@ -53,7 +37,6 @@ function placeClouds(ctx: RenderCtx, view: SkyProjection, travel: number, foregr
     for (const cloud of CLOUDS) {
         if (options.only && !options.only.has(cloud.seed)) continue;
         const z = options.unwrapped ? ((cloud.z + 12000) % 10000) - 500 - travel : ((cloud.z - travel + 12000) % 10000) - 500;
-        // Nothing the chair has passed is drawn: a cloud thins out as the chair reaches it.
         const across = cloud.x - anchor.x * .55, turn = options.turn ?? 0;
         const ahead = z * Math.cos(turn) + across * Math.sin(turn);
         if (ahead <= 0 || (ahead < 900) !== foreground) continue;
@@ -65,7 +48,6 @@ function placeClouds(ctx: RenderCtx, view: SkyProjection, travel: number, foregr
         const size = Math.abs(edge[0]-x) / 170;
         if (!options.only && !foreground && z < 4500 && Math.abs(x-ctx.W/2) < ctx.W*.34+size*90) continue;
         if (x < -size*300 || x > ctx.W+size*300 || y-size*180 > ctx.H || y+size*40 < 0) continue;
-        // With a custom cutoff, clouds swinging in past the camera fade in rather than popping at it.
         const reach = ctx.clamp(ahead / PASS_FADE, 0, 1);
         const opacity = reach * (options.nearDepth === undefined ? 1 : ctx.clamp((depth - options.nearDepth) / 600, 0, 1));
         placed.push({ seed: cloud.seed, x, y, size, opacity });
@@ -73,7 +55,6 @@ function placeClouds(ctx: RenderCtx, view: SkyProjection, travel: number, foregr
     return placed;
 }
 
-/** Seeds of the basin clouds this view shows, by stage five's own rules. */
 export function basinCloudSeeds(ctx: RenderCtx, view: SkyProjection, travel: number, anchor: BasinAnchor) {
     return new Set([false, true].flatMap(foreground =>
         placeClouds(ctx, view, travel, foreground, { anchor }).map(cloud => cloud.seed)));
@@ -91,7 +72,6 @@ export function orbitCloudBank(ctx: RenderCtx, view: SkyProjection, travel: numb
     if (!foreground) for (const [x,y,seed] of [[.15,.15,9201],[.83,.1,9202]]) {
         bread(ctx.W*x + Math.sin(travel*.0003)*8, ctx.H*y, ctx.W/2500, seed, false);
     }
-    // A low continuous cloud floor leaves the city visible above its crests. It carries over from stage four.
     if (!foreground) for (let i = 0; i < 5; i++) {
         bread(ctx.W * (i / 4), ctx.H * (.98+Math.sin(i*4)*.065), ctx.W/1000*(.8+(i%2)*.2), 700+i*2, false);
     }

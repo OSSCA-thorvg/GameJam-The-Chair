@@ -1,8 +1,5 @@
 #!/usr/bin/env node
-// Rebuilds the subset TTFs in src/assets/fonts that ThorVG Text draws with.
-// Keeps printable ASCII plus every character of the i18n messages and of the Korean literals in src/render.
-// Needs fontTools (`pip install fonttools`) for pyftsubset. Run after changing in-game copy:
-//   node scripts/subset-fonts.mjs
+// Requires fontTools: pip install fonttools.
 import { mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';

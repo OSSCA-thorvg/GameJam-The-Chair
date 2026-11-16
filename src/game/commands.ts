@@ -5,7 +5,6 @@ import { stageHooks } from './stages/hooks';
 import { PHYSICS } from './level';
 import * as Det from './math';
 
-// Every way the outside world changes the game. Recorded with the tick it arrived on.
 export type Command =
     | { type: 'keys'; keys: Input[] }
     | { type: 'jump' }
@@ -34,7 +33,6 @@ function isStageId(value: unknown): value is StageId {
     return value === 1 || value === 2 || value === 3 || value === 4 || value === 5;
 }
 
-/** Parses one command from an external replay and strips fields outside the command contract. */
 export function parseCommand(value: unknown): Command {
     if (!isRecord(value) || typeof value.type !== 'string') throw new Error('bad command');
     switch (value.type) {
@@ -58,8 +56,6 @@ export function parseCommand(value: unknown): Command {
     }
 }
 
-// Commands take effect immediately, between fixed steps, even while paused. Writes into `s`;
-// stepGame/applyCommand in step.ts are the pure entry points.
 export function runCommand(s: CoreState, command: Command, out: GameEvent[]) {
     switch (command.type) {
         case 'keys': s.keys = [...command.keys]; return;

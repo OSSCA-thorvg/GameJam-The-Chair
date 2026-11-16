@@ -2,7 +2,6 @@ import { translate } from '../../i18n';
 import type { RenderCtx } from '../context';
 import { STAGE_THREE } from '../../game/stages/rooftop/data';
 
-// The closing door jolts only Jin's portrait loose from the otherwise tidy row.
 export function employeeBoard(ctx: RenderCtx) {
     ctx.rect(51, 86, 172, 132, '#26334455');
     ctx.rect(47, 82, 172, 132, '#263c53');
@@ -14,7 +13,6 @@ export function employeeBoard(ctx: RenderCtx) {
     ctx.label(translate('world.employeeBoard', ctx.locale), 133, 104, 10, '#fff0c6');
     employeePortrait(ctx, 62, 118, false, '#526d86');
     employeePortrait(ctx, 111, 118, false, '#747d60');
-    // The clean patch and abandoned pin make the empty place in the row visible.
     ctx.rect(160, 118, 40, 49, '#b9c9d244');
     ctx.ellipse(180, 119, 2, 2, '#293f54');
     ctx.rod(180, 122, 181, 149, 1, '#293f5470');

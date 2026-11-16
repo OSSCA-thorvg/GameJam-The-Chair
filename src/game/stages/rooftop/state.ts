@@ -4,7 +4,6 @@ export type RooftopState = {
     entrance: RooftopEntrance;
     duct: DuctReaction;
     flight: FirstFlight;
-    // Extinguisher bursts fired since the wheels last touched the ground.
     airSprays: number;
 };
 

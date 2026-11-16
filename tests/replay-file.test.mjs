@@ -10,7 +10,6 @@ const R = await bundled({
     bundle: true, write: false, platform: 'node', format: 'esm',
 });
 
-// Plays through the shell with recording hooks, like main.ts does.
 function recordedGame(settings = {}, seed = 21) {
     const current = { ...R.REPLAY_DEFAULTS, ...settings };
     const recorder = R.createRecorder(() => current, seed);
@@ -41,7 +40,6 @@ test('a recorded attempt replays to the same state with matching hashes and mark
     game.startStage(1);
     for (let i = 0; i < 120 * 30; i++) {
         const state = game.getSnapshot();
-        // The attempt ends either way the office can end: a loss or a clear.
         if (state.mode === 'dead' || state.mode === 'won') break;
         balancePolicy(state, game);
         game.advance([1 / 60, 1 / 144, .011][i % 3]);
@@ -56,7 +54,6 @@ test('a recorded attempt replays to the same state with matching hashes and mark
     assert.ok(timeline.markers.some(marker => marker.kind === 'checkpoint'));
     assert.ok(timeline.markers.some(marker => marker.kind === 'death' || marker.kind === 'clear'));
     assert.equal(JSON.stringify(R.seekTimeline(timeline, timeline.endTick).state), game.serialize());
-    // Seeking anywhere matches running straight through.
     const mid = Math.floor((timeline.startTick + timeline.endTick) / 2);
     const straight = R.createCursor(timeline.file);
     runUntil(() => straight.state.tick >= mid, () => { straight.next(); }, { maxSteps: 120 * 120, message: 'Replay cursor did not reach the seek target' });

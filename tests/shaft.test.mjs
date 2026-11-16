@@ -18,7 +18,6 @@ function rooftop(p, { time = 0, duct = { kind: 'idle', rest: 0, shots: 0 }, grou
     return { p: { vx: 0, vy: 0, a: 0, w: 0, ...p }, ground, hasExtinguisher: true, firstFlight: course, ductReaction: duct, time };
 }
 
-// The first time in the vent's cycle that it is in `kind`.
 function firstTime(vent, kind) {
     for (let t = 0; t < vent.period; t += dt) if (ventPhase(vent, t).kind === kind) return t + dt;
     throw new Error(`vent never ${kind}`);
@@ -42,12 +41,8 @@ test('the shaft has no open column: holding spray straight up never gets past th
             game.step(dt); game.drainEvents();
             const s = game.getSnapshot();
             top = Math.min(top, s.player.y);
-            // R2 (centre -92, right of x 1540) or the L2 storey above it.
             if (s.ground && s.player.y < 0 && (s.player.x > 1540 || s.player.y < -150)) higher ??= { ...s.player };
         }
-        // Landing refills the bursts, so the chair may hop onto R1 (centre 248), slide along its printouts
-        // onto the low wall pipe, float up into the room above it, or be thrown onto L1 (and its wall pipe)
-        // by the duct's timed gust, but it never stands on R2 nor reaches the L2 storey (bottom -210).
         assert.equal(higher, null, `from x=${x} the chair stood at ${higher && `${higher.x.toFixed(0)},${higher.y.toFixed(0)}`}`);
         assert.ok(top > -210, `from x=${x} the chair rose to ${top.toFixed(0)}`);
     }

@@ -2,7 +2,6 @@ import type { RenderCtx } from '../context';
 import { createSkyProjection, type Point3 } from './sky-projection';
 import { departureCake } from './sky-promotion-cake';
 
-// The last ledge falls behind the already-3D chair, the promotion cake still on it. This is scenery, never a collider.
 export function skyDeparture(ctx: RenderCtx, progress: number) {
     if (progress >= 1) return;
     const view = createSkyProjection(ctx.W, ctx.H, 0);

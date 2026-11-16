@@ -7,7 +7,6 @@ import { OPENING_BEATS, type OpeningFrame } from './timeline';
 
 export { openingFrame, openingState, openingFocusY, OPENING_BEATS, OPENING_DURATION, type OpeningFrame } from './timeline';
 
-/** One cutscene frame: the office (lit for the hour) and/or the clock cover, then the speech bubbles. */
 export function drawOpening(ctx: RenderCtx, frame: OpeningFrame) {
     ctx.commands = [];
     if (frame.shot === 'office') {

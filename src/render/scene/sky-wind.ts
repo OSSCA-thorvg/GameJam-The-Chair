@@ -3,7 +3,6 @@ import type { RenderCtx } from '../context';
 import { skyGearArt } from './sky-gear';
 import { robotParrotArt } from './sky-robot-parrot';
 
-// Papers rattle loose a moment before the gust: a few scraps tumble along with the warning breeze.
 export function skyWarningScraps(ctx: RenderCtx) {
     const { warn, strength } = skyGust(ctx.t);
     const live = warn * (1 - strength);
@@ -21,7 +20,6 @@ export function skyWarningScraps(ctx: RenderCtx) {
 
 function paperBundle(ctx: RenderCtx, h: SkyHazard) {
     ctx.ox = h.x; ctx.oy = h.y; ctx.rotation = Math.sin(h.spin) * .5; ctx.localScale = 1.5;
-    // Loose pages flap behind (to the right of) the bundle as it flies left.
     for (let i = 0; i < 3; i++) {
         const flap = Math.sin(h.spin * 2.4 + i * 1.7) * 7;
         ctx.polygon([[6, -10 + i * 7], [30 + i * 4, -14 + i * 7 + flap], [33 + i * 4, -6 + i * 7 + flap], [8, -3 + i * 7]], i % 2 ? '#f3ecd8' : '#fbf6e8');
@@ -30,7 +28,6 @@ function paperBundle(ctx: RenderCtx, h: SkyHazard) {
     ctx.rect(-19, -15, 32, 24, '#fbf6e8');
     ctx.rect(-19, -15, 32, 5, '#e0503f');
     for (let y = -6; y < 7; y += 4) ctx.rod(-14, y, 8, y, 1, '#9a9e9d');
-    // A big binder clip, and a red "URGENT" stamp shape.
     ctx.rect(-6, -19, 10, 6, '#3c4658');
     ctx.ellipse(-11, 4, 4, 4, '#e0503f66');
     ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
@@ -42,7 +39,6 @@ function macaw(ctx: RenderCtx, h: SkyHazard) {
     const flap = Math.sin(h.spin);
     const P = PARROT;
     ctx.ox = h.x; ctx.oy = h.y; ctx.rotation = flap * .06; ctx.localScale = 1.45;
-    // A scarlet parrot flying left, long tail streaming behind, still wearing its office tie.
     ctx.polygon([[14, -1], [50, -6 + flap * 3], [53, -1 + flap * 3], [16, 5]], P.red);
     ctx.polygon([[15, 2], [46, 6 + flap * 2], [47, 11 + flap * 2], [16, 7]], P.blue);
     ctx.polygon([[2, -3], [16, -28 * flap - 5], [27, -24 * flap - 2], [12, 1]], P.navy);
@@ -53,12 +49,10 @@ function macaw(ctx: RenderCtx, h: SkyHazard) {
     for (let i = 0; i < 3; i++) ctx.rod(-18, -6 + i * 2, -13, -6.5 + i * 2, .5, '#c9bfb0');
     ctx.ellipse(-15, -5, 2.2, 2.2, '#ffffff');
     ctx.ellipse(-15.6, -5, 1.1, 1.1, '#20242c');
-    // A big hooked beak: pale upper mandible curling over a dark lower one.
     ctx.effectPath([-20, -9], [[-26, -11, -32, -7, -31, -1], [-30, 2, -28, 3, -27, 1], [-26, -2, -23, -2, -21, -1]], P.beak);
     ctx.polygon([[-21, -1], [-26, 1], [-24, 4], [-20, 3]], '#2b2b2b');
     ctx.polygon([[-6, 4], [-2, 4], [-1, 13], [-4, 16], [-7, 13]], P.navy);
     ctx.rod(-5, 7, -2, 6, 1, P.yellow);
-    // Near wing: yellow coverts over blue flight feathers.
     ctx.polygon([[-2, -3], [18, 11 * flap + 2], [26, 8 * flap + 6], [8, 6]], P.blue);
     ctx.polygon([[-2, -3], [10, 6 * flap + 1], [14, 5 * flap + 4], [4, 4]], P.yellow);
     ctx.rod(4, 11, 2, 16, 1.4, '#7d8794');
@@ -66,30 +60,19 @@ function macaw(ctx: RenderCtx, h: SkyHazard) {
     ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
 }
 
-// Lovebird colour mutations. `head` paints the crown and cheeks, `mask` the forehead band (or a black hood),
-// `collar` a ring under a hood; `ring` is the bare white eye ring of Fischer's and masked birds.
 type Lovebird = { body: string; wing: string; flight: string; rump: string; tail: string; head: string; mask: string;
     collar: string | null; beak: string; ring: boolean; eye: string };
 const LOVEBIRDS: readonly Lovebird[] = [
-    // Peach-faced, wild green.
     { body: '#62b24a', wing: '#43913b', flight: '#2f6f35', rump: '#3b82d8', tail: '#3f8a3a', head: '#f2959a', mask: '#e8503e', collar: null, beak: '#eadfc4', ring: false, eye: '#20242c' },
-    // Peach-faced, Dutch blue: aqua body, pale peach face.
     { body: '#73b9bd', wing: '#549aa2', flight: '#3c7580', rump: '#3a6fd0', tail: '#5a9ca3', head: '#f6d8c6', mask: '#f0b49c', collar: null, beak: '#eadfc4', ring: false, eye: '#20242c' },
-    // Peach-faced, lutino: yellow body, red eyes.
     { body: '#f5dc48', wing: '#ecca36', flight: '#f3e9b0', rump: '#f8edb0', tail: '#efd24a', head: '#f5978a', mask: '#ec5a44', collar: null, beak: '#f2dfc0', ring: false, eye: '#b8302c' },
-    // Peach-faced, creamino: cream body, red eyes.
     { body: '#f4ecd2', wing: '#e8ddbc', flight: '#f8f3e4', rump: '#dfe8ee', tail: '#e8ddbc', head: '#f6d6c4', mask: '#f2b9a2', collar: null, beak: '#f2dfc0', ring: false, eye: '#b8302c' },
-    // Fischer's: orange face, red beak, white eye ring.
     { body: '#6bbd4a', wing: '#4b9b3b', flight: '#2f7035', rump: '#4f7ccf', tail: '#4b9b3b', head: '#f39a3c', mask: '#e2603a', collar: null, beak: '#d8332a', ring: true, eye: '#20242c' },
-    // Violet Fischer's.
     { body: '#8c7fca', wing: '#6c5dab', flight: '#4b3f86', rump: '#5a64c4', tail: '#6c5dab', head: '#f2c3b4', mask: '#e9a08c', collar: null, beak: '#d8332a', ring: true, eye: '#20242c' },
-    // Masked: black hood, yellow collar.
     { body: '#52a847', wing: '#3a8a36', flight: '#2a6430', rump: '#5a86c4', tail: '#3a8a36', head: '#262626', mask: '#262626', collar: '#f4d63c', beak: '#d8332a', ring: true, eye: '#20242c' },
-    // Blue masked: black hood, white collar, blue body.
     { body: '#5e92d2', wing: '#4272b2', flight: '#2f5590', rump: '#93a6c4', tail: '#4272b2', head: '#262626', mask: '#262626', collar: '#f4f4ee', beak: '#d8332a', ring: true, eye: '#20242c' },
 ];
 
-// Each pass of each lane gets its own bird: mostly lovebirds in every colour, now and then the big macaw.
 function birdVariant(h: SkyHazard) {
     let n = Math.imul(h.focusId + 0x9e37, 0x9e3779b1);
     n = Math.imul(n ^ (n >>> 16), 0x45d9f3b);
@@ -100,7 +83,6 @@ function birdVariant(h: SkyHazard) {
 function lovebird(ctx: RenderCtx, h: SkyHazard, L: Lovebird) {
     const flap = Math.sin(h.spin * 1.3);
     ctx.ox = h.x; ctx.oy = h.y; ctx.rotation = flap * .07; ctx.localScale = 1.35;
-    // A chubby lovebird flying left: short rounded tail, blue rump, big head, stubby beak, tie askew.
     ctx.polygon([[13, -2], [27, -1 + flap * 2], [28, 5 + flap * 2], [14, 6]], L.tail);
     ctx.rod(17, 2, 26, 2 + flap * 2, 1.2, '#e2603a');
     ctx.polygon([[1, -3], [12, -24 * flap - 4], [21, -20 * flap - 1], [10, 2]], L.flight);
@@ -139,7 +121,6 @@ export function skyHazardsArt(ctx: RenderCtx) {
     for (const h of visible) if (h.kind === 'bird') bird(ctx, h);
 }
 
-// Bright parrot feathers burst off the chair for a moment after a parrot clips it.
 export function skyKnockFeathers(ctx: RenderCtx) {
     const sky = ctx.state.sky;
     if (sky.knockKind !== 'bird' || sky.knock <= 0) return;
@@ -157,7 +138,6 @@ export function skyKnockFeathers(ctx: RenderCtx) {
     ctx.ox = ctx.oy = ctx.rotation = 0; ctx.localScale = 1;
 }
 
-// Three charges above the chair: one goes dark per burst in the air, all refill on touching down.
 export function skySprayGauge(ctx: RenderCtx) {
     const state = ctx.state;
     if (state.sky.phase !== 'course' || (state.ground && state.sky.airSprays === 0)) return;

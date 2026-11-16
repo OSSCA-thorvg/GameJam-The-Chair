@@ -8,7 +8,6 @@ const { createGame, createRenderCtx, player } = await loadSource(`
     export { player } from './src/render/scene/player';
 `);
 
-/** The side-view rider drawn large, as the 2D stages show him. */
 function rider() {
     const game = createGame();
     game.startStage(1);
@@ -32,7 +31,6 @@ test('side on, the rider’s glasses show the lens edge-on as a thin line, as th
     const { width, height } = extent(lens);
     assert.ok(height > width * 3, `a thin upright line, not a lens surface (${width.toFixed(1)} by ${height.toFixed(1)})`);
     assert.ok(!commands.some(command => command.fill === '#bfe6ef'), 'no face-on reflection stripe side on');
-    // The eye sits on the face behind the line; the arm runs back from the line to the ear.
     const eye = extent(commands.filter(command => command.fill === '#446d82'));
     assert.ok(eye.left < extent(lens).left, 'the eye is behind the lens line');
     assert.ok(commands.some(command => command.fill === '#3a414b'), 'the arm runs back to the ear');

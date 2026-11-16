@@ -8,10 +8,8 @@ import { createFeedback } from './feedback';
 import { buildPersonalBoxTrack, personalBoxAt } from './personal-box-replay';
 
 const SPEEDS = [.25, .5, 1, 2, 4];
-// Death and clear screens stay up briefly before the recorded retry, like they did for the player.
 const HOLD_SECONDS = 1;
 
-// `closable: false` keeps the player open (the replay tool page has no game to return to).
 export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, getSettings: () => ReplaySettings, onClose: () => void, { closable = true } = {}) {
     const q = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector);
     const bar = q<HTMLElement>('[data-replay-bar]');
@@ -50,9 +48,7 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
         pending.push(...events);
     }
 
-    // One fixed step of playback. Commands at this tick apply first; returns false at the end.
-    // Manual frame steps skip the pause on death and clear screens. A recorded error ends playback there
-    // (the timeline already reports it) instead of escaping into the page's frame loop.
+    // Playback errors are reported by the timeline; keep them out of the page frame loop.
     function stepOnce(manual = false): boolean {
         try {
             return advanceCursor(manual);
@@ -78,7 +74,6 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
         return true;
     }
 
-    // Jumps to `tick`, re-running a short stretch before it so particles, speech and camera have settled.
     function seek(tick: number) {
         if (!timeline) return;
         const target = Math.max(timeline.startTick, Math.min(timeline.endTick, Math.round(tick)));
@@ -209,7 +204,6 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
         get active() { return !!timeline; },
         get timeline() { return timeline; },
         get tick() { return cursor?.state.tick ?? 0; },
-        /** The raw core state at the current position (read-only). */
         get state() { return cursor?.state ?? null; },
         get playing() { return playing; },
         seek(tick: number) { seek(tick); },

@@ -17,9 +17,7 @@ export type Speck = {
     color: string;
 };
 export type WaterDrop = {
-    /** stream: part of the continuous pour; drop: a loose blob; spray: splash-back from the floor. */
     kind: 'stream' | 'drop' | 'spray';
-    /** Stream particles with the same chain are drawn as one ribbon. */
     chain: number;
     x: number;
     y: number;
@@ -27,7 +25,6 @@ export type WaterDrop = {
     vy: number;
     life: number;
     r: number;
-    /** Floor height where this particle meets the floor plane. */
     floor: number;
 };
 export type WaterRipple = {
@@ -36,7 +33,6 @@ export type WaterRipple = {
     age: number;
     life: number;
     r: number;
-    /** A heavy hit throws up a short crown sheet as well as a ring. */
     crown: boolean;
 };
 export type WaterPour = {
@@ -53,10 +49,8 @@ export type WaterPuddle = {
     right: number;
     reachLeft: number;
     reachRight: number;
-    /** How much water has landed (0..1). */
     wet: number;
 };
-// Changing these values changes appearance only, never focus recovery or damage.
 export function createEffects() {
     const personalBox = createPersonalBoxObserver();
     const keyHints = createKeyHints();
@@ -126,7 +120,6 @@ export function createEffects() {
             specks.push({ x: event.x, y: F - 2, vx: event.vx, vy: -45, a: 0, life: .35, color: EFFECT_STYLE.speckColor });
         }
     }
-    // Deterministic noise so previews replay the same pour every time.
     function random() {
         if (!waterPour) return .5;
         let t = waterPour.seed = (waterPour.seed + 0x6d2b79f5) | 0;
@@ -155,7 +148,6 @@ export function createEffects() {
             pour.emit += dt * 110;
             while (pour.emit >= 1) {
                 pour.emit--;
-                // Invisible tracers that follow the drawn water sheet; they make the splashes and the puddle.
                 const launch = pourLaunch(pour.x, F, pour.side, pour.age);
                 waterDrops.push({
                     kind: 'stream', chain: pour.chain,
@@ -178,7 +170,6 @@ export function createEffects() {
                 life: 2, r: 1.3 + random() * 2.2, floor: F - 2 + random() * 11,
             });
         }
-        // The last of the water dribbles off the rim.
         const dribble = (pour.age - .95) / 1.2;
         if (dribble > 0 && dribble < 1 && random() < dt * 9 * (1 - dribble)) {
             waterDrops.push({
@@ -236,7 +227,6 @@ export function createEffects() {
         waterDrops = alive.slice(-420);
         if (waterPuddle) {
             const p = waterPuddle;
-            // The edge creeps after the water, fast at first and slower as it thins out.
             p.reachLeft -= dt * 4;
             p.reachRight += dt * 4;
             p.left -= Math.min(p.left - p.reachLeft, dt * (40 + (p.left - p.reachLeft) * 4));

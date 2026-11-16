@@ -1,10 +1,7 @@
 import type { RenderCtx } from '../../context';
 import type { Curve, DrawCommand, PathCommand, Gradient, Stroke, Vector } from '../../types';
 
-// Screen-space path helpers for the cutscene. Unlike the RenderCtx helpers these ignore the world camera:
-// the clock, the bubbles and the full-screen lighting are laid out in canvas pixels.
 
-/** Kappa for a quarter circle drawn with one cubic Bézier. */
 const K = .5522847498;
 
 export class PathBuilder {
@@ -25,7 +22,6 @@ export class PathBuilder {
         this.at = [x, y];
         return this;
     }
-    /** Quarter-ellipse arc from the current point to (x, y), bulging along the given corner. */
     corner(cx: number, cy: number, x: number, y: number) {
         const [px, py] = this.at;
         return this.cubic(px + (cx - px) * K, py + (cy - py) * K, x + (cx - x) * K, y + (cy - y) * K, x, y);
@@ -46,7 +42,6 @@ export function circle(cx: number, cy: number, rx: number, ry = rx) {
         .corner(cx + rx, cy - ry, cx + rx, cy);
 }
 
-/** Circle starting at 12 o'clock and running clockwise, so trim fractions read like a dial. */
 export function dialCircle(cx: number, cy: number, r: number) {
     return new PathBuilder(cx, cy - r)
         .corner(cx + r, cy - r, cx + r, cy)

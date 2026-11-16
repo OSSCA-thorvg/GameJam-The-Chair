@@ -25,7 +25,6 @@ test('CPU-emulated WebGL does not count as a GPU', () => {
     assert.equal(isSoftwareGl('ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)'), false);
 });
 
-/** A WebGL2 stand-in whose timer results become available when the test says so. */
 function fakeGl({ timer = true } = {}) {
     let next = 1;
     const queries = new Map();

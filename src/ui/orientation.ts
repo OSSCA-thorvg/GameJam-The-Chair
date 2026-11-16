@@ -1,5 +1,3 @@
-// Phones are played in landscape. Turning to portrait pauses a running game (the CSS rotate hint covers
-// the screen), and the first tap on Start asks the browser for fullscreen + a landscape lock where supported.
 
 type OrientationLock = ScreenOrientation & { lock?: (orientation: 'landscape') => Promise<void> };
 
@@ -27,6 +25,5 @@ async function goLandscape() {
         if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
         await (screen.orientation as OrientationLock | undefined)?.lock?.('landscape');
     } catch {
-        // Unsupported (e.g. iOS Safari): the rotate hint still asks the player to turn the phone.
     }
 }

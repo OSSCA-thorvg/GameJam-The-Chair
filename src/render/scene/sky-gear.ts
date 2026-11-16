@@ -9,7 +9,6 @@ function monitor(ctx: RenderCtx, h: SkyHazard) {
     ctx.gradientPolygon([[-22, -16], [22, -16], [22, 14], [-22, 14]],
         ctx.gradientFill(-22, -16, 22, 14, [[0, '#a6afbf'], [.6, G.shell], [1, G.mid]]));
     ctx.rect(-19, -13, 38, 24, G.side);
-    // The screen still glows with a half-finished spreadsheet.
     ctx.gradientPolygon([[-17, -11], [17, -11], [17, 9], [-17, 9]],
         ctx.gradientFill(-17, -11, 17, 9, [[0, '#9fd3ff'], [.5, '#4f86c6'], [1, '#2f5590']]));
     for (let y = -7; y < 8; y += 4) ctx.rod(-14, y, 14, y, .5, '#ffffff55');
@@ -26,7 +25,6 @@ function keyboard(ctx: RenderCtx, h: SkyHazard) {
     ctx.gradientPolygon([[-30, -9], [30, -9], [32, 3], [-32, 3]],
         ctx.gradientFill(0, -9, 0, 3, [[0, G.light], [1, G.shell]]));
     for (let row = 0; row < 3; row++) for (let col = 0; col < 9; col++) {
-        // One key drifts loose and bobs above the rest.
         const loose = row === 0 && col === 6;
         const lift = loose ? -6 - Math.sin(h.spin * 3) * 3 : 0;
         ctx.rect(-27 + col * 6 + row, -7.5 + row * 3.4 + lift, 4.6, 2.6, loose ? '#f2c230' : G.key);
@@ -36,7 +34,6 @@ function keyboard(ctx: RenderCtx, h: SkyHazard) {
 }
 
 function mouse(ctx: RenderCtx, h: SkyHazard) {
-    // The cable streams behind like a tail.
     ctx.strokePath([10, -2], [[22, -8 + Math.sin(h.spin * 4) * 5, 30, 6, 42, Math.sin(h.spin * 4 + 1) * 6]], { width: 1.5, color: G.cable, cap: 'round' });
     ctx.ellipse(0, 0, 13, 9, ctx.radialFill(-3, -3, 14, [[0, G.light], [.7, G.shell], [1, G.side]]));
     ctx.rod(-12, -1, 0, -1, .8, G.side);
@@ -52,7 +49,6 @@ function tower(ctx: RenderCtx, h: SkyHazard) {
     ctx.rect(-10, -21, 20, 5, G.dark);
     ctx.rect(-10, -14, 20, 5, G.dark);
     ctx.rod(-7, -18.5, 3, -18.5, 1, G.mid);
-    // A front fan, still spinning on nothing.
     ctx.ellipse(0, 8, 8, 8, G.dark);
     for (let i = 0; i < 4; i++) {
         const a = h.spin * 14 + i * Math.PI / 2;
@@ -65,7 +61,6 @@ function tower(ctx: RenderCtx, h: SkyHazard) {
 
 const ART = { monitor, keyboard, mouse, tower };
 
-// Loose office gear tumbles through the gaps; a hit sends the chair bouncing back.
 export function skyGearArt(ctx: RenderCtx, gear: readonly SkyHazard[]) {
     if (!gear.length) return;
     ctx.beginLayer({ key: 'sky-office-gear' });
@@ -77,7 +72,6 @@ export function skyGearArt(ctx: RenderCtx, gear: readonly SkyHazard[]) {
     ctx.endLayer();
 }
 
-// Keycaps and sparks spray off the chair right after a piece of gear clangs into it.
 export function skyKnockKeycaps(ctx: RenderCtx) {
     const sky = ctx.state.sky;
     if (sky.knockKind !== 'gear' || sky.knock <= 0) return;

@@ -28,7 +28,6 @@ function render(state, locale, width) {
         for (const curve of c.curves ?? []) for (const n of curve) assert.ok(Number.isFinite(n));
         const d = `M${c.points[0].join(',')} ${c.points.slice(1).map(v => `L${v.join(',')}`).join(' ')} ${(c.curves ?? []).map(v => `C${v.join(',')}`).join(' ')}`;
         if (c.fill == null) {
-            // A stroked ThorVG path (the ramp plank) has no fill.
             assert.ok(c.stroke && Number.isFinite(c.stroke.width));
             const stroke = typeof c.stroke.color === 'string' ? c.stroke.color : '#888';
             shapes += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${c.stroke.width}"/>`;

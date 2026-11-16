@@ -27,7 +27,6 @@ function applyInput(game, scenario, i) {
     if (scenario.kind === 'jump' && i % scenario.interval === 0) game.jump();
 }
 
-// Gameplay fingerprints live in golden.test.mjs; this suite checks presentation isolation.
 test('changing effect durations and particle count cannot change gameplay', () => {
     const plain = createGame(), decorated = createGame();
     const effects = createEffects(), feedback = createFeedback();

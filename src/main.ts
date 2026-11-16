@@ -42,7 +42,6 @@ function applyLocale() {
     }
 }
 applyLocale();
-// `?stage=<1-5>` skips the splash and starts that stage directly.
 const launchParams = new URLSearchParams(location.search);
 const requestedStage = Number(launchParams.get('stage'));
 const directStage: StageId | null = [1, 2, 3, 4, 5].includes(requestedStage) ? requestedStage as StageId : null;
@@ -56,7 +55,6 @@ for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) 
         if (selected !== 'en' && selected !== 'ko') return;
         locale = selected;
         try { localStorage.setItem(LOCALE_STORAGE_KEY, locale); } catch {}
-        // A `?lang=` in the address would undo this choice on reload, so it follows the menu.
         const url = new URL(location.href);
         if (url.searchParams.has('lang') || url.searchParams.has('locale')) {
             url.searchParams.delete('locale');
@@ -80,12 +78,9 @@ try {
 catch {
 }
 const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-// Replays: every attempt is recorded (start state + commands) so it can be watched, exported or attached to
-// errors. Recording settings are fixed game config; players cannot change them.
 const replaySettings = REPLAY_DEFAULTS;
 const recorder = createRecorder(() => replaySettings, seed);
 const errorLog = createErrorLog(replaySettings.maxErrors);
-// The newest data stays in this browser so the replay tool (/replay.html) can open it directly.
 const keepBrowserData = () => saveBrowserData(replayData(recorder, errorLog));
 let lastStage: number | null = null;
 const reportedErrors = new Set<unknown>();
@@ -140,9 +135,7 @@ window.addEventListener('error', event => logWindowError(event.error ?? event.me
 window.addEventListener('unhandledrejection', event => logWindowError(event.reason));
 const feedback = createFeedback(() => locale);
 const player = createReplayPlayer(root, () => locale, () => replaySettings, () => unbind.sync());
-// The opening cutscene plays over the first fresh game after each page load.
 const opening = createOpening(root, () => locale);
-// The keycap hints go as soon as the player tries their key, so live presses are noted on the way to the game.
 const hintedInput = { left: 'left', right: 'right', spray: 'spray' } as const;
 const hintedGame: typeof game = {
     ...game,
@@ -177,7 +170,6 @@ try {
 catch (error) {
     console.error('Renderer unavailable', error);
 }
-// Developer metrics (F3 / ` / ?debug=1). Timing stays here and in the renderer, never in the game core.
 const perf = createPerfOverlay(root, () => locale, {
     profile: stats => renderer?.profile(stats),
     layerOverrides: overrides => renderer?.layerOverrides(overrides),
@@ -204,9 +196,7 @@ function draw() {
         catch {
         }
     }
-    // Presentation receives detached snapshots. A missing HUD or renderer cannot stop simulation.
     try {
-        // The replay player feeds its own effects and feedback, so live and replayed cues never mix.
         if (!replay) {
             effects.observe(state);
             for (const event of events) {
@@ -241,8 +231,6 @@ function frame(ms: number) {
         perf.destroy();
         return;
     }
-    // The startup splash completely covers the game. Keep its ThorVG animation at full quality while avoiding
-    // a second, viewport-sized ThorVG render behind it. Resetting `last` makes the first visible frame start at dt 0.
     if (startupSplashVisible) {
         last = null;
         requestAnimationFrame(frame);
@@ -264,14 +252,12 @@ function frame(ms: number) {
         logWindowError(error);
         showFailure();
     }
-    // The end-of-run close-up keeps going after the game has stopped ticking.
     if (!player.active && !opening.active) effects.advance(dt);
     const simMs = profiling ? performance.now() - simStart : 0;
     hudMs = 0;
     draw();
     if (profiling) perf.record({ frameMs: dt * 1000, simMs, ticks: advanced.ticks, droppedMs: advanced.dropped * 1000, hudMs });
 }
-// Retain the existing browser debugging API without exposing live game state.
 const officeStageOne = {
     skipOpening: () => opening.skip(),
     interact: game.interact, leaveMeeting: game.leaveMeeting, reset: game.reset, startStage: game.startStage, step: game.step, jump: game.jump, pause: game.pause, draw,

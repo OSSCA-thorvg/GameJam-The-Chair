@@ -3,18 +3,16 @@ import { clamp, contact } from './geometry';
 import type { DeepReadonly, Player, Point } from './types';
 import * as Det from './math';
 
-// How the chair is driven this tick. Built by the play step from keys and stage rules.
 export type Drive = {
-    grounded: boolean;   // wheels touched the ground at the end of the last tick
-    slip: boolean;       // rolling on spilled water
-    dir: number;         // -1, 0, 1 wheel drive
-    tilt: number;        // lean input, -1..1 plus air steering
-    upright: boolean;    // tutorial and rooftop assist that rights the chair
-    convoyJump: boolean; // leaping off the chair convoy carries its speed
+    grounded: boolean;
+    slip: boolean;
+    dir: number;
+    tilt: number;
+    upright: boolean;
+    convoyJump: boolean;
     expressJump: boolean;
 };
 
-// One step of wheel drive, gravity, drag and limits. Pure: returns a new player.
 export function drivePlayer(player: Readonly<Player>, d: Drive, dt: number): Player {
     const { lean, upright, drive, drag, spinDrag, limits } = PHYSICS;
     const p = { ...player };
@@ -45,8 +43,6 @@ export function drivePlayer(player: Readonly<Player>, d: Drive, dt: number): Pla
 
 export type Collision = { p: Player; ground: boolean; headHit: Point | null };
 
-// Pushes the chair's contact circles out of the terrain with a springy impulse.
-// A head pressed into a surface from above ends the attempt; `p` is where the chair was at that moment.
 export function collide(player: Readonly<Player>, solids: readonly DeepReadonly<Point[]>[]): Collision {
     const { iterations, push, bounce, inertia, wheelGround, headDown, headDepth } = PHYSICS.contact;
     const p = { ...player };
@@ -88,7 +84,6 @@ export function collide(player: Readonly<Player>, solids: readonly DeepReadonly<
     return { p, ground, headHit: null };
 }
 
-// Far below every floor: the attempt is lost (each stage decides how, see StageHooks.onFall).
 export function fellOffFloor(p: Readonly<Point>) {
     return p.y > LEVEL.floor + PHYSICS.fallDepth;
 }

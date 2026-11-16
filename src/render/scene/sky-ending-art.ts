@@ -5,11 +5,6 @@ import type { Point3, SkyProjection } from './sky-projection';
 import { endingHair } from './sky-player-hair';
 import { endingGlasses } from './sky-player-glasses';
 
-/**
- * `loose`: seconds since the extinguisher came off the chair at the end of the flight (negative while attached).
- * `rest`: how far the rider's hands have lifted off the keys (0 typing, 1 stopped above them).
- * `rocket`: how far the extinguisher has ignited into stage five's rocket engine (0 the reveal's soft puffs, 1 full).
- */
 export function endingChair(view: SkyProjection, elapsed: number, spray = 1, arrival = 0, loose = -1, rest = 0, rocket = 0) {
     const draw = chairDrawing(view, elapsed, arrival);
     chairFrame(draw);
@@ -17,22 +12,16 @@ export function endingChair(view: SkyProjection, elapsed: number, spray = 1, arr
     riderHead(view, draw);
     riderArms(view, draw, rest);
     if (loose < 0) extinguisher(draw, spray, rocket);
-    // Its last puffs set it tumbling as it drifts away.
     else extinguisher(looseDrawing(view, draw, loose), spray * Math.exp(-loose * .6), rocket);
     return draw.bob;
 }
 
-/**
- * The extinguisher once it has come off: it drifts away up and to the left, turning over slowly, free of the
- * chair's bob. Drawing through this moves every part of it the same way.
- */
 function looseDrawing(view: SkyProjection, draw: ChairDrawing, loose: number): ChairDrawing {
     const centre: Point3 = [-46, -5, 0];
     const axis: Point3 = [.3, .5, .81], angle = loose * .9;
     const cos = Math.cos(angle), sin = Math.sin(angle);
     const shift: Point3 = [-10 * loose, 9 * loose, -38 * loose - 10 * (1 - Math.exp(-3 * loose))];
     const move = (p: Point3): Point3 => {
-        // Rodrigues' rotation about `axis` through the extinguisher's middle.
         const v: Point3 = [p[0] - centre[0], p[1] - centre[1], p[2] - centre[2]];
         const d = v[0] * axis[0] + v[1] * axis[1] + v[2] * axis[2];
         const c: Point3 = [axis[1] * v[2] - axis[2] * v[1], axis[2] * v[0] - axis[0] * v[2], axis[0] * v[1] - axis[1] * v[0]];
@@ -76,7 +65,6 @@ function chairFrame({ C, rod, oval, profile }: ChairDrawing) {
 }
 
 function riderBody({ C, profile }: ChairDrawing) {
-    // Keep the same silhouettes and palette as the ordinary player illustration.
     profile(PLAYER_OUTLINES.farLeg, 5, '#4e5b70', -12);
     profile([[35, 3], [42, 3], [50, 6], [55, 9], [52, 10], [35, 7]], 7, '#383f4e', -12);
     profile(PLAYER_OUTLINES.nearLeg, 5, '#5b6b80', 12);
@@ -91,26 +79,19 @@ function riderBody({ C, profile }: ChairDrawing) {
 }
 
 function riderHead(view: SkyProjection, { C, bob, oval }: ChairDrawing) {
-    // Only the face below the hairline needs skin. Hidden scalp faces can sort over the hair while orbiting.
     const face: Vector[] = [[-10, -77], [-3, -83], [3, -89], [10, -92], ...PLAYER_OUTLINES.head.slice(3)];
     view.profile(face.map(([x, y]) => [x, -y - 35 + bob]), 12, C.skin, 0, { widthAt: (_x, y) => {
         const fullness = Math.max(0, Math.min(1, (y - 31 - bob) / 20));
         return 5 + fullness * 7;
     } });
     endingHair(view, bob);
-    // Ears on the sides; the eyes are behind the glasses on the front of the face (endingGlasses).
     for (const side of [-1, 1]) oval(-7, -81, side * 13, 2.7, 3.4, 1.5, C.skin);
     endingGlasses(view, bob);
 }
 
-/**
- * The laptop in 3D: a thin base under the hands with its keyboard and trackpad, and a thin lid hinged at the base's
- * back edge, tipped a little back, its screen towards the rider. Coordinates follow the side-view outlines.
- */
 function laptop(view: SkyProjection, { profile, point, bob }: ChairDrawing) {
     const top = (x0: number, z0: number, x1: number, z1: number, y: number, color: string) =>
         view.polygon([point(x0, y, z0), point(x1, y, z0), point(x1, y, z1), point(x0, y, z1)], color + 'ff');
-    // The thin chassis has a separate keyboard deck, inset keys and a trackpad.
     profile([[16, -31], [50, -31], [50, -34], [16, -34]], 22, '#667284');
     top(18, -20, 48, 20, -34.2, '#343e4c');
     top(19, -18, 31, 18, -34.35, '#758396');
@@ -147,7 +128,6 @@ function riderArms(view: SkyProjection, draw: ChairDrawing, rest = 0) {
     for (const z of [-19, 19]) {
         profile([[-17, -58], [-13, -60], [-9, -57], [-8, -35], [-18, -34]], 4, '#e6e0cc', z);
         profile([[-19, -39], [-8, -39], [-8, -34], [-19, -33]], 4.5, '#fff6de', z);
-        // Lifting off the keys, the forearms tip up and the fingers hover still.
         const lift = -5 * rest;
         profile([[-16, -34], [-9, -35], [23, -36 + lift], [25, -32 + lift], [-15, -27]], 3, C.skin, z);
         const tap = Math.sin(elapsed * 24) * 1.2 * (1 - rest) + lift;
@@ -168,23 +148,17 @@ function extinguisher({ elapsed, rod, oval }: ChairDrawing, spray: number, rocke
         oval(-46 - age * 4, -7 + age * 50 * spray, 0, 3 + age * 7, 4 + age * 9, 3 + age * 6, '#f6e6df' + hex(100 / 255 * (1 - age) * (1 - rocket)));
     }
     if (rocket <= 0) return;
-    // Flared nozzle bell.
     rod([-46, -9, 0], [-46, -4, 0], 5.5, '#2f3540');
     if (spray > 0) rocketExhaust(oval, elapsed, spray * rocket);
 }
 
 const hex = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0');
 
-/**
- * The extinguisher fires like a rocket engine: a white-hot core with shock diamonds straight out of the nozzle,
- * then a long billowing column of foam that swells and tumbles away behind the chair.
- */
 function rocketExhaust(oval: ChairDrawing['oval'], elapsed: number, spray: number) {
     const power = Math.min(1.8, spray);
     const flicker = 1 + Math.sin(elapsed * 47) * .08 + Math.sin(elapsed * 83) * .05;
     const reach = (120 + 230 * power) * flicker;
     oval(-46, -3.5, 0, 6.5, 1.2, 6.5, '#ffe9b0' + hex(Math.min(1, power * 2)));
-    // Billowing foam: puffs flow down the column, swelling and drifting apart as they go.
     const puffs = Math.round(14 + 18 * Math.min(1, power));
     for (let i = 0; i < puffs; i++) {
         const age = (elapsed * 2.6 + i / puffs) % 1;
@@ -192,11 +166,9 @@ function rocketExhaust(oval: ChairDrawing['oval'], elapsed: number, spray: numbe
         const spread = age * age * 50 * power;
         const size = 7 + age * 55 * (.6 + .4 * power);
         const tone = age < .25 ? '#fff4d6' : age < .6 ? '#f6efe4' : '#dcdcd8';
-        // The column trails back behind the chair as well as down, like a launch seen from the chase plane.
         oval(-46 - age * reach * .55 + Math.cos(swirl) * spread, -2 + age * reach, Math.sin(swirl) * spread,
             size, size * (1.1 + .5 * (1 - age)), size, tone + hex(Math.min(1, age / .18) * (1 - age) * (1 - age) * .9 * Math.min(1, power + .3)));
     }
-    // The white-hot core and its shock diamonds, along the same tilted thrust line as the foam.
     const core = (40 + 50 * power) * flicker;
     oval(-46 - 8, 6, 0, 16 * power, 18 * power, 16 * power, '#fff1c4' + hex(.35 * Math.min(1, power)));
     for (let k = 0; k < 6; k++) {

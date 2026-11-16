@@ -3,10 +3,8 @@ import test from 'node:test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, normalize, relative } from 'node:path';
 
-// Keeps stage work independent: people editing different stages should not need to touch the same files.
 const STAGES = ['office', 'building', 'rooftop', 'sky', 'orbit'];
 const STAGE_ROOT = 'src/game/stages';
-// Files that list every stage once (one line or one case per stage).
 const STAGE_INDEXES = ['src/game/stages/index.ts', 'src/game/stages/hooks.ts', 'src/game/stages/attempt.ts', 'src/game/stages/view.ts', 'src/game/stages/validation.ts'];
 
 function files(dir) {
@@ -15,7 +13,6 @@ function files(dir) {
         return entry.isDirectory() ? files(path) : path.endsWith('.ts') ? [path] : [];
     });
 }
-// Relative imports of a file, with whether each is type-only (erased at build time).
 function importsOf(path) {
     const source = readFileSync(path, 'utf8');
     return [...source.matchAll(/^(import|export)\s+(type\s+)?[^;]*?from '(\.[^']+)';/gms)]

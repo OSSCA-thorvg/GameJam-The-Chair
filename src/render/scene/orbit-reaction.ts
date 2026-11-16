@@ -6,7 +6,6 @@ import { PathBuilder, push } from './opening/shapes';
 const MARKS = ['!', '✓', '…'];
 const INK = '#2b2f3a';
 
-/** A camera catches the rider; each second brings another wordless answer. */
 export function orbitReaction(ctx: RenderCtx, head: Vector, age: number, lit: boolean) {
     if (!lit) return;
     const beat = age - Math.floor(age);

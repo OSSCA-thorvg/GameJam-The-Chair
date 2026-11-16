@@ -6,7 +6,6 @@ export function personalBoxBadge(ctx: RenderCtx) {
     const { ox, oy, rotation, localScale } = ctx;
     ctx.ox += 130 * localScale;
     ctx.oy -= 30 * localScale;
-    // Keep the portrait readable independently of the small carton.
     ctx.localScale = 1;
     const pose = personalBoxPose(ctx.personalBox, ctx.t);
     ctx.strokePath([-16, 24], [[-15, 12, 8, -14, 0, -3]],

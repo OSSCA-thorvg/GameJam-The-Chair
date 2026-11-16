@@ -44,7 +44,6 @@ function text2d(bg: CanvasRenderingContext2D, spec: TextSpec) {
     bg.restore();
 }
 
-/** Canvas2D fallback: same commands, with the layer features Canvas2D can express. */
 export function paintCanvas(ctx: RenderCtx, bg: CanvasRenderingContext2D, commands: DrawCommand[]) {
     for (const cmd of commands) {
         if (cmd.kind === 'text') {
@@ -63,7 +62,6 @@ export function paintCanvas(ctx: RenderCtx, bg: CanvasRenderingContext2D, comman
                 tracePath2d(bg, layer.clip);
                 bg.clip();
             }
-            // An inverted mask punches a hole: clip to the canvas minus the mask path.
             if (layer?.mask && layer.maskInvert) {
                 tracePath2d(bg, layer.mask);
                 bg.rect(0, 0, ctx.W, ctx.H);

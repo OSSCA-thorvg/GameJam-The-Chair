@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// Re-runs replay files in Node: reports state-hash divergence and reproduced errors.
-// Usage: node scripts/replay-check.mjs <replay.json|error-log.json>... [--expect-error]
-// Error logs are expanded into the replays attached to each entry.
 import { readFileSync } from 'node:fs';
 import { build } from 'esbuild';
 

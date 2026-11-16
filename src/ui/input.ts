@@ -1,9 +1,6 @@
 import { isStageUnlocked } from '../game/progression';
 import type { Game } from '../game/game';
 import { bindControls } from './controls';
-// Menu buttons, dialog focus and pause syncing. Gameplay keys and touch controls live in ./controls.
-// `blocked` (e.g. while a replay plays) hides the pause menu and ignores every live-game control.
-// `onStart` runs after Start begins a fresh game from the title panel (the opening cutscene hooks in here).
 export function bindInput(root: HTMLElement, game: Game, { blocked = () => false, onStart }: { blocked?: () => boolean; onStart?: () => void } = {}) {
     const controller = new AbortController();
     const options = { signal: controller.signal };

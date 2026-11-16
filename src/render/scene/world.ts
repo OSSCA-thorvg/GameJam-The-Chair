@@ -17,10 +17,8 @@ import { windowView, type WindowView } from './window-view';
 import { roofFor, roofShape } from './skyline';
 import { officeControlHints } from './control-hints';
 
-/** The exit door's span on the back wall, around the goal; no window is drawn behind it. */
 const EXIT = { left: LEVEL.goal - 45, right: LEVEL.goal + 81 };
 
-/** The exit: a door standing against the back wall (its foot on the wall line) under the chair-only exit sign. */
 function exitDoor(ctx: RenderCtx, goal: number, wallFoot: number) {
     const top = wallFoot - 205;
     ctx.rect(goal - 35, top, 106, 205, '#677d7e');
@@ -29,10 +27,8 @@ function exitDoor(ctx: RenderCtx, goal: number, wallFoot: number) {
     chairPictogram(ctx, goal + 18, 'exit', top - 70);
 }
 
-/** The glass of one office window: its left edge is given per window; all share this height and width. */
 const PANE = { top: 87, bottom: 266, width: 183 };
 
-/** Repeatable 0..1 values for window `index` of this run's skyline (`seed`), so each window shows its own city. */
 function cityRandom(seed: number, index: number) {
     let s = Math.imul(seed ^ index, 0x45d9f3b) >>> 0;
     return () => {
@@ -43,10 +39,6 @@ function cityRandom(seed: number, index: number) {
 
 type CityRow = { width: [number, number]; gap: [number, number]; height: [number, number]; body: string };
 
-/**
- * One row of towers standing on the pane's sill, with random widths, gaps and heights, trimmed to the glass.
- * Returns each tower's box so the front row can light its windows.
- */
 function cityRow(ctx: RenderCtx, left: number, rand: () => number, row: CityRow) {
     const towers: { left: number; top: number; width: number }[] = [];
     const span = (range: [number, number]) => range[0] + rand() * (range[1] - range[0]);
@@ -56,7 +48,6 @@ function cityRow(ctx: RenderCtx, left: number, rand: () => number, row: CityRow)
         if (to - from > 4) {
             ctx.rect(from, top, to - from, PANE.bottom - top, row.body);
             const roof = roofFor(Math.floor(rand() * 1000));
-            // A roof shape only where it stays on the glass, clear of the frame above.
             if (from === at && to === at + width && top - width * .6 > PANE.top + 4) roofShape((points, color) => ctx.polygon(points, color), at, top, width, roof, row.body);
             towers.push({ left: at, top, width });
         }
@@ -65,10 +56,6 @@ function cityRow(ctx: RenderCtx, left: number, rand: () => number, row: CityRow)
     return towers;
 }
 
-/**
- * The city through one office window: a far row of taller towers and a near row of lower ones in front, each tower
- * its own width, height and spacing. The near towers' windows are lit, and one of them flickers now and then.
- */
 function windowCity(ctx: RenderCtx, left: number, index: number, view: WindowView) {
     const rand = cityRandom(ctx.state.skylineSeed, index);
     cityRow(ctx, left, rand, { width: [34, 58], gap: [-8, 8], height: [.48, .8], body: view.buildingFar });
@@ -118,7 +105,6 @@ export function drawWorld(ctx: RenderCtx) {
     const view = windowView(ctx.windowDusk);
     for (let i = Math.floor(cam / 235) - 1; i < (cam + VW) / 235 + 1; i++) {
         const x = i * 235;
-        // No window behind the exit door: the wall stays solid where the door stands against it.
         if (x + 214 <= EXIT.left || x + 17 >= EXIT.right) {
             ctx.rect(x + 17, 80, 197, 193, view.frame);
             if (view.skyTop === view.skyBottom) ctx.rect(x + 24, 87, 183, 179, view.skyTop);
@@ -152,7 +138,6 @@ export function drawWorld(ctx: RenderCtx) {
         desk(ctx, x);
         const plantX = x + (x === 110 ? 295 : 205);
         const potX = Math.abs(plantX - cleaning.x - 55) < 70 ? plantX + 90 : plantX;
-        // Nothing stands in front of the exit door, and no pot peeks out from behind the first copier.
         const clear = (left: number, right: number) => potX + 25 <= left || potX - 25 >= right;
         if (clear(EXIT.left, EXIT.right) && clear(LEVEL.copier.x - 70, LEVEL.copier.x + 70)) plant(ctx, potX);
     }

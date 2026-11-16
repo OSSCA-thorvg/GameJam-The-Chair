@@ -21,14 +21,11 @@ function isJoinedConvoy(convoy: Corridor['convoy']): convoy is 'carried' | 'lead
 const ORIENTATION = STAGE_TWO.orientation;
 const RIDER_FOOT = 12;
 
-// The orientation obstacle a rider low enough to meet it is touching, or -1.
 export function touchedObstacle(p: Readonly<Point>) {
     return ORIENTATION.obstacles.findIndex(obstacle => p.y + 28 > 422 - obstacle.height
         && Math.abs(p.x - obstacle.x) < obstacle.width / 2 + RIDER_FOOT);
 }
 
-// One orientation line at a time: each waits (negative age) until the front chair reaches its `at`,
-// and a line whose moment has passed is skipped so the rules stay ahead of their obstacles.
 export function orientationStep(chat: Extract<ChairChat, { kind: 'orientation' }>, frontX: number, dt: number): Extract<ChairChat, { kind: 'orientation' }> {
     const lines = ORIENTATION.lines;
     let line = chat.line, age = chat.age;
@@ -44,7 +41,6 @@ export function orientationStep(chat: Extract<ChairChat, { kind: 'orientation' }
     return { kind: 'orientation', age, line };
 }
 
-// The line to resume with when the rookie rejoins: the interrupted one, or the next if it was said.
 function resumeLesson(chat: Extract<ChairChat, { kind: 'orientation' }>) {
     return chat.age >= CHAIR_CHAT_INTERVAL.orientation * .6 ? chat.line + 1 : chat.line;
 }
@@ -53,7 +49,6 @@ export function inOrientation(x: number) {
     return x >= STAGE_TWO.checkpoints[2].x && x < STAGE_TWO.express.start;
 }
 
-// Landing from a jump onto the moving chairs rides along; landing anywhere else frees the rider.
 export function convoyLanding(corridor: Readonly<Corridor>, furniture: readonly Readonly<Furniture>[], p: Readonly<Point>, ground: boolean): { convoy: Corridor['convoy']; vx: number | null } | null {
     if ((corridor.convoy !== 'airborne' && corridor.convoy !== 'leading-airborne') || !ground) return null;
     const departure = corridor.departure;
@@ -64,7 +59,6 @@ export function convoyLanding(corridor: Readonly<Corridor>, furniture: readonly 
     return { convoy, vx: isJoinedConvoy(convoy) ? furniture[0].vx : null };
 }
 
-// A rider carried into the lift goes down with the chairs. `lost` once the doors close below.
 export function liftRide(departure: Readonly<ChairDeparture>, dt: number): { departure: ChairDeparture; y: number; lost: boolean } | null {
     if (departure.kind !== 'descending' || departure.reason !== 'abduction') return null;
     const age = departure.age + dt;
@@ -84,12 +78,10 @@ export function canEnterMeeting(s: { stage: number; mode: Mode; corridor: Readon
 
 export const MEETING_SEAT: Readonly<Player> = Object.freeze({ x: STAGE_TWO.meeting - 100, y: 392, vx: 0, vy: 0, a: 0, w: 0 });
 
-// Where the rider reappears in the corridor; pushed out when the meeting ends on its own.
 export function meetingExit(returnX: number, pushed: boolean): Player {
     return { x: returnX + (pushed ? 110 : 0), y: 392, vx: pushed ? 180 : 0, vy: 0, a: 0, w: 0 };
 }
 
-// The optional meeting plays out by itself, then shoves the rider back into the corridor.
 export function meetingStep(room: Exclude<Corridor['room'], { kind: 'corridor' }>, dt: number): { room: Corridor['room']; x: number; leave: boolean } {
     if (room.kind === 'entering') return meetingEntryStep(room, dt);
     const age = room.age + dt;
@@ -109,8 +101,6 @@ function meetingEntryStep(room: Exclude<Corridor['room'], { kind: 'corridor' }>,
 export type CorridorInput = { corridor: Readonly<Corridor>; furniture: readonly Readonly<Furniture>[]; p: Readonly<Player>; ground: boolean; steering: boolean; steer: number; rng: number; length: number };
 export type CorridorResult = { corridor: Corridor; furniture: Furniture[]; p: Player; rng: number; stopRider: boolean; kick: 'trip' | null; tripped: number };
 
-// The building corridor: typing bubbles, the chair convoy, its chatter and the lift ride.
-// Works on its own copies; the caller writes the result back.
 export function corridorStep(input: CorridorInput, dt: number, previousX: number): CorridorResult {
     const c = clonePlain(input.corridor) as Corridor;
     const furniture: Furniture[] = input.furniture.map(chair => ({ ...chair }));
@@ -173,7 +163,6 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
         p.vx = 360;
     }
     const minimumSpeed = 70;
-    // Once welcomed, the chairs slow down for a rookie who fell off.
     const rookieAway = c.lesson >= 0 && c.convoy === 'free';
     for (const [index, chair] of furniture.entries()) {
         if (!chair.released) continue;
@@ -203,13 +192,11 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     if (isJoinedConvoy(c.convoy) || followsBoarding) {
         const shuffle = isJoinedConvoy(c.convoy) && ground ? input.steer * STAGE_TWO.shuffle : 0;
         const nextX = previousX + front.x - frontX + shuffle * dt;
-        // A wedged rider rolls only within its own gap: the chairs on either side are walls, hopped over, not passed.
         const behindMiddle = previousX < middleX;
         const low = c.convoy === 'leading' ? front.x + 29 : behindMiddle ? back.x + 29 : furniture[1].x + 29;
         const high = c.convoy === 'leading' ? front.x + 239 : behindMiddle ? furniture[1].x - 29 : front.x - 29;
         p.x = Math.max(low, Math.min(high, nextX));
         p.vx = front.vx + (p.x === nextX ? shuffle : 0);
-        // A leader rolling ahead of the casual convoy leaves it; the express convoy outruns a rider.
         if (shuffle && c.convoy === 'leading' && nextX > high && c.pace === 'casual') {
             c.convoy = 'free';
             p.x = nextX;
@@ -220,12 +207,11 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     }
     const touched = touchedObstacle(p);
     if (touched >= 0 && touched !== c.tripped) {
-        // Trip: a rider meeting an orientation obstacle low stumbles up and loses its speed.
         const joined = isJoinedConvoy(c.convoy) || c.convoy === 'airborne' || c.convoy === 'leading-airborne';
         kick = 'trip';
         tripped = touched;
         p.vy = -ORIENTATION.kick;
-        p.y -= 4;  // off the floor now, so this tick's collisions do not set it back down
+        p.y -= 4;
         p.vx = (joined ? front.vx : p.vx) * ORIENTATION.drag;
         p.w += ORIENTATION.spin;
         c.convoy = 'free';
@@ -234,7 +220,6 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
             c.chat = { kind: 'trip', age: 0 };
         }
     }
-    // One obstacle trips a rider once: it counts again only after the rider has rolled clear of it.
     if (c.tripped >= 0) {
         const obstacle = ORIENTATION.obstacles[c.tripped];
         if (Math.abs(p.x - obstacle.x) >= obstacle.width / 2 + RIDER_FOOT) c.tripped = -1;
@@ -264,7 +249,6 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
             c.chat = { kind: 'orientation', age: -1, line: c.lesson };
         }
         else if (c.chat.kind === 'ramp' && c.chat.age >= CHAIR_CHAT_INTERVAL.ramp * CHAIR_CHAT.ramp.length) c.chat = { kind: 'rush', age: 0 };
-        // The front chair nears the ramp: they shout back to the rookie.
         if (c.chat.kind === 'rush' && c.pace === 'express'
             && front.x >= STAGE_TWO.express.ramp.start - 300 && front.x < STAGE_TWO.express.pit.left) c.chat = { kind: 'ramp', age: 0 };
     }

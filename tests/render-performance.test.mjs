@@ -32,7 +32,6 @@ function stageContext(stage, camera = 0) {
 }
 
 test('the stage three takeoff and the stage four sky draw no white sun disc', () => {
-    // The old sun glow rendered as a hard white disc, like a moon hanging over the climb and the whole of stage four.
     const disc = commands => commands.find(command => command.blend === 'screen' && command.fill && typeof command.fill !== 'string' && command.fill.radius);
     const sky = stageContext(4);
     drawSky(sky);

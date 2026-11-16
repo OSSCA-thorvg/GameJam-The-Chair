@@ -18,7 +18,6 @@ export function sprayPlume(ctx: RenderCtx) {
     plumeSwirl(ctx, shape);
 }
 
-// Wind carries older smoke farther sideways, leaving the nozzle fixed to the extinguisher.
 function point(shape: Plume, along: number, across = 0): Vector {
     return [shape.origin[0] + shape.dx * shape.length * along - shape.dy * across + shape.drift * along * along,
         shape.origin[1] + shape.dy * shape.length * along + shape.dx * across];

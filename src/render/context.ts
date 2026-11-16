@@ -12,7 +12,6 @@ import type { KeysTried } from './key-hints';
 export type RenderCtx = {
     locale: Locale;
     bg: CanvasRenderingContext2D;
-    /** Width of `content` in `font` at 1px; ThorVG measures once it has loaded, Canvas2D until then. */
     textWidth(content: string, font: FontName): number;
 
     readonly F: number;
@@ -33,7 +32,6 @@ export type RenderCtx = {
     oy: number;
     rotation: number;
     localScale: number;
-    /** Reflect world y around `y`, squashed by `k` (floor-plane reflections). */
     mirror: { y: number; k: number } | null;
     layer: LayerSpec | null;
 
@@ -52,7 +50,6 @@ export type RenderCtx = {
     papers: GameSnapshot['papers'];
     inBin: boolean;
     soaked: boolean;
-    /** How many times the dirty bucket water has splashed the rider this attempt; each adds a layer of stains. */
     soaks: number;
     dirty: boolean;
     t: number;
@@ -69,15 +66,10 @@ export type RenderCtx = {
     practiceBurst: number;
     saveFlash: number;
     personalBox: PersonalBoxReaction;
-    /** The opening's chair acting: the backrest's own swing (radians, negative leans back) and the worker bucked up. */
     chairPose: { backrest: number; riderPop: number; shiver: number };
-    /** True while the opening cutscene draws the office, so in-game hints stay out of the film. */
     cutscene: boolean;
-    /** How far into the evening the office windows show (0 sunset, 1 night); only the opening moves it off 1. */
     windowDusk: number;
-    /** Which hinted keys the player has tried this stage; their keycap hints are gone. */
     keysTried: KeysTried;
-    /** How many times the player has entered the stage two meeting room (1 on the first visit). */
     meetingVisit: number;
 
     screenPoint(x: number, y: number): Vector;
@@ -94,26 +86,20 @@ export type RenderCtx = {
     beginLayer(spec: LayerSpec): void;
     endLayer(): void;
     gradientPolygon(points: Vector[], fill: Gradient, opts?: PathOptions): void;
-    /** Build immutable local geometry once; ThorVG moves its retained Scene with the camera thereafter. */
     retainedGroup(key: string, bounds: Bounds, draw: () => void): void;
-    /** Conservative world-space visibility test for skipping whole scene groups before command creation. */
     visible(bounds: Bounds, margin?: number): boolean;
     ripple(x: number, y: number, rx: number, ry: number, width: number, color: string): void;
     tint(hex: string, alpha: number): string;
     rect(x: number, y: number, w: number, h: number, c: string): void;
     ellipse(x: number, y: number, rx: number, ry: number, c: string | Gradient, opts?: PathOptions): void;
     rod(x: number, y: number, xx: number, yy: number, w: number, c: string): void;
-    /** System label: a Do Hyeon line whose baseline sits at world (x, y), ordered with the shapes around it. */
     label(text: string, x: number, y: number, size?: number, color?: string, font?: FontName): void;
-    /** Width of one line of `font` text at `size` local units, in local units. */
     measureText(content: string, size: number, font?: FontName): number;
-    /** One line of ThorVG Text centred on local (x, y), turning with the current rotation. */
     text(content: string, x: number, y: number, size: number, fill: string, opts?: TextOptions): void;
-    /** One line of ThorVG Text centred on canvas pixel (x, y), ignoring the camera. */
     screenText(content: string, x: number, y: number, size: number, fill: string, opts?: TextOptions): void;
 };
 
-export type TextOptions = { font?: FontName; outline?: { width: number; color: string }; opacity?: number; /** Screen text only, in radians. */ rotation?: number };
+export type TextOptions = { font?: FontName; outline?: { width: number; color: string }; opacity?: number;   rotation?: number };
 export type PathOptions = { blend?: Blend; trim?: [number, number] };
 export type StrokeInput = { width: number; color: string | Gradient; cap?: Stroke['cap']; dash?: number[]; dashOffset?: number };
 
@@ -340,7 +326,6 @@ function drawingMethods(getCtx: () => RenderCtx, { retained }: RenderResources) 
         pushText(content, cx, cy, size * unit, getCtx().rotation, fill, { ...opts, outline });
     };
     const screenText: RenderCtx['screenText'] = (content, x, y, size, fill, opts) => pushText(content, x, y, size, opts?.rotation ?? 0, fill, opts);
-    // A label's y is its baseline, as with Canvas2D fillText; the middle of the line sits a third of a size above.
     const label: RenderCtx['label'] = (text, x, y, size = 12, color = '#333d4b', font = LABEL_FONT) => {
         getCtx().text(text, x, y - size * .35, size, color, { font });
     };

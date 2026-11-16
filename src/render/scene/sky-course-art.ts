@@ -14,7 +14,6 @@ function rivet(ctx: RenderCtx, x: number, y: number) {
 
 function desk(ctx: RenderCtx, width: number, small: boolean, drawer: number) {
     const left = -width / 2, right = width / 2, height = small ? 53 : 82;
-    // Legs, feet and stretcher sit below the same playable tabletop.
     ctx.rod(left + 30, height * .72, right - 20, height * .72, 5, '#46546b');
     for (const x of [left + 19, right - 22]) {
         metalPanel(ctx, x, 9, 13, height, '#96a0b4', '#59637c', '#46546b');
@@ -26,7 +25,6 @@ function desk(ctx: RenderCtx, width: number, small: boolean, drawer: number) {
     }
     metalPanel(ctx, left + 9, 8, width - 18, 18, '#8991a8', '#737a91', '#424d66');
     ctx.rect(left + 10, 8, width - 20, 3, '#46546b');
-    // A shallow top plane and warm front edge keep the landing face easy to read.
     ctx.gradientPolygon([[left, -2], [left + 8, -9], [right - 8, -9], [right, -2]],
         ctx.gradientFill(0, -9, 0, -2, [[0, '#ebbd77'], [1, '#ffe0a3']]));
     ctx.gradientPolygon([[left, -2], [right, -2], [right, 8], [left, 8]],
@@ -72,7 +70,6 @@ function billboard(ctx: RenderCtx, width: number) {
     ctx.rect(left, -3, width, 1.5, '#f7e5c6');
     ctx.rect(left, 92, width, 5, '#69738c');
     for (const x of [left + 4, right - 4]) for (const y of [8, 88]) rivet(ctx, x, y);
-    // Small lamps and their pools of light are attached to the frame, never extra platforms.
     for (const x of [left + width * .25, left + width * .72]) {
         ctx.rod(x, -6, x, -16, 2, '#5c6b83');
         ctx.polygon([[x - 9, -17], [x + 8, -17], [x + 12, -11], [x - 12, -11]], '#69738c');
@@ -90,7 +87,6 @@ function billboard(ctx: RenderCtx, width: number) {
     ctx.ellipse(model - 3, 36, 1, 1.4, '#424f6d');
     ctx.ellipse(model + 3, 36, 1, 1.4, '#424f6d');
     if (Math.abs(ctx.rotation) < .65) {
-        // ThorVG Text sits in the scene right after the screen, so parrots and the chair pass in front of it.
         const lines = ctx.locale === 'ko' ? ['흔들리지', '않는 기업'] : ['UNSHAKE', 'ABLE INC.'];
         const textLeft = left + 14, textRight = model - 34;
         const maxSize = 34;

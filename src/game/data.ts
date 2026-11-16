@@ -1,6 +1,5 @@
 import type { DeepReadonly } from './types';
 
-// Freezes configuration at load time so nothing can change rules outside game state during a run.
 export function deepFreeze<T>(value: T): DeepReadonly<T> {
     if (value && typeof value === 'object' && !Object.isFrozen(value)) {
         for (const child of Object.values(value)) deepFreeze(child);
@@ -9,7 +8,6 @@ export function deepFreeze<T>(value: T): DeepReadonly<T> {
     return value as DeepReadonly<T>;
 }
 
-// FNV-1a over the JSON form. Two builds with the same rules and levels share a version.
 export function configHash(config: unknown): string {
     const text = JSON.stringify(config);
     let hash = 0x811c9dc5;
@@ -20,7 +18,6 @@ export function configHash(config: unknown): string {
     return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-// Deep copy of plain JSON-like data (objects, arrays, numbers, strings, booleans, null).
 export function clonePlain<T>(value: T): T {
     if (Array.isArray(value)) return value.map(clonePlain) as T;
     if (value !== null && typeof value === 'object') {

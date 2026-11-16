@@ -11,7 +11,6 @@ export function applyConvoyLanding(s: CoreState) {
     if (r.vx !== null) s.p.vx = r.vx;
 }
 
-// Returns true while the lift carries the rider down.
 export function applyLiftRide(s: CoreState, out: GameEvent[], dt: number) {
     const r = liftRide(s.building.corridor.departure, dt);
     if (!r) return false;
@@ -55,7 +54,6 @@ export function applyCorridor(s: CoreState, out: GameEvent[], dt: number, previo
     }
 }
 
-// Returns true while the meeting scene owns the rider.
 export function applyMeeting(s: CoreState, dt: number) {
     if (s.building.corridor.room.kind === 'corridor') return false;
     const r = meetingStep(s.building.corridor.room, dt);

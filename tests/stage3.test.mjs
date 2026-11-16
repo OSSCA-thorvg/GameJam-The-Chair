@@ -61,7 +61,6 @@ test('dropping off the roof onto the sales graph rides it into an airborne stage
     const ride = driveStageThree(game, state => state.firstFlight.kind === 'ride', state => {
         flags.add(state.checkpoint);
         reactions.add(state.ductReaction.kind);
-        // The shaft's four ledges, zig-zagging up from the duct: R1, L1, R2, L2.
         if (state.ground) {
             if (state.player.x > 1480 && state.player.x < 1780 && Math.abs(state.player.y - 248) < 18) landings.add('R1');
             if (state.player.x > 1240 && state.player.x < 1540 && Math.abs(state.player.y - 78) < 18) landings.add('L1');

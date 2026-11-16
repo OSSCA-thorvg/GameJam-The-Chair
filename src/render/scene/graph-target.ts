@@ -4,7 +4,6 @@ import type { RenderCtx } from '../context';
 const PEAK = STAGE_THREE.graph.points[1];
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
-// Distance is monotonic during a ride: the joke plays once and seeks without hidden state.
 export function graphTargetPose(distance: number) {
     const sincePeak = distance - GRAPH_CORNERS[1];
     const move = clamp((sincePeak - 100) / 120);

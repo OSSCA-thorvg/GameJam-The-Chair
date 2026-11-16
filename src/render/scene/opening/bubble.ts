@@ -5,15 +5,8 @@ import type { OpeningBubble, OpeningFrame } from './timeline';
 import { SIGN_FONT, SPEECH_FONT, type FontName } from '../../fonts';
 import { circle, PathBuilder, push } from './shapes';
 
-// Speech bubbles. The shapes are ThorVG paths in screen space (so they keep their size while the camera
-// zooms); the words are ThorVG Text with a typewriter reveal.
-//   solid: the office worker, opaque white with a pointed tail.
-//   glass: the chair daydreaming, in the chair's own slate with light words and a trail of bubbles for a tail.
-//   rage:  the chair snapping, a slate spiky burst with a red edge that shakes.
-// The chair's bubbles share its slate colour, so who is talking reads at a glance.
 
 const TYPE_SPEED = 28;
-/** The chair's own colour, shared by everything it says. */
 const CHAIR_SLATE = '#4c5368';
 
 export function wrap(measure: (line: string) => number, text: string, maxWidth: number) {
@@ -43,7 +36,6 @@ function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, 
     const size = bubble.style === 'rage' ? base * 1.3 : base;
     const font: FontName = bubble.style === 'rage' ? SIGN_FONT : SPEECH_FONT;
     const measure = (line: string) => ctx.measureText(line, size, font);
-    // No face has a ♪, so a trailing one becomes a drawn note that bobs after the words.
     const message = translate(bubble.message, ctx.locale);
     const note = message.endsWith('♪');
     const noteWidth = note ? size * .8 : 0;
@@ -54,9 +46,7 @@ function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, 
     const padX = size * .9, padY = size * .6;
     const w = textWidth + padX * 2, h = lines.length * lineHeight + padY * 2;
     const tip = bubbleAnchor(ctx, bubble);
-    // The worker's bubble sits over his head; the chair's floats up and left of its backrest.
     const gap = bubble.style === 'solid' ? size * .9 : size * 2.2;
-    // The burst keeps clear of the worker's face: it goes fully left of the backrest.
     let x = bubble.speaker === 'rider' ? tip[0] - w / 2 : bubble.style === 'rage' ? tip[0] - w - size * 1.6 : tip[0] - w * .8;
     let y = tip[1] - gap - h;
     if (bubble.style === 'rage') {
@@ -74,7 +64,6 @@ function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, 
 
     let path: PathBuilder;
     if (bubble.style === 'rage') {
-        // Spiky burst; the spike nearest the speaker stretches into the tail.
         const cx = x + w / 2, cy = y + h / 2, rx = w / 2 + size * 1.1, ry = h / 2 + size * 1.1;
         const count = 26;
         const boil = Math.floor(frame.t * 14);
@@ -96,7 +85,6 @@ function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, 
         for (const point of scaled.slice(1)) path.line(...point);
         path.line(...scaled[0]);
     } else if (bubble.speaker === 'chair') {
-        // No tail on the body; small bubbles trail down to the chair instead.
         const r = Math.min(h / 2, size * .9), s = (px: number, py: number) => grow([px, py]);
         path = new PathBuilder(...s(x + r, y))
             .line(...s(x + w - r, y)).corner(...s(x + w, y), ...s(x + w, y + r))
@@ -133,7 +121,6 @@ function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, 
     ctx.beginLayer({ key, opacity: bubble.alpha });
     push(ctx, path.command(fill, { ...stroke, cap: 'round' }));
     if (bubble.style === 'glass') {
-        // The trail of bubbles from the body down to the chair, shrinking as it goes.
         const from: Vector = [ctx.clamp(tip[0], x + w * .3, x + w * .9), y + h];
         for (const [k, radius] of [[.3, .42], [.62, .28], [.88, .17]]) {
             const [bx, by] = grow([from[0] + (tip[0] - from[0]) * k, from[1] + (tip[1] - from[1]) * k]);
@@ -142,7 +129,6 @@ function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, 
     }
     ctx.endLayer();
 
-    // Words, revealed a few characters at a time.
     let shown = Math.floor(bubble.age * TYPE_SPEED * (bubble.style === 'rage' ? 2 : 1));
     const [cx, cy] = grow([x + w / 2, y + h / 2]);
     const ink = bubble.style === 'solid' ? '#2b2f3a' : bubble.style === 'rage' ? '#ffd2c6' : '#f4f1ea';
@@ -150,7 +136,6 @@ function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, 
         const visible = [...line].slice(0, Math.max(0, shown)).join('');
         shown -= [...line].length + 1;
         if (!visible) return;
-        // Keep the line's final position while it types out: anchor the revealed part at the line's left edge.
         const lineY = cy + (i - (lines.length - 1) / 2) * lineHeight * scale;
         const left = cx - lineWidths[i] / 2 * scale;
         ctx.screenText(visible, left + measure(visible) / 2 * scale, lineY, size * scale, ink, { font, opacity: bubble.alpha });
@@ -160,7 +145,6 @@ function drawBubble(ctx: RenderCtx, frame: OpeningFrame, bubble: OpeningBubble, 
     });
 }
 
-/** An eighth note that hops in time with the chair's good mood. */
 function drawNote(ctx: RenderCtx, key: string, x: number, y: number, size: number, ink: string, alpha: number, t: number) {
     const hop = Math.abs(Math.sin(t * 7)) * size * .18;
     const tilt = Math.sin(t * 7) * .12;

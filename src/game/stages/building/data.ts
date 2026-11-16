@@ -5,10 +5,6 @@ import { deepFreeze } from '../../data';
 export const TYPING_SOUNDS = deepFreeze(['typing.1', 'typing.2', 'typing.3', 'typing.4', 'typing.5'] satisfies Message[]);
 export type { StageId } from '../../types';
 export type Furniture = { kind: 'chair'; x: number; y: number; width: number; height: number; vx: number; released: boolean; cheer: number };
-// The orientation ride past the second flag: the chairs roll a little faster (`cruise`) and teach the
-// rookie to hop power cables and colleagues asleep on the floor, then the same two come back to back.
-// Each obstacle trips a rider that meets it low (`kick`, slowed to `drag`); the convoy then slows to
-// `wait` until the rookie is back aboard.
 export type Obstacle = { kind: 'cable' | 'sleeper'; x: number; width: number; height: number };
 const ORIENTATION = {
     cruise: 220, wait: 120, kick: 200, drag: .4, spin: .4, damage: 20,
@@ -19,7 +15,6 @@ const ORIENTATION = {
         { kind: 'sleeper', x: 5370, width: 80, height: 18 },
         { kind: 'sleeper', x: 5700, width: 80, height: 18 },
         { kind: 'cable', x: 5960, width: 40, height: 12 },
-        // Past the flag: the same two, back to back with no more teaching.
         { kind: 'cable', x: 6450, width: 40, height: 12 },
         { kind: 'cable', x: 6700, width: 40, height: 12 },
         { kind: 'sleeper', x: 6970, width: 80, height: 18 },
@@ -33,7 +28,6 @@ const ORIENTATION = {
         { kind: 'sleeper', x: 8790, width: 80, height: 18 },
         { kind: 'cable', x: 8990, width: 40, height: 12 },
     ] satisfies Obstacle[],
-    // Each line waits for the front chair to reach `at`, so every rule is said before its obstacle.
     lines: [
         { at: 3650, speaker: 0, text: 'chair.orientation.1' },
         { at: 4090, speaker: 1, text: 'chair.orientation.2' },
@@ -44,10 +38,6 @@ const ORIENTATION = {
         { at: 9150, speaker: 1, text: 'chair.orientation.7' },
     ] satisfies { at: number; speaker: 0 | 1 | 2; text: Message }[],
 };
-// The rush-hour corridor after orientation (`start`): a ramp (`ramp.start` rising `ramp.rise` to
-// its lip at `pit.left`) before a construction hole: a well-timed jump from the express convoy
-// gets the `launch` impulse and clears the hole; rolling up it on foot falls short.
-// The lift stays far enough past the hole that the convoy can still sweep a rookie back aboard.
 const EXPRESS = {
     start: 9600,
     ramp: { start: 10500, rise: 40 },
@@ -58,9 +48,7 @@ export const STAGE_TWO = deepFreeze({
     length: 12420, goal: 12170,
     meeting: 620,
     meetingEntry: .65,
-    // How fast a rider aboard the convoy rolls between the chairs with left or right.
     shuffle: 110,
-    // Sideways speed a hop off the orientation convoy takes from the held direction: enough to clear one chair.
     hopShift: 150,
     dispatch: { room: 1840, trigger: 1320 },
     lift: 11620,
@@ -86,7 +74,6 @@ export const CHAIR_CHAT = deepFreeze({
         { speaker: 1, text: 'chair.rush.2' },
         { speaker: 2, text: 'chair.rush.3' },
     ],
-    // Shouted back at the rookie as the front chair nears the launch ramp.
     ramp: [
         { speaker: 0, text: 'chair.ramp.1' },
         { speaker: 1, text: 'chair.ramp.2' },
@@ -119,7 +106,6 @@ export const CHAIR_CHAT = deepFreeze({
     ],
     realizing: [{ speaker: 1, text: 'chair.realizing.1' }],
     welcoming: [{ speaker: 2, text: 'chair.welcoming.1' }],
-    // The convoy waits after the rookie trips.
     trip: [
         { speaker: 2, text: 'chair.trip.1' },
         { speaker: 0, text: 'chair.trip.2' },
@@ -132,7 +118,6 @@ export function chairChatLine(chat: Exclude<ChairChat, { kind: 'waiting' }>, see
     const topic = chat.kind === 'gossip' ? seed % (lines.length / 3) : 0;
     return lines[(topic * 3 + Math.floor(chat.age / CHAIR_CHAT_INTERVAL[chat.kind])) % lines.length];
 }
-// Orientation and trip lines are said once; the others loop.
 export function chairChatOnce(kind: ChairChat['kind']) {
     return kind === 'orientation' || kind === 'trip';
 }
@@ -167,11 +152,8 @@ export type Corridor = {
     dispatchAge: number;
     dispatchStarted: boolean;
     chat: ChairChat;
-    // The next orientation line to say when the rookie (re)joins; -1 before the welcome.
     lesson: number;
-    // The orientation obstacle the rider is tripping on, so one obstacle trips it once.
     tripped: number;
-    // 'leading': rolling at the head; 'leading-airborne': jumping from there.
     convoy: 'free' | 'carried' | 'leading' | 'airborne' | 'leading-airborne';
     pace: 'casual' | 'express';
     departure: ChairDeparture;
@@ -196,7 +178,6 @@ export function createCorridor(checkpoint: number, appearanceSeed: number): Corr
     };
 }
 export function createFurniture(checkpoint = 0): Furniture[] {
-    // At the mid-orientation flag the rider respawns among the chairs, just before the next cables.
     const front = checkpoint >= 2 ? STAGE_TWO.checkpoints[checkpoint].x + (checkpoint === 3 ? 90 : 190) : STAGE_TWO.dispatch.room + 12;
     return [0, 1, 2].map(i => {
         const x = checkpoint >= 2 ? front - i * 130 : front;

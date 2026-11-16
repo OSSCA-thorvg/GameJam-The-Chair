@@ -32,7 +32,6 @@ export type Paper = {
     landed: boolean;
     volley: number;
     safe: boolean;
-    // A stapled bundle of reports is bigger, heavier and shoves the chair back.
     kind: 'sheet' | 'bundle';
 };
 export type Input = 'left' | 'right' | 'q' | 'e' | 'spray' | 'forward' | 'back' | 'brake';

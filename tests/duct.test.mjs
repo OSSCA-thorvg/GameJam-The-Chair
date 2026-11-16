@@ -10,7 +10,6 @@ function at(x, y = 226) {
     return s;
 }
 function tick(s, seconds) { for (let i = 0; i < Math.round(seconds * 120); i++) applyRooftop(s, [], 1 / 120); }
-// The ejected junk: four energy-drink cans, three coffee cups, an empty badge, two ties and twelve printouts.
 function props(s) {
     const ctx = createRenderCtx({}); Object.assign(ctx, { state: viewState(s) }); rooftopDuct(ctx);
     const marks = Object.values(DUCT_PROP_COLORS);

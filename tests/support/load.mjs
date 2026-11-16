@@ -1,6 +1,3 @@
-// Bundles TypeScript sources with esbuild and imports them in Node tests.
-// bundled(options): any esbuild options (entryPoints or stdin); load(path): one source file.
-// Results are cached per test process, so files that load the same module build it once.
 import { build } from 'esbuild';
 
 const cache = new Map();
@@ -17,5 +14,4 @@ export function bundled(options) {
 
 export const load = path => bundled({ entryPoints: [path] });
 
-/** Re-exports the given lines (e.g. "export { createGame } from './src/game/game';") as one bundle. */
 export const loadSource = contents => bundled({ stdin: { contents, resolveDir: process.cwd() } });

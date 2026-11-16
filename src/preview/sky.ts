@@ -226,7 +226,6 @@ export function skyToOrbit(): PreviewScene {
         const state = game.getSnapshot();
         if (state.stage === 5 && !markers.some(marker => marker.label === 'Stage 5')) markers.push({ at: i / 60, label: 'Stage 5' });
         const age = state.stage === 5 && state.orbit ? state.orbit.age : -1;
-        // The chair flies on by itself: steer right, then left and up, then let go.
         game.setInput(...(age < 0 ? [] : age < 1.6 ? ['right' as const] : age < 3.2 ? ['left' as const, 'forward' as const] : []));
         stepGame(game, effects);
         frames.push(capture(game, effects));

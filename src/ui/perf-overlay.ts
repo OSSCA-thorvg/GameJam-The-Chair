@@ -2,22 +2,11 @@ import { translate, type Locale } from '../i18n';
 import { createLayerOverrides, createRenderStats, type LayerOverrides, type RenderStats } from '../render/perf';
 import { createLayerPanel } from './perf-layers';
 
-/**
- * Developer performance overlay (toggle with F3 or `, or open with `?debug=1`).
- *
- * It lives outside the deterministic core: everything here is presentation-side timing. While closed it
- * measures nothing, and while open it keeps its own cost low — text refreshes a few times a second and the
- * graph is a separate Canvas2D element, so the ThorVG canvas being measured never draws overlay pixels.
- */
 
-/** Main-loop timings for one browser frame (ms). */
 export type FrameSample = {
-    /** Time since the previous browser frame. */
     frameMs: number;
-    /** `game.advance()` (or replay/opening advance). */
     simMs: number;
     ticks: number;
-    /** Accumulated simulation time discarded on a mode change. */
     droppedMs: number;
     hudMs: number;
 };
@@ -25,28 +14,22 @@ export type FrameSample = {
 export type PerfSurface = {
     backend: string;
     renderError: string | null;
-    /** Canvas size in CSS px and the game's own DPR (used by the Canvas2D layers). */
     width: number;
     height: number;
     dpr: number;
-    /** Pixels the vector renderer actually rasterizes, and the DPR it applied. */
     raster: { width: number; height: number; dpr: number };
-    /** Backend that was asked for; a different `backend` means ThorVG failed to start with it. */
     requested: string;
-    /** GPU timer state: on, unsupported by this browser, idle (not created yet) or n/a (not WebGL). */
     gpuTimer: 'on' | 'unsupported' | 'idle' | 'n/a';
 };
 
 type PerfDeps = {
     profile(stats: RenderStats | null): void;
-    /** Applies (or with null, removes) debug layer hiding and flattening. */
     layerOverrides(overrides: LayerOverrides | null): void;
     surface(): PerfSurface | null;
 };
 
 const HISTORY = 240;
 const TEXT_INTERVAL = 200;
-/** Graph range: at least 50 ms, growing in 50 ms steps up to 250 ms so slow devices stay readable. */
 const GRAPH_MIN_MS = 50;
 const GRAPH_MAX_MS = 250;
 const SERIES = ['sim', 'build', 'sync', 'render', 'hud'] as const;
@@ -63,13 +46,11 @@ function ring() {
 const mb = (bytes: number | null) => bytes === null ? 'n/a' : `${(bytes / 1048576).toFixed(1)} MB`;
 const ms = (value: number) => `${value.toFixed(2)}`;
 
-/** Bytes of the ThorVG WebAssembly heap. It only grows, so its size tracks the module's peak use. */
 function wasmMemory(): number | null {
     const module = (globalThis as { __ThorVGModule?: { HEAPU8?: Uint8Array } }).__ThorVGModule;
     return module?.HEAPU8?.buffer.byteLength ?? null;
 }
 
-/** Chrome-only JS heap figures. */
 function jsHeap(): { used: number; total: number; limit: number } | null {
     const memory = (performance as Performance & {
         memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number };
@@ -84,7 +65,6 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
     const dropped = ring();
     const series: Record<Series, Float64Array> = { sim: ring(), build: ring(), sync: ring(), render: ring(), hud: ring() };
     const overlayCost = ring();
-    // GPU ms whose timer results arrived in each frame (NaN when none did). They describe earlier frames.
     const gpu = ring().fill(NaN);
     const reordered = new Uint8Array(HISTORY);
     let head = 0;
@@ -136,7 +116,6 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
         open = next;
         panel.hidden = !open;
         deps.profile(open ? stats : null);
-        // Layer switches only live while the overlay is open, so a closed overlay never hides scenery.
         layers.clear();
         deps.layerOverrides(open ? overrides : null);
         count = 0;
@@ -151,7 +130,6 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
         if (open) applyLocale();
     }
 
-    /** Average, p95 and max of the newest samples covering about one second of frames. */
     function window1s() {
         const picked: number[] = [];
         const sums: Record<Series, number> = { sim: 0, build: 0, sync: 0, render: 0, hud: 0 };
@@ -242,7 +220,6 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
                 g.fillRect(x, y(frames[i]), Math.max(1, bar), y(base) - y(frames[i]));
             }
         }
-        // GPU time runs alongside the CPU work, so it is a line over the bars, not another bar segment.
         g.strokeStyle = COLORS.gpu;
         g.lineWidth = 1.5;
         g.beginPath();
@@ -315,7 +292,6 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
         series.sync[i] = stats.syncMs;
         series.render[i] = stats.renderMs;
         gpu[i] = stats.gpuMs.length ? stats.gpuMs.reduce((a, b) => a + b, 0) / stats.gpuMs.length : NaN;
-        // `reorders` counts paint-order rebuilds inside the history window.
         if (count === HISTORY && reordered[i]) reorders--;
         reordered[i] = stats.reorder ? 1 : 0;
         if (stats.reorder) reorders++;
@@ -359,7 +335,6 @@ export function createPerfOverlay(root: HTMLElement, getLocale: () => Locale, de
             return open;
         },
         toggle: (next = !open) => setOpen(next),
-        /** Console access to the layer switches (the overlay must be open). */
         layers: {
             hide: (key: string, on = true) => layers.set(key, 'hide', on),
             flatten: (key: string, on = true) => layers.set(key, 'flat', on),

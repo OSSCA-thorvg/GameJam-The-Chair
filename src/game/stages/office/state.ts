@@ -3,19 +3,18 @@ import type { Paper } from '../../types';
 import { createUrgentCopier, type Copier, type UrgentCopier } from './copier/decide';
 import type { Bucket, Cleaning } from './cleaning/decide';
 
-// Everything the office changes during an attempt. Lives in state.office.
 export type OfficeState = {
     copier: Copier;
-    urgent: UrgentCopier;      // the executive printer's urgent reports
-    volley: number;            // copier volleys fired
-    bursts: number;            // paper shots fired
+    urgent: UrgentCopier;
+    volley: number;
+    bursts: number;
     papers: Paper[];
     paperHits: number;
     paperPenaltyRemaining: number;
     cleaning: Cleaning;
     bucket: Bucket;
-    soakedOnSpill: number;     // last spill that splashed the rider
-    slip: boolean;             // wheels on the wet floor this tick
+    soakedOnSpill: number;
+    slip: boolean;
     wetSeen: boolean;
     slipCooldown: number;
     inBin: boolean;

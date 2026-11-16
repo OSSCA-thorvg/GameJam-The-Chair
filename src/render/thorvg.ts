@@ -11,11 +11,7 @@ export type { ThorvgRenderer } from './backend';
 let engine: ReturnType<typeof init> | null = null;
 let chosen: ThorvgRenderer | null = null;
 
-/**
- * Whether WebGL2 runs on the GPU. Without a usable GPU, browsers emulate WebGL on the CPU (SwiftShader,
- * llvmpipe), which is far slower than ThorVG's own software renderer, so that counts as unavailable.
- * `failIfMajorPerformanceCaveat` alone is not enough: Chromium still hands out SwiftShader contexts.
- */
+// Chromium may return SwiftShader even with failIfMajorPerformanceCaveat; reject software WebGL.
 function hardwareWebGL2() {
     try {
         const probe = document.createElement('canvas');
@@ -38,7 +34,6 @@ function requestedRenderer() {
     }
 }
 
-/** The backend ThorVG was (or will be) started with. */
 export function thorvgRenderer(): ThorvgRenderer {
     chosen ??= chooseRenderer(hardwareWebGL2(), requestedRenderer());
     return chosen;
@@ -46,10 +41,6 @@ export function thorvgRenderer(): ThorvgRenderer {
 
 const FONTS = [[SIGN_FONT, signFontUrl], [LABEL_FONT, labelFontUrl], [SPEECH_FONT, speechFontUrl]] as const;
 
-/**
- * Register a face with ThorVG, and with the document so the Canvas2D fallback draws the same glyphs.
- * A failure only costs that face, never the renderer.
- */
 async function loadFont(TVG: Awaited<ReturnType<typeof init>>, name: string, url: string) {
     try {
         const res = await fetch(url);

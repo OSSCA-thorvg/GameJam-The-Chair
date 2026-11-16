@@ -30,7 +30,6 @@ export function playerChair(ctx: RenderCtx) {
     ctx.rotation = rotation;
 }
 
-/** Where the backrest post meets the seat: the backrest swings about here in the opening. */
 const BACKREST_PIVOT: [number, number] = [-24, -12];
 
 function backrest(ctx: RenderCtx) {

@@ -1,16 +1,12 @@
 import { STAGE_PRESENTATION } from '../presentation/stages';
-// To change a key, edit CONTROLS; labels in the menu and in the world update automatically.
 import type { Game, GameStatus } from '../game/game';
 import type { Input } from '../game/types';
 
 export type Action = 'up' | 'down' | 'left' | 'right' | 'jump' | 'spray' | 'meeting' | 'pause' | 'restart';
 
 interface Control {
-    /** KeyboardEvent.key values (letters are matched case-insensitively). */
     keys: readonly string[];
-    /** Text shown in the controls list and world pictograms. */
     label: string;
-    /** When this control is active; omitted means always. Earlier entries win when keys overlap. */
     when?: (status: GameStatus) => boolean;
 }
 
@@ -19,7 +15,6 @@ export const CONTROLS: Readonly<Record<Action, Control>> = {
     down:      { keys: ['ArrowDown', 's'], label: '↓ / S', when: s => STAGE_PRESENTATION[s.stage].controls.flight },
     left:      { keys: ['ArrowLeft'], label: '←' },
     right:     { keys: ['ArrowRight'], label: '→' },
-    // Space is reserved for the extinguisher, so jumping is Up-only in every stage.
     jump:      { keys: ['ArrowUp'], label: '↑' },
     spray:     { keys: [' '], label: 'Space', when: s => STAGE_PRESENTATION[s.stage].controls.spray },
     meeting:   { keys: ['ArrowDown'], label: '↓', when: s => STAGE_PRESENTATION[s.stage].controls.meeting },
@@ -27,7 +22,6 @@ export const CONTROLS: Readonly<Record<Action, Control>> = {
     restart:   { keys: ['r'], label: 'R' },
 };
 
-/** Short key name used by in-world pictograms (e.g. the extinguisher pickup). */
 export const SPRAY_KEY = 'Space';
 export const MOVE_LABEL = '← →';
 
@@ -43,7 +37,6 @@ export function actionForKey(key: string, state: GameStatus): Action | null {
     return null;
 }
 
-/** Fill `[data-control-label="action"]` elements with their key label. */
 export function applyControlLabels(root: ParentNode) {
     root.querySelectorAll?.<HTMLElement>('[data-control-label]').forEach(el => {
         const action = el.dataset.controlLabel;
@@ -52,7 +45,6 @@ export function applyControlLabels(root: ParentNode) {
 }
 
 interface ControlHooks {
-    /** Return false to ignore gameplay keys (e.g. while the splash is visible). */
     accepting: (e: KeyboardEvent) => boolean;
     togglePause: () => void;
     afterRestart: () => void;

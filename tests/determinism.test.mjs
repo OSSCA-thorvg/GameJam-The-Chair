@@ -3,7 +3,6 @@ import test from 'node:test';
 import { begin, runWith, sampleCommands } from './support/harness.mjs';
 import { determinismTests } from './support/determinism.mjs';
 
-// Scripted inputs in every stage. Closed-loop routes are in determinism-routes.test.mjs.
 const scenarios = [
     { name: 'office', start: { stage: 1 }, ticks: 120 * 40 },
     { name: 'building', start: { stage: 2 }, ticks: 120 * 30 },

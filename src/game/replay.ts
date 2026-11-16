@@ -1,5 +1,3 @@
-// Replays: record an attempt as (start state, commands by tick), check it with state hashes, and play it
-// back with seekable keyframes. Pure core module: no DOM, storage or clock; the UI supplies those.
 import { parseCommand, type Command } from './commands';
 import { CONFIG_VERSION } from './stages/index';
 import { clonePlain, configHash, deepFreeze } from './data';
@@ -8,19 +6,17 @@ import type { CoreState } from './state';
 import type { GameEvent } from './types';
 import { assertGameState } from './validation';
 
-// 3: adds the orbit stage state and continuous braking input.
 export const REPLAY_FORMAT = 3;
 
-// Tunable from the pause menu. Ticks are fixed 1/120 s steps.
 export type ReplaySettings = {
-    enabled: boolean;         // record attempts while playing
-    hashInterval: number;     // ticks between recorded state hashes (divergence check)
-    keyframeInterval: number; // ticks between seek points built when a replay is opened
-    maxCommands: number;      // commands kept per attempt; longer attempts are cut off
-    keepAttempts: number;     // finished attempts kept in memory besides the current one
-    maxErrors: number;        // entries kept in the error log
-    playbackSpeed: number;    // default playback speed
-    warmupSeconds: number;    // simulated time run before a seek target so effects settle
+    enabled: boolean;
+    hashInterval: number;
+    keyframeInterval: number;
+    maxCommands: number;
+    keepAttempts: number;
+    maxErrors: number;
+    playbackSpeed: number;
+    warmupSeconds: number;
 };
 
 export const REPLAY_DEFAULTS: Readonly<ReplaySettings> = deepFreeze({
@@ -46,8 +42,7 @@ const RANGES: Record<Exclude<keyof ReplaySettings, 'enabled'>, readonly [number,
 
 export const REPLAY_SETTING_RANGES = RANGES;
 
-// Timeline construction is synchronous. Keep imported and locally recorded attempts small enough
-// to validate and index without letting one file monopolize the browser's main thread.
+// Bound synchronous timeline construction to avoid blocking the browser.
 export const REPLAY_FILE_LIMITS = deepFreeze({
     characters: 5_000_000,
     commands: REPLAY_DEFAULTS.maxCommands,
@@ -56,7 +51,6 @@ export const REPLAY_FILE_LIMITS = deepFreeze({
     sources: 50,
 });
 
-/** Accepts anything (saved JSON, form values) and returns valid settings, falling back to defaults. */
 export function normalizeReplaySettings(input: unknown): ReplaySettings {
     const source = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
     const settings: ReplaySettings = { ...REPLAY_DEFAULTS };
@@ -74,14 +68,14 @@ export type ReplayError = { tick: number; at: 'step' | 'command' | 'window'; mes
 
 export type ReplayFile = {
     format: typeof REPLAY_FORMAT;
-    version: string;                  // CONFIG_VERSION of the build that recorded it
+    version: string;
     seed: number | null;
-    start: CoreState;                 // state when the attempt began
+    start: CoreState;
     commands: [tick: number, command: Command][];
     hashes: [tick: number, hash: string][];
-    endTick: number;                  // last tick to simulate
-    truncated: boolean;               // stopped recording at maxCommands
-    error: ReplayError | null;        // first error in the attempt, if any
+    endTick: number;
+    truncated: boolean;
+    error: ReplayError | null;
 };
 
 export function hashState(state: Readonly<CoreState>): string {
@@ -116,7 +110,6 @@ export function parseReplayError(value: unknown): ReplayError | null {
     };
 }
 
-/** Parses and checks a replay file. Throws an Error with a short reason when it is not one. */
 export function parseReplay(text: string): ReplayFile {
     if (text.length > REPLAY_FILE_LIMITS.characters) throw new Error('replay file is too large');
     let data: unknown;
@@ -159,10 +152,6 @@ export function parseReplay(text: string): ReplayFile {
     return { format: REPLAY_FORMAT, version, seed: typeof seed === 'number' ? seed : null, start, commands, hashes, endTick: data.endTick, truncated, error };
 }
 
-/**
- * Collects the current attempt from the createGame hooks. Pass the returned hooks to createGame.
- * `getSettings` is read on every call, so settings changes apply immediately.
- */
 export function createRecorder(getSettings: () => ReplaySettings, seed: number | null = null) {
     let current: ReplayFile | null = null;
     const finished: ReplayFile[] = [];
@@ -211,13 +200,10 @@ export function createRecorder(getSettings: () => ReplaySettings, seed: number |
             // A failing step happens on the next tick: simulate up to it so playback reproduces the error.
             if (error.at === 'step') current.endTick = error.tick + 1;
         },
-        /** Whether an attempt is being recorded; it is then the first of `attempts()`. */
         get recording() { return !!current; },
-        /** The attempt in progress and the finished ones kept, newest first, as detached copies. */
         attempts(): ReplayFile[] {
             return [current, ...finished.slice().reverse()].filter((file): file is ReplayFile => !!file).map(file => clonePlain(file));
         },
-        /** The newest attempt worth watching: at least half a second long, or one that ended in an error. */
         latest(minTicks = 60): ReplayFile | null {
             const file = [current, ...finished.slice().reverse()].find(file => file && (replayLength(file) >= minTicks || !!file.error));
             return file ? clonePlain(file) : null;
@@ -237,12 +223,11 @@ export type Timeline = {
     endTick: number;
     keyframes: Keyframe[];
     markers: Marker[];
-    divergedAt: number | null;      // first tick whose state hash differs from the recording
-    error: ReplayError | null;      // error reproduced while building the timeline
+    divergedAt: number | null;
+    error: ReplayError | null;
     versionMismatch: boolean;
 };
 
-/** A position in a replay. `next()` advances by one command or one fixed step. */
 export function createCursor(file: Readonly<ReplayFile>, from: Keyframe = { state: file.start, index: 0 }) {
     let state = from.state;
     let index = from.index;
@@ -250,7 +235,6 @@ export function createCursor(file: Readonly<ReplayFile>, from: Keyframe = { stat
     return {
         get state() { return state; },
         get index() { return index; },
-        /** The next thing that would happen: a command at this tick, a step, or the end. */
         pending(): 'command' | 'step' | 'end' {
             if (index < commands.length && commands[index][0] <= state.tick) return 'command';
             if (state.tick >= file.endTick || !SIMULATED.includes(state.mode)) return 'end';
@@ -268,7 +252,6 @@ export function createCursor(file: Readonly<ReplayFile>, from: Keyframe = { stat
     };
 }
 
-/** Runs the whole replay once, collecting seek keyframes, markers and the hash check. */
 export function buildTimeline(input: Readonly<ReplayFile>, keyframeInterval: number = REPLAY_DEFAULTS.keyframeInterval): Timeline {
     if (input.endTick - input.start.tick > REPLAY_FILE_LIMITS.ticks) throw new Error('replay is too long');
     if (input.commands.length > REPLAY_FILE_LIMITS.commands) throw new Error('too many commands');
@@ -317,7 +300,7 @@ export function buildTimeline(input: Readonly<ReplayFile>, keyframeInterval: num
     };
 }
 
-/** A cursor positioned at `tick` (after the step that reached it, before its commands). */
+// Position after the step reaching `tick`, before commands at that tick.
 export function seekTimeline(timeline: Readonly<Timeline>, tick: number) {
     const target = Math.max(timeline.startTick, Math.min(timeline.endTick, tick));
     let keyframe = timeline.keyframes[0];
@@ -332,8 +315,6 @@ export function seekTimeline(timeline: Readonly<Timeline>, tick: number) {
 
 export type ReplayCursor = ReturnType<typeof createCursor>;
 
-// Everything the game exports for developers: recent attempts and the error log, each error with the
-// replay of the attempt that failed. Read-only for players; opened in the replay tool (/replay.html).
 export type ReplayErrorEntry = ReplayError & { time: string; stage: number | null; replay: ReplayFile | null };
 export type ReplayData = {
     kind: 'the-chair-replay-data';
@@ -347,10 +328,6 @@ export type ReplayData = {
 
 export type ReplaySource = { label: string; kind: 'attempt' | 'error' | 'file'; file: ReplayFile; error: ReplayErrorEntry | null };
 
-/**
- * Accepts a replay data bundle, a single replay file, or an older error log, and lists the replays inside.
- * Entries without a usable replay are skipped. Throws when nothing in the text is a replay.
- */
 export function readReplaySources(text: string): { sources: ReplaySource[]; data: Record<string, unknown> | null } {
     if (text.length > REPLAY_FILE_LIMITS.characters) throw new Error('replay file is too large');
     let raw: unknown;

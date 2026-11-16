@@ -2,7 +2,7 @@ import { STAGE_FOUR, skyHazards, skyHeadwind, skyPlatforms, skySurface, skyWind,
 import type { Player, Point } from '../../../types';
 import * as Det from '../../../math';
 
-// Robot parrots count as gear for focus; offset their ids so they never share a token with a floating gear loop.
+// Offset parrot focus IDs to avoid collisions with floating gear IDs.
 const ROBOT_FOCUS_ID = 1_000_000;
 
 export type SkyInput = {
@@ -13,7 +13,7 @@ export type SkyInput = {
     jumpQ: number;
     checkpoint: number;
     time: number;
-    direction: number;  // -1, 0, 1 left/right
+    direction: number;
     length: number;
     sprayBurst: number;
     sprayDir: Readonly<Point>;
@@ -22,14 +22,13 @@ export type SkyResult = Omit<SkyInput, 'time' | 'direction' | 'length' | 'sky' |
     sky: SkyState;
     p: Player;
     sprayDir: Point;
-    speed: number | null;  // null leaves actualSpeed unchanged
-    reached: boolean;      // a new flag was saved
-    fell: boolean;         // dropped below the last flag and was put back
+    speed: number | null;
+    reached: boolean;
+    fell: boolean;
     won: boolean;
-    hit: { kind: SkyHazardKind; focusId: number } | null;  // a paper bundle, bird or office gear knocked the chair back this tick
+    hit: { kind: SkyHazardKind; focusId: number } | null;
 };
 
-// then an automatic side-to-back camera turn and final hold. Works on its own copies.
 export function skyStep(input: SkyInput, dt: number): SkyResult {
     const sky = { ...input.sky };
     const p = { ...input.p };
@@ -72,12 +71,10 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
     } else {
         const before = skyPlatforms(sky, time - dt);
         const oldStanding = before.find(platform => platform.id === sky.standing);
-        // The windows grow once the chair has touched the arrival roof, and stay grown after a fall.
         if (sky.lift > 0 || sky.standing === 'arrival-roof' || checkpoint > 0) sky.lift = Math.min(1, sky.lift + dt * .45);
         sky.knock = Math.max(0, sky.knock - dt);
         if (sky.knock === 0) sky.knockKind = null;
         const wind = skyWind(time);
-        // The sign blows flat only while a gust is on it, folding back down in the calm.
         const targetTilt = -.12 - (1 - wind) * 1.12;
         sky.signTilt += ((sky.standing === 'wind-sign' ? -.12 : targetTilt) - sky.signTilt) * Math.min(1, dt * 2);
         if (sky.standing === 'drawer-desk') {
@@ -88,7 +85,6 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
         const platforms = skyPlatforms(sky, time);
         const standing = platforms.find(platform => platform.id === sky.standing);
         if (ground && oldStanding && standing) {
-            // Ride the rocking desk: carried sideways with it and kept on its face.
             const carried = standing.x - oldStanding.x;
             p.y += skySurface(standing, p.x + carried) - skySurface(oldStanding, p.x);
             p.x += carried;
@@ -109,8 +105,6 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
             const body = { x: p.x, y: p.y - 20 };
             const struck = skyHazards(time).find(item => Det.hypot(item.x - body.x, item.y - body.y) < item.r + STAGE_FOUR.knock.reach);
             if (struck) {
-                // Papers slap the chair backwards and up; a bird clips it back and down; office gear, robot parrots
-                // included, bounces it away from the impact.
                 const metal = struck.kind === 'gear' || struck.robot !== undefined;
                 hit = struck.robot ? { kind: 'gear', focusId: ROBOT_FOCUS_ID + struck.focusId } : { kind: struck.kind, focusId: struck.focusId };
                 sky.knock = STAGE_FOUR.knock.cooldown;

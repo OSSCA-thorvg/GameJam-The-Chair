@@ -15,7 +15,6 @@ export function monitorPhase(m: MonitorSpec, t: number) {
 
 export type MonitorContact = { index: number; x: number; vx: number; focus: FocusHit };
 
-// The first lit monitor the chair touches pushes it back to the side it came from.
 export function monitorContact(p: Readonly<Point>, previousX: number, time: number): MonitorContact | null {
     if (p.y + 28 < 300) return null;
     for (let i = 0; i < LEVEL.monitors.length; i++) {

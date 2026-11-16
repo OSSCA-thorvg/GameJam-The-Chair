@@ -9,15 +9,11 @@ export type PreviewScene = {
     label: string;
     duration: number;
     focusX: number;
-    // Follow the chair with the camera (centred) instead of holding it at `focusX`.
     follow?: boolean;
     markers: readonly { at: number; label: string }[];
     sample(time: number): { state: GameSnapshot; effects: EffectsState };
-    // Cutscene frames draw with their own camera and overlays instead of the stage scene.
     opening?(time: number): OpeningFrame;
-    // Spoken lines shown over the scene at this time.
     talk?(time: number, locale: Locale): SceneTalk;
-    // The title screen draws its own looping scene at this time.
     title?: boolean;
 };
 

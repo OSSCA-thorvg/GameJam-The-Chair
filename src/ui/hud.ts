@@ -22,7 +22,6 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
     let previousFocus = 100;
     let focusIntroduced = false;
     let introduceUntil = 0;
-    // `cutscene`: the opening is playing over a fresh game, so every game HUD element stays out of the way.
     function draw(state: GameSnapshot, feedback: FeedbackState, effects: EffectsState, cutscene = false) {
         const t = (message: Message) => translate(message, getLocale());
         const { mode, focus } = state;
@@ -63,7 +62,6 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         hidden('[data-jump]', !policy.hud.jump);
         hidden('.balance-controls', !policy.hud.balance);
         hidden('[data-meeting-help]', !policy.controls.meeting);
-        // In stage five the extinguisher fires on its own.
         hidden('[data-spray-help]', !state.hasExtinguisher || !policy.hud.manualSpray);
         hidden('[data-spray]', !state.hasExtinguisher || !policy.hud.manualSpray);
         hidden('[data-stage-menu]', state.completedStage === 0);
@@ -71,10 +69,8 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
             hidden(`[data-stage="${stage}"]`, !isStageUnlocked(stage, state.completedStage));
         }
         const panel = feedback.panel;
-        // The game-over panel waits until the end-of-run close-up has eased back to the usual framing.
         const closeUp = !!effects.deathShot && !effects.deathShot.done;
         hidden('[data-overlay]', cutscene || closeUp || (mode !== 'intro' && !panel));
-        // On the title screen the scene draws the title and the start sign; the DOM keeps them for input and readers.
         q('[data-overlay]')?.classList.toggle('title-screen', mode === 'intro' && state.stage === 1 && !cutscene);
         if (mode === 'intro') {
             text('[data-title]', 'THE CHAIR');

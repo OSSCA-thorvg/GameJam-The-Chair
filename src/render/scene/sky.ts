@@ -16,7 +16,6 @@ function atmosphere(ctx: RenderCtx) {
     for (let i = -2; i < 7; i++) {
         const drift = ctx.cam * .18 + ctx.t * 4;
         const x = ctx.cam + i * 290 - drift % 290;
-        // Follow each cloud as it scrolls, so it keeps its own shape after wrapping round.
         const id = i + Math.floor(drift / 290);
         cloud(ctx, x, top + height * (.98 + Math.sin(i * 4) * .065), .8 + (i % 2) * .2, 700 + id * 2, false);
         if (i % 2 === 0) cloud(ctx, x + 110, top + height * .08, .65, 701 + id * 2, false);
@@ -42,14 +41,11 @@ export function drawSky(ctx: RenderCtx) {
     }
     skyHazardsArt(ctx);
     sprayPlume(ctx);
-    // Foreground cloud edges frame open space without hiding the next landing.
     ctx.beginLayer({ key: 'sky-near-clouds', opacity: .75 });
     const bottom = ctx.H / ctx.scale - ctx.vertical;
     cloud(ctx, ctx.cam - 100 - Math.sin(ctx.t * .15) * 25, bottom + 60, 1.45, 901, true);
     cloud(ctx, ctx.cam + ctx.VW + 130, bottom + 45, 1.7, 902, true);
     ctx.endLayer();
-    // The chair stays above the near clouds so a falling player is never lost behind them,
-    // and its knock feathers and spray gauge sit on top of it — all inside the ThorVG scene.
     player(ctx);
     skyKnockFeathers(ctx);
     skyKnockKeycaps(ctx);

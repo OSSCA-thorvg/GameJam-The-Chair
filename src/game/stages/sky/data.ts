@@ -5,18 +5,12 @@ export const STAGE_FOUR = deepFreeze({
     length: 6100,
     goal: 5410,
     arrivalY: -1820,
-    // The 3D turn to the chair's back, then the glide past the watching cameras into stage five.
     reveal: { settle: 2.65, turn: 8.4, hold: 2.7 },
     spawn: { x: 2380, y: -1820 },
-    // One flag halfway: the start, then the floating desk after the gusty sign.
     checkpoints: [{ x: 2380, y: -1820 }, { x: 3790, y: -2078 }],
-    // Falling below this line returns the chair to its last flag.
     fallY: -1480,
-    // Bursts per time in the air; touching down refills them.
     airSprayLimit: 3,
-    // A steady headwind (px/s²) with a gust every `period` seconds: calm, then a warning breeze, then the blow.
     wind: { base: 55, gust: 205, period: 7.5, calm: 3, warn: 1.5, rise: .35, blow: 2.2, fall: .45, ground: .55 },
-    // Desks rock back and forth on the gusts, so standing still on one takes steering.
     rock: { tilt: .2, sway: 26, slide: 520, speed: 1.55 },
     knock: { cooldown: .7, reach: 34 },
 });
@@ -53,7 +47,6 @@ function cycle(time: number, period: number) {
     return time - Math.floor(time / period) * period;
 }
 
-/** `warn` rises before each gust (0..1) and `strength` is the gust itself (0..1). */
 export function skyGust(time: number) {
     const w = STAGE_FOUR.wind;
     const t = cycle(time, w.period);
@@ -68,13 +61,11 @@ export function skyGust(time: number) {
     return { warn, strength };
 }
 
-/** Leftward push against the course in px/s². */
 export function skyHeadwind(time: number) {
     return STAGE_FOUR.wind.base + STAGE_FOUR.wind.gust * skyGust(time).strength;
 }
 
 export function skyWind(time: number) {
-    // 0 in the steady breeze, 1 at the height of a gust. Ribbons, wisps and the sign follow it.
     return skyGust(time).strength;
 }
 
@@ -115,9 +106,6 @@ export function skySurface(platform: Readonly<SkyPlatform>, x: number) {
 
 export type SkyHazard = { id: string; kind: SkyHazardKind; x: number; y: number; r: number; spin: number; focusId: number; item?: SkyGearItem; robot?: SkyRobot };
 
-// Paper bundles ride each gust in from beyond the right edge, cross their stretch of the course, then drop out
-// of sight below. Birds swoop down from above, glide across the upper desks and climb away out of view, so
-// nothing ever blinks out on screen. Every path is a pure function of time.
 const PAPER_LANES = deepFreeze([
     { from: 3640, to: 2820, y: -1905, lag: 0, speed: 360 },
     { from: 3960, to: 3150, y: -2105, lag: .55, speed: 330 },
@@ -131,7 +119,6 @@ const BIRD_LANES = deepFreeze([
     { from: 5560, to: 4700, y: -2450, period: 8.4, offset: 6.1, speed: 185 },
 ]);
 const BIRD_PATH = { swoop: 1.4, reach: 260, height: 950, climb: 240 };
-// Office gear adrift over the gaps: each piece bobs and sways on its own slow loop, so every hop has an opening.
 const GEAR = deepFreeze([
     { item: 'keyboard', x: 3230, y: -2150, r: 14, ax: 18, ay: 48, period: 4.6, phase: 0 },
     { item: 'mouse', x: 2900, y: -1835, r: 9, ax: 30, ay: 40, period: 3.8, phase: 1.7 },
@@ -142,7 +129,6 @@ const GEAR = deepFreeze([
     { item: 'mouse', x: 5090, y: -2475, r: 9, ax: 22, ay: 52, period: 4.2, phase: 5.3 },
 ] as const);
 
-// About one pass in four is a chrome robot parrot instead of a real bird; it hits like office gear.
 export function skyBirdRobot(focusId: number): SkyRobot | null {
     let n = Math.imul(focusId + 0x51ed, 0x2c1b3c6d);
     n = Math.imul(n ^ (n >>> 15), 0x297a2d39);

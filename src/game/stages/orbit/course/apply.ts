@@ -10,10 +10,8 @@ export function applyOrbit(s: CoreState, out: GameEvent[], dt: number) {
     s.orbit = result.orbit;
     setPlayer(s, result.p);
     s.actualSpeed = s.orbit.speed;
-    // The plume shows while the extinguisher pushes and trails off for a moment after.
     s.sprayBurst = result.spraying ? .24 : Math.max(0, s.sprayBurst - dt);
     if (result.satelliteLit && !applyFocusHit(s, out, { kind: 'satelliteLight', id: Math.floor(s.orbit.age), damage: FOCUS_DAMAGE.satelliteLight })) return;
-    // The takeover skips the shared tick, so focus comes back here (not while the beam is on the chair).
     if (s.orbit.phase !== 'parked') applyFocusRecovery(s, dt);
     if (result.flag > s.checkpoint) {
         s.focus = 100;

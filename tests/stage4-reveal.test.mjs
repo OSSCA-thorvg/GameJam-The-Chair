@@ -21,7 +21,6 @@ const { SKY_DEPARTURE, REVEAL_DURATION, revealChairOrbit, createGame, createSky,
 test('the stage four billboard slogan fills its space without covering the portrait', () => {
     const ems = { '흔들리지': 4, '않는 기업': 3.25, UNSHAKE: 5.2, 'ABLE INC.': 4.8 };
     const renderLabels = (locale, width) => {
-        // Before ThorVG loads, the base canvas measures; the copy itself is ThorVG Text in the command list.
         const bg = { measureText(text) { return { width: Number(this.font.match(/([\d.]+)px/)?.[1]) * ems[text] }; } };
         const ctx = createRenderCtx(bg);
         ctx.locale = locale;
@@ -83,8 +82,6 @@ test('the ending draws no slogans, only the departing promotion flag and the att
             const before = structuredClone(state);
             drawSky(ctx);
             assert.deepEqual(state, before, 'cinematic rendering leaves gameplay untouched');
-            // ThorVG Text: the promotion flag while the last ledge drifts away, then only the attendance bubble's line
-            // during the last second of stage four.
             const expected = phase === 'reveal' && age < 2 ? [locale === 'ko' ? '승진' : 'PROMOTED']
                 : phase === 'depth' && age > hold - 1.2 ? [locale === 'ko' ? '근태 확인됨.' : 'Attendance confirmed.'] : [];
             assert.deepEqual(ctx.commands.filter(command => command.text).map(command => command.text.content), expected);
@@ -165,7 +162,6 @@ test('the rear hair has a swept crown and a tapered nape instead of a rectangula
     for (const [x, y] of vertices) assert.ok(Number.isFinite(x) && Number.isFinite(y));
 });
 
-/** The glasses' dark arm, shaded a little on the faces of its rod. */
 const isArm = color => typeof color === 'string' && color.length >= 7
     && [1, 3, 5].every((i, k) => Math.abs(parseInt(color.slice(i, i + 2), 16) - [0x3a, 0x41, 0x4b][k]) <= 4);
 const lensPanes = commands => commands.filter(command => command.fill === '#83c8e4');
@@ -175,11 +171,9 @@ const lensBounds = pane => {
 };
 
 test('the 3D glasses have lenses on the front of the face only: none on the sides', () => {
-    // Side on, the forward-facing lenses are edge-on and culled; only the frame's arm shows.
     const side = createSkyProjection(1000, 510, 0);
     endingGlasses(side, 0);
     assert.deepEqual(lensPanes(side.commands()), [], 'no lens surface painted on the side of the face');
-    // ...but the lens edge still shows, as a thin blue line down the front of the face.
     const blue = side.commands().filter(command => typeof command.fill === 'string' && command.fill.length >= 7
         && [1, 3, 5].every((i, k) => Math.abs(parseInt(command.fill.slice(i, i + 2), 16) - [0x83, 0xc8, 0xe4][k]) <= 12));
     assert.ok(blue.length > 0, 'the lens shows side on as a line');
@@ -188,7 +182,6 @@ test('the 3D glasses have lenses on the front of the face only: none on the side
     const height = Math.max(...spread.map(([, y]) => y)) - Math.min(...spread.map(([, y]) => y));
     assert.ok(height > width * 2.5, `a thin upright line, not a surface (${width.toFixed(1)} by ${height.toFixed(1)})`);
     assert.ok(side.commands().some(command => isArm(command.fill)), 'the arm runs back along the side of the head');
-    // Face on: exactly two lenses, side by side, each wider than tall, with reflection and eyes.
     const front = createSkyProjection(1000, 510, 3, { zoom: 3 });
     endingGlasses(front, 0);
     const panes = lensPanes(front.commands()).map(lensBounds).sort((a, b) => a.left - b.left);
@@ -239,17 +232,14 @@ const bounds = commands => {
 };
 test('the reveal turns steadily from the side to behind the chair, keeping it centred in the shared camera', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
-    // Side view: the chair is exactly the standalone model, with nothing else near it.
     const side = createSkyProjection(1000, 510, 0);
     endingChair(side, settle);
     const model = side.commands();
     near(withoutBubble(revealFrame('reveal', settle)).slice(-model.length), model);
-    // Side on, the glasses show as their frame and arm; the lenses are on the front of the face.
     assert.ok(model.some(command => command.fill === '#50606a' || command.fill === '#3a414b' || isArm(command.fill)), 'the glasses remain visible');
     let previous = -1;
     for (let at = settle; at <= settle + turn + hold; at += .5) previous = (assert.ok(revealChairOrbit(at, settle) >= previous), revealChairOrbit(at, settle));
     assert.ok(Math.abs(revealChairOrbit(settle + turn, settle) - 1) < 1e-9, 'behind the chair once the turn is done');
-    // Behind the chair, its silhouette (picked out by the model's own colours) stays centred and the same size.
     for (const [phase, age] of /** @type {const} */ ([['depth', 0], ['depth', hold]])) {
         const rear = createSkyProjection(1000, 510, 1);
         endingChair(rear, settle + turn + age);
@@ -257,7 +247,6 @@ test('the reveal turns steadily from the side to behind the chair, keeping it ce
         const chair = bounds(withoutBubble(revealFrame(phase, age)).filter(command => colours.has(command.fill) && !command.layer));
         const alone = bounds(rear.commands());
         assert.ok(Math.abs((chair.left + chair.right) / 2 - 500) < 30, 'the chair stays centred');
-        // The glide's speed pulls the camera back a little, so the chair may look somewhat smaller, never tiny.
         const width = chair.right - chair.left, model = alone.right - alone.left;
         assert.ok(width <= model * 1.05 && width > model * .6, `at about the same size (${(width / model).toFixed(2)})`);
     }
@@ -266,7 +255,6 @@ test('the reveal turns steadily from the side to behind the chair, keeping it ce
 
 test('the watchers stay out of the flat side view and turn up, without fading, as the view turns into 3D', () => {
     const { settle, turn } = STAGE_FOUR.reveal;
-    // Every watcher carries a recording lamp; count those.
     const watch = (phase, age) => revealFrame(phase, age).filter(command => !command.layer && ['#ff4a3a', '#5e1d1a'].includes(command.fill));
     assert.equal(watch('reveal', settle * .9).length, 0, 'nothing in the 2D side view');
     const early = watch('reveal', settle + turn * .3), late = watch('reveal', settle + turn * .8);
@@ -314,7 +302,6 @@ test('arrival spray shortens and settles into the existing chair animation', () 
     near(plume(revealFrame('reveal', settled)), plume(chair(settled, 1, 0)));
 });
 const hex = color => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
-// Cloud bodies are the vertical gradients whose first stop is a cloud crown colour.
 const cloudBodies = (commands, tone) => commands.filter(command =>
     Array.isArray(command.fill?.stops) && command.fill.stops[0][1].slice(0, 3).join() === hex(tone.top).join());
 
@@ -323,14 +310,12 @@ test('the ending clouds are bread clouds, not flat pale ovals', () => {
     for (const [phase, age] of /** @type {const} */ ([['reveal', 0], ['reveal', settle + turn / 2], ['depth', 0], ['depth', hold]])) {
         const commands = revealFrame(phase, age);
         assert.ok(cloudBodies(commands, CLOUD_TONES.bread).length >= 5, `${phase} ${age}: bread clouds stay on screen`);
-        // The old ending drew its clouds as flat ovals in these two colours (the spray shares the base colour).
         assert.ok(!commands.some(command => command.fill === '#f6e6dfbe' || command.fill === '#f6e6dfc3'));
     }
 });
 
 test('ending clouds are bread from the start and none vanishes while the camera turns', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
-    // Cloud bodies: linear crown-to-belly gradients whose underside fades out.
     const bodies = commands => commands.filter(command => !command.layer?.key?.startsWith('orbit-satellite-light') && Array.isArray(command.fill?.stops) && !command.fill.radius
         && command.fill.stops.length === 3 && command.fill.stops[2][1][3] === 0);
     const bread = hex(CLOUD_TONES.bread.top).join();
@@ -353,7 +338,6 @@ test('the last ending frame shows the same bread clouds as the first frame of st
 });
 
 test('the last frame of the stage four reveal is the first frame of stage five', () => {
-    // Everything but the rider's bubble, whose pop-in scale follows its own clock in both stages.
     const last = withoutBubble(revealFrame('depth', STAGE_FOUR.reveal.hold));
     const first = withoutBubble(renderFrame(5));
     assert.equal(last.length, first.length);

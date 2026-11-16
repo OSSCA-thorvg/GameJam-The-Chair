@@ -10,7 +10,6 @@ export function waterExposure(bucketAge: number, p: Readonly<Point>, cleaningX: 
     return bucketAge < RULES.waterExposure && Math.abs(p.x - cleaningX) < 210 && p.y > LEVEL.floor - 150;
 }
 
-// The bucket tips over when the chair rolls up to it, then refills before it can tip again.
 export function cleaningStep(input: { p: Readonly<Point>; cleaning: Readonly<Cleaning>; bucket: Readonly<Bucket>; soakedOnSpill: number }, dt: number): CleaningResult {
     const { p } = input;
     const cleaning = { ...input.cleaning };

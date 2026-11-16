@@ -29,7 +29,6 @@ test('the rooftop sales chart support ends cleanly at the top edge', () => {
     game.startStage(3);
     const state = game.getSnapshot();
     const ctx = createRenderCtx({});
-    // This structural assertion asks for the whole chart, so use a viewport wide enough to include it.
     Object.assign(ctx, { state, player: state.player, mode: state.mode, W: 3500, VW: 3500 });
 
     drawRooftop(ctx);

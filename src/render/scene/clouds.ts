@@ -5,8 +5,6 @@ import { blendCloudTone, CLOUD_TONES, puffCloud, seeded } from './cloud-art';
 
 type Placement = { x: number; y: number; size: number; seed: number };
 
-// A loose, uneven scatter along the climb: random spots that keep a minimum distance from each other,
-// so there are no rows or columns and plenty of open sky. Fixed, so the scatter never reshuffles.
 const SPREAD = 960;
 const ASCENT: readonly Placement[] = (() => {
     const random = seeded(4242);
@@ -28,7 +26,6 @@ function ascentTone(ctx: RenderCtx) {
     return blendCloudTone(CLOUD_TONES.ascent, CLOUD_TONES.bread, eased);
 }
 
-// The clouds the chair punches through on its climb from the rooftop.
 export function ascentClouds(ctx: RenderCtx) {
     ctx.beginLayer({ key: 'ascent-clouds' });
     const tone = ascentTone(ctx);
