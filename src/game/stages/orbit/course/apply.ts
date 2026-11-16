@@ -12,6 +12,7 @@ export function applyOrbit(s: CoreState, out: GameEvent[], dt: number) {
     s.actualSpeed = s.orbit.speed;
     s.sprayBurst = result.spraying ? .24 : Math.max(0, s.sprayBurst - dt);
     if (result.satelliteLit && !applyFocusHit(s, out, { kind: 'satelliteLight', id: Math.floor(s.orbit.age), damage: FOCUS_DAMAGE.satelliteLight })) return;
+    // Takeover skips shared focus recovery; apply it here.
     if (s.orbit.phase !== 'parked') applyFocusRecovery(s, dt);
     if (result.flag > s.checkpoint) {
         s.focus = 100;

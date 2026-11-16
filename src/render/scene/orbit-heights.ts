@@ -33,6 +33,7 @@ export function inOpacity(ctx: RenderCtx, layer: LayerSpec, draw: () => void) {
 
 const screen = (ctx: RenderCtx, bottom = ctx.H): Vector[] => [[0, 0], [ctx.W, 0], [ctx.W, bottom], [0, bottom]];
 
+// Integer screens per turn keep stars aligned after a full rotation.
 export const PANORAMA = 5;
 
 export const panoramaX = (x: number, spin: number) => {

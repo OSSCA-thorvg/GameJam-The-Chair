@@ -182,6 +182,7 @@ export function orbitBeacon(ctx: RenderCtx, view: SkyProjection, point: RoutePoi
 
 export function orbitCloudGlints(ctx: RenderCtx, alpha = 1) {
     if (alpha <= 0) return;
+    // Colours bake in the screen blend to avoid a full-canvas compositing pass.
     const layer = { key: 'orbit-cloud-glint' };
     for (const glint of ORBIT_WATCH.glints) {
         const wave = Math.sin(ctx.t * glint.rate + glint.phase);

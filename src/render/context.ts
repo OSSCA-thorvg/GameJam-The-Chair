@@ -12,6 +12,7 @@ import type { KeysTried } from './key-hints';
 export type RenderCtx = {
     locale: Locale;
     bg: CanvasRenderingContext2D;
+    // Width at 1px font size.
     textWidth(content: string, font: FontName): number;
 
     readonly F: number;
@@ -86,6 +87,7 @@ export type RenderCtx = {
     beginLayer(spec: LayerSpec): void;
     endLayer(): void;
     gradientPolygon(points: Vector[], fill: Gradient, opts?: PathOptions): void;
+    // Geometry is cached per key; draw must not depend on changing state.
     retainedGroup(key: string, bounds: Bounds, draw: () => void): void;
     visible(bounds: Bounds, margin?: number): boolean;
     ripple(x: number, y: number, rx: number, ry: number, width: number, color: string): void;
@@ -93,9 +95,13 @@ export type RenderCtx = {
     rect(x: number, y: number, w: number, h: number, c: string): void;
     ellipse(x: number, y: number, rx: number, ry: number, c: string | Gradient, opts?: PathOptions): void;
     rod(x: number, y: number, xx: number, yy: number, w: number, c: string): void;
+    // Baseline at world (x, y).
     label(text: string, x: number, y: number, size?: number, color?: string, font?: FontName): void;
+    // Width at the requested size, in local units.
     measureText(content: string, size: number, font?: FontName): number;
+    // Centred at local (x, y); follows the current transform.
     text(content: string, x: number, y: number, size: number, fill: string, opts?: TextOptions): void;
+    // Centred at screen (x, y); ignores the camera.
     screenText(content: string, x: number, y: number, size: number, fill: string, opts?: TextOptions): void;
 };
 

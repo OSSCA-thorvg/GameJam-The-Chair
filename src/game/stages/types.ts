@@ -25,11 +25,14 @@ export type StageDefinition = {
 
 export type StageHooks = {
     timers?(s: CoreState, dt: number): void;
+    // True ends the tick.
     takeover?(s: CoreState, out: GameEvent[], dt: number): boolean;
+    // False ends the tick.
     hazards?(s: CoreState, out: GameEvent[], dt: number): boolean;
     beforeDrive?(s: CoreState, out: GameEvent[], grounded: boolean): void;
     onJump?(s: CoreState): void;
     drive?(s: CoreState, inputDir: number): Partial<Pick<Drive, 'dir' | 'slip' | 'convoyJump' | 'expressJump'>>;
+    // True ends the tick.
     afterMove?(s: CoreState, out: GameEvent[], dt: number, previousX: number): boolean;
     afterCollide?(s: CoreState, out: GameEvent[], dt: number, previousX: number): void;
     afterScore?(s: CoreState, out: GameEvent[], dt: number): void;

@@ -30,6 +30,7 @@ export function applySky(s: CoreState, out: GameEvent[], dt: number) {
         const damage = r.hit.kind === 'paper' ? FOCUS_DAMAGE.skyPaper : r.hit.kind === 'gear' ? FOCUS_DAMAGE.gear : FOCUS_DAMAGE.bird;
         if (!applyFocusHit(s, out, { kind: r.hit.kind, id: r.hit.focusId, damage })) return;
     }
+    // Takeover skips shared focus recovery; apply it here.
     if (s.sky.phase === 'course') applyFocusRecovery(s, dt);
     if (r.fell) s.deaths++;
     if (r.won) {

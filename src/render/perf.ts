@@ -43,6 +43,7 @@ export function applyLayerOverrides(commands: DrawCommand[], overrides: LayerOve
         const key = cmd.layer?.key;
         if (key === undefined) out.push(cmd);
         else if (overrides.hidden.has(key)) continue;
+        // Retained geometry needs its Scene transform to stay positioned.
         else if (overrides.flat.has(key) && !cmd.layer?.retained) out.push({ ...cmd, layer: undefined });
         else out.push(cmd);
     }

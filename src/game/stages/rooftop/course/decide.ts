@@ -89,6 +89,7 @@ function ductReactionStep(input: Readonly<DuctReaction>, player: Readonly<Player
     } else if (reaction.kind === 'done') {
         reaction.rest += dt;
         if (reaction.rest < duct.gustPeriod) return { reaction, p, knocked: false };
+        // Age 10 keeps debris from the first sneeze settled.
         reaction = { kind: 'reacting', age: 10, shots: reaction.shots + 1, bursts: [{ kind: 'gust', age: reaction.rest - duct.gustPeriod }] };
     }
     if (reaction.kind !== 'reacting') return { reaction, p, knocked: false };

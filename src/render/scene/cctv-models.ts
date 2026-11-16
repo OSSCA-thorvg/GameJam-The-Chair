@@ -5,6 +5,7 @@ import type { Point3, SkyProjection } from './sky-projection';
 export const CCTV_KINDS = ['bullet', 'dome', 'ptz', 'webcam', 'long'] as const;
 export type CctvKind = typeof CCTV_KINDS[number];
 
+// Models face +u; v points up and w out of the silhouette plane.
 export function placer(anchor: Point3, yaw: number, scale = 1) {
     const cos = Math.cos(yaw), sin = Math.sin(yaw);
     return ([u, v, w]: Point3): Point3 =>

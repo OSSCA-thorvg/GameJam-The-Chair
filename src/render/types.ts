@@ -23,6 +23,7 @@ export type Gradient = {
         number,
         Color
     ][];
+    // Radial when set: from is the centre; radius is in screen px.
     radius?: number;
 };
 export type Blend = 'normal' | 'multiply' | 'screen' | 'add' | 'overlay';
@@ -41,7 +42,9 @@ export type Stroke = {
 };
 export type LayerSpec = {
     key: string;
+    // Gaussian sigma in screen px.
     blur?: number;
+    // Screen px; degrees clockwise from +x.
     motionBlur?: { distance: number; angle: number };
     blend?: Blend;
     opacity?: number;

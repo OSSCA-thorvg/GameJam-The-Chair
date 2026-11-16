@@ -75,6 +75,7 @@ function riderWorry(ctx: RenderCtx) {
     }
     if (tension.critical > 0) {
         const pop = .5 + .5 * Math.sin(ctx.t * 6);
+        // Keep invisible dots to avoid paint-order rebuilds when blinking.
         for (let i = 0; i < 3; i++) {
             const on = (ctx.t * 2.4 - i * .35) % 1.6 < 1.1;
             ctx.ellipse(-4 + i * 6, -108 - i * 1.5, 1.8, 1.8, ctx.tint('#f5eddc', on ? tension.critical : 0));
