@@ -15,7 +15,7 @@ const { FOCUS_DAMAGE, ORBIT_ENDING, orbitEnding, createGame, orbitStep, gearAt, 
     export { previewScenes, orbitKeys } from './src/preview-scenes';
     export { drawOrbit } from './src/render/scene/orbit';
     export { ORBIT_ENDING, orbitEnding } from './src/render/scene/orbit-ending';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
 `);
 /** How far the chair gets from a standing start in `t` seconds, chasing full steering speed. */
 const reach = t => STAGE_FIVE.steer.speed * (t - (1 - Math.exp(-STAGE_FIVE.steer.response * t)) / STAGE_FIVE.steer.response);

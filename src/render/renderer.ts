@@ -1,11 +1,11 @@
+import { gameplayCamera } from './camera';
 import type { Locale } from '../i18n';
 import type { Canvas, ThorVGNamespace } from '@thorvg/webcanvas';
 import { loadThorvg, thorvgRenderer } from './thorvg';
 import { createGpuTimer, type GpuTimer } from './gpu-timer';
 import type { GameState } from '../game/game';
-import { ART } from './art';
 import type { EffectsState } from './effects';
-import { createRenderCtx } from './context';
+import { createRenderCtx, createRenderResources, type RenderCtx } from './context';
 import { drawOrbit } from './scene/orbit';
 import { drawWorld } from './scene/world';
 import { drawBuilding } from './scene/building';
@@ -49,7 +49,11 @@ function setup(
     bg: CanvasRenderingContext2D,
     getLocale: () => Locale,
 ) {
-    const ctx = createRenderCtx(bg);
+    const resources = createRenderResources(bg);
+    let ctx: RenderCtx;
+    const viewport = { W: 800, H: 510, VW: VIEW_WIDTH, scale: 1, vertical: 0, dpr: 1 };
+    let cameraState = { cam: 0, wheel: 0 };
+    let soaks = 0;
     let lastTime = 0;
     let lastStage = 0;
     /** The view the end-of-run close-up started from, and how far into the shot the last frame was. */
@@ -68,15 +72,15 @@ function setup(
     let overrides: LayerOverrides | null = null;
 
     function size() {
-        ctx.W = Math.max(1, base.clientWidth || VIEW_WIDTH);
-        ctx.H = base.clientHeight || VIEW_HEIGHT;
-        ctx.VW = VIEW_WIDTH;
-        ctx.scale = ctx.W / ctx.VW;
-        ctx.vertical = Math.max(0, ctx.H / ctx.scale - VIEW_HEIGHT) * .7;
-        ctx.dpr = Math.min(devicePixelRatio || 1, 2);
-        base.width = Math.round(ctx.W * ctx.dpr);
-        base.height = Math.round(ctx.H * ctx.dpr);
-        tvg?.resize(ctx.W, ctx.H);
+        viewport.W = Math.max(1, base.clientWidth || VIEW_WIDTH);
+        viewport.H = base.clientHeight || VIEW_HEIGHT;
+        viewport.VW = VIEW_WIDTH;
+        viewport.scale = viewport.W / viewport.VW;
+        viewport.vertical = Math.max(0, viewport.H / viewport.scale - VIEW_HEIGHT) * .7;
+        viewport.dpr = Math.min(devicePixelRatio || 1, 2);
+        base.width = Math.round(viewport.W * viewport.dpr);
+        base.height = Math.round(viewport.H * viewport.dpr);
+        tvg?.resize(viewport.W, viewport.H);
     }
     const observer = new ResizeObserver(size);
     observer.observe(base);
@@ -84,75 +88,22 @@ function setup(
 
     let lastWaterLife = 0;
     function draw(next: GameState, effects: EffectsState, camera?: number, opening?: OpeningFrame, talk?: SceneTalk, titleTime?: number) {
+        ctx = createRenderCtx(resources, next, effects);
+        Object.assign(ctx, viewport, cameraState);
         ctx.locale = getLocale();
-        ctx.state = next;
-        ctx.LEN = next.level.length;
-        ctx.GOAL = next.level.goal;
-        ctx.p = next.player;
-        ctx.mode = next.mode;
-        ctx.cleaning = next.cleaning;
-        ctx.people = next.people;
-        ctx.solids = next.solids;
-        ctx.papers = next.papers;
-        ctx.inBin = next.inBin;
-        ctx.soaked = next.soaked;
-        // Count splashes from the 'water' focus notice: each new spill that hits the rider starts a fresh one.
-        // The count clears once the rider is dry again (a retry), so it stays a render-only detail.
         const water = next.focusNotice?.kind === 'water' ? next.focusNotice.life : 0;
-        if (!next.soaked) ctx.soaks = 0;
-        else if (water > lastWaterLife) ctx.soaks++;
+        if (!next.soaked) soaks = 0;
+        else if (water > lastWaterLife) soaks++;
+        ctx.soaks = soaks;
         lastWaterLife = water;
-        ctx.dirty = next.dirty;
-        ctx.t = next.time;
-        ctx.monitors = next.monitors.map((monitor, index) => ({ ...monitor, ...ART.monitors[index] }));
-        ctx.bin = { ...next.bin, bottom: ART.binBottom };
-        ctx.copier = { ...next.copier, flash: effects.copierFlash };
-        ctx.urgentCopier = next.urgentCopier;
-        ctx.waterDrops = effects.waterDrops;
-        ctx.waterRipples = effects.waterRipples;
-        ctx.waterPour = effects.waterPour;
-        ctx.waterPuddle = effects.waterPuddle;
-        ctx.specks = effects.specks;
-        ctx.paperFace = effects.paperFace;
-        ctx.glare = effects.glare;
-        ctx.practiceBurst = effects.practiceBurst;
-        ctx.saveFlash = effects.saveFlash;
-        ctx.keysTried = effects.keysTried;
-        ctx.meetingVisit = effects.meetingVisit;
-        ctx.personalBox = effects.personalBox;
 
-        const baseWidth = VIEW_WIDTH;
-        ctx.VW = next.stage === 4 ? baseWidth * 1.12 : baseWidth;
-        ctx.scale = ctx.W / ctx.VW;
         const t = ctx.t;
-        const dt = Math.max(0, t - lastTime);
-        // Riding the sales graph and the climb that follows keep the chair centred, so the view moves right
-        // with it and the rise into the sky stage reads as straight up.
-        const centred = (next.stage === 3 && next.firstFlight.kind !== 'course') || (next.stage === 4 && next.sky.phase === 'arrival');
-        const lead = centred ? .5 : .35;
-        if (t < lastTime || next.stage !== lastStage) {
-            ctx.cam = ctx.clamp(ctx.p.x - ctx.VW * lead, 0, Math.max(0, ctx.LEN - ctx.VW));
-            ctx.wheel = 0;
-        }
-        if (camera !== undefined) {
-            ctx.cam = ctx.clamp(camera, 0, Math.max(0, ctx.LEN - ctx.VW));
-        } else if (ctx.mode === 'play' || (next.stage === 4 && ctx.mode === 'won')) {
-            const focusX = ctx.p.x - ctx.VW * lead;
-            const targetCamera = ctx.clamp(focusX, 0, Math.max(0, ctx.LEN - ctx.VW));
-            ctx.cam += (targetCamera - ctx.cam) * Math.min(1, dt * 7);
-            ctx.wheel += ctx.p.vx * dt / 8;
-        }
-        const baseVertical = Math.max(0, ctx.H / ctx.scale - VIEW_HEIGHT) * .7;
-        // Nearing the sales-graph billboard the view tilts up to show the whole sign; riding it eases the
-        // chair to the sky stage's framing, which the climb keeps.
-        const flight = next.firstFlight;
-        const signLook = next.stage === 3 ? 330 + 110 * ctx.clamp((ctx.p.x - 2050) / 300, 0, 1) : 330;
-        const focusY = next.stage === 4 || flight.kind === 'flight' ? 265
-            : flight.kind === 'ride' ? 440 - 175 * Math.min(1, flight.age / 1.2) : signLook;
-        ctx.vertical = next.stage >= 3 ? baseVertical + Math.max(0, focusY - ctx.p.y) : baseVertical;
+        const baseWidth = VIEW_WIDTH;
+        const baseVertical = gameplayCamera(ctx, lastTime, lastStage, camera);
         if (opening) openingCamera(opening, baseWidth, baseVertical);
         else if (effects.deathShot) deathCamera(effects.deathShot);
         else closeUpFrom = null;
+        cameraState = { cam: ctx.cam, wheel: ctx.wheel };
         lastStage = next.stage;
         lastTime = t;
         const buildStart = stats ? performance.now() : 0;
@@ -257,8 +208,8 @@ function setup(
         try {
             TVG = await loadThorvg().catch(() => loadThorvg());
             if (!root.isConnected) return;
-            tvg = new TVG.Canvas(cn, { width: ctx.W, height: ctx.H });
-            ctx.textWidth = thorvgTextWidth(TVG);
+            tvg = new TVG.Canvas(cn, { width: viewport.W, height: viewport.H });
+            resources.textWidth = thorvgTextWidth(TVG);
             renderer = 'thorvg';
             cn.hidden = false;
         } catch (e) {
@@ -273,13 +224,13 @@ function setup(
         resetView() {
             lastTime = Infinity;
             lastStage = 0;
-            ctx.soaks = 0;
+            soaks = 0;
             lastWaterLife = 0;
             closeUpFrom = null;
             closeUpAge = -1;
         },
         ready,
-        info: () => ({ renderer, renderError, commands: ctx.commands.length }),
+        info: () => ({ renderer, renderError, commands: ctx?.commands.length ?? 0 }),
         /** Start (or with null, stop) filling render counters each frame. */
         profile(next: RenderStats | null) {
             stats = next;
@@ -300,11 +251,11 @@ function setup(
             requested: `thorvg-${thorvgRenderer()}`,
             gpuTimer: !tvg || tvg.renderer !== 'gl' ? 'n/a' as const : gpuTimer ? 'on' as const : gpuTimerTried ? 'unsupported' as const : 'idle' as const,
             renderError,
-            width: ctx.W,
-            height: ctx.H,
-            dpr: ctx.dpr,
+            width: viewport.W,
+            height: viewport.H,
+            dpr: viewport.dpr,
             // The pixels actually rasterized. ThorVG scales its canvas by its own DPR (1 + (dpr - 1) × 0.75).
-            raster: tvg ? { width: cn.width, height: cn.height, dpr: tvg.dpr } : { width: base.width, height: base.height, dpr: ctx.dpr },
+            raster: tvg ? { width: cn.width, height: cn.height, dpr: tvg.dpr } : { width: base.width, height: base.height, dpr: viewport.dpr },
         }),
         destroy() {
             observer.disconnect();

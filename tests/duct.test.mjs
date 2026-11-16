@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { bundled } from './support/load.mjs';
-const { createCore, viewState, applyRooftop, rooftopHooks, createRenderCtx, rooftopDuct, DUCT_PROP_COLORS, STAGE_THREE } = await bundled({ stdin: { contents: `export {createCore} from './src/game/state'; export {viewState} from './src/game/game'; export {applyRooftop} from './src/game/stages/rooftop/course/apply'; export {rooftopHooks} from './src/game/stages/rooftop/hooks'; export {createRenderCtx} from './src/render/context'; export {rooftopDuct, DUCT_PROP_COLORS} from './src/render/scene/rooftop-duct'; export {STAGE_THREE} from './src/game/stages/rooftop/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
+const { createCore, viewState, applyRooftop, rooftopHooks, createRenderCtx, rooftopDuct, DUCT_PROP_COLORS, STAGE_THREE } = await bundled({ stdin: { contents: `export {createCore} from './src/game/state'; export {viewState} from './src/game/game'; export {applyRooftop} from './src/game/stages/rooftop/course/apply'; export {rooftopHooks} from './src/game/stages/rooftop/hooks'; export {createRenderCtx} from './tests/support/render-context'; export {rooftopDuct, DUCT_PROP_COLORS} from './src/render/scene/rooftop-duct'; export {STAGE_THREE} from './src/game/stages/rooftop/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 const D = STAGE_THREE.duct;
 function at(x, y = 226) {
     const s = createCore({ seed: 0 }); s.stage = 3; s.hasExtinguisher = true;

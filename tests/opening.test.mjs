@@ -5,7 +5,7 @@ import { loadSource } from './support/load.mjs';
 const { createGame, createOpening, createRenderCtx, drawOpening, openingFrame, openingState, OPENING_BEATS, OPENING_DURATION, translate, previewScenes } = await loadSource(`
     export { createGame } from './src/game/game';
     export { createOpening } from './src/ui/opening';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { drawOpening, openingFrame, openingState, OPENING_BEATS, OPENING_DURATION } from './src/render/scene/opening';
     export { translate } from './src/i18n';
     export { previewScenes } from './src/preview-scenes';

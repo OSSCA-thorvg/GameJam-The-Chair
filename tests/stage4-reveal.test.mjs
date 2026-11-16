@@ -6,7 +6,7 @@ const { SKY_DEPARTURE, REVEAL_DURATION, revealChairOrbit, createGame, createSky,
     export { createGame } from './src/game/game';
     export { createSky, STAGE_FOUR } from './src/game/stages/sky/data';
     export { skyStep } from './src/game/stages/sky/course/decide';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { drawSky } from './src/render/scene/sky';
     export { drawOrbit } from './src/render/scene/orbit';
     export { CLOUD_TONES } from './src/render/scene/cloud-art';

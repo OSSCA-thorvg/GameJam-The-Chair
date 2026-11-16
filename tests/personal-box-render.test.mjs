@@ -3,7 +3,7 @@ import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
 const { createRenderCtx, personalBox } = await loadSource(`
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { personalBox } from './src/render/scene/personal-box';
 `);
 

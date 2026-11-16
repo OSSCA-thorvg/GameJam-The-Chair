@@ -3,7 +3,7 @@ import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
 const { createRenderCtx, player, sprayPlume, drawSky, skyWindResponse, previewScenes, skyCoursePlatform } = await loadSource(`
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { player } from './src/render/scene/player';
     export { sprayPlume } from './src/render/scene/spray';
     export { drawSky } from './src/render/scene/sky';

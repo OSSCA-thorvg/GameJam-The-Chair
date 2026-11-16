@@ -5,7 +5,7 @@ import { loadSource } from './support/load.mjs';
 const { FIVE, createGame, createRenderCtx, drawOrbit, cctvLamp, ORBIT_WATCH, orbitWatchers, createSkyProjection, revealChairOrbit, revealGlideStart, revealTravel, STAGE_FOUR, attendanceBubble, orbitReaction } = await loadSource(`
     export { createGame } from './src/game/game';
     export { STAGE_FIVE as FIVE } from './src/game/stages/orbit/data';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { drawOrbit } from './src/render/scene/orbit';
     export { cctvLamp, ORBIT_WATCH, orbitWatchers } from './src/render/scene/orbit-watch';
     export { createSkyProjection } from './src/render/scene/sky-projection';

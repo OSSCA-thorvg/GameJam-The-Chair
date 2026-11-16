@@ -5,7 +5,7 @@ import { loadSource } from './support/load.mjs';
 const { paint, createPaintPool, createRenderCtx, createRenderStats, resetRenderStats, createLayerOverrides } = await loadSource(`
     export { paint, createPaintPool } from './src/render/paint';
     export { createRenderStats, resetRenderStats, createLayerOverrides } from './src/render/perf';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
 `);
 
 // A stand-in for ThorVG WebCanvas that keeps only what this bug needs. In ThorVG 1.1.3, removing a scene

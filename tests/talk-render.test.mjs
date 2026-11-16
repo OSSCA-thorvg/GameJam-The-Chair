@@ -4,7 +4,7 @@ import { loadSource } from './support/load.mjs';
 
 const { createGame, createRenderCtx, drawTalk, drawStageTitle, SPEECH_FONT, LABEL_FONT } = await loadSource(`
     export { createGame } from './src/game/game';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { drawTalk, drawStageTitle } from './src/render/scene/talk';
     export { SPEECH_FONT, LABEL_FONT } from './src/render/fonts';
 `);

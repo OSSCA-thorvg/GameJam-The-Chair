@@ -6,7 +6,7 @@ import { orientationHop } from './support/harness.mjs';
 
 const { createGame, createRenderCtx, drawBuilding } = await bundled({ stdin: {
     contents: `export { createGame } from './src/game/game';
-        export { createRenderCtx } from './src/render/context';
+        export { createRenderCtx } from './tests/support/render-context';
         export { drawBuilding } from './src/render/scene/building';`,
     resolveDir: process.cwd(),
 }, bundle: true, write: false, platform: 'node', format: 'esm' });

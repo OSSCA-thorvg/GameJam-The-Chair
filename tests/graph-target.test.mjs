@@ -4,7 +4,7 @@ import { loadSource } from './support/load.mjs';
 
 const { createGame, createRenderCtx, rooftopGraphSign, graphTargetPose, GRAPH_CORNERS, STAGE_THREE, previewScenes } = await loadSource(`
     export { createGame } from './src/game/game';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { rooftopGraphSign } from './src/render/scene/rooftop-graph';
     export { graphTargetPose } from './src/render/scene/graph-target';
     export { GRAPH_CORNERS, STAGE_THREE } from './src/game/stages/rooftop/data';

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { driveStageThree } from './support/stage3-route.mjs';
 import { bundled } from './support/load.mjs';
-const { createGame, createRenderCtx, drawRooftop, drawCloudStart, STAGE_THREE, STAGE_FOUR } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { createRenderCtx } from './src/render/context'; export { drawRooftop } from './src/render/scene/rooftop'; export { drawCloudStart } from './src/render/scene/clouds'; export { STAGE_THREE } from './src/game/stages/rooftop/data'; export { STAGE_FOUR } from './src/game/stages/sky/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
+const { createGame, createRenderCtx, drawRooftop, drawCloudStart, STAGE_THREE, STAGE_FOUR } = await bundled({ stdin: { contents: `export { createGame } from './src/game/game'; export { createRenderCtx } from './tests/support/render-context'; export { drawRooftop } from './src/render/scene/rooftop'; export { drawCloudStart } from './src/render/scene/clouds'; export { STAGE_THREE } from './src/game/stages/rooftop/data'; export { STAGE_FOUR } from './src/game/stages/sky/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 
 test('the rooftop sales chart has no information banner above it', () => {
     const game = createGame();

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
 const { createRenderCtx, riderStains, MAX_STAIN_LAYERS } = await loadSource(`
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { riderStains, MAX_STAIN_LAYERS } from './src/render/scene/player-stains';
 `);
 

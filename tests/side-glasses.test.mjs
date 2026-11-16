@@ -4,7 +4,7 @@ import { loadSource } from './support/load.mjs';
 
 const { createGame, createRenderCtx, player } = await loadSource(`
     export { createGame } from './src/game/game';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { player } from './src/render/scene/player';
 `);
 

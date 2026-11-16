@@ -4,7 +4,7 @@ import { loadSource } from './support/load.mjs';
 
 const { createGame, createRenderCtx, drawSky, drawRooftop, puffCloud, CLOUD_TONES, effectScaleForArea } = await loadSource(`
     export { createGame } from './src/game/game';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { drawSky } from './src/render/scene/sky';
     export { drawRooftop } from './src/render/scene/rooftop';
     export { puffCloud, CLOUD_TONES } from './src/render/scene/cloud-art';
