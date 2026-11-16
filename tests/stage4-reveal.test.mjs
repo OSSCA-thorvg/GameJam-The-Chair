@@ -6,7 +6,7 @@ const { SKY_DEPARTURE, REVEAL_DURATION, revealChairOrbit, createGame, createSky,
     export { createGame } from './src/game/game';
     export { createSky, STAGE_FOUR } from './src/game/stages/sky/data';
     export { skyStep } from './src/game/stages/sky/course/decide';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { drawSky } from './src/render/scene/sky';
     export { drawOrbit } from './src/render/scene/orbit';
     export { CLOUD_TONES } from './src/render/scene/cloud-art';
@@ -79,7 +79,7 @@ test('the ending draws no slogans, only the departing promotion flag and the att
             Object.assign(state.sky, { phase, age });
             const transforms = [];
             const ctx = createRenderCtx({ save() {}, restore() {}, transform(...matrix) { transforms.push(matrix); } });
-            Object.assign(ctx, { state, p: state.player, mode: 'play', locale, W: width, H: 510 });
+            Object.assign(ctx, { state, player: state.player, mode: 'play', locale, W: width, H: 510 });
             const before = structuredClone(state);
             drawSky(ctx);
             assert.deepEqual(state, before, 'cinematic rendering leaves gameplay untouched');
@@ -91,7 +91,7 @@ test('the ending draws no slogans, only the departing promotion flag and the att
             assert.deepEqual(transforms, []);
             assert.ok(ctx.commands.length > 100);
             for (const command of ctx.commands) {
-                for (const point of [...command.v, ...(command.curves ?? [])]) assert.ok(point.every(Number.isFinite));
+                for (const point of [...command.points, ...(command.curves ?? [])]) assert.ok(point.every(Number.isFinite));
             }
         }
     }
@@ -101,7 +101,7 @@ test('the camera orbits from side to back while keeping the chair in frame', () 
     for (const width of [320, 1000]) for (const orbit of [0, .25, .5, .75, 1]) {
         const view = createSkyProjection(width, 510, orbit);
         endingChair(view, 2);
-        const vertices = view.commands().flatMap(command => command.v);
+        const vertices = view.commands().flatMap(command => command.points);
         assert.ok(vertices.length > 100);
         assert.ok(vertices.every(([x, y]) => x > 0 && x < width && y > 0 && y < 510));
     }
@@ -116,10 +116,10 @@ test('the rotating illustration keeps the original hair silhouette and smooth ro
     const view = createSkyProjection(1000, 510, 0);
     endingChair(view, 2);
     const commands = view.commands();
-    const hair = commands.find(command => command.c === '#3c424f' && command.v.length > 4);
+    const hair = commands.find(command => command.fill === '#3c424f' && command.points.length > 4);
     assert.ok(hair, 'the concave hair outline stays filled instead of disappearing during culling');
-    const area = Math.abs(hair.v.reduce((sum, p, i) => {
-        const next = hair.v[(i + 1) % hair.v.length];
+    const area = Math.abs(hair.points.reduce((sum, p, i) => {
+        const next = hair.points[(i + 1) % hair.points.length];
         return sum + p[0] * next[1] - next[0] * p[1];
     }, 0)) / 2;
     assert.ok(area > 200);
@@ -141,9 +141,9 @@ test('the crown stays covered by hair throughout the orbit', () => {
         const commands = view.commands();
         for (const point of /** @type {const} */ ([[-4, 54, 8], [-4, 58, 8], [0, 58, 8]])) {
             const screen = view.project(point);
-            const visible = commands.filter(command => command.v.length > 2 && covers(screen, command.v)).at(-1);
+            const visible = commands.filter(command => command.points.length > 2 && covers(screen, command.points)).at(-1);
             assert.ok(visible, `the crown is filled at orbit ${frame}/12`);
-            assert.ok(parseInt(visible.c.slice(1, 3), 16) < 128, `skin must not cover the hair at orbit ${frame}/12`);
+            assert.ok(parseInt(visible.fill.slice(1, 3), 16) < 128, `skin must not cover the hair at orbit ${frame}/12`);
         }
     }
 });
@@ -152,7 +152,7 @@ test('the rear hair has a swept crown and a tapered nape instead of a rectangula
     const view = createSkyProjection(1000, 510, 1);
     endingHair(view, 0);
     const commands = view.commands();
-    const vertices = commands.flatMap(command => command.v);
+    const vertices = commands.flatMap(command => command.points);
     const left = Math.min(...vertices.map(([x]) => x)), right = Math.max(...vertices.map(([x]) => x));
     const top = Math.min(...vertices.map(([, y]) => y)), bottom = Math.max(...vertices.map(([, y]) => y));
     const edge = (x, end) => vertices.filter(([px]) => Math.abs(px - x) < (right - left) * .08)
@@ -161,16 +161,16 @@ test('the rear hair has a swept crown and a tapered nape instead of a rectangula
     assert.ok(edge(left, 'top') > top + 3 && edge(right, 'top') > top + 3, 'crown slopes down toward both temples');
     assert.ok(Math.abs(edge(left, 'top') - edge(right, 'top')) > .5, 'swept crown is not symmetric');
     assert.ok(edge(left, 'bottom') < bottom - 2 && edge(right, 'bottom') < bottom - 2, 'nape tapers at both sides');
-    assert.ok(commands.some(command => command.c === '#505968'), 'rear surface carries a small swept lock');
+    assert.ok(commands.some(command => command.fill === '#505968'), 'rear surface carries a small swept lock');
     for (const [x, y] of vertices) assert.ok(Number.isFinite(x) && Number.isFinite(y));
 });
 
 /** The glasses' dark arm, shaded a little on the faces of its rod. */
 const isArm = color => typeof color === 'string' && color.length >= 7
     && [1, 3, 5].every((i, k) => Math.abs(parseInt(color.slice(i, i + 2), 16) - [0x3a, 0x41, 0x4b][k]) <= 4);
-const lensPanes = commands => commands.filter(command => command.c === '#83c8e4');
+const lensPanes = commands => commands.filter(command => command.fill === '#83c8e4');
 const lensBounds = pane => {
-    const xs = pane.v.map(([x]) => x), ys = pane.v.map(([, y]) => y);
+    const xs = pane.points.map(([x]) => x), ys = pane.points.map(([, y]) => y);
     return { left: Math.min(...xs), right: Math.max(...xs), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) };
 };
 
@@ -180,14 +180,14 @@ test('the 3D glasses have lenses on the front of the face only: none on the side
     endingGlasses(side, 0);
     assert.deepEqual(lensPanes(side.commands()), [], 'no lens surface painted on the side of the face');
     // ...but the lens edge still shows, as a thin blue line down the front of the face.
-    const blue = side.commands().filter(command => typeof command.c === 'string' && command.c.length >= 7
-        && [1, 3, 5].every((i, k) => Math.abs(parseInt(command.c.slice(i, i + 2), 16) - [0x83, 0xc8, 0xe4][k]) <= 12));
+    const blue = side.commands().filter(command => typeof command.fill === 'string' && command.fill.length >= 7
+        && [1, 3, 5].every((i, k) => Math.abs(parseInt(command.fill.slice(i, i + 2), 16) - [0x83, 0xc8, 0xe4][k]) <= 12));
     assert.ok(blue.length > 0, 'the lens shows side on as a line');
-    const spread = blue.flatMap(command => command.v);
+    const spread = blue.flatMap(command => command.points);
     const width = Math.max(...spread.map(([x]) => x)) - Math.min(...spread.map(([x]) => x));
     const height = Math.max(...spread.map(([, y]) => y)) - Math.min(...spread.map(([, y]) => y));
     assert.ok(height > width * 2.5, `a thin upright line, not a surface (${width.toFixed(1)} by ${height.toFixed(1)})`);
-    assert.ok(side.commands().some(command => isArm(command.c)), 'the arm runs back along the side of the head');
+    assert.ok(side.commands().some(command => isArm(command.fill)), 'the arm runs back along the side of the head');
     // Face on: exactly two lenses, side by side, each wider than tall, with reflection and eyes.
     const front = createSkyProjection(1000, 510, 3, { zoom: 3 });
     endingGlasses(front, 0);
@@ -195,8 +195,8 @@ test('the 3D glasses have lenses on the front of the face only: none on the side
     assert.equal(panes.length, 2, 'two lenses');
     assert.ok(panes[0].right < panes[1].left, 'side by side, not overlapping');
     for (const pane of panes) assert.ok(pane.width > pane.height * .9 && pane.height > 40, `each a large lens (${pane.width.toFixed(0)} by ${pane.height.toFixed(0)})`);
-    assert.ok(front.commands().some(command => command.c === '#bfe6ef'), 'keeps the pale reflection');
-    assert.equal(front.commands().filter(command => command.c === '#446d82').length, 2, 'an eye behind each lens');
+    assert.ok(front.commands().some(command => command.fill === '#bfe6ef'), 'keeps the pale reflection');
+    assert.equal(front.commands().filter(command => command.fill === '#446d82').length, 2, 'an eye behind each lens');
 });
 
 test('blue lenses never number more than two while turning, and do not face through the back of the head', () => {
@@ -219,7 +219,7 @@ function renderFrame(stage, setup) {
     const state = structuredClone(game.getSnapshot());
     setup?.(state);
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state, p: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t: 0 });
+    Object.assign(ctx, { state, player: state.player, mode: 'play', locale: 'en', W: 1000, H: 510, t: 0 });
     (stage === 4 ? drawSky : drawOrbit)(ctx);
     return ctx.commands;
 }
@@ -233,7 +233,7 @@ const near = (actual, expected, path = '') => {
     for (const key of Object.keys(expected)) near(actual[key], expected[key], `${path}.${key}`);
 };
 const bounds = commands => {
-    const points = commands.flatMap(command => [...command.v, ...(command.curves ?? []).map(curve => curve.slice(-2))]);
+    const points = commands.flatMap(command => [...command.points, ...(command.curves ?? []).map(curve => curve.slice(-2))]);
     const xs = points.map(([x]) => x), ys = points.map(([, y]) => y);
     return { left: Math.min(...xs), right: Math.max(...xs), top: Math.min(...ys), bottom: Math.max(...ys) };
 };
@@ -245,7 +245,7 @@ test('the reveal turns steadily from the side to behind the chair, keeping it ce
     const model = side.commands();
     near(withoutBubble(revealFrame('reveal', settle)).slice(-model.length), model);
     // Side on, the glasses show as their frame and arm; the lenses are on the front of the face.
-    assert.ok(model.some(command => command.c === '#50606a' || command.c === '#3a414b' || isArm(command.c)), 'the glasses remain visible');
+    assert.ok(model.some(command => command.fill === '#50606a' || command.fill === '#3a414b' || isArm(command.fill)), 'the glasses remain visible');
     let previous = -1;
     for (let at = settle; at <= settle + turn + hold; at += .5) previous = (assert.ok(revealChairOrbit(at, settle) >= previous), revealChairOrbit(at, settle));
     assert.ok(Math.abs(revealChairOrbit(settle + turn, settle) - 1) < 1e-9, 'behind the chair once the turn is done');
@@ -253,8 +253,8 @@ test('the reveal turns steadily from the side to behind the chair, keeping it ce
     for (const [phase, age] of /** @type {const} */ ([['depth', 0], ['depth', hold]])) {
         const rear = createSkyProjection(1000, 510, 1);
         endingChair(rear, settle + turn + age);
-        const colours = new Set(rear.commands().map(command => command.c));
-        const chair = bounds(withoutBubble(revealFrame(phase, age)).filter(command => colours.has(command.c) && !command.layer));
+        const colours = new Set(rear.commands().map(command => command.fill));
+        const chair = bounds(withoutBubble(revealFrame(phase, age)).filter(command => colours.has(command.fill) && !command.layer));
         const alone = bounds(rear.commands());
         assert.ok(Math.abs((chair.left + chair.right) / 2 - 500) < 30, 'the chair stays centred');
         // The glide's speed pulls the camera back a little, so the chair may look somewhat smaller, never tiny.
@@ -267,11 +267,11 @@ test('the reveal turns steadily from the side to behind the chair, keeping it ce
 test('the watchers stay out of the flat side view and turn up, without fading, as the view turns into 3D', () => {
     const { settle, turn } = STAGE_FOUR.reveal;
     // Every watcher carries a recording lamp; count those.
-    const watch = (phase, age) => revealFrame(phase, age).filter(command => !command.layer && ['#ff4a3a', '#5e1d1a'].includes(command.c));
+    const watch = (phase, age) => revealFrame(phase, age).filter(command => !command.layer && ['#ff4a3a', '#5e1d1a'].includes(command.fill));
     assert.equal(watch('reveal', settle * .9).length, 0, 'nothing in the 2D side view');
     const early = watch('reveal', settle + turn * .3), late = watch('reveal', settle + turn * .8);
     assert.ok(early.length > 0 && late.length > early.length, 'more cameras come into view as the turn goes on');
-    for (const commands of [early, late, watch('depth', 1)]) assert.ok(commands.every(command => command.c.length === 7), 'no fade');
+    for (const commands of [early, late, watch('depth', 1)]) assert.ok(commands.every(command => command.fill.length === 7), 'no fade');
     assert.ok(revealFrame('reveal', settle + turn - .1).some(command => command.layer?.key === 'orbit-beacon'), 'the far speck shows before stage five');
 });
 
@@ -289,7 +289,7 @@ test('the departure leaves scenery behind before the quiet side view and is seek
     assert.ok(start.length > 0 && leaving.length > 0);
     assert.ok(leaving[0].layer.opacity < start[0].layer.opacity);
     const bounds = commands => {
-        const points = commands.flatMap(command => command.v);
+        const points = commands.flatMap(command => command.points);
         return { right: Math.max(...points.map(([x]) => x)), bottom: Math.max(...points.map(([, y]) => y)) };
     };
     assert.ok(bounds(leaving).right < bounds(start).right, 'the ledge retreats behind the chair');
@@ -304,8 +304,8 @@ test('arrival spray shortens and settles into the existing chair animation', () 
         endingChair(view, time, spray, arrival);
         return view.commands();
     };
-    const plume = commands => commands.filter(command => typeof command.c === 'string' && command.c.startsWith('#f6e6df'));
-    const bottom = commands => Math.max(...plume(commands).flatMap(command => [...command.v, ...command.curves]).map(point => point[1]));
+    const plume = commands => commands.filter(command => typeof command.fill === 'string' && command.fill.startsWith('#f6e6df'));
+    const bottom = commands => Math.max(...plume(commands).flatMap(command => [...command.points, ...command.curves]).map(point => point[1]));
     assert.ok(bottom(chair(0, 2.5, 0)) > bottom(chair(0, 1, 0)) + 30);
     assert.notDeepEqual(chair(.1, 1, 1), chair(.1, 1, 0), 'arrival initially shakes the chair');
     const settled = SKY_DEPARTURE + .1;
@@ -316,7 +316,7 @@ test('arrival spray shortens and settles into the existing chair animation', () 
 const hex = color => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
 // Cloud bodies are the vertical gradients whose first stop is a cloud crown colour.
 const cloudBodies = (commands, tone) => commands.filter(command =>
-    Array.isArray(command.c?.stops) && command.c.stops[0][1].slice(0, 3).join() === hex(tone.top).join());
+    Array.isArray(command.fill?.stops) && command.fill.stops[0][1].slice(0, 3).join() === hex(tone.top).join());
 
 test('the ending clouds are bread clouds, not flat pale ovals', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
@@ -324,21 +324,21 @@ test('the ending clouds are bread clouds, not flat pale ovals', () => {
         const commands = revealFrame(phase, age);
         assert.ok(cloudBodies(commands, CLOUD_TONES.bread).length >= 5, `${phase} ${age}: bread clouds stay on screen`);
         // The old ending drew its clouds as flat ovals in these two colours (the spray shares the base colour).
-        assert.ok(!commands.some(command => command.c === '#f6e6dfbe' || command.c === '#f6e6dfc3'));
+        assert.ok(!commands.some(command => command.fill === '#f6e6dfbe' || command.fill === '#f6e6dfc3'));
     }
 });
 
 test('ending clouds are bread from the start and none vanishes while the camera turns', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     // Cloud bodies: linear crown-to-belly gradients whose underside fades out.
-    const bodies = commands => commands.filter(command => !command.layer?.key?.startsWith('orbit-satellite-light') && Array.isArray(command.c?.stops) && !command.c.radius
-        && command.c.stops.length === 3 && command.c.stops[2][1][3] === 0);
+    const bodies = commands => commands.filter(command => !command.layer?.key?.startsWith('orbit-satellite-light') && Array.isArray(command.fill?.stops) && !command.fill.radius
+        && command.fill.stops.length === 3 && command.fill.stops[2][1][3] === 0);
     const bread = hex(CLOUD_TONES.bread.top).join();
     let previous = 0;
     for (let at = 0; at <= settle + turn + hold; at += 1 / 30) {
         const turning = at < settle + turn;
         const clouds = bodies(revealFrame(turning ? 'reveal' : 'depth', turning ? at : at - settle - turn));
-        assert.deepEqual(clouds.map(command => command.c.stops[0][1].slice(0, 3).join()).filter(crown => crown !== bread), [],
+        assert.deepEqual(clouds.map(command => command.fill.stops[0][1].slice(0, 3).join()).filter(crown => crown !== bread), [],
             `every cloud is bread at ${at.toFixed(2)} s`);
         assert.ok(clouds.length >= previous, `no cloud disappears at ${at.toFixed(2)} s`);
         previous = clouds.length;

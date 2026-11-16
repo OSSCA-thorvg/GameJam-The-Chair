@@ -1,6 +1,7 @@
+import { STAGE_PRESENTATION, hideStageHud } from '../presentation/stages';
 import { isStageUnlocked } from '../game/progression';
 import { translate, type Locale, type Message } from '../i18n';
-import type { GameState } from '../game/game';
+import type { GameSnapshot } from '../game/game';
 import type { Mode } from '../game/types';
 import type { FeedbackState } from './feedback';
 import type { EffectsState } from '../render/effects';
@@ -22,13 +23,12 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
     let focusIntroduced = false;
     let introduceUntil = 0;
     // `cutscene`: the opening is playing over a fresh game, so every game HUD element stays out of the way.
-    function draw(state: GameState, feedback: FeedbackState, effects: EffectsState, cutscene = false) {
+    function draw(state: GameSnapshot, feedback: FeedbackState, effects: EffectsState, cutscene = false) {
         const t = (message: Message) => translate(message, getLocale());
         const { mode, focus } = state;
         const active = mode === 'play' && !cutscene;
-        // The stage four turn into 3D and the stage five ending (parked in the Earth's shadow) play without HUD.
-        const ending = (state.stage === 4 && (state.sky.phase === 'reveal' || state.sky.phase === 'depth'))
-            || (state.stage === 5 && state.orbit?.phase === 'parked');
+        const policy = STAGE_PRESENTATION[state.stage];
+        const ending = hideStageHud(state);
         const paused = mode === 'pause';
         if (state.stage !== lastStage || state.time < lastTime) {
             focusIntroduced = false;
@@ -51,21 +51,21 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         style('[data-focus-fill]', 'width', focus + '%');
         style('[data-focus-trail]', 'width', focus + '%');
         style('[data-focus-fill]', 'background', focus <= 20 ? '#d88e7e' : '#d2b783');
-        hidden('[data-focus-alert]', !(active && state.stage === 1 && state.focusNotice));
+        hidden('[data-focus-alert]', !(active && policy.hud.focusAlert && state.focusNotice));
         q('[data-play-hud]')?.classList.toggle('critical', active && focus <= 20);
         q('[data-play-hud]')?.classList.toggle('hit', active && !!state.focusNotice && state.focusNotice.life > 1.25);
         q('[data-focus-meter]')?.setAttribute('aria-valuenow', String(focus));
         text('[data-focus]', focus + '%');
         text('[data-status]', feedback.status);
-        hidden('[data-interact]', state.stage !== 2);
-        hidden('[data-orbit-controls]', state.stage !== 5);
-        hidden('[data-orbit-help]', state.stage !== 5);
-        hidden('[data-jump]', state.stage === 5);
-        hidden('.balance-controls', state.stage === 5);
-        hidden('[data-meeting-help]', state.stage !== 2);
+        hidden('[data-interact]', !policy.controls.meeting);
+        hidden('[data-orbit-controls]', !policy.controls.flight);
+        hidden('[data-orbit-help]', !policy.controls.flight);
+        hidden('[data-jump]', !policy.hud.jump);
+        hidden('.balance-controls', !policy.hud.balance);
+        hidden('[data-meeting-help]', !policy.controls.meeting);
         // In stage five the extinguisher fires on its own.
-        hidden('[data-spray-help]', !state.hasExtinguisher || state.stage === 5);
-        hidden('[data-spray]', !state.hasExtinguisher || state.stage === 5);
+        hidden('[data-spray-help]', !state.hasExtinguisher || !policy.hud.manualSpray);
+        hidden('[data-spray]', !state.hasExtinguisher || !policy.hud.manualSpray);
         hidden('[data-stage-menu]', state.completedStage === 0);
         for (const stage of [1, 2, 3, 4, 5]) {
             hidden(`[data-stage="${stage}"]`, !isStageUnlocked(stage, state.completedStage));

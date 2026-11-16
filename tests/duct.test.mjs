@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { bundled } from './support/load.mjs';
-const { createCore, viewState, applyRooftop, rooftopHooks, createRenderCtx, rooftopDuct, DUCT_PROP_COLORS, STAGE_THREE } = await bundled({ stdin: { contents: `export {createCore} from './src/game/state'; export {viewState} from './src/game/game'; export {applyRooftop} from './src/game/stages/rooftop/course/apply'; export {rooftopHooks} from './src/game/stages/rooftop/hooks'; export {createRenderCtx} from './src/render/context'; export {rooftopDuct, DUCT_PROP_COLORS} from './src/render/scene/rooftop-duct'; export {STAGE_THREE} from './src/game/stages/rooftop/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
+const { createCore, viewState, applyRooftop, rooftopHooks, createRenderCtx, rooftopDuct, DUCT_PROP_COLORS, STAGE_THREE } = await bundled({ stdin: { contents: `export {createCore} from './src/game/state'; export {viewState} from './src/game/game'; export {applyRooftop} from './src/game/stages/rooftop/course/apply'; export {rooftopHooks} from './src/game/stages/rooftop/hooks'; export {createRenderCtx} from './tests/support/render-context'; export {rooftopDuct, DUCT_PROP_COLORS} from './src/render/scene/rooftop-duct'; export {STAGE_THREE} from './src/game/stages/rooftop/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
 const D = STAGE_THREE.duct;
 function at(x, y = 226) {
     const s = createCore({ seed: 0 }); s.stage = 3; s.hasExtinguisher = true;
@@ -13,7 +13,7 @@ function tick(s, seconds) { for (let i = 0; i < Math.round(seconds * 120); i++) 
 function props(s) {
     const ctx = createRenderCtx({}); Object.assign(ctx, { state: viewState(s) }); rooftopDuct(ctx);
     const marks = Object.values(DUCT_PROP_COLORS);
-    return ctx.commands.filter(command => marks.includes(command.c)).map(command => command.v);
+    return ctx.commands.filter(command => marks.includes(command.fill)).map(command => command.points);
 }
 
 test('the duct sneezes first on a timer, wherever the rider is', () => {

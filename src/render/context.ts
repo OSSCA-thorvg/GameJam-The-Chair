@@ -1,8 +1,8 @@
 import type { Locale } from '../i18n';
 import { LEVEL } from '../game/level';
-import type { GameState } from '../game/game';
+import type { GameSnapshot } from '../game/game';
 import type { DeepReadonly, Mode } from '../game/types';
-import type { Vector, Curve, Color, Gradient, DrawCommand, LayerSpec, Blend, Stroke, Bounds, TextSpec } from './types';
+import type { Vector, Curve, Color, Gradient, DrawCommand, PathCommand, LayerSpec, Blend, Stroke, Bounds, TextSpec } from './types';
 import { fitGlyphs, fontCss, LABEL_FONT, SIGN_FONT, type FontName } from './fonts';
 import { ART } from './art';
 import type { EffectsState } from './effects';
@@ -39,17 +39,17 @@ export type RenderCtx = {
 
     commands: DrawCommand[];
 
-    state: GameState;
-    p: GameState['player'];
+    state: GameSnapshot;
+    player: GameSnapshot['player'];
     mode: Mode;
-    monitors: (GameState['monitors'][number] & typeof ART.monitors[number])[];
-    cleaning: GameState['cleaning'];
-    bin: GameState['bin'] & { bottom: number };
-    copier: GameState['copier'] & { flash: number };
-    urgentCopier: GameState['urgentCopier'];
-    people: GameState['people'];
-    solids: GameState['solids'];
-    papers: GameState['papers'];
+    monitors: (GameSnapshot['monitors'][number] & typeof ART.monitors[number])[];
+    cleaning: GameSnapshot['cleaning'];
+    bin: GameSnapshot['bin'] & { bottom: number };
+    copier: GameSnapshot['copier'] & { flash: number };
+    urgentCopier: GameSnapshot['urgentCopier'];
+    people: GameSnapshot['people'];
+    solids: GameSnapshot['solids'];
+    papers: GameSnapshot['papers'];
     inBin: boolean;
     soaked: boolean;
     /** How many times the dirty bucket water has splashed the rider this attempt; each adds a layer of stains. */
@@ -87,8 +87,10 @@ export type RenderCtx = {
     gradientFill(x1: number, y1: number, x2: number, y2: number, stops: [number, string][], alpha?: number): Gradient;
     effectPath(start: Vector, curves: Curve[], fill: Gradient | string, opts?: PathOptions): void;
     strokePath(start: Vector, curves: Curve[], stroke: StrokeInput, opts?: PathOptions & { closed?: boolean }): void;
-    pathCommand(start: Vector, curves: Curve[]): DrawCommand;
+    pathCommand(start: Vector, curves: Curve[]): PathCommand;
     radialFill(cx: number, cy: number, r: number, stops: [number, string][], alpha?: number): Gradient;
+    withTransform(transform: Partial<Pick<RenderCtx, 'ox' | 'oy' | 'rotation' | 'localScale' | 'mirror'>>, draw: () => void): void;
+    withLayer(spec: LayerSpec, draw: () => void): void;
     beginLayer(spec: LayerSpec): void;
     endLayer(): void;
     gradientPolygon(points: Vector[], fill: Gradient, opts?: PathOptions): void;
@@ -115,107 +117,91 @@ export type TextOptions = { font?: FontName; outline?: { width: number; color: s
 export type PathOptions = { blend?: Blend; trim?: [number, number] };
 export type StrokeInput = { width: number; color: string | Gradient; cap?: Stroke['cap']; dash?: number[]; dashOffset?: number };
 
-export function createRenderCtx(bg: CanvasRenderingContext2D): RenderCtx {
+export function createRenderResources(bg: CanvasRenderingContext2D) {
+    return {
+        bg,
+        retained: new Map<string, DrawCommand[]>(),
+        textWidth(content: string, font: FontName) {
+            if (typeof bg.measureText !== 'function') return content.length * .62;
+            bg.font = fontCss(font, 100);
+            return bg.measureText(content).width / 100;
+        },
+    };
+}
+export type RenderResources = ReturnType<typeof createRenderResources>;
+
+export function createRenderCtx(resources: RenderResources, state: GameSnapshot, effects: EffectsState): RenderCtx {
+    const ctx: RenderCtx = {
+        bg: resources.bg,
+        textWidth: (content, font) => resources.textWidth(content, font),
+        locale: 'en', F: LEVEL.floor, TAU: Math.PI * 2, C: ART.palette,
+        clamp: (v, a, b) => Math.max(a, Math.min(b, v)),
+        W: 800, H: 510, scale: 1, VW: 800, vertical: 0, dpr: 1, cam: 0, wheel: 0,
+        ox: 0, oy: 0, rotation: 0, localScale: 1, mirror: null, layer: null, commands: [],
+        state, player: state.player, mode: state.mode,
+        monitors: state.monitors.map((monitor, index) => ({ ...monitor, ...ART.monitors[index] })),
+        cleaning: state.cleaning, bin: { ...state.bin, bottom: ART.binBottom },
+        copier: { ...state.copier, flash: effects.copierFlash }, urgentCopier: state.urgentCopier,
+        people: state.people, solids: state.solids, papers: state.papers,
+        inBin: state.inBin, soaked: state.soaked, soaks: 0, dirty: state.dirty, t: state.time,
+        LEN: state.level.length, GOAL: state.level.goal,
+        waterDrops: effects.waterDrops, waterRipples: effects.waterRipples,
+        waterPour: effects.waterPour, waterPuddle: effects.waterPuddle, specks: effects.specks,
+        paperFace: effects.paperFace, glare: effects.glare, practiceBurst: effects.practiceBurst,
+        saveFlash: effects.saveFlash, personalBox: effects.personalBox,
+        chairPose: { backrest: 0, riderPop: 0, shiver: 0 }, cutscene: false, windowDusk: 1,
+        keysTried: effects.keysTried, meetingVisit: effects.meetingVisit,
+        ...drawingMethods(() => ctx, resources),
+    };
+    return ctx;
+}
+
+function drawingMethods(getCtx: () => RenderCtx, { retained }: RenderResources) {
     const TAU = Math.PI * 2;
     const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-    const ctx = {
-        locale: 'en' satisfies Locale,
-        bg,
-        F: LEVEL.floor,
-        TAU,
-        C: ART.palette,
-        clamp,
-        W: 800,
-        H: 510,
-        scale: 1,
-        VW: 800,
-        vertical: 0,
-        dpr: 1,
-        cam: 0,
-        wheel: 0,
-        ox: 0,
-        oy: 0,
-        rotation: 0,
-        localScale: 1,
-        mirror: null,
-        layer: null,
-        commands: [] as DrawCommand[],
-        state: null as unknown as GameState,
-        p: null as unknown as GameState['player'],
-        mode: 'intro' as Mode,
-        monitors: [] as RenderCtx['monitors'],
-        cleaning: null as unknown as GameState['cleaning'],
-        bin: null as unknown as GameState['bin'] & { bottom: number },
-        copier: null as unknown as GameState['copier'] & { flash: number },
-        urgentCopier: null as unknown as GameState['urgentCopier'],
-        people: [] as unknown as GameState['people'],
-        solids: [] as unknown as GameState['solids'],
-        papers: [] as unknown as GameState['papers'],
-        inBin: false,
-        soaked: false,
-        soaks: 0,
-        dirty: false,
-        t: 0,
-        LEN: LEVEL.length,
-        GOAL: LEVEL.goal,
-        waterDrops: [] as DeepReadonly<EffectsState['waterDrops']>,
-        waterRipples: [] as DeepReadonly<EffectsState['waterRipples']>,
-        waterPour: null,
-        waterPuddle: null,
-        specks: [] as DeepReadonly<EffectsState['specks']>,
-        paperFace: 0,
-        glare: 0,
-        practiceBurst: 0,
-        saveFlash: 0,
-        personalBox: { kind: 'idle' },
-        chairPose: { backrest: 0, riderPop: 0, shiver: 0 },
-        cutscene: false,
-        windowDusk: 1,
-        keysTried: { left: false, right: false, jump: false, spray: false },
-        meetingVisit: 0,
-    } as unknown as RenderCtx;
-
-    ctx.screenPoint = (x, y) => {
-        const c = Math.cos(ctx.rotation);
-        const s = Math.sin(ctx.rotation);
-        x *= ctx.localScale;
-        y *= ctx.localScale;
-        let wy = x * s + y * c + ctx.oy;
-        if (ctx.mirror) wy = ctx.mirror.y + (ctx.mirror.y - wy) * ctx.mirror.k;
-        return [(x * c - y * s + ctx.ox - ctx.cam) * ctx.scale, (wy + ctx.vertical) * ctx.scale];
+    const screenPoint: RenderCtx['screenPoint'] = (x, y) => {
+        const c = Math.cos(getCtx().rotation);
+        const s = Math.sin(getCtx().rotation);
+        x *= getCtx().localScale;
+        y *= getCtx().localScale;
+        let wy = x * s + y * c + getCtx().oy;
+        const mirror = getCtx().mirror;
+        if (mirror) wy = mirror.y + (mirror.y - wy) * mirror.k;
+        return [(x * c - y * s + getCtx().ox - getCtx().cam) * getCtx().scale, (wy + getCtx().vertical) * getCtx().scale];
     };
     const push = (cmd: DrawCommand) => {
-        if (ctx.layer) cmd.layer = ctx.layer;
-        ctx.commands.push(cmd);
+        const layer = getCtx().layer;
+        if (layer) cmd.layer = layer;
+        getCtx().commands.push(cmd);
     };
-    ctx.polygon = (points, color, opts) => {
-        push({ v: points.map(([x, y]) => ctx.screenPoint(x, y)), c: color, ...opts });
+    const polygon: RenderCtx['polygon'] = (points, color, opts) => {
+        push({ kind: 'path', points: points.map(([x, y]) => getCtx().screenPoint(x, y)), fill: color, ...opts });
     };
-    ctx.rgb = (hex) => {
+    const rgb: RenderCtx['rgb'] = (hex) => {
         const h = hex.slice(1);
         return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
     };
-    ctx.rgba = (hex, alpha = 1) => {
-        return [...ctx.rgb(hex), Math.round((hex.length === 9 ? parseInt(hex.slice(7, 9), 16) : 255) * clamp(alpha, 0, 1))];
+    const rgba: RenderCtx['rgba'] = (hex, alpha = 1) => {
+        return [...getCtx().rgb(hex), Math.round((hex.length === 9 ? parseInt(hex.slice(7, 9), 16) : 255) * clamp(alpha, 0, 1))];
     };
-    ctx.gradientFill = (x1, y1, x2, y2, stops, alpha = 1) => {
-        return { from: ctx.screenPoint(x1, y1), to: ctx.screenPoint(x2, y2), stops: stops.map(([at, c]) => [at, ctx.rgba(c, alpha)]) };
+    const gradientFill: RenderCtx['gradientFill'] = (x1, y1, x2, y2, stops, alpha = 1) => {
+        return { from: getCtx().screenPoint(x1, y1), to: getCtx().screenPoint(x2, y2), stops: stops.map(([at, c]) => [at, getCtx().rgba(c, alpha)]) };
     };
-    ctx.pathCommand = (start, curves) => ({
-        v: [ctx.screenPoint(...start)],
-        curves: curves.map(c => [...ctx.screenPoint(c[0], c[1]), ...ctx.screenPoint(c[2], c[3]), ...ctx.screenPoint(c[4], c[5])]),
-        c: null,
+    const pathCommand: RenderCtx['pathCommand'] = (start, curves) => ({ kind: 'path',
+        points: [getCtx().screenPoint(...start)],
+        curves: curves.map(c => [...getCtx().screenPoint(c[0], c[1]), ...getCtx().screenPoint(c[2], c[3]), ...getCtx().screenPoint(c[4], c[5])]),
+        fill: null,
     });
-    ctx.effectPath = (start, curves, fill, opts) => {
-        const cmd = ctx.pathCommand(start, curves);
-        cmd.c = fill;
+    const effectPath: RenderCtx['effectPath'] = (start, curves, fill, opts) => {
+        const cmd = getCtx().pathCommand(start, curves);
+        cmd.fill = fill;
         if (opts?.blend) cmd.blend = opts.blend;
         if (opts?.trim) cmd.trim = opts.trim;
         push(cmd);
     };
-    ctx.strokePath = (start, curves, stroke, opts) => {
-        const cmd = ctx.pathCommand(start, curves);
-        const unit = ctx.scale * ctx.localScale;
+    const strokePath: RenderCtx['strokePath'] = (start, curves, stroke, opts) => {
+        const cmd = getCtx().pathCommand(start, curves);
+        const unit = getCtx().scale * getCtx().localScale;
         cmd.open = !opts?.closed;
         cmd.stroke = {
             width: stroke.width * unit,
@@ -228,63 +214,82 @@ export function createRenderCtx(bg: CanvasRenderingContext2D): RenderCtx {
         if (opts?.trim) cmd.trim = opts.trim;
         push(cmd);
     };
-    ctx.radialFill = (cx, cy, r, stops, alpha = 1) => ({
-        from: ctx.screenPoint(cx, cy),
-        to: ctx.screenPoint(cx + r, cy),
-        radius: r * ctx.scale * ctx.localScale,
-        stops: stops.map(([at, c]) => [at, ctx.rgba(c, alpha)]),
+    const radialFill: RenderCtx['radialFill'] = (cx, cy, r, stops, alpha = 1) => ({
+        from: getCtx().screenPoint(cx, cy),
+        to: getCtx().screenPoint(cx + r, cy),
+        radius: r * getCtx().scale * getCtx().localScale,
+        stops: stops.map(([at, c]) => [at, getCtx().rgba(c, alpha)]),
     });
-    ctx.beginLayer = (spec) => {
+    const layers: (LayerSpec | null)[] = [];
+    const beginLayer: RenderCtx['beginLayer'] = spec => {
+        layers.push(getCtx().layer);
+        getCtx().layer = spec;
+    };
+    const endLayer: RenderCtx['endLayer'] = () => {
+        getCtx().layer = layers.pop() ?? null;
+    };
+    const withLayer: RenderCtx['withLayer'] = (spec, draw) => {
+        const ctx = getCtx();
+        const previous = ctx.layer;
+        const depth = layers.length;
         ctx.layer = spec;
+        try { draw(); } finally {
+            ctx.layer = previous;
+            layers.length = depth;
+        }
     };
-    ctx.endLayer = () => {
-        ctx.layer = null;
+    const withTransform: RenderCtx['withTransform'] = (transform, draw) => {
+        const ctx = getCtx();
+        const { ox, oy, rotation, localScale, mirror } = ctx;
+        Object.assign(ctx, transform);
+        try { draw(); } finally {
+            Object.assign(ctx, { ox, oy, rotation, localScale, mirror });
+        }
     };
-    ctx.gradientPolygon = (points, fill, opts) => {
-        push({ v: points.map(v => ctx.screenPoint(...v)), c: fill, ...opts });
+    const gradientPolygon: RenderCtx['gradientPolygon'] = (points, fill, opts) => {
+        push({ kind: 'path', points: points.map(v => getCtx().screenPoint(...v)), fill: fill, ...opts });
     };
-    const retained = new Map<string, DrawCommand[]>();
-    ctx.visible = (bounds, margin = 0) => {
-        const left = ctx.cam - margin, right = ctx.cam + ctx.VW + margin;
-        const top = -ctx.vertical - margin, bottom = ctx.H / ctx.scale - ctx.vertical + margin;
+    const visible: RenderCtx['visible'] = (bounds, margin = 0) => {
+        const left = getCtx().cam - margin, right = getCtx().cam + getCtx().VW + margin;
+        const top = -getCtx().vertical - margin, bottom = getCtx().H / getCtx().scale - getCtx().vertical + margin;
         return bounds.right > left && bounds.left < right && bounds.bottom > top && bounds.top < bottom;
     };
-    ctx.retainedGroup = (key, bounds, draw) => {
-        if (!ctx.visible(bounds)) return;
+    const retainedGroup: RenderCtx['retainedGroup'] = (key, bounds, draw) => {
+        if (!getCtx().visible(bounds)) return;
         let geometry = retained.get(key);
         if (!geometry) {
             const saved = {
-                commands: ctx.commands, cam: ctx.cam, vertical: ctx.vertical, scale: ctx.scale,
-                ox: ctx.ox, oy: ctx.oy, rotation: ctx.rotation, localScale: ctx.localScale,
-                mirror: ctx.mirror, layer: ctx.layer,
+                commands: getCtx().commands, cam: getCtx().cam, vertical: getCtx().vertical, scale: getCtx().scale,
+                ox: getCtx().ox, oy: getCtx().oy, rotation: getCtx().rotation, localScale: getCtx().localScale,
+                mirror: getCtx().mirror, layer: getCtx().layer,
             };
-            ctx.commands = [];
-            ctx.cam = ctx.vertical = ctx.ox = ctx.oy = ctx.rotation = 0;
-            ctx.scale = ctx.localScale = 1;
-            ctx.mirror = ctx.layer = null;
+            getCtx().commands = [];
+            getCtx().cam = getCtx().vertical = getCtx().ox = getCtx().oy = getCtx().rotation = 0;
+            getCtx().scale = getCtx().localScale = 1;
+            getCtx().mirror = getCtx().layer = null;
             try {
                 draw();
-                geometry = ctx.commands;
+                geometry = getCtx().commands;
                 retained.set(key, geometry);
             } finally {
-                Object.assign(ctx, saved);
+                Object.assign(getCtx(), saved);
             }
         }
         const transform = {
-            e11: ctx.scale, e12: 0, e13: -ctx.cam * ctx.scale,
-            e21: 0, e22: ctx.scale, e23: ctx.vertical * ctx.scale,
+            e11: getCtx().scale, e12: 0, e13: -getCtx().cam * getCtx().scale,
+            e21: 0, e22: getCtx().scale, e23: getCtx().vertical * getCtx().scale,
             e31: 0 as const, e32: 0 as const, e33: 1 as const,
         };
         const screenBounds = {
-            left: (bounds.left - ctx.cam) * ctx.scale,
-            top: (bounds.top + ctx.vertical) * ctx.scale,
-            right: (bounds.right - ctx.cam) * ctx.scale,
-            bottom: (bounds.bottom + ctx.vertical) * ctx.scale,
+            left: (bounds.left - getCtx().cam) * getCtx().scale,
+            top: (bounds.top + getCtx().vertical) * getCtx().scale,
+            right: (bounds.right - getCtx().cam) * getCtx().scale,
+            bottom: (bounds.bottom + getCtx().vertical) * getCtx().scale,
         };
         const layer: LayerSpec = { key: `retained:${key}`, retained: { geometry: key, transform, bounds: screenBounds } };
-        ctx.commands.push(...geometry.map(command => ({ ...command, layer })));
+        getCtx().commands.push(...geometry.map(command => ({ ...command, layer })));
     };
-    ctx.ripple = (x, y, rx, ry, width, color) => {
+    const ripple: RenderCtx['ripple'] = (x, y, rx, ry, width, color) => {
         const points: Vector[] = [];
         for (let i = 0; i <= 24; i++) {
             const a = i / 24 * TAU;
@@ -294,35 +299,29 @@ export function createRenderCtx(bg: CanvasRenderingContext2D): RenderCtx {
             const a = i / 24 * TAU;
             points.push([x + Math.max(0, rx - width) * Math.cos(a), y + Math.max(0, ry - width * .35) * Math.sin(a)]);
         }
-        ctx.polygon(points, color);
+        getCtx().polygon(points, color);
     };
-    ctx.tint = (hex, alpha) => hex + Math.round(clamp(alpha, 0, 1) * 255).toString(16).padStart(2, '0');
-    ctx.rect = (x, y, w, h, c) => {
-        ctx.polygon([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], c);
+    const tint: RenderCtx['tint'] = (hex, alpha) => hex + Math.round(clamp(alpha, 0, 1) * 255).toString(16).padStart(2, '0');
+    const rect: RenderCtx['rect'] = (x, y, w, h, c) => {
+        getCtx().polygon([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], c);
     };
-    ctx.ellipse = (x, y, rx, ry, c, opts) => {
-        ctx.polygon(Array.from({ length: 16 }, (_, i) => [x + rx * Math.cos(i / 16 * TAU), y + ry * Math.sin(i / 16 * TAU)]), c, opts);
+    const ellipse: RenderCtx['ellipse'] = (x, y, rx, ry, c, opts) => {
+        getCtx().polygon(Array.from({ length: 16 }, (_, i) => [x + rx * Math.cos(i / 16 * TAU), y + ry * Math.sin(i / 16 * TAU)]), c, opts);
     };
-    ctx.rod = (x, y, xx, yy, w, c) => {
+    const rod: RenderCtx['rod'] = (x, y, xx, yy, w, c) => {
         const dx = xx - x;
         const dy = yy - y;
         const l = Math.hypot(dx, dy) || 1;
         const nx = -dy / l * w / 2;
         const ny = dx / l * w / 2;
-        ctx.polygon([[x + nx, y + ny], [xx + nx, yy + ny], [xx - nx, yy - ny], [x - nx, y - ny]], c);
+        getCtx().polygon([[x + nx, y + ny], [xx + nx, yy + ny], [xx - nx, yy - ny], [x - nx, y - ny]], c);
     };
-    ctx.textWidth = (content, font) => {
-        const measure = (bg as Partial<CanvasRenderingContext2D>).measureText;
-        if (typeof measure !== 'function') return content.length * .62;
-        bg.font = fontCss(font, 100);
-        return measure.call(bg, content).width / 100;
-    };
-    ctx.measureText = (content, size, font = SIGN_FONT) => ctx.textWidth(fitGlyphs(content), font) * size;
+    const measureText: RenderCtx['measureText'] = (content, size, font = SIGN_FONT) => getCtx().textWidth(fitGlyphs(content), font) * size;
     const pushText = (content: string, cx: number, cy: number, size: number, rotation: number, fill: string, opts: TextOptions = {}) => {
         const font = opts.font ?? SIGN_FONT;
         content = fitGlyphs(content);
         const outline = opts.outline?.width ?? 0;
-        const halfWidth = ctx.textWidth(content, font) * size / 2 + outline;
+        const halfWidth = getCtx().textWidth(content, font) * size / 2 + outline;
         const halfHeight = size * .6 + outline;
         const c = Math.cos(rotation), s = Math.sin(rotation);
         const box = ([[-halfWidth, -halfHeight], [halfWidth, -halfHeight], [halfWidth, halfHeight], [-halfWidth, halfHeight]] as Vector[])
@@ -332,19 +331,19 @@ export function createRenderCtx(bg: CanvasRenderingContext2D): RenderCtx {
             ...(opts.outline ? { outline: opts.outline } : {}),
             ...(opts.opacity !== undefined ? { opacity: opts.opacity } : {}),
         };
-        push({ v: box, c: fill, text });
+        push({ kind: 'text', points: box, text });
     };
-    ctx.text = (content, x, y, size, fill, opts) => {
-        const unit = ctx.scale * ctx.localScale;
-        const [cx, cy] = ctx.screenPoint(x, y);
+    const text: RenderCtx['text'] = (content, x, y, size, fill, opts) => {
+        const unit = getCtx().scale * getCtx().localScale;
+        const [cx, cy] = getCtx().screenPoint(x, y);
         const outline = opts?.outline && { width: opts.outline.width * unit, color: opts.outline.color };
-        pushText(content, cx, cy, size * unit, ctx.rotation, fill, { ...opts, outline });
+        pushText(content, cx, cy, size * unit, getCtx().rotation, fill, { ...opts, outline });
     };
-    ctx.screenText = (content, x, y, size, fill, opts) => pushText(content, x, y, size, opts?.rotation ?? 0, fill, opts);
+    const screenText: RenderCtx['screenText'] = (content, x, y, size, fill, opts) => pushText(content, x, y, size, opts?.rotation ?? 0, fill, opts);
     // A label's y is its baseline, as with Canvas2D fillText; the middle of the line sits a third of a size above.
-    ctx.label = (text, x, y, size = 12, color = '#333d4b', font = LABEL_FONT) => {
-        ctx.text(text, x, y - size * .35, size, color, { font });
+    const label: RenderCtx['label'] = (text, x, y, size = 12, color = '#333d4b', font = LABEL_FONT) => {
+        getCtx().text(text, x, y - size * .35, size, color, { font });
     };
 
-    return ctx;
+    return { withTransform, withLayer, screenPoint, polygon, rgb, rgba, gradientFill, pathCommand, effectPath, strokePath, radialFill, beginLayer, endLayer, gradientPolygon, visible, retainedGroup, ripple, tint, rect, ellipse, rod, measureText, text, screenText, label };
 }

@@ -4,14 +4,14 @@ import { loadSource } from './support/load.mjs';
 
 const { createGame, createRenderCtx, drawTalk, drawStageTitle, SPEECH_FONT, LABEL_FONT } = await loadSource(`
     export { createGame } from './src/game/game';
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { drawTalk, drawStageTitle } from './src/render/scene/talk';
     export { SPEECH_FONT, LABEL_FONT } from './src/render/fonts';
 `);
 
 function context(state, overrides = {}) {
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state, p: state.player, mode: 'play', locale: 'ko', t: state.time, W: 1000, H: 510, VW: 1000, scale: 1, cam: 0, vertical: 0 }, overrides);
+    Object.assign(ctx, { state, player: state.player, mode: 'play', locale: 'ko', t: state.time, W: 1000, H: 510, VW: 1000, scale: 1, cam: 0, vertical: 0 }, overrides);
     return ctx;
 }
 
@@ -25,7 +25,7 @@ test('rider reactions and colleague remarks are ThorVG bubbles with Jua words', 
     assert.deepEqual(texts.map(text => text.content), ['이거 이번 달 실적인데...', '박 과장', '벌써 퇴근하는 거야?']);
     assert.ok(texts.every(text => text.font === SPEECH_FONT));
     assert.equal(ctx.commands.filter(command => command.layer?.key.startsWith('talk-')).length, 2, 'one paper bubble per speaker');
-    for (const command of ctx.commands) for (const point of [...command.v, ...(command.curves ?? [])]) assert.ok(point.every(Number.isFinite));
+    for (const command of ctx.commands) for (const point of [...command.points, ...(command.curves ?? [])]) assert.ok(point.every(Number.isFinite));
 });
 
 test('remarks stay quiet where the HUD kept them hidden', () => {

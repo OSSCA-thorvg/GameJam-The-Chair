@@ -84,13 +84,13 @@ export function skyKnockKeycaps(ctx: RenderCtx) {
     const age = 1 - sky.knock / STAGE_FOUR.knock.cooldown;
     const fade = 1 - age;
     ctx.beginLayer({ key: 'sky-gear-spark', blend: 'add', opacity: fade });
-    ctx.ellipse(ctx.p.x + 18, ctx.p.y - 40, 26 + age * 30, 26 + age * 30, ctx.radialFill(ctx.p.x + 18, ctx.p.y - 40, 26 + age * 30,
+    ctx.ellipse(ctx.player.x + 18, ctx.player.y - 40, 26 + age * 30, 26 + age * 30, ctx.radialFill(ctx.player.x + 18, ctx.player.y - 40, 26 + age * 30,
         [[0, '#fff6c8'], [.4, '#ffd36a88'], [1, '#ffd36a00']]));
     ctx.endLayer();
     for (let i = 0; i < 8; i++) {
         const angle = i * .8 - .6;
         const reach = 30 + age * 90;
-        ctx.ox = ctx.p.x + 18 + Math.cos(angle) * reach; ctx.oy = ctx.p.y - 40 + Math.sin(angle) * reach * .7 + age * age * 60;
+        ctx.ox = ctx.player.x + 18 + Math.cos(angle) * reach; ctx.oy = ctx.player.y - 40 + Math.sin(angle) * reach * .7 + age * age * 60;
         ctx.rotation = angle * 3 + age * 9; ctx.localScale = 1.6;
         ctx.rect(-3, -3, 6, 5, ctx.tint(G.side, fade));
         ctx.rect(-2.6, -3.4, 5.2, 4, ctx.tint(i % 3 ? G.key : '#f2c230', fade));

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
 const { createRenderCtx, riderStains, MAX_STAIN_LAYERS } = await loadSource(`
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { riderStains, MAX_STAIN_LAYERS } from './src/render/scene/player-stains';
 `);
 
@@ -25,5 +25,5 @@ test('every splash adds more stains, up to a cap', () => {
 });
 
 test('the same number of soakings always draws the same stains', () => {
-    assert.deepEqual(stains(4).map(command => command.v), stains(4).map(command => command.v));
+    assert.deepEqual(stains(4).map(command => command.points), stains(4).map(command => command.points));
 });

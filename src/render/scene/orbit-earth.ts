@@ -180,9 +180,9 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
     const { horizon, middle } = view;
     const far = Math.max(ctx.W, ctx.H) * 4;
     const ground: Vector[] = [...horizon, [horizon.at(-1)![0] + far, horizon.at(-1)![1] + far], [horizon[0][0] - far, horizon[0][1] + far]];
-    const clip: DrawCommand = { v: ground, c: '#000000' };
+    const clip: DrawCommand = { kind: 'path', points: ground, fill: '#000000' };
     // Ocean, hazier toward the horizon. A single shape, so its fade is folded into its own colours (no layer).
-    ctx.commands.push({ v: ground, c: { from: middle, to: [middle[0], middle[1] + ctx.H * .5],
+    ctx.commands.push({ kind: 'path', points: ground, fill: { from: middle, to: [middle[0], middle[1] + ctx.H * .5],
         stops: [[0, ctx.rgba('#8cc0e6', strength)], [.18, ctx.rgba('#3f82c4', strength)], [1, ctx.rgba('#1b4f8f', strength)]] } });
     // Land, clouds and lights sit on the sphere and are clipped to the ground under the horizon (ThorVG clip).
     // The fade-in is folded into each colour's alpha: a layer opacity would add a full-canvas offscreen pass.
@@ -194,7 +194,7 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
         // A coast wholly beyond the horizon would only squash onto it.
         if (!points.some(view.visible)) continue;
         const v = view.outline(points);
-        if (v.length) ctx.commands.push({ v, c: faded(land.color), layer: surface,
+        if (v.length) ctx.commands.push({ kind: 'path', points: v, fill: faded(land.color), layer: surface,
             ...(land.inland ? {} : { stroke: { width: Math.max(1, ctx.W / 700), color: faded('#d9efe0aa') } }) });
     }
     const drift = ctx.t * .015, cloud = '#ffffff' + alpha(.5 * (1 - night * .85) * strength);
@@ -204,36 +204,36 @@ export function orbitEarth(ctx: RenderCtx, travel: number, camera: EarthCamera, 
             const a = i / 9 * Math.PI * 2;
             return globe(lon + drift + Math.cos(a) * r * (1 + .3 * Math.sin(i * 2.3 + k)), lat + Math.sin(a) * r * stretch);
         }));
-        if (v.length) ctx.commands.push({ v, c: cloud, layer: surface });
+        if (v.length) ctx.commands.push({ kind: 'path', points: v, fill: cloud, layer: surface });
     });
     if (night > 0) {
-        ctx.commands.push({ v: ground, c: '#06101f' + alpha(.86 * night * strength), layer: surface });
+        ctx.commands.push({ kind: 'path', points: ground, fill: '#06101f' + alpha(.86 * night * strength), layer: surface });
         // Coasts still faintly visible under the night sky.
         for (const land of LAND_DENSE) {
             if (land.inland) continue;
             const points = land.points;
             if (!points.some(view.visible)) continue;
             const v = view.outline(points);
-            if (v.length) ctx.commands.push({ v, c: null, stroke: { width: Math.max(1, ctx.W / 800), color: '#6f8fbf' + alpha(.45 * night * strength) }, layer: surface });
+            if (v.length) ctx.commands.push({ kind: 'path', points: v, fill: null, stroke: { width: Math.max(1, ctx.W / 800), color: '#6f8fbf' + alpha(.45 * night * strength) }, layer: surface });
         }
         const glow = { key: 'orbit-earth-lights', blend: 'screen' as const, opacity: strength * night, clip };
         for (const [lon, lat, size] of CITIES) {
             if (!view.visible(globe(lon, lat))) continue;
             const [x, y] = view.project(globe(lon, lat));
             const r = size * ctx.W / 420;
-            ctx.commands.push({ v: [[x - r * 4, y - r * 4], [x + r * 4, y - r * 4], [x + r * 4, y + r * 4], [x - r * 4, y + r * 4]], layer: glow,
-                c: { from: [x, y], to: [x + r * 4, y], radius: r * 4, stops: [[0, ctx.rgba('#ffc96a', 1)], [.35, ctx.rgba('#ffb84d', .45)], [1, ctx.rgba('#ffb84d', 0)]] } });
-            ctx.commands.push({ v: [[x - r * 2.2, y], [x, y - r], [x + r * 2.2, y], [x, y + r]], c: '#fff6dc', layer: glow });
+            ctx.commands.push({ kind: 'path', points: [[x - r * 4, y - r * 4], [x + r * 4, y - r * 4], [x + r * 4, y + r * 4], [x - r * 4, y + r * 4]], layer: glow,
+                fill: { from: [x, y], to: [x + r * 4, y], radius: r * 4, stops: [[0, ctx.rgba('#ffc96a', 1)], [.35, ctx.rgba('#ffb84d', .45)], [1, ctx.rgba('#ffb84d', 0)]] } });
+            ctx.commands.push({ kind: 'path', points: [[x - r * 2.2, y], [x, y - r], [x + r * 2.2, y], [x, y + r]], fill: '#fff6dc', layer: glow });
         }
     }
     // Haze along the horizon and the thin, bright line of the atmosphere over it.
     const above = horizon.map(([x, y]): Vector => [x, y - ctx.H * .07]);
     // Its fade sits in the gradient, so with no opacity of its own it shares the limb's screen-blended Scene.
-    ctx.commands.push({ v: [...horizon, ...above.reverse()], layer: { key: 'orbit-earth-air', blend: 'screen' },
-        c: { from: middle, to: [middle[0], middle[1] - ctx.H * .07], stops: [[0, ctx.rgba('#7fb8ff', .55 * strength)], [1, ctx.rgba('#7fb8ff', 0)]] } });
+    ctx.commands.push({ kind: 'path', points: [...horizon, ...above.reverse()], layer: { key: 'orbit-earth-air', blend: 'screen' },
+        fill: { from: middle, to: [middle[0], middle[1] - ctx.H * .07], stops: [[0, ctx.rgba('#7fb8ff', .55 * strength)], [1, ctx.rgba('#7fb8ff', 0)]] } });
     const limb = { key: 'orbit-earth-limb', blend: 'screen' as const };
     for (const [width, color, opacity] of [[ctx.W * .012, '#4f8fe0', .45], [ctx.W * .004, '#d8f0ff', .85]] as const) {
-        ctx.commands.push({ v: horizon, open: true, c: null, stroke: { width, color: color + alpha(opacity * strength) }, layer: limb });
+        ctx.commands.push({ kind: 'path', points: horizon, open: true, fill: null, stroke: { width, color: color + alpha(opacity * strength) }, layer: limb });
     }
     return middle;
 }

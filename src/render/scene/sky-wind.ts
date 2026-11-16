@@ -147,7 +147,7 @@ export function skyKnockFeathers(ctx: RenderCtx) {
     for (let i = 0; i < 7; i++) {
         const angle = i * .9 + .4;
         const reach = 45 + age * 80;
-        ctx.ox = ctx.p.x + Math.cos(angle) * reach; ctx.oy = ctx.p.y - 40 + Math.sin(angle) * reach * .7 + age * age * 30;
+        ctx.ox = ctx.player.x + Math.cos(angle) * reach; ctx.oy = ctx.player.y - 40 + Math.sin(angle) * reach * .7 + age * age * 30;
         ctx.rotation = angle + age * 4; ctx.localScale = 1.8;
         const color = [PARROT.red, PARROT.blue, PARROT.yellow, '#62b24a', '#f2959a'][i % 5];
         ctx.ellipse(0, 0, 10, 3.6, ctx.tint(color, 1 - age));
@@ -162,7 +162,7 @@ export function skySprayGauge(ctx: RenderCtx) {
     const state = ctx.state;
     if (state.sky.phase !== 'course' || (state.ground && state.sky.airSprays === 0)) return;
     const limit = STAGE_FOUR.airSprayLimit, left = limit - state.sky.airSprays;
-    const x = ctx.p.x, y = ctx.p.y - 112;
+    const x = ctx.player.x, y = ctx.player.y - 112;
     ctx.rect(x - 24, y - 7, 48, 14, '#1d2c3fa8');
     for (let i = 0; i < limit; i++) {
         const cx = x - 14 + i * 14;

@@ -79,7 +79,7 @@ test('the farewell settles and resets only for a new attempt', () => {
 });
 
 test('personal belongings preview seeks backward through the bow, flip and one-shot return', () => {
-    const scene = previewScenes.find(scene => scene.id === 'personal-belongings');
+    const scene = previewScenes.find(scene => scene.id === 'personal-belongings')?.create();
     const bowed = scene.sample(3.6);
     const before = scene.sample(2.8);
     assert.equal(personalBoxPose(before.effects.personalBox, before.state.time).badgeTurn, 0);

@@ -1,5 +1,5 @@
 import type { RenderCtx } from '../context';
-import type { Curve, DrawCommand, Vector } from '../types';
+import type { Curve, PathCommand, Vector } from '../types';
 import { WATER_GRAVITY, bucketMouth, pourLaunch } from '../bucket';
 
 type Path = { start: Vector; curves: Curve[] };
@@ -50,7 +50,7 @@ function ellipsePath(x: number, y: number, rx: number, ry: number): Path {
     };
 }
 
-export type PuddleShape = { cx: number; cy: number; rx: number; ry: number; outline: Path; clip: DrawCommand };
+export type PuddleShape = { cx: number; cy: number; rx: number; ry: number; outline: Path; clip: PathCommand };
 
 /**
  * The wet patch grows from where water actually landed and then spreads over
@@ -258,7 +258,7 @@ export function drawPour(ctx: RenderCtx) {
         const shapes = curtains.map(c => ({ sheet: c, ...sheetOutline(c, age) }));
         // Fade the lowest free-falling front so it dissolves into the drops around it.
         const falling = shapes.filter(s => !s.sheet.landed).sort((a, b) => b.front.p[1] - a.front.p[1])[0];
-        let mask: DrawCommand | undefined;
+        let mask: PathCommand | undefined;
         if (falling) {
             const { p, dir } = falling.front;
             const big = 1e4;
@@ -266,7 +266,7 @@ export function drawPour(ctx: RenderCtx) {
                 [-big, -big, big, -big, big, -big], [big, -big, big, big, big, big],
                 [big, big, -big, big, -big, big], [-big, big, -big, -big, -big, -big],
             ]);
-            mask.c = ctx.gradientFill(p[0] - dir[0] * 14, p[1] - dir[1] * 14, p[0] + dir[0] * 12, p[1] + dir[1] * 12, [[0, '#ffffff'], [1, '#ffffff00']]);
+            mask.fill = ctx.gradientFill(p[0] - dir[0] * 14, p[1] - dir[1] * 14, p[0] + dir[0] * 12, p[1] + dir[1] * 12, [[0, '#ffffff'], [1, '#ffffff00']]);
         }
         ctx.beginLayer({
             key: 'water-sheet',

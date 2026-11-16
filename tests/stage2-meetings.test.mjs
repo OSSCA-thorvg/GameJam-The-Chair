@@ -60,17 +60,17 @@ test('retry at the first flag preserves the new room departure and the original 
 
 test('meeting and dispatch previews support deterministic forward and backward seeking', () => {
     for (const id of ['building-meeting', 'building-dispatch']) {
-        const scene = previewScenes.find(scene => scene.id === id);
+        const scene = previewScenes.find(scene => scene.id === id)?.create();
         assert.ok(scene);
         const middle = scene.sample(1.8);
         scene.sample(scene.duration);
         assert.deepEqual(scene.sample(1.8), middle);
     }
-    const room = previewScenes.find(scene => scene.id === 'building-meeting');
+    const room = previewScenes.find(scene => scene.id === 'building-meeting')?.create();
     assert.equal(room.sample(1.8).state.corridor.room.kind, 'meeting');
     assert.equal(room.sample(5).state.furniture.some(chair => chair.released), false);
     assert.equal(room.sample(room.duration).state.corridor.room.kind, 'corridor');
-    const dispatch = previewScenes.find(scene => scene.id === 'building-dispatch');
+    const dispatch = previewScenes.find(scene => scene.id === 'building-dispatch')?.create();
     assert.equal(dispatch.sample(0).state.furniture.some(chair => chair.released), false);
     assert.ok(dispatch.sample(4.8).state.furniture.every(chair => chair.released));
     for (let i = 0; i < 3; i++) {

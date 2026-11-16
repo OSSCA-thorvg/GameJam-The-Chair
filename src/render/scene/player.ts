@@ -6,7 +6,7 @@ import { chairStains, riderFaceStains, riderSplash, riderStains } from './player
 import type { RenderCtx } from '../context';
 
 export function player(ctx: RenderCtx) {
-    const p = ctx.p;
+    const p = ctx.player;
     const state = ctx.state;
     ctx.ox = p.x + ART.player.offsetX;
     ctx.oy = p.y + ART.player.offsetY;
@@ -175,9 +175,9 @@ function riderEffects(ctx: RenderCtx) {
 
 export function debugCollisions(ctx: RenderCtx) {
     if (!ART.debugCollisions) return;
-    ctx.ox = ctx.p.x;
-    ctx.oy = ctx.p.y;
-    ctx.rotation = ctx.p.a;
+    ctx.ox = ctx.player.x;
+    ctx.oy = ctx.player.y;
+    ctx.rotation = ctx.player.a;
     for (const part of LEVEL.playerContacts) {
         ctx.ripple(part.x, part.y, part.r, part.r, 1, '#ff0055');
     }

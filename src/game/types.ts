@@ -7,7 +7,9 @@ export type Player = {
     y: number;
     vx: number;
     vy: number;
+    /** Angle in radians; the short key is part of the replay format. */
     a: number;
+    /** Angular velocity in radians per second. */
     w: number;
 };
 export type Snapshot = {

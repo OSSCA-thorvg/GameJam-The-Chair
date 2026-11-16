@@ -3,7 +3,7 @@ import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
 const { createRenderCtx, breadCloud, puffCloud, CLOUD_TONES } = await loadSource(`
-    export { createRenderCtx } from './src/render/context';
+    export { createRenderCtx } from './tests/support/render-context';
     export { breadCloud } from './src/render/scene/cloud-art';
     export { puffCloud, CLOUD_TONES } from './src/render/scene/cloud-art';
 `);

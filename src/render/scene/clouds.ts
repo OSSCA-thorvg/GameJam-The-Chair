@@ -23,7 +23,7 @@ const GRAPH_END = STAGE_THREE.graph.points[STAGE_THREE.graph.points.length - 1];
 const ASCENT_START_Y = GRAPH_END.y - 28;
 
 function ascentTone(ctx: RenderCtx) {
-    const progress = ctx.clamp((ASCENT_START_Y - ctx.p.y) / (ASCENT_START_Y - STAGE_FOUR.arrivalY), 0, 1);
+    const progress = ctx.clamp((ASCENT_START_Y - ctx.player.y) / (ASCENT_START_Y - STAGE_FOUR.arrivalY), 0, 1);
     const eased = progress * progress * (3 - 2 * progress);
     return blendCloudTone(CLOUD_TONES.ascent, CLOUD_TONES.bread, eased);
 }

@@ -87,14 +87,14 @@ function backdrop(ctx: RenderCtx, shot: OrbitShot, clouds: number, earth: EarthC
     const heights = orbitHeights(shot.travel);
     if (heights.air < 1) {
         if (shot.basin < 1) {
-            ctx.commands.push({ v: screen(ctx), c: { from: [0, 0], to: [0, ctx.H], stops: [[0, ctx.rgba('#678eae')], [1, ctx.rgba('#b7ced1')]] } });
+            ctx.commands.push({ kind: 'path', points: screen(ctx), fill: { from: [0, 0], to: [0, ctx.H], stops: [[0, ctx.rgba('#678eae')], [1, ctx.rgba('#b7ced1')]] } });
             inOpacity(ctx, { key: 'orbit-basin-sky', opacity: shot.basin }, () => orbitSky(ctx));
         } else orbitSky(ctx);
     }
     // Low sunlight over the cloud basin, thinning out as the chair climbs out of the clouds. Plain alpha instead of
     // a screen-blended Scene: over the sky behind the sun, #fff2eb paints what #ffdfb5 screened would
     // (c + d(1 - c) for d = #7499b9), without a full-canvas offscreen pass.
-    if (clouds > 0) ctx.commands.push({ v: screen(ctx), layer: { key: 'orbit-sunlight' }, c: {
+    if (clouds > 0) ctx.commands.push({ kind: 'path', points: screen(ctx), layer: { key: 'orbit-sunlight' }, fill: {
         from: [ctx.W * .75, ctx.H * .15], to: [ctx.W, ctx.H], radius: ctx.W * .8,
         stops: [[0, ctx.rgba('#fff2eb', .16 * clouds)], [1, ctx.rgba('#fff2eb', 0)]],
     } });
@@ -224,7 +224,7 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     satelliteGlare(ctx, chair.project([0, 15, 0]), light.warmth, pulse);
     orbitViewfinder(ctx, plane, light.warmth >= 1 ? 1 : 0, lightShown * blend * (1 - heights.shadow), shot.hitStop ?? 0);
     // Caught: a white camera flash over everything, fading through the stop.
-    if (shot.hitStop) ctx.commands.push({ v: screen(ctx), c: '#ffffff' + Math.round(.32 * shot.hitStop * shot.hitStop * 255).toString(16).padStart(2, '0'), layer: { key: 'orbit-shutter' } });
+    if (shot.hitStop) ctx.commands.push({ kind: 'path', points: screen(ctx), fill: '#ffffff' + Math.round(.32 * shot.hitStop * shot.hitStop * 255).toString(16).padStart(2, '0'), layer: { key: 'orbit-shutter' } });
     endingLaptopText(ctx, chair, ending, laptopBob);
     endingChairLights(ctx, chair, ending);
     const head = chair.project([4, 70, 0]);

@@ -25,14 +25,14 @@ export function orbitViewfinder(ctx: RenderCtx, plane: (x: number, y: number) =>
         : { width: 2 + 1.5 * lit, color: hex('#ff4b52', (.5 + .5 * blink) * shown), cap: 'butt' as const };
     const layer = { key: 'orbit-viewfinder' };
     for (const [x, y, sx, sy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
-        ctx.commands.push({ v: [[x, y + sy * L], [x, y], [x + sx * L, y]], c: null, open: true, stroke, layer });
+        ctx.commands.push({ kind: 'path', points: [[x, y + sy * L], [x, y], [x + sx * L, y]], fill: null, open: true, stroke, layer });
     }
     if (lit <= .1) return;
     const size = ctx.clamp(ctx.H * .032, 11, 18), cx = x0 + L * .5, cy = y0 + L * .75;
     if (blink > 0) {
         const r = size * .32;
-        ctx.commands.push({ v: [[cx - r, cy - r], [cx + r, cy - r], [cx + r, cy + r], [cx - r, cy + r]],
-            c: { from: [cx, cy], to: [cx + r, cy], radius: r, stops: [[0, ctx.rgba('#ff4b52', lit * shown)], [.8, ctx.rgba('#ff4b52', lit * shown)], [1, ctx.rgba('#ff4b52', 0)]] }, layer });
+        ctx.commands.push({ kind: 'path', points: [[cx - r, cy - r], [cx + r, cy - r], [cx + r, cy + r], [cx - r, cy + r]],
+            fill: { from: [cx, cy], to: [cx + r, cy], radius: r, stops: [[0, ctx.rgba('#ff4b52', lit * shown)], [.8, ctx.rgba('#ff4b52', lit * shown)], [1, ctx.rgba('#ff4b52', 0)]] }, layer });
     }
     ctx.screenText('REC', cx + size * 1.4, cy, size, '#ffffff', { font: LABEL_FONT, opacity: lit * shown });
 }

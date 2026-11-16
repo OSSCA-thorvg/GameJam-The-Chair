@@ -7,7 +7,7 @@ import { dirname, join, normalize, relative } from 'node:path';
 const STAGES = ['office', 'building', 'rooftop', 'sky', 'orbit'];
 const STAGE_ROOT = 'src/game/stages';
 // Files that list every stage once (one line or one case per stage).
-const STAGE_INDEXES = ['src/game/stages/index.ts', 'src/game/stages/hooks.ts', 'src/game/stages/attempt.ts', 'src/game/stages/view.ts'];
+const STAGE_INDEXES = ['src/game/stages/index.ts', 'src/game/stages/hooks.ts', 'src/game/stages/attempt.ts', 'src/game/stages/view.ts', 'src/game/stages/validation.ts'];
 
 function files(dir) {
     return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {

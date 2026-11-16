@@ -36,10 +36,12 @@ export type Attempt = {
     sprayDir: { x: number; y: number };
 
     mode: Mode;
+    /** Player body; this key is persisted in existing replays. */
     p: Player;
     keys: Input[];
     ground: boolean;
     coyote: number;
+    /** Remaining jump buffer in seconds; the key is persisted in existing replays. */
     jumpQ: number;
     // Seconds simulated in this attempt (fixed steps only).
     time: number;
@@ -69,7 +71,7 @@ export type Attempt = {
 };
 
 // Everything that decides how play continues. Plain JSON: save it and restore it to resume exactly.
-export type GameState = Progress & Attempt;
+export type CoreState = Progress & Attempt;
 
 function createProgress(skylineSeed: number, deaths = 0, completedStage: 0 | StageId = 0): Progress {
     return {
@@ -127,57 +129,57 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
 
 export type CoreOptions = { seed: number; deaths?: number; completedStage?: 0 | StageId };
 
-export function createCore({ seed, deaths, completedStage }: CoreOptions): GameState {
+export function createCore({ seed, deaths, completedStage }: CoreOptions): CoreState {
     const rng = seedRng(seed);
     const progress = createProgress(randomUint32(rng, 'cosmetic'), deaths, completedStage);
     return { ...progress, ...createAttempt(progress, rng, 'intro') };
 }
 
-export function progressOf(s: GameState): Progress {
+export function progressOf(s: CoreState): Progress {
     const { stage, checkpoint, lessons, deaths, completedStage, skylineSeed, tick } = s;
     return { stage, checkpoint, lessons, deaths, completedStage, skylineSeed, tick };
 }
 
 // Starts a new attempt from the current progress. The core object keeps its identity.
-export function resetAttempt(s: GameState, out: GameEvent[]) {
+export function resetAttempt(s: CoreState, out: GameEvent[]) {
     // Some stages show a fresh skyline on every attempt; the others keep theirs.
     if (STAGES[s.stage].newSkylineEachAttempt) s.skylineSeed = randomUint32(s.rng, 'cosmetic');
     Object.assign(s, createAttempt(progressOf(s), s.rng));
     out.push({ type: 'reset' });
 }
 
-export function startStage(s: GameState, id: StageId, out: GameEvent[]) {
+export function startStage(s: CoreState, id: StageId, out: GameEvent[]) {
     s.stage = id;
     s.checkpoint = 0;
     s.lessons = { moved: false, jumped: false };
     resetAttempt(s, out);
 }
 
-export function serializeState(s: GameState): string {
+export function serializeState(s: CoreState): string {
     return JSON.stringify(s);
 }
 
-export function parseState(json: string): GameState {
+export function parseState(json: string): CoreState {
     const value: unknown = JSON.parse(json);
     assertGameState(value);
     return value;
 }
 
 // Rewind frames are frozen: once recorded they are shared between states, never copied or edited.
-export function snapshot(s: GameState): Snapshot {
+export function snapshot(s: CoreState): Snapshot {
     return Object.freeze({ p: Object.freeze({ ...s.p }) }) as Snapshot;
 }
 
 // Copy for the pure step. Plain recursive copy is several times faster than structuredClone here,
 // and the rewind history (most of the state) shares its frozen frames.
-export function cloneState(s: Readonly<GameState>): GameState {
+export function cloneState(s: Readonly<CoreState>): CoreState {
     const { history, ...rest } = s;
-    const copy = clonePlain(rest) as GameState;
+    const copy = clonePlain(rest) as CoreState;
     copy.history = history.slice();
     return copy;
 }
 
 // Player updates keep the same object: the play step holds a reference to it for the whole tick.
-export function setPlayer(s: GameState, p: Readonly<GameState['p']>) {
+export function setPlayer(s: CoreState, p: Readonly<CoreState['p']>) {
     Object.assign(s.p, p);
 }

@@ -176,7 +176,7 @@ export function orbitWatchGlow(ctx: RenderCtx, view: SkyProjection, lamps: Lamp[
         const [x, y] = view.project(at);
         const radius = ctx.clamp(30000 / view.depth(at), 10, 60) * (state === 'flash' ? 1 : state === 'recorded' ? .45 : .55);
         const idle = state === 'idle';
-        (idle ? recs : lights).push({ v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
+        (idle ? recs : lights).push({ kind: 'path', points: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], fill: {
             from: [x, y], to: [x + radius, y], radius, stops: [[0, ctx.rgba('#ff6b57', .95 * alpha)], [1, ctx.rgba('#ff6b57', 0)]],
         }, layer: idle ? recLayer : lightLayer });
     }
@@ -187,7 +187,7 @@ function eyeGlow(ctx: RenderCtx, view: SkyProjection, at: Point3, glow: number, 
     const [x, y] = view.project(at);
     const radius = Math.max(4, Math.abs(view.project([at[0], at[1] + glow, at[2]])[1] - y)) * (state === 'flash' ? 1.5 : 1);
     const pulse = (.8 + Math.sin(ctx.t * 3 + at[0]) * .2) * alpha;
-    return { v: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], c: {
+    return { kind: 'path', points: [[x - radius, y - radius], [x + radius, y - radius], [x + radius, y + radius], [x - radius, y + radius]], fill: {
         from: [x, y], to: [x + radius, y], radius,
         stops: [[0, ctx.rgba('#ff3a1a', .85 * pulse)], [.4, ctx.rgba('#ff2a1a', .45 * pulse)], [1, ctx.rgba('#ff2a1a', 0)]],
     }, layer };
@@ -202,13 +202,13 @@ export function orbitBeacon(ctx: RenderCtx, view: SkyProjection, point: RoutePoi
     const twinkle = .35 + .65 * Math.pow(Math.sin(ctx.t * 1.7) * .5 + .5, 3);
     const layer = { key: 'orbit-beacon', blend: 'screen' as const };
     const glow = 5 + 9 * twinkle;
-    ctx.commands.push({ v: [[cx - glow, cy - glow], [cx + glow, cy - glow], [cx + glow, cy + glow], [cx - glow, cy + glow]], c: {
+    ctx.commands.push({ kind: 'path', points: [[cx - glow, cy - glow], [cx + glow, cy - glow], [cx + glow, cy + glow], [cx - glow, cy + glow]], fill: {
         from: [cx, cy], to: [cx + glow, cy], radius: glow, stops: [[0, ctx.rgba('#fff3cf', .9 * alpha)], [1, ctx.rgba('#fff3cf', 0)]],
     }, layer });
     const ray = 3 + 7 * twinkle, thin = .7;
     const color = '#fffaf0' + Math.round(ctx.clamp(twinkle * alpha, 0, 1) * 255).toString(16).padStart(2, '0');
-    ctx.commands.push({ v: [[cx - ray, cy], [cx, cy - thin], [cx + ray, cy], [cx, cy + thin]], c: color, layer });
-    ctx.commands.push({ v: [[cx, cy - ray], [cx + thin, cy], [cx, cy + ray], [cx - thin, cy]], c: color, layer });
+    ctx.commands.push({ kind: 'path', points: [[cx - ray, cy], [cx, cy - thin], [cx + ray, cy], [cx, cy + thin]], fill: color, layer });
+    ctx.commands.push({ kind: 'path', points: [[cx, cy - ray], [cx + thin, cy], [cx, cy + ray], [cx - thin, cy]], fill: color, layer });
 }
 
 /** White lens glints and red recording lamps blink out of the clouds. */
@@ -223,10 +223,10 @@ export function orbitCloudGlints(ctx: RenderCtx, alpha = 1) {
         const k = (wave - .55) / .45, x = glint.x * ctx.W, y = glint.y * ctx.H;
         const glow = 7 + 9 * k, core = 2 + 1.6 * k;
         const color = glint.red ? '#ffd399' : '#fffbe2';
-        ctx.commands.push({ v: [[x - glow, y - glow], [x + glow, y - glow], [x + glow, y + glow], [x - glow, y + glow]], c: {
+        ctx.commands.push({ kind: 'path', points: [[x - glow, y - glow], [x + glow, y - glow], [x + glow, y + glow], [x - glow, y + glow]], fill: {
             from: [x, y], to: [x + glow, y], radius: glow, stops: [[0, ctx.rgba(color, .9 * k * alpha)], [1, ctx.rgba(color, 0)]],
         }, layer });
         const tint = Math.round(alpha * 255).toString(16).padStart(2, '0');
-        ctx.commands.push({ v: [[x - core, y], [x, y - core], [x + core, y], [x, y + core]], c: (glint.red ? '#ffce91' : '#ffffff') + tint, layer });
+        ctx.commands.push({ kind: 'path', points: [[x - core, y], [x, y - core], [x + core, y], [x, y + core]], fill: (glint.red ? '#ffce91' : '#ffffff') + tint, layer });
     }
 }

@@ -16,7 +16,7 @@ function mixHex(a: string, b: string, k: number) {
 
 export function rooftopSky(ctx: RenderCtx) {
     const top = -ctx.vertical, bottom = ctx.H / ctx.scale - ctx.vertical;
-    const day = ctx.state.firstFlight.kind === 'course' ? 0 : ctx.clamp((ctx.p.y - DAY_FROM) / (DAY_AT - DAY_FROM), 0, 1);
+    const day = ctx.state.firstFlight.kind === 'course' ? 0 : ctx.clamp((ctx.player.y - DAY_FROM) / (DAY_AT - DAY_FROM), 0, 1);
     const eased = day * day * (3 - 2 * day);
     ctx.gradientPolygon([[ctx.cam, top], [ctx.cam + ctx.VW, top], [ctx.cam + ctx.VW, bottom], [ctx.cam, bottom]],
         ctx.gradientFill(0, top, 0, bottom, DUSK.map(([at, color], i) => [at, mixHex(color, DAY[i][1], eased)] as [number, string])));

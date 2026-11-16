@@ -130,7 +130,7 @@ export function practiceFloor(ctx: RenderCtx) {
 }
 
 export function checkpointFlag(ctx: RenderCtx, x: number, y: number, active: boolean) {
-    const raising = active && Math.abs(ctx.p.x - x) < 170 ? ctx.clamp((1.5 - ctx.saveFlash) / .45, 0, 1) : 1;
+    const raising = active && Math.abs(ctx.player.x - x) < 170 ? ctx.clamp((1.5 - ctx.saveFlash) / .45, 0, 1) : 1;
     const height = active ? 25 + 55 * raising : 25;
     ctx.rod(x, y, x, y - 93, 3, '#677d7e');
     ctx.polygon([[x, y - height], [x + 32, y - height + 10], [x, y - height + 22]], active ? '#b8d6a2' : '#b4bab3');

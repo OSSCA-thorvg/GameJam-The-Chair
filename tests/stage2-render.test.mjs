@@ -6,14 +6,14 @@ import { orientationHop } from './support/harness.mjs';
 
 const { createGame, createRenderCtx, drawBuilding } = await bundled({ stdin: {
     contents: `export { createGame } from './src/game/game';
-        export { createRenderCtx } from './src/render/context';
+        export { createRenderCtx } from './tests/support/render-context';
         export { drawBuilding } from './src/render/scene/building';`,
     resolveDir: process.cwd(),
 }, bundle: true, write: false, platform: 'node', format: 'esm' });
 const escape = s => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 function render(state, locale, width) {
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state, p: state.player, mode: state.mode, locale, t: state.time,
+    Object.assign(ctx, { state, player: state.player, mode: state.mode, locale, t: state.time,
         cam: Math.max(0, Math.min(state.player.x - width * .35, state.level.length - width)),
         VW: width, W: width, H: 510, LEN: state.level.length, GOAL: state.level.goal,
         solids: state.solids, soaked: state.soaked, dirty: state.dirty,
@@ -24,17 +24,17 @@ function render(state, locale, width) {
     let defs = '', shapes = '';
     ctx.commands.forEach((c, i) => {
         if (c.text) return;
-        for (const point of c.v) for (const n of point) assert.ok(Number.isFinite(n));
+        for (const point of c.points) for (const n of point) assert.ok(Number.isFinite(n));
         for (const curve of c.curves ?? []) for (const n of curve) assert.ok(Number.isFinite(n));
-        const d = `M${c.v[0].join(',')} ${c.v.slice(1).map(v => `L${v.join(',')}`).join(' ')} ${(c.curves ?? []).map(v => `C${v.join(',')}`).join(' ')}`;
-        if (c.c == null) {
+        const d = `M${c.points[0].join(',')} ${c.points.slice(1).map(v => `L${v.join(',')}`).join(' ')} ${(c.curves ?? []).map(v => `C${v.join(',')}`).join(' ')}`;
+        if (c.fill == null) {
             // A stroked ThorVG path (the ramp plank) has no fill.
             assert.ok(c.stroke && Number.isFinite(c.stroke.width));
             const stroke = typeof c.stroke.color === 'string' ? c.stroke.color : '#888';
             shapes += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${c.stroke.width}"/>`;
             return;
         }
-        let fill = c.c;
+        let fill = c.fill;
         if (typeof fill !== 'string') {
             assert.ok(fill.stops.every(([, color]) => color.every(Number.isFinite)));
             defs += `<linearGradient id="g${i}" gradientUnits="userSpaceOnUse" x1="${fill.from[0]}" y1="${fill.from[1]}" x2="${fill.to[0]}" y2="${fill.to[1]}">${fill.stops.map(([at, [r,g,b,a]]) => `<stop offset="${at}" stop-color="rgb(${r},${g},${b})" stop-opacity="${a/255}"/>`).join('')}</linearGradient>`;

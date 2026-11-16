@@ -1,3 +1,4 @@
+import { STAGE_PRESENTATION } from '../presentation/stages';
 // To change a key, edit CONTROLS; labels in the menu and in the world update automatically.
 import type { Game, GameStatus } from '../game/game';
 import type { Input } from '../game/types';
@@ -14,14 +15,14 @@ interface Control {
 }
 
 export const CONTROLS: Readonly<Record<Action, Control>> = {
-    up:        { keys: ['ArrowUp', 'w'], label: '↑ / W', when: s => s.stage === 5 },
-    down:      { keys: ['ArrowDown', 's'], label: '↓ / S', when: s => s.stage === 5 },
+    up:        { keys: ['ArrowUp', 'w'], label: '↑ / W', when: s => STAGE_PRESENTATION[s.stage].controls.flight },
+    down:      { keys: ['ArrowDown', 's'], label: '↓ / S', when: s => STAGE_PRESENTATION[s.stage].controls.flight },
     left:      { keys: ['ArrowLeft'], label: '←' },
     right:     { keys: ['ArrowRight'], label: '→' },
     // Space is reserved for the extinguisher, so jumping is Up-only in every stage.
     jump:      { keys: ['ArrowUp'], label: '↑' },
-    spray:     { keys: [' '], label: 'Space', when: s => s.stage >= 3 },
-    meeting:   { keys: ['ArrowDown'], label: '↓', when: s => s.stage === 2 },
+    spray:     { keys: [' '], label: 'Space', when: s => STAGE_PRESENTATION[s.stage].controls.spray },
+    meeting:   { keys: ['ArrowDown'], label: '↓', when: s => STAGE_PRESENTATION[s.stage].controls.meeting },
     pause:     { keys: ['p', 'Escape'], label: 'P / Esc' },
     restart:   { keys: ['r'], label: 'R' },
 };
