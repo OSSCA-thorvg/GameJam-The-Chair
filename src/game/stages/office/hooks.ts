@@ -20,7 +20,7 @@ export const officeHooks: StageHooks = {
         s.office.lightCooldown = Math.max(0, s.office.lightCooldown - dt);
     },
     hazards(s, out, dt) {
-        applyCopier(s, out, copierStep(s.office.copier, s.office.volley, s.p.x, true, dt));
+        applyCopier(s, out, copierStep(s.office.copier, s.p.x, true, dt));
         applyUrgentCopier(s, out, urgentCopierStep(s.office.urgent, s.p.x, dt));
         if (!applyPapers(s, out, papersStep(s.office.papers, s.p, s.office.inBin, dt), dt)) return false;
         const { cleaning, bucket, soakedOnSpill } = s.office;

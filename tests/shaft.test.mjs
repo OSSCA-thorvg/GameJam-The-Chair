@@ -77,7 +77,7 @@ test('steam vents shove only while blowing: the wall vents sideways, the ceiling
 });
 
 test('the scattered printouts make the shaft ledges slippery only once the duct is awake', () => {
-    const s = createCore({ seed: 0 }); s.stage = 3; s.hasExtinguisher = true; s.ground = true;
+    const s = createCore({ seed: 0 }); s.stage = 3; s.extinguisher.owned = true; s.ground = true;
     for (const span of STAGE_THREE.slick) {
         s.p = { x: (span.left + span.right) / 2, y: span.y - 28, vx: 0, vy: 0, a: 0, w: 0 };
         s.rooftop.duct = { kind: 'idle', rest: 0, shots: 0 };

@@ -151,7 +151,7 @@ test('flying over the group does not count as joining, grounded admission welcom
     s.p.x = (s.building.furniture[0].x + s.building.furniture[2].x) / 2;
     tick(s);
     assert.equal(s.building.corridor.chat.kind, 'orientation', 'rejoining resumes the orientation instead of repeating the welcome');
-    assert.equal(s.focus, 100);
+    assert.equal(s.focus.value, 100);
 });
 
 function rideOrientation(game, hop, until) {

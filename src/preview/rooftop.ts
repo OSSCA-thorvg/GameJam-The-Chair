@@ -31,7 +31,7 @@ export function rooftopTakeoff(): PreviewScene {
     const parked = JSON.parse(game.serialize());
     parked.p = { ...parked.p, x: 2150, y: -172, vx: 0, vy: 0, a: 0, w: 0 };
     parked.ground = true;
-    parked.hasExtinguisher = true;
+    parked.extinguisher.owned = true;
     game.restore(JSON.stringify(parked));
     const effects = createEffects();
     const frames = [capture(game, effects)];

@@ -3,16 +3,16 @@ import type { Paper, Point } from '../../../types';
 import type { FocusHit } from '../../../systems/focus/decide';
 import * as Det from '../../../math';
 
-export type Copier = { x: number; cool: number; burst: number; next: number; dir: number };
-export type CopierResult = { copier: Copier; volley: number; fire: boolean };
+export type Copier = { x: number; cool: number; burst: number; next: number; dir: number; volley: number; bursts: number };
+export type CopierResult = { copier: Copier; fire: boolean };
 export type PaperHit = { index: number; vx: number; heavy: boolean; focus: FocusHit };
 
-export function copierStep(copier: Readonly<Copier>, volley: number, playerX: number, office: boolean, dt: number): CopierResult {
+export function copierStep(copier: Readonly<Copier>, playerX: number, office: boolean, dt: number): CopierResult {
     const next = { ...copier };
     let fire = false;
-    if (office && (volley > 0 || Math.abs(playerX - next.x) < 350) && next.cool === 0 && next.burst === 0) {
+    if (office && (next.volley > 0 || Math.abs(playerX - next.x) < 350) && next.cool === 0 && next.burst === 0) {
         next.dir = playerX < next.x ? -1 : 1;
-        volley++;
+        next.volley++;
         next.burst = 4;
         next.next = .75;
         next.cool = 1.45;
@@ -25,10 +25,10 @@ export function copierStep(copier: Readonly<Copier>, volley: number, playerX: nu
             next.next = .19;
         }
     }
-    return { copier: next, volley, fire };
+    return { copier: next, fire };
 }
 
-export function paperShot(copier: Readonly<Copier>, volley: number, bursts: number): Paper[] {
+export function paperShot(copier: Readonly<Copier>): Paper[] {
     const F = LEVEL.floor;
     const dir = copier.dir;
     return [0, 1, 2, 3].map(i => ({
@@ -41,8 +41,8 @@ export function paperShot(copier: Readonly<Copier>, volley: number, bursts: numb
         life: 5,
         hit: false,
         landed: false,
-        volley,
-        safe: volley === 1 && bursts === 0,
+        volley: copier.volley,
+        safe: copier.volley === 1 && copier.bursts === 0,
         kind: 'sheet' as const,
     }));
 }

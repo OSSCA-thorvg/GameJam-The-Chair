@@ -10,19 +10,19 @@ export function applyOrbit(s: CoreState, out: GameEvent[], dt: number) {
     s.orbit = result.orbit;
     setPlayer(s, result.p);
     s.actualSpeed = s.orbit.speed;
-    s.sprayBurst = result.spraying ? .24 : Math.max(0, s.sprayBurst - dt);
+    s.extinguisher.burst = result.spraying ? .24 : Math.max(0, s.extinguisher.burst - dt);
     if (result.satelliteLit && !applyFocusHit(s, out, { kind: 'satelliteLight', id: Math.floor(s.orbit.age), damage: FOCUS_DAMAGE.satelliteLight })) return;
     // Takeover skips shared focus recovery; apply it here.
     if (s.orbit.phase !== 'parked') applyFocusRecovery(s, dt);
     if (result.flag > s.checkpoint) {
-        s.focus = 100;
-        s.focusClock = 0;
+        s.focus.value = 100;
+        s.focus.recoveryClock = 0;
         s.checkpoint = result.flag;
         out.push({ type: 'cue', id: 'checkpoint' });
     }
     if (result.checkpoint) {
-        s.focus = 100;
-        s.focusClock = 0;
+        s.focus.value = 100;
+        s.focus.recoveryClock = 0;
         s.checkpoint = STAGE_FIVE.restarts.length + 1;
         if (s.completedStage < 4) s.completedStage = 4;
         out.push({ type: 'cue', id: 'checkpoint' });

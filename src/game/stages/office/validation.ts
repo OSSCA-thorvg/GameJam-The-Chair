@@ -3,15 +3,16 @@ import type { OfficeState } from './state';
 
 export function office(value: unknown, path: string) {
     const data = record(value, path);
-    exactFields<OfficeState>(data, { copier: true, urgent: true, volley: true, bursts: true, papers: true, paperHits: true, paperPenaltyRemaining: true, cleaning: true, bucket: true, soakedOnSpill: true, slip: true, wetSeen: true, slipCooldown: true, inBin: true, dirty: true, binAge: true, binCooldown: true, binFalls: true, lightPenaltyRemaining: true, lightHits: true, lightCooldown: true, doorHits: true }, path);
+    exactFields<OfficeState>(data, { copier: true, urgent: true, papers: true, paperHits: true, paperPenaltyRemaining: true, cleaning: true, bucket: true, soakedOnSpill: true, slip: true, wetSeen: true, slipCooldown: true, inBin: true, dirty: true, binAge: true, binCooldown: true, binFalls: true, lightPenaltyRemaining: true, lightHits: true, lightCooldown: true, doorHits: true }, path);
     const copier = record(data.copier, `${path}.copier`);
-    exact(copier, ['x', 'cool', 'burst', 'next', 'dir'], `${path}.copier`);
+    exact(copier, ['x', 'cool', 'burst', 'next', 'dir', 'volley', 'bursts'], `${path}.copier`);
     for (const key of ['x', 'cool', 'burst', 'next', 'dir']) finite(copier[key], `${path}.copier.${key}`);
+    for (const key of ['volley', 'bursts']) integer(copier[key], `${path}.copier.${key}`);
     const urgent = record(data.urgent, `${path}.urgent`);
     exact(urgent, ['x', 'scan', 'cool', 'burst', 'next', 'dir', 'volley'], `${path}.urgent`);
     for (const key of ['x', 'scan', 'cool', 'next', 'dir']) finite(urgent[key], `${path}.urgent.${key}`);
     for (const key of ['burst', 'volley']) integer(urgent[key], `${path}.urgent.${key}`);
-    for (const key of ['volley', 'bursts', 'paperHits', 'soakedOnSpill', 'binFalls', 'lightHits', 'doorHits']) integer(data[key], `${path}.${key}`);
+    for (const key of ['paperHits', 'soakedOnSpill', 'binFalls', 'lightHits', 'doorHits']) integer(data[key], `${path}.${key}`);
     for (const key of ['paperPenaltyRemaining', 'slipCooldown', 'binAge', 'binCooldown', 'lightPenaltyRemaining', 'lightCooldown']) finite(data[key], `${path}.${key}`);
     for (const key of ['slip', 'wetSeen', 'inBin', 'dirty']) boolean(data[key], `${path}.${key}`);
     array(data.papers, `${path}.papers`, 60).forEach((item, index) => paper(item, `${path}.papers[${index}]`));

@@ -57,23 +57,23 @@ test('the bucket tips once when approached, splashes nearby riders and must refi
 });
 
 test('the copier aims, waits, then fires a four-sheet burst; the first shot is harmless', () => {
-    const copier = { x: 750, cool: 0, burst: 0, next: 0, dir: -1 };
-    assert.equal(sys.copierStep(copier, 0, 200, true, 1 / 120).volley, 0, 'too far to notice');
-    assert.equal(sys.copierStep(copier, 0, 500, false, 1 / 120).volley, 0, 'only in the office');
-    let state = { copier, volley: 0 };
+    const copier = { x: 750, cool: 0, burst: 0, next: 0, dir: -1, volley: 0, bursts: 0 };
+    assert.equal(sys.copierStep(copier, 200, true, 1 / 120).copier.volley, 0, 'too far to notice');
+    assert.equal(sys.copierStep(copier, 500, false, 1 / 120).copier.volley, 0, 'only in the office');
+    let state = { copier };
     let shots = 0;
     for (let i = 0; i < 200; i++) {
-        const r = sys.copierStep(state.copier, state.volley, 500, true, 1 / 120);
+        const r = sys.copierStep(state.copier, 500, true, 1 / 120);
         state = r;
         if (r.fire) shots++;
     }
-    assert.equal(state.volley, 1);
+    assert.equal(state.copier.volley, 1);
     assert.equal(state.copier.dir, -1);
     assert.equal(shots, 4);
-    const first = sys.paperShot(state.copier, 1, 0);
+    const first = sys.paperShot(state.copier);
     assert.equal(first.length, 4);
     assert.ok(first.every(paper => paper.safe && paper.vx < 0));
-    assert.ok(sys.paperShot(state.copier, 1, 1).every(paper => !paper.safe));
+    assert.ok(sys.paperShot({ ...state.copier, bursts: 1 }).every(paper => !paper.safe));
 });
 
 test('sheets that reach the rider are reported once, in order, without touching the input', () => {
@@ -152,14 +152,14 @@ test('the sky hovers in and lands on the arrival roof without touching its input
 });
 
 test('each distraction costs focus once, and focus recovers only when undisturbed', () => {
-    const fresh = { focus: 100, focusClock: 1, focusEvents: [], focusNotice: null };
+    const fresh = { value: 100, recoveryClock: 1, processedEvents: [], notice: null };
     const hit = sys.focusAfterHit(fresh, { kind: 'paper', id: 2, damage: 30 });
-    assert.deepEqual(hit, { focus: 70, focusClock: 0, focusEvents: ['paper:2'], focusNotice: { kind: 'paper', life: 1.7 }, lost: false });
+    assert.deepEqual(hit, { value: 70, recoveryClock: 0, processedEvents: ['paper:2'], notice: { kind: 'paper', life: 1.7 }, lost: false });
     assert.equal(sys.focusAfterHit(hit, { kind: 'paper', id: 2, damage: 30 }), null, 'same volley again');
-    assert.equal(sys.focusAfterHit({ ...hit, focus: 20 }, { kind: 'light', id: 0, damage: 30 }).lost, true);
-    assert.equal(sys.focusRecovery({ ...hit, focusClock: 1.999 }, false, .01).focus, 71);
-    assert.deepEqual(sys.focusRecovery({ ...hit, focusClock: 1.999 }, true, .01).focus, 70, 'blocked');
-    assert.equal(sys.focusRecovery({ ...hit, focusNotice: { kind: 'paper', life: .005 } }, false, .01).focusNotice, null);
+    assert.equal(sys.focusAfterHit({ ...hit, value: 20 }, { kind: 'light', id: 0, damage: 30 }).lost, true);
+    assert.equal(sys.focusRecovery({ ...hit, recoveryClock: 1.999 }, false, .01).value, 71);
+    assert.deepEqual(sys.focusRecovery({ ...hit, recoveryClock: 1.999 }, true, .01).value, 70, 'blocked');
+    assert.equal(sys.focusRecovery({ ...hit, notice: { kind: 'paper', life: .005 } }, false, .01).notice, null);
     assert.deepEqual(sys.focusLossStep(1.69, .01).over, true);
 });
 
@@ -251,10 +251,10 @@ test('every urgent volley is 20 sheets\' worth, and each sheet that hits costs f
         assert.equal(worth, 20, `volley ${volley}`);
         assert.equal(new Set(papers.map(z => z.volley)).size, papers.length, 'each sheet has its own focus id');
     }
-    const focus = { focus: 100, focusClock: 0, focusEvents: [], focusNotice: null };
+    const focus = { value: 100, recoveryClock: 0, processedEvents: [], notice: null };
     let f = focus;
     const sheets = [];
     for (let burst = 4; burst >= 0; burst--) sheets.push(...sys.urgentShot({ ...sys.createUrgentCopier(), volley: 1, burst }));
     for (const z of sheets) f = { ...f, ...sys.focusAfterHit(f, { kind: 'paper', id: z.volley, damage: 2.5 }) };
-    assert.equal(f.focus, 50, 'a whole volley takes half the focus bar');
+    assert.equal(f.value, 50, 'a whole volley takes half the focus bar');
 });

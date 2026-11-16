@@ -80,16 +80,16 @@ function jump(s: CoreState) {
 
 export function spray(s: CoreState, out: GameEvent[]) {
     const hooks = stageHooks(s.stage);
-    if (s.mode !== 'play' || !s.hasExtinguisher || hooks.canSpray?.(s) === false || s.sprayCooldown > 0) return;
+    if (s.mode !== 'play' || !s.extinguisher.owned || hooks.canSpray?.(s) === false || s.extinguisher.cooldown > 0) return;
     const dx = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
     const len = Det.hypot(dx, 1);
-    s.sprayDir = { x: -dx / len, y: 1 / len };
+    s.extinguisher.direction = { x: -dx / len, y: 1 / len };
     s.p.vx += dx * 150;
     s.p.vy = Math.max(-500, Math.min(0, s.p.vy) - (dx ? 430 : 470));
     s.ground = false;
     s.coyote = 0;
-    s.sprayCooldown = .24;
-    s.sprayBurst = .24;
+    s.extinguisher.cooldown = .24;
+    s.extinguisher.burst = .24;
     out.push({ type: 'cue', id: 'spray' });
     hooks.onSpray?.(s, dx);
 }

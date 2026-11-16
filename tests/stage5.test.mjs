@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { FOCUS_DAMAGE, ORBIT_ENDING, orbitEnding, createGame, orbitStep, gearAt, satelliteLightOn, satelliteLightStage, orbitSatelliteLight, satelliteLightWarmth, createSkyProjection, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
+const { FOCUS_DAMAGE, ORBIT_ENDING, orbitEnding, createGame, viewState, orbitStep, gearAt, satelliteLightOn, satelliteLightStage, orbitSatelliteLight, satelliteLightWarmth, createSkyProjection, STAGE_FIVE, stepGame, parseCommand, previewScenes, orbitKeys, drawOrbit, createRenderCtx, actionForKey, createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } = await loadSource(`
     export { createRecorder, REPLAY_DEFAULTS, buildTimeline, seekTimeline } from './src/game/replay';
     export { FOCUS_DAMAGE } from './src/game/level';
     export { actionForKey } from './src/ui/controls';
-    export { createGame, stepGame } from './src/game/game';
+    export { createGame, stepGame, viewState } from './src/game/game';
     export { orbitStep, gearAt, satelliteLightOn } from './src/game/stages/orbit/course/decide';
     export { orbitSatelliteLight, satelliteLightStage, satelliteLightWarmth } from './src/render/scene/orbit-satellite-light';
     export { createSkyProjection } from './src/render/scene/sky-projection';
@@ -44,7 +44,7 @@ test('stage five has no hoops: after the entry the chair heads straight for the 
     Object.assign(state.orbit, { phase: 'entry', age: STAGE_FIVE.entryTime });
     const result = stepGame(state);
     assert.equal(result.state.orbit.phase, 'door');
-    assert.equal(result.state.focus, 100);
+    assert.equal(result.state.focus.value, 100);
     assert.equal(result.state.deaths, 0);
 });
 
@@ -206,19 +206,19 @@ const run = (state, seconds) => {
 test('5-1: each second under the satellite light costs focus, and it does not come back meanwhile', () => {
     const first = STAGE_FIVE.satelliteLight.beams[0], z = first.from + 30;
     const { state } = run(satelliteLightState(z, 0), 1.5);
-    assert.ok(state.focus < 100, `focus ${state.focus}`);
-    assert.ok(state.focus >= 100 - 2 * FOCUS_DAMAGE.satelliteLight, 'at most one hit per second');
-    assert.equal(state.focusNotice?.kind, 'satelliteLight');
+    assert.ok(state.focus.value < 100, `focus ${state.focus.value}`);
+    assert.ok(state.focus.value >= 100 - 2 * FOCUS_DAMAGE.satelliteLight, 'at most one hit per second');
+    assert.equal(state.focus.notice?.kind, 'satelliteLight');
     assert.equal(state.deaths, 0);
 });
 
 test('5-1: outside the beam focus recovers, and running out of focus ends the attempt', () => {
     const first = STAGE_FIVE.satelliteLight.beams[0];
     const calm = satelliteLightState(STAGE_FIVE.satelliteLight.beams.at(-1).to + 60, 0);
-    calm.focus = 80;
-    assert.ok(run(calm, 2.1).state.focus > 80, 'recovers away from the beams');
+    calm.focus.value = 80;
+    assert.ok(run(calm, 2.1).state.focus.value > 80, 'recovers away from the beams');
     const shaky = satelliteLightState(first.from + 30, 0);
-    shaky.focus = 5;
+    shaky.focus.value = 5;
     const { state, events } = run(shaky, .2);
     assert.equal(state.mode, 'focuslost');
     assert.ok(events.some(event => event.id === 'focus-lost'));
@@ -231,7 +231,7 @@ function endingFrame(t) {
     const state = JSON.parse(fresh().serialize());
     Object.assign(state.orbit, { phase: 'parked', z: STAGE_FIVE.checkpoint.z, speed: 0, settled: 1 + t });
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state: { ...state, player: state.p, spray: { burst: state.sprayBurst } }, t: 80 + t, W: 1000, H: 510 });
+    Object.assign(ctx, { state: viewState(state), t: 80 + t, W: 1000, H: 510 });
     drawOrbit(ctx);
     const layer = key => ctx.commands.filter(command => command.layer?.key === key);
     const labels = ctx.commands.filter(command => command.text).map(command => command.text.content);
@@ -423,7 +423,7 @@ function flightFrame(setup) {
     Object.assign(state.orbit, { phase: 'door', age: 20, z: 300 });
     setup?.(state);
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state: { ...state, player: state.p, spray: { burst: state.sprayBurst } }, t: 30, W: 1000, H: 510 });
+    Object.assign(ctx, { state: viewState(state), t: 30, W: 1000, H: 510 });
     drawOrbit(ctx);
     return ctx.commands;
 }
@@ -457,7 +457,7 @@ test('rushing forward pulls the camera back and streams air round the chair, mor
         return { width: Math.max(...xs) - Math.min(...xs), y: (Math.max(...ys) + Math.min(...ys)) / 2 };
     };
     const air = commands => commands.filter(command => command.layer?.key === 'orbit-slipstream');
-    const frame = (speed, burst, z = 300) => flightFrame(state => { Object.assign(state.orbit, { speed, z }); state.sprayBurst = burst; });
+    const frame = (speed, burst, z = 300) => flightFrame(state => { Object.assign(state.orbit, { speed, z }); state.extinguisher.burst = burst; });
     const third = STAGE_FIVE.gears[2], z3 = third.from + 150;
     const slow = frame(STAGE_FIVE.cruise * .4, 0), cruise = frame(STAGE_FIVE.cruise, 0, z3), rushing = frame(third.maxSpeed, .24, z3);
     assert.ok(casters(rushing).width < casters(cruise).width * .9, 'the chair looks smaller as the camera falls back');

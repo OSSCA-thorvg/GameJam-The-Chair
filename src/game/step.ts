@@ -73,8 +73,8 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
     s.time += dt;
     s.rollCooldown = Math.max(0, s.rollCooldown - dt);
     s.reverseCooldown = Math.max(0, s.reverseCooldown - dt);
-    s.sprayCooldown = Math.max(0, s.sprayCooldown - dt);
-    s.sprayBurst = Math.max(0, s.sprayBurst - dt);
+    s.extinguisher.cooldown = Math.max(0, s.extinguisher.cooldown - dt);
+    s.extinguisher.burst = Math.max(0, s.extinguisher.burst - dt);
     hooks.timers?.(s, dt);
     if (s.keys.includes('spray')) spray(s, out);
     out.push({ type: 'tick', dt });
@@ -174,8 +174,8 @@ function reachCheckpoints(s: CoreState, out: GameEvent[]) {
     for (let i = s.checkpoint + 1; i < stage.checkpoints.length; i++) {
         if (!inCheckpointArea(stage.checkpoints[i], s.p)) continue;
         s.checkpoint = i;
-        s.focus = 100;
-        s.focusClock = 0;
+        s.focus.value = 100;
+        s.focus.recoveryClock = 0;
         out.push({ type: 'cue', id: 'checkpoint' });
     }
 }

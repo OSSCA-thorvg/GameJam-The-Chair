@@ -1,4 +1,4 @@
-import type { FocusNotice } from './systems/focus/decide';
+import type { FocusState } from './systems/focus/decide';
 import type { Impact } from './systems/impact/decide';
 import type { OrbitState } from './stages/orbit/state';
 import type { SkyState } from './stages/sky/data';
@@ -26,12 +26,16 @@ export type Progress = {
     tick: number;
 };
 
+export type ExtinguisherState = {
+    owned: boolean;
+    cooldown: number;
+    burst: number;
+    direction: { x: number; y: number };
+};
+
 export type Attempt = {
     rng: Rng;
-    hasExtinguisher: boolean;
-    sprayCooldown: number;
-    sprayBurst: number;
-    sprayDir: { x: number; y: number };
+    extinguisher: ExtinguisherState;
 
     mode: Mode;
     /** Player body; this key is persisted in existing replays. */
@@ -51,10 +55,7 @@ export type Attempt = {
     history: Snapshot[];
     impact: Impact | null;
 
-    focus: number;
-    focusClock: number;
-    focusEvents: string[];
-    focusNotice: FocusNotice | null;
+    focus: FocusState;
     lossReason: LossReason | null;
     focusLossTime: number;
 
@@ -85,10 +86,7 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
     const appearanceSeed = randomUint32(rng, 'cosmetic');
     const attempt: Attempt = {
         rng,
-        hasExtinguisher: false,
-        sprayCooldown: 0,
-        sprayBurst: 0,
-        sprayDir: { x: 0, y: 1 },
+        extinguisher: { owned: false, cooldown: 0, burst: 0, direction: { x: 0, y: 1 } },
 
         mode,
         p: { ...stageSpawn(stage, checkpoint), vx: 0, vy: 0, a: 0, w: 0 },
@@ -106,10 +104,7 @@ export function createAttempt(progress: Progress, seed: Rng, mode: Mode = 'play'
         history: [],
         impact: null,
 
-        focus: 100,
-        focusClock: 0,
-        focusEvents: [],
-        focusNotice: null,
+        focus: { value: 100, recoveryClock: 0, processedEvents: [], notice: null },
         lossReason: null,
         focusLossTime: 0,
 
