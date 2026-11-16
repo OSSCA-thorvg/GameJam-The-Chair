@@ -33,18 +33,19 @@ export function drivePlayer(
         p.vx += d.dir * drive.air * dt;
     }
     p.vy += PHYSICS.gravity * dt;
-    p.vx *= Det.exp(
-        -(d.convoyJump
-            ? 0
-            : was
-              ? d.slip
-                  ? drag.slip
-                  : drag.ground
-              : drag.air) * dt,
-    );
-    p.w *= Det.exp(
-        -(was ? (d.slip ? spinDrag.slip : spinDrag.ground) : spinDrag.air) * dt,
-    );
+    let linearDrag = drag.air;
+    if (d.convoyJump) {
+        linearDrag = 0;
+    } else if (was) {
+        linearDrag = d.slip ? drag.slip : drag.ground;
+    }
+    const angularDrag = was
+        ? d.slip
+            ? spinDrag.slip
+            : spinDrag.ground
+        : spinDrag.air;
+    p.vx *= Det.exp(-linearDrag * dt);
+    p.w *= Det.exp(-angularDrag * dt);
     const horizontalLimit = d.expressJump
         ? limits.expressVx
         : d.convoyJump

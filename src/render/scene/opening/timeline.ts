@@ -222,11 +222,11 @@ export function openingFrame(time: number): OpeningFrame {
             ? rageRise * (1 - progress(t, B.handoff - 0.2, B.handoff + 0.5))
             : 0;
     const { strain: creak, pulse: creakPulse } = creaking(t);
-    const kick = [buck(t, B.kick), buck(t, B.kick + 1.15)].reduce((a, b) =>
-        Math.abs(b.backrest) + b.riderPop > Math.abs(a.backrest) + a.riderPop
-            ? b
-            : a,
-    );
+    const firstKick = buck(t, B.kick);
+    const secondKick = buck(t, B.kick + 1.15);
+    const firstStrength = Math.abs(firstKick.backrest) + firstKick.riderPop;
+    const secondStrength = Math.abs(secondKick.backrest) + secondKick.riderPop;
+    const kick = secondStrength > firstStrength ? secondKick : firstKick;
     const joy =
         -Math.abs(Math.sin(t * 6)) * 13 * hum - pop(t, B.chairHope, 0.6) * 10;
     const lift =

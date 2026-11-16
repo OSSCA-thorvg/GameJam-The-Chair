@@ -370,18 +370,18 @@ export function corridorStep(
                 : 0;
         const nextX = previousX + front.x - frontX + shuffle * dt;
         const behindMiddle = previousX < middleX;
-        const low =
-            c.convoy === 'leading'
-                ? front.x + 29
-                : behindMiddle
-                  ? back.x + 29
-                  : furniture[1].x + 29;
-        const high =
-            c.convoy === 'leading'
-                ? front.x + 239
-                : behindMiddle
-                  ? furniture[1].x - 29
-                  : front.x - 29;
+        let low: number;
+        let high: number;
+        if (c.convoy === 'leading') {
+            low = front.x + 29;
+            high = front.x + 239;
+        } else if (behindMiddle) {
+            low = back.x + 29;
+            high = furniture[1].x - 29;
+        } else {
+            low = furniture[1].x + 29;
+            high = front.x - 29;
+        }
         p.x = Math.max(low, Math.min(high, nextX));
         p.vx = front.vx + (p.x === nextX ? shuffle : 0);
         if (
@@ -464,12 +464,13 @@ export function corridorStep(
             (c.chat.kind === 'gossip' || c.chat.kind === 'dismissed') &&
             isJoinedConvoy(c.convoy)
         ) {
-            c.chat =
-                c.lesson >= 0
-                    ? lessonLeft
-                        ? { kind: 'orientation', age: -1, line: c.lesson }
-                        : { kind: 'trip', age: 99 }
-                    : { kind: 'wary', age: 0 };
+            if (c.lesson < 0) {
+                c.chat = { kind: 'wary', age: 0 };
+            } else if (lessonLeft) {
+                c.chat = { kind: 'orientation', age: -1, line: c.lesson };
+            } else {
+                c.chat = { kind: 'trip', age: 99 };
+            }
         } else if (
             c.chat.kind === 'trip' &&
             lessonLeft &&

@@ -20,6 +20,20 @@ export type CleaningResult = {
     soak: FocusHit | null;
 };
 
+export function createCleaning(): Cleaning {
+    return {
+        ...LEVEL.cleaning,
+        spilled: false,
+        age: 0,
+        followup: false,
+        splashDir: 0,
+    };
+}
+
+export function createBucket(): Bucket {
+    return { age: RULES.bucketReset, armed: true, spills: 0 };
+}
+
 export function waterExposure(
     bucketAge: number,
     p: Readonly<Point>,

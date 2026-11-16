@@ -12,6 +12,18 @@ export type Copier = {
     volley: number;
     bursts: number;
 };
+export function createCopier(): Copier {
+    return {
+        ...LEVEL.copier,
+        cool: 0,
+        burst: 0,
+        next: 0,
+        dir: -1,
+        volley: 0,
+        bursts: 0,
+    };
+}
+
 export type CopierResult = { copier: Copier; fire: boolean };
 export type PaperHit = {
     index: number;

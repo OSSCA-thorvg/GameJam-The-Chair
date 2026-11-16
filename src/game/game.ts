@@ -1,7 +1,6 @@
-import { FIXED_STEP, LEVEL, PHYSICS } from './level';
-import type { Input, DeepReadonly, GameEvent, Mode, StageId } from './types';
+import { FIXED_STEP } from './level';
+import type { Input, GameEvent, Mode, StageId } from './types';
 import type { SkyState } from './stages/sky/data';
-import { clonePlain } from './data';
 import {
     cloneState,
     createCore,
@@ -11,12 +10,14 @@ import {
     type Progress,
 } from './state';
 import type { Command } from './commands';
-import { SIMULATED, applyCommand, stageSolids, stepGame } from './step';
-import { STAGES } from './stages/index';
-import { applyFocusLoss, focusBlockedIn } from './systems/focus/apply';
+import { SIMULATED, applyCommand, stepGame } from './step';
+import { applyFocusLoss } from './systems/focus/apply';
 import { applyImpact } from './systems/impact/apply';
-import { stageHooks } from './stages/hooks';
-import { monitorsView } from './stages/view';
+import { viewState, type GameSnapshot } from './snapshot';
+
+export type { GameSnapshot } from './snapshot';
+
+export { viewState } from './snapshot';
 
 export type { Command } from './commands';
 export {
@@ -146,8 +147,8 @@ export function createGame(options: GameOptions = {}) {
         };
     }
 
-    // Returns a detached copy that callers may edit.
-    function getSnapshot() {
+    // Returns a detached presentation snapshot.
+    function getSnapshot(): GameSnapshot {
         return viewState(s);
     }
     function advance(dt: number): AdvanceResult {
@@ -211,85 +212,11 @@ export function createGame(options: GameOptions = {}) {
             acc = 0;
         },
         status,
-        getSnapshot: getSnapshot as () => DeepReadonly<
-            ReturnType<typeof viewState>
-        >,
+        getSnapshot,
         drainEvents() {
             return pending.splice(0);
         },
     };
 }
 
-export function viewState(s: Readonly<CoreState>) {
-    return clonePlain({
-        game: STAGES[s.stage].name,
-        spray: {
-            burst: s.extinguisher.burst,
-            cooldown: s.extinguisher.cooldown,
-            dir: s.extinguisher.direction,
-        },
-        lessons: s.lessons,
-        officeCheckpoint: s.stage === 1 && s.checkpoint > 0,
-        skylineSeed: s.skylineSeed,
-        actualSpeed: s.mode === 'play' ? s.actualSpeed : 0,
-        tutorialAssist:
-            s.mode === 'play' && s.p.x < PHYSICS.upright.tutorialUntilX,
-        stage: s.stage,
-        sky: s.sky,
-        orbit: s.stage === 5 ? s.orbit : undefined,
-        completedStage: s.completedStage,
-        hasExtinguisher: s.extinguisher.owned,
-        firstFlight: s.rooftop.flight,
-        rooftopEntrance: s.rooftop.entrance,
-        ductReaction: s.rooftop.duct,
-        airSprays: s.rooftop.airSprays,
-        checkpoint: s.checkpoint,
-        furniture: s.building.furniture,
-        corridor: s.building.corridor,
-        canEnterMeeting: stageHooks(s.stage).canInteract?.(s) ?? false,
-        level: { length: STAGES[s.stage].length, goal: STAGES[s.stage].goal },
-        mode: s.mode,
-        focus: s.focus.value,
-        focusClock: s.focus.recoveryClock,
-        focusLossTime: s.focusLossTime,
-        focusNotice: s.focus.notice,
-        lossReason: s.lossReason,
-        player: s.p,
-        ground: s.ground,
-        slip: s.office.slip,
-        dirty: s.office.dirty,
-        inBin: s.office.inBin,
-        binAge: s.office.binAge,
-        time: s.time,
-        deaths: s.deaths,
-        bursts: s.office.copier.bursts,
-        paperHits: s.office.paperHits,
-        binFalls: s.office.binFalls,
-        dirtyWaterExperienced: s.office.wetSeen,
-        cleaningSpilled: s.office.cleaning.spilled,
-        soaked: s.office.soakedOnSpill > 0,
-        bucketAge: s.office.bucket.age,
-        paperPenaltyRemaining: s.office.paperPenaltyRemaining,
-        lightPenaltyRemaining: s.office.lightPenaltyRemaining,
-        cleaning: s.office.cleaning,
-        lightHits: s.office.lightHits,
-        doorHits: s.office.doorHits,
-        monitors: monitorsView(s.time),
-        papers: s.office.papers,
-        people: s.people,
-        solids: stageSolids(s).map((p) => ({ p })),
-        copier: {
-            x: s.office.copier.x,
-            cool: s.office.copier.cool,
-            burst: s.office.copier.burst,
-            next: s.office.copier.next,
-            dir: s.office.copier.dir,
-        },
-        urgentCopier: s.office.urgent,
-        bin: LEVEL.bin,
-        focusBlocked: focusBlockedIn(s),
-    });
-}
-
 export type Game = ReturnType<typeof createGame>;
-export type GameSnapshot = ReturnType<Game['getSnapshot']>;

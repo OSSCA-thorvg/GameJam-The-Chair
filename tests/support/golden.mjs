@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { canonicalJson } from './canonical-json.mjs';
 import {
     balancePolicy,
     corridorPolicy,
@@ -19,7 +20,7 @@ function traced(game) {
                     held.push(...events);
                     const s = target.getSnapshot();
                     hash.update(
-                        JSON.stringify([s.mode, s.player, s.focus, events]),
+                        canonicalJson([s.mode, s.player, s.focus, events]),
                     );
                 };
             }
@@ -31,7 +32,7 @@ function traced(game) {
         game: wrapper,
         digest: () =>
             hash
-                .update(JSON.stringify(game.getSnapshot()))
+                .update(canonicalJson(game.getSnapshot()))
                 .digest('hex')
                 .slice(0, 16),
     };

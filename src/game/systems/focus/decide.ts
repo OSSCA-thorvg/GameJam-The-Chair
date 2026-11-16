@@ -17,6 +17,15 @@ export type FocusState = {
     notice: FocusNotice | null;
 };
 
+export function createFocusState(): FocusState {
+    return {
+        value: 100,
+        recoveryClock: 0,
+        processedEvents: [],
+        notice: null,
+    };
+}
+
 export const FOCUS_LOSS_DURATION = 1.7;
 
 export function focusAfterHit(

@@ -20,6 +20,7 @@ stages/<stage>/
   definition.ts        StageDefinition: 길이, 목표, 지형, 체크포인트, 등장인물, 규칙 flag
   attempt.ts           새 시도의 시작 값
   hooks.ts             공용 tick에 끼어드는 StageHooks
+  view.ts              별도 변환이 필요한 스테이지의 독립적인 화면 데이터 생성
   <system>/decide.ts   필요한 값만 받는 순수 판단
   <system>/apply.ts    판단 결과를 state에 반영
 ```
@@ -48,8 +49,9 @@ Command hook은 `canJump`, `canSpray`, `onSpray`, `interact`, `leave`, `canInter
 3. `definition.ts`에는 데이터만 둡니다. 동작은 `hooks.ts`에 둡니다.
 4. `src/game`에서 `Math.random`, `Date`, `performance`를 쓰지 않습니다. 난수는 `rng.ts`를 통해 `state.rng`에서 얻습니다.
 5. decide/apply system에서 `decide.ts`는 state를 바꾸지 않습니다. 짝을 이루는 `apply.ts`가 결과를 씁니다.
+6. 스테이지의 `view.ts`는 필요한 스테이지 데이터와 조회된 규칙 결과만 받으며, `CoreState`를 import하거나 stage hook을 조회하지 않습니다.
 
-`tests/structure.test.mjs`는 1번과 2번 규칙을 검사하고 각 스테이지의 핵심 파일이 있는지 확인합니다. `npm run lint`는 금지 API와 `decide.ts` import 경계를 검사합니다.
+`tests/structure.test.mjs`는 1번, 2번, 6번 규칙을 검사하고 각 스테이지의 핵심 파일이 있는지 확인합니다. `npm run lint`는 금지 API와 `decide.ts` import 경계를 검사합니다.
 
 ## 새 스테이지 추가
 
@@ -72,7 +74,7 @@ Command hook은 `canJump`, `canSpray`, `onSpray`, `interact`, `leave`, `canInter
 |---|---|
 | `state.ts`의 `Attempt` | 스테이지 추가 |
 | `types.ts`의 `CueId`, `Input` | 연출 신호나 입력 추가 |
-| `game.ts`의 `viewState` | 화면에 값을 전달 |
+| `snapshot.ts`와 `stages/<stage>/view.ts` | 화면에 값을 전달 |
 | `i18n.ts` | 문구 추가 |
 | `src/render/scene/*`, `src/ui/hud.ts` | 스테이지 화면 변경 |
 

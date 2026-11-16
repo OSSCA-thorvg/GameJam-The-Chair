@@ -1,9 +1,3 @@
-import { LEVEL } from '../level';
-import { monitorPhase } from './office/monitor/decide';
-
-export function monitorsView(time: number) {
-    return LEVEL.monitors.map((monitor) => ({
-        ...monitor,
-        ...monitorPhase(monitor, time),
-    }));
-}
+export { createOfficeSnapshot, type OfficeSnapshot } from './office/view';
+export { createBuildingSnapshot, type BuildingSnapshot } from './building/view';
+export { createRooftopSnapshot, type RooftopSnapshot } from './rooftop/view';

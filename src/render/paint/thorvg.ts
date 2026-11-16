@@ -30,16 +30,14 @@ type LayerSlot = {
 
 type TextSlot = { back: Text; front: Text; font: string; content: string };
 
-const STROKED = 1;
-const TRIMMED = 2;
-const BLENDED = 4;
+type AppliedStyle = { stroked: boolean; trimmed: boolean; blended: boolean };
 const PX_TO_PT = 72 / 96;
 
 export type PaintPool = {
     top: Shape[];
     texts: TextSlot[];
     layers: Map<string, LayerSlot>;
-    styled: Map<Shape, number>;
+    styled: Map<Shape, AppliedStyle>;
     signature: string;
 };
 
@@ -129,7 +127,11 @@ export function paintThorvg(
             s.fill(g);
             g.dispose();
         }
-        let style = pool.styled.get(s) ?? 0;
+        const style = pool.styled.get(s) ?? {
+            stroked: false,
+            trimmed: false,
+            blended: false,
+        };
         if (cmd.stroke) {
             const k = cmd.stroke;
             const gradient =
@@ -148,27 +150,28 @@ export function paintThorvg(
                 dashOffset: k.dashOffset ?? 0,
             });
             gradient?.dispose();
-            style |= STROKED;
-        } else if (style & STROKED) {
+            style.stroked = true;
+        } else if (style.stroked) {
             s.stroke({ width: 0, dash: [] });
-            style &= ~STROKED;
+            style.stroked = false;
         }
         if (cmd.trim) {
             s.trimPath(cmd.trim[0], cmd.trim[1], true);
-            style |= TRIMMED;
-        } else if (style & TRIMMED) {
+            style.trimmed = true;
+        } else if (style.trimmed) {
             s.trimPath(0, 1, true);
-            style &= ~TRIMMED;
+            style.trimmed = false;
         }
         if (cmd.blend && cmd.blend !== 'normal') {
             s.blend(blendOf(cmd.blend));
-            style |= BLENDED;
-        } else if (style & BLENDED) {
+            style.blended = true;
+        } else if (style.blended) {
             s.blend(TVG.BlendMethod.Normal);
-            style &= ~BLENDED;
+            style.blended = false;
         }
-        if (style) pool.styled.set(s, style);
-        else pool.styled.delete(s);
+        if (style.stroked || style.trimmed || style.blended) {
+            pool.styled.set(s, style);
+        } else pool.styled.delete(s);
         s.visible(true);
     };
 
