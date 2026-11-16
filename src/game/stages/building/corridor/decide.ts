@@ -157,7 +157,7 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     }
     const allReleased = furniture.every(chair => chair.released);
     const front = furniture[0], back = furniture[2];
-    const frontX = front.x;
+    const frontX = front.x, middleX = furniture[1].x;
     const nearby = p.x > back.x - 240 && p.x < front.x + 240;
     const leading = allReleased && ground && c.pace === 'casual' && leadsConvoy(p, furniture) && p.x >= STAGE_TWO.checkpoints[2].x;
     const captiveBoarding = c.departure.kind === 'boarding' && c.departure.reason === 'abduction';
@@ -203,13 +203,14 @@ export function corridorStep(input: CorridorInput, dt: number, previousX: number
     if (isJoinedConvoy(c.convoy) || followsBoarding) {
         const shuffle = isJoinedConvoy(c.convoy) && ground ? input.steer * STAGE_TWO.shuffle : 0;
         const nextX = previousX + front.x - frontX + shuffle * dt;
-        const low = c.convoy === 'leading' ? front.x + 29 : back.x + 29;
-        const high = c.convoy === 'leading' ? front.x + 239 : front.x - 29;
+        // A wedged rider rolls only within its own gap: the chairs on either side are walls, hopped over, not passed.
+        const behindMiddle = previousX < middleX;
+        const low = c.convoy === 'leading' ? front.x + 29 : behindMiddle ? back.x + 29 : furniture[1].x + 29;
+        const high = c.convoy === 'leading' ? front.x + 239 : behindMiddle ? furniture[1].x - 29 : front.x - 29;
         p.x = Math.max(low, Math.min(high, nextX));
         p.vx = front.vx + (p.x === nextX ? shuffle : 0);
-        // Rolling past either end steps off; the express convoy outruns a rider, so only its back lets go.
-        const out = nextX < low ? c.convoy === 'carried' : nextX > high && c.pace === 'casual';
-        if (shuffle && out) {
+        // A leader rolling ahead of the casual convoy leaves it; the express convoy outruns a rider.
+        if (shuffle && c.convoy === 'leading' && nextX > high && c.pace === 'casual') {
             c.convoy = 'free';
             p.x = nextX;
         }
