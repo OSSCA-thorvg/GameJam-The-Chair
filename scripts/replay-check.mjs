@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
+
 import { build } from 'esbuild';
 
 const bundle = await build({

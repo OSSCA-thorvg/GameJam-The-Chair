@@ -1,3 +1,5 @@
+import { fontCss } from '../fonts';
+
 import type { RenderCtx } from '../context';
 import type {
     Blend,
@@ -6,7 +8,6 @@ import type {
     Gradient,
     TextSpec,
 } from '../types';
-import { fontCss } from '../fonts';
 
 const COMPOSITE: Record<Blend, GlobalCompositeOperation> = {
     normal: 'source-over',
@@ -19,9 +20,15 @@ const COMPOSITE: Record<Blend, GlobalCompositeOperation> = {
 function tracePath2d(bg: CanvasRenderingContext2D, cmd: PathCommand) {
     bg.beginPath();
     bg.moveTo(...cmd.points[0]);
-    for (let i = 1; i < cmd.points.length; i++) bg.lineTo(...cmd.points[i]);
-    for (const c of cmd.curves || []) bg.bezierCurveTo(...c);
-    if (!cmd.open) bg.closePath();
+    for (let i = 1; i < cmd.points.length; i++) {
+        bg.lineTo(...cmd.points[i]);
+    }
+    for (const c of cmd.curves || []) {
+        bg.bezierCurveTo(...c);
+    }
+    if (!cmd.open) {
+        bg.closePath();
+    }
 }
 
 function style2d(
@@ -29,7 +36,9 @@ function style2d(
     bg: CanvasRenderingContext2D,
     c: string | Gradient,
 ) {
-    if (typeof c === 'string') return c;
+    if (typeof c === 'string') {
+        return c;
+    }
     const g =
         c.radius === undefined
             ? bg.createLinearGradient(...c.from, ...c.to)
@@ -48,7 +57,9 @@ function text2d(bg: CanvasRenderingContext2D, spec: TextSpec) {
     bg.translate(spec.x, spec.y);
     bg.rotate(spec.rotation);
     bg.font = fontCss(spec.font, spec.size);
-    if (spec.opacity !== undefined) bg.globalAlpha = spec.opacity;
+    if (spec.opacity !== undefined) {
+        bg.globalAlpha = spec.opacity;
+    }
     bg.textAlign = 'center';
     bg.textBaseline = 'middle';
     if (spec.outline) {
@@ -66,7 +77,7 @@ export function paintCanvas(
     ctx: RenderCtx,
     bg: CanvasRenderingContext2D,
     commands: DrawCommand[],
-) {
+): void {
     for (const cmd of commands) {
         if (cmd.kind === 'text') {
             text2d(bg, cmd.text);
@@ -89,8 +100,12 @@ export function paintCanvas(
                 bg.rect(0, 0, ctx.W, ctx.H);
                 bg.clip('evenodd');
             }
-            if (layer?.opacity !== undefined) bg.globalAlpha = layer.opacity;
-            if (layer?.blur) bg.filter = `blur(${layer.blur}px)`;
+            if (layer?.opacity !== undefined) {
+                bg.globalAlpha = layer.opacity;
+            }
+            if (layer?.blur) {
+                bg.filter = `blur(${layer.blur}px)`;
+            }
             bg.globalCompositeOperation =
                 COMPOSITE[cmd.blend ?? layer?.blend ?? 'normal'];
         }
@@ -112,6 +127,8 @@ export function paintCanvas(
                     : style2d(ctx, bg, color);
             bg.stroke();
         }
-        if (styled) bg.restore();
+        if (styled) {
+            bg.restore();
+        }
     }
 }

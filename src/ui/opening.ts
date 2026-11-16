@@ -1,11 +1,24 @@
-import { translate, type Locale } from '../i18n';
+import { translate } from '../i18n';
 import {
     OPENING_DURATION,
     openingFrame,
-    type OpeningFrame,
 } from '../render/scene/opening/timeline';
 
-export function createOpening(root: HTMLElement, getLocale: () => Locale) {
+import type { Locale } from '../i18n';
+import type { OpeningFrame } from '../render/scene/opening/timeline';
+
+export function createOpening(
+    root: HTMLElement,
+    getLocale: () => Locale,
+): {
+    start: (done: () => void) => void;
+    skip: () => void;
+    readonly seen: boolean;
+    readonly active: boolean;
+    advance(dt: number): void;
+    frame(): OpeningFrame | null;
+    destroy(): void;
+} {
     let time: number | null = null;
     let screen: HTMLElement | null = null;
     let onDone: (() => void) | null = null;
@@ -13,7 +26,9 @@ export function createOpening(root: HTMLElement, getLocale: () => Locale) {
     const controller = new AbortController();
 
     function finish() {
-        if (time === null) return;
+        if (time === null) {
+            return;
+        }
         time = null;
         screen?.remove();
         screen = null;
@@ -25,7 +40,9 @@ export function createOpening(root: HTMLElement, getLocale: () => Locale) {
 
     function start(done: () => void) {
         const scene = root.querySelector<HTMLElement>('.scene');
-        if (!scene) return done();
+        if (!scene) {
+            return done();
+        }
         time = 0;
         onDone = done;
         screen = document.createElement('div');
@@ -71,9 +88,13 @@ export function createOpening(root: HTMLElement, getLocale: () => Locale) {
             return time !== null;
         },
         advance(dt: number) {
-            if (time === null) return;
+            if (time === null) {
+                return;
+            }
             time += dt;
-            if (time >= OPENING_DURATION) finish();
+            if (time >= OPENING_DURATION) {
+                finish();
+            }
         },
         frame(): OpeningFrame | null {
             return time === null ? null : openingFrame(time);

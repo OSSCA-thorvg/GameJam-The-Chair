@@ -1,4 +1,5 @@
 import { stageCamera } from '../presentation/stages';
+
 import type { RenderCtx } from './context';
 
 const VIEW_WIDTH = 1000;
@@ -9,7 +10,7 @@ export function gameplayCamera(
     lastTime: number,
     lastStage: number,
     camera?: number,
-) {
+): number {
     const next = ctx.state;
     const t = ctx.t;
     const policy = stageCamera(next);

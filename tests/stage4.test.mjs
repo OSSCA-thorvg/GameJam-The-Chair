@@ -1,8 +1,9 @@
-import { runUntil } from './support/until.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { driveStageFour, STAGE_FOUR_ROUTE } from './support/stage4-route.mjs';
+
 import { bundled } from './support/load.mjs';
+import { driveStageFour, STAGE_FOUR_ROUTE } from './support/stage4-route.mjs';
+import { runUntil } from './support/until.mjs';
 const {
     createGame,
     FOCUS_DAMAGE,
@@ -27,18 +28,20 @@ const {
 test('stage 4 traverses growing building, gust sign, rocking desks and depth reveal without falling', () => {
     const game = createGame();
     game.startStage(4);
-    const landings = new Set(),
-        flags = new Set(),
-        phases = new Set();
-    let lift = 0,
-        drawer = 0,
-        tiltedDesk = false,
-        sign = false;
+    const landings = new Set();
+    const flags = new Set();
+    const phases = new Set();
+    let lift = 0;
+    let drawer = 0;
+    let tiltedDesk = false;
+    let sign = false;
     const end = driveStageFour(game, (state) => {
         flags.add(state.checkpoint);
         phases.add(state.sky.phase);
         assert.ok(state.sky.airSprays <= STAGE_FOUR.airSprayLimit);
-        if (state.ground) landings.add(state.sky.standing);
+        if (state.ground) {
+            landings.add(state.sky.standing);
+        }
         lift = Math.max(lift, state.sky.lift);
         drawer = Math.max(drawer, state.sky.drawer);
         tiltedDesk ||= Math.abs(state.sky.deskTilt) > 0.001;
@@ -78,8 +81,8 @@ test('stage 4 traverses growing building, gust sign, rocking desks and depth rev
 test('the single sky flag restores a safe landing and does not leak props into earlier stages', () => {
     const game = createGame();
     game.startStage(4);
-    let checked = false,
-        savedSky;
+    let checked = false;
+    let savedSky;
     driveStageFour(game, (state) => {
         if (state.checkpoint === 1 && !checked) {
             checked = true;
@@ -388,8 +391,8 @@ test('a bird or paper hit costs focus once per pass and running out of focus end
 
 test('desks rock back and forth and carry the chair standing on them', () => {
     const sky = { ...createSky(), phase: 'course', lift: 1 };
-    const angles = new Set(),
-        xs = new Set();
+    const angles = new Set();
+    const xs = new Set();
     for (let t = 0; t < 6; t += 0.5) {
         const desk = skyPlatforms(sky, t).find((p) => p.id === 'upper-rest');
         angles.add(Math.sign(desk.angle));

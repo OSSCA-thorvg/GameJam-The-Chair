@@ -1,7 +1,8 @@
-import type { RenderCtx } from '../../context';
-import type { Vector } from '../../types';
 import { SPEECH_FONT } from '../../fonts';
 import { PathBuilder, push } from '../opening/shapes';
+
+import type { RenderCtx } from '../../context';
+import type { Vector } from '../../types';
 
 const MARKS = ['!', '✓', '…'];
 const INK = '#2b2f3a';
@@ -11,8 +12,10 @@ export function orbitReaction(
     head: Vector,
     age: number,
     lit: boolean,
-) {
-    if (!lit) return;
+): void {
+    if (!lit) {
+        return;
+    }
     const beat = age - Math.floor(age);
     const u = Math.min(1, beat / 0.18);
     const scale = 0.55 + 0.45 * (1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2);
@@ -24,8 +27,8 @@ export function orbitReaction(
         ctx.W - size * 1.35,
     );
     const cy = ctx.clamp(head[1] - size * 1.15, size, ctx.H - size);
-    const rx = size * 1.05,
-        ry = size * 0.83;
+    const rx = size * 1.05;
+    const ry = size * 0.83;
     const at = (x: number, y: number): Vector => [
         tip[0] + (x - tip[0]) * scale,
         tip[1] + (y - tip[1]) * scale,

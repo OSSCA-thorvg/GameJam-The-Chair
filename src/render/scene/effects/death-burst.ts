@@ -1,8 +1,9 @@
-import type { RenderCtx } from '../../context';
-import type { Vector } from '../../types';
 import { translate } from '../../../i18n';
 import { SIGN_FONT } from '../../fonts';
 import { PathBuilder, push } from '../opening/shapes';
+
+import type { RenderCtx } from '../../context';
+import type { Vector } from '../../types';
 
 const INK = '#2b2f3a';
 
@@ -59,7 +60,7 @@ function kungStrokes(ctx: RenderCtx, at: Vector, size: number) {
     stroke(ctx, at, size, [1.12, 0.92], [1.12, 0.93], w * 1.1);
 }
 
-export function deathBurst(ctx: RenderCtx, head: Vector, u: number) {
+export function deathBurst(ctx: RenderCtx, head: Vector, u: number): void {
     const pop =
         u < 0.2
             ? 0.5 + 0.8 * Math.sin(((u / 0.2) * Math.PI) / 2) * 1.12
@@ -67,12 +68,12 @@ export function deathBurst(ctx: RenderCtx, head: Vector, u: number) {
     const alpha = u < 0.75 ? 1 : 1 - (u - 0.75) / 0.25;
     const size = ctx.clamp(ctx.W / 9, 70, 150) * pop;
     const shake = (1 - u) * 4;
-    const cx = head[0] - size * 0.9 + Math.sin(u * 90) * shake,
-        cy = head[1] - size * 0.75 + Math.cos(u * 77) * shake;
+    const cx = head[0] - size * 0.9 + Math.sin(u * 90) * shake;
+    const cy = head[1] - size * 0.75 + Math.cos(u * 77) * shake;
     const points: Vector[] = [];
     for (let i = 0; i < 24; i++) {
-        const a = (i / 24) * Math.PI * 2,
-            r = i % 2 ? 0.72 : 1 + (i % 4 === 0 ? 0.12 : 0);
+        const a = (i / 24) * Math.PI * 2;
+        const r = i % 2 ? 0.72 : 1 + (i % 4 === 0 ? 0.12 : 0);
         points.push([
             cx + Math.cos(a) * size * r,
             cy + Math.sin(a) * size * 0.72 * r,

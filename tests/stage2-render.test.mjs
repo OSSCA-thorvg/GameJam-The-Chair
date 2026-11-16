@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { bundled } from './support/load.mjs';
+import test from 'node:test';
+
 import { orientationHop } from './support/harness.mjs';
+import { bundled } from './support/load.mjs';
 
 const { createGame, createRenderCtx, drawBuilding } = await bundled({
     stdin: {
@@ -53,15 +54,21 @@ function render(state, locale, width) {
             font: `${text.size}px ${text.font}`,
             color: text.fill,
         }));
-    let defs = '',
-        shapes = '';
+    let defs = '';
+    let shapes = '';
     ctx.commands.forEach((c, i) => {
-        if (c.text) return;
+        if (c.text) {
+            return;
+        }
         for (const point of c.points) {
-            for (const n of point) assert.ok(Number.isFinite(n));
+            for (const n of point) {
+                assert.ok(Number.isFinite(n));
+            }
         }
         for (const curve of c.curves ?? []) {
-            for (const n of curve) assert.ok(Number.isFinite(n));
+            for (const n of curve) {
+                assert.ok(Number.isFinite(n));
+            }
         }
         const d = `M${c.points[0].join(',')} ${c.points
             .slice(1)
@@ -162,7 +169,9 @@ test('corridor and meeting render finite vector paths in both languages and narr
         ) {
             frames.set('sleeper', state);
         }
-        if (frames.size === 5) break;
+        if (frames.size === 5) {
+            break;
+        }
         assert.equal(state.mode, 'play');
         const waitingForMeeting = !visited && state.player.x > 510;
         const correction = -state.player.a * 12 - state.player.w * 4;
@@ -178,7 +187,9 @@ test('corridor and meeting render finite vector paths in both languages and narr
                   : []),
             ...(correction < -0.4 ? ['q'] : correction > 0.4 ? ['e'] : []),
         );
-        if (orientationHop(state)) game.jump();
+        if (orientationHop(state)) {
+            game.jump();
+        }
         game.step(1 / 120);
         game.drainEvents();
     }

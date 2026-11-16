@@ -1,22 +1,35 @@
-import { STAGE_PRESENTATION, hideStageHud } from '../presentation/stages';
 import { isStageUnlocked } from '../game/progression';
-import { translate, type Locale, type Message } from '../i18n';
+import { translate } from '../i18n';
+import { STAGE_PRESENTATION, hideStageHud } from '../presentation/stages';
+
+import type { Locale, Message } from '../i18n';
+import type { FeedbackState } from './feedback';
 import type { GameSnapshot } from '../game/game';
 import type { Mode } from '../game/types';
-import type { FeedbackState } from './feedback';
 import type { EffectsState } from '../render/effects';
 export function createHud(
     root: HTMLElement,
     getLocale: () => Locale = () => 'en',
-) {
+): {
+    draw: (
+        state: GameSnapshot,
+        feedback: FeedbackState,
+        effects: EffectsState,
+        cutscene?: boolean,
+    ) => void;
+} {
     const q = (selector: string) => root.querySelector<HTMLElement>(selector);
     const text = (selector: string, value: string) => {
         const el = q(selector);
-        if (el && el.textContent !== value) el.textContent = value;
+        if (el && el.textContent !== value) {
+            el.textContent = value;
+        }
     };
     const hidden = (selector: string, value: boolean) => {
         const el = q(selector);
-        if (el) el.hidden = value;
+        if (el) {
+            el.hidden = value;
+        }
     };
     const style = (selector: string, key: string, value: string) =>
         q(selector)?.style.setProperty(key, value);
@@ -128,7 +141,9 @@ export function createHud(
         if (mode === 'won' && previousMode !== 'won') {
             const stats =
                 root.querySelector<HTMLDetailsElement>('[data-stats]');
-            if (stats) stats.open = false;
+            if (stats) {
+                stats.open = false;
+            }
         }
         previousMode = mode;
         hidden('[data-stats]', mode !== 'won');

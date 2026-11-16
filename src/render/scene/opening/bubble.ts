@@ -1,9 +1,11 @@
-import { translate } from '../../../i18n';
-import type { RenderCtx } from '../../context';
-import type { Vector } from '../../types';
-import type { OpeningBubble, OpeningFrame } from './timeline';
-import { SIGN_FONT, SPEECH_FONT, type FontName } from '../../fonts';
 import { circle, PathBuilder, push } from './shapes';
+import { translate } from '../../../i18n';
+import { SIGN_FONT, SPEECH_FONT } from '../../fonts';
+
+import type { OpeningBubble, OpeningFrame } from './timeline';
+import type { RenderCtx } from '../../context';
+import type { FontName } from '../../fonts';
+import type { Vector } from '../../types';
 
 const TYPE_SPEED = 28;
 const CHAIR_SLATE = '#4c5368';
@@ -12,18 +14,21 @@ export function wrap(
     measure: (line: string) => number,
     text: string,
     maxWidth: number,
-) {
+): string[] {
     const lines: string[] = [];
     let line = '';
     for (const word of text.split(' ')) {
         const next = line ? `${line} ${word}` : word;
-        if (measure(next) <= maxWidth || !line) line = next;
-        else {
+        if (measure(next) <= maxWidth || !line) {
+            line = next;
+        } else {
             lines.push(line);
             line = word;
         }
     }
-    if (line) lines.push(line);
+    if (line) {
+        lines.push(line);
+    }
     return lines;
 }
 
@@ -59,10 +64,10 @@ function drawBubble(
     );
     const lineHeight = size * 1.3;
     const textWidth = Math.max(...lineWidths);
-    const padX = size * 0.9,
-        padY = size * 0.6;
-    const w = textWidth + padX * 2,
-        h = lines.length * lineHeight + padY * 2;
+    const padX = size * 0.9;
+    const padY = size * 0.6;
+    const w = textWidth + padX * 2;
+    const h = lines.length * lineHeight + padY * 2;
     const tip = bubbleAnchor(ctx, bubble);
     const gap = bubble.style === 'solid' ? size * 0.9 : size * 2.2;
     let x =
@@ -90,15 +95,15 @@ function drawBubble(
 
     let path: PathBuilder;
     if (bubble.style === 'rage') {
-        const cx = x + w / 2,
-            cy = y + h / 2,
-            rx = w / 2 + size * 1.1,
-            ry = h / 2 + size * 1.1;
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        const rx = w / 2 + size * 1.1;
+        const ry = h / 2 + size * 1.1;
         const count = 26;
         const boil = Math.floor(frame.t * 14);
         const toTip = Math.atan2((tip[1] - cy) / ry, (tip[0] - cx) / rx);
-        let tail = 0,
-            best = Infinity;
+        let tail = 0;
+        let best = Infinity;
         for (let i = 0; i < count; i += 2) {
             const d = Math.abs(
                 Math.atan2(
@@ -129,11 +134,13 @@ function drawBubble(
         }
         const scaled = points.map(grow);
         path = new PathBuilder(...scaled[0]);
-        for (const point of scaled.slice(1)) path.line(...point);
+        for (const point of scaled.slice(1)) {
+            path.line(...point);
+        }
         path.line(...scaled[0]);
     } else if (bubble.speaker === 'chair') {
-        const r = Math.min(h / 2, size * 0.9),
-            s = (px: number, py: number) => grow([px, py]);
+        const r = Math.min(h / 2, size * 0.9);
+        const s = (px: number, py: number) => grow([px, py]);
         path = new PathBuilder(...s(x + r, y))
             .line(...s(x + w - r, y))
             .corner(...s(x + w, y), ...s(x + w, y + r))
@@ -233,7 +240,9 @@ function drawBubble(
     lines.forEach((line, i) => {
         const visible = [...line].slice(0, Math.max(0, shown)).join('');
         shown -= [...line].length + 1;
-        if (!visible) return;
+        if (!visible) {
+            return;
+        }
         const lineY = cy + (i - (lines.length - 1) / 2) * lineHeight * scale;
         const left = cx - (lineWidths[i] / 2) * scale;
         ctx.screenText(
@@ -292,7 +301,7 @@ function drawNote(
     ctx.endLayer();
 }
 
-export function drawBubbles(ctx: RenderCtx, frame: OpeningFrame) {
+export function drawBubbles(ctx: RenderCtx, frame: OpeningFrame): void {
     frame.bubbles.forEach((bubble, index) =>
         drawBubble(ctx, frame, bubble, index),
     );

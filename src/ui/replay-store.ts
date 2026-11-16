@@ -1,13 +1,12 @@
+import { REPLAY_FORMAT, parseReplayError, parseReplay } from '../game/replay';
 import { CONFIG_VERSION } from '../game/stages/index';
-import {
-    REPLAY_FORMAT,
-    parseReplayError,
-    parseReplay,
-    type Recorder,
-    type ReplayData,
-    type ReplayError,
-    type ReplayErrorEntry,
-    type ReplayFile,
+
+import type {
+    Recorder,
+    ReplayData,
+    ReplayError,
+    ReplayErrorEntry,
+    ReplayFile,
 } from '../game/replay';
 
 const ERRORS_KEY = 'the-chair-error-log';
@@ -23,7 +22,14 @@ function store(key: string, value: unknown) {
 }
 
 // Persist errors immediately: a crash may stop the game loop.
-export function createErrorLog(max: number) {
+export function createErrorLog(max: number): {
+    add(
+        error: ReplayError,
+        stage: number | null,
+        replay: ReplayFile | null,
+    ): void;
+    readonly entries: readonly ReplayErrorEntry[];
+} {
     max = Number.isFinite(max) ? Math.max(0, Math.floor(max)) : 0;
     let entries: ReplayErrorEntry[] = [];
     try {
@@ -32,7 +38,9 @@ export function createErrorLog(max: number) {
         );
         if (Array.isArray(saved)) {
             for (const value of saved as unknown[]) {
-                if (!value || typeof value !== 'object') continue;
+                if (!value || typeof value !== 'object') {
+                    continue;
+                }
                 const entry = value as Record<string, unknown>;
                 try {
                     const error = parseReplayError(entry);
@@ -65,7 +73,9 @@ export function createErrorLog(max: number) {
                 } catch {}
             }
             entries = entries.slice(-Math.max(0, max));
-            if (max <= 0) entries = [];
+            if (max <= 0) {
+                entries = [];
+            }
         }
     } catch {}
     function persist() {
@@ -100,7 +110,9 @@ export function createErrorLog(max: number) {
                 stage,
                 replay,
             });
-            while (entries.length > max) entries.shift();
+            while (entries.length > max) {
+                entries.shift();
+            }
             persist();
         },
         get entries(): readonly ReplayErrorEntry[] {
@@ -123,8 +135,10 @@ export function replayData(recorder: Recorder, errorLog: ErrorLog): ReplayData {
     };
 }
 
-export function saveBrowserData(data: ReplayData) {
-    if (store(BROWSER_DATA_KEY, data)) return;
+export function saveBrowserData(data: ReplayData): void {
+    if (store(BROWSER_DATA_KEY, data)) {
+        return;
+    }
     store(BROWSER_DATA_KEY, {
         ...data,
         attempts: data.attempts.slice(0, 1),
@@ -140,7 +154,7 @@ export function loadBrowserData(): string | null {
     }
 }
 
-export function downloadJson(name: string, data: unknown) {
+export function downloadJson(name: string, data: unknown): void {
     const url = URL.createObjectURL(
         new Blob([JSON.stringify(data)], { type: 'application/json' }),
     );
@@ -151,7 +165,7 @@ export function downloadJson(name: string, data: unknown) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export async function copyText(text: string) {
+export async function copyText(text: string): Promise<boolean> {
     try {
         await navigator.clipboard.writeText(text);
         return true;
@@ -169,6 +183,6 @@ export async function copyText(text: string) {
     }
 }
 
-export function stamp() {
+export function stamp(): string {
     return new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 }

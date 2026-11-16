@@ -1,11 +1,12 @@
 import { translate } from '../../../i18n';
-import type { RenderCtx } from '../../context';
 import { SIGN_FONT } from '../../fonts';
-import type { Vector } from '../../types';
-import { drawWorld } from '../office/world';
 import { sprayPlume } from '../effects/spray';
 import { officeTint } from '../office/window-view';
+import { drawWorld } from '../office/world';
 import { PathBuilder, push, radial, screenRect } from '../opening/shapes';
+
+import type { RenderCtx } from '../../context';
+import type { Vector } from '../../types';
 
 export const TITLE_SIGN = {
     left: 0.055,
@@ -18,7 +19,7 @@ const DASH = 200;
 const VIEW = 720;
 const QUIET = { from: 2.45, loop: (3 * Math.PI * 2) / 24 };
 
-export function drawTitle(ctx: RenderCtx, time: number) {
+export function drawTitle(ctx: RenderCtx, time: number): void {
     const saved = {
         cam: ctx.cam,
         VW: ctx.VW,
@@ -86,9 +87,9 @@ function afterHours(ctx: RenderCtx) {
 }
 
 function openDoor(ctx: RenderCtx, time: number) {
-    const goal = ctx.GOAL,
-        foot = ctx.F - 62,
-        top = foot - 205;
+    const goal = ctx.GOAL;
+    const foot = ctx.F - 62;
+    const top = foot - 205;
     const pulse = 0.92 + 0.08 * Math.sin(time * 2.3);
     const [dx, dy] = ctx.screenPoint(goal + 18, top + 100);
     ctx.beginLayer({
@@ -144,8 +145,8 @@ function speedLines(ctx: RenderCtx, time: number) {
     for (let i = 0; i < 6; i++) {
         const y = p.y - 112 + i * 21;
         const run = (time * 1.6 + i * 0.37) % 1;
-        const tail = p.x - 60 - run * 150,
-            length = 40 + (i % 3) * 25;
+        const tail = p.x - 60 - run * 150;
+        const length = 40 + (i % 3) * 25;
         ctx.rod(tail - length, y, tail, y, 3, ctx.tint('#e9fff1', 1 - run));
     }
     ctx.endLayer();
@@ -213,10 +214,10 @@ function titleWords(ctx: RenderCtx) {
 }
 
 function startSign(ctx: RenderCtx, time: number) {
-    const x = ctx.W * TITLE_SIGN.left,
-        y = ctx.H * TITLE_SIGN.top;
-    const w = ctx.W * TITLE_SIGN.width,
-        h = ctx.H * TITLE_SIGN.height;
+    const x = ctx.W * TITLE_SIGN.left;
+    const y = ctx.H * TITLE_SIGN.top;
+    const w = ctx.W * TITLE_SIGN.width;
+    const h = ctx.H * TITLE_SIGN.height;
     const glow = 0.75 + 0.25 * Math.sin(time * 3);
     ctx.beginLayer({
         key: 'title-sign-glow',
@@ -275,8 +276,8 @@ function startSign(ctx: RenderCtx, time: number) {
         push(ctx, circleAt(...icon(wx, 33), 1.6 * u).command('#e2eee0'));
     }
 
-    const arrowLeft = x + w - h * 0.62,
-        mid = y + h / 2;
+    const arrowLeft = x + w - h * 0.62;
+    const mid = y + h / 2;
     push(ctx, {
         kind: 'path',
         points: [
@@ -298,8 +299,8 @@ function startSign(ctx: RenderCtx, time: number) {
     });
 
     const label = translate('button.start', ctx.locale);
-    const textLeft = x + h * 0.18 + 24 * u,
-        textRight = arrowLeft - h * 0.12;
+    const textLeft = x + h * 0.18 + 24 * u;
+    const textRight = arrowLeft - h * 0.12;
     const size = Math.min(
         h * 0.46,
         (textRight - textLeft) / Math.max(0.1, ctx.measureText(label, 1)),

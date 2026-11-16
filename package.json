@@ -15,8 +15,8 @@
     "lint": "eslint src vite.config.ts eslint.config.js scripts tests",
     "test:fast": "node scripts/test-fast.mjs",
     "lint:fix": "eslint src vite.config.ts eslint.config.js scripts tests --fix",
-    "format": "prettier --write \"src/**/*.ts\" vite.config.ts eslint.config.js \"scripts/**/*.mjs\" \"tests/**/*.mjs\"",
-    "format:check": "prettier --check \"src/**/*.ts\" vite.config.ts eslint.config.js \"scripts/**/*.mjs\" \"tests/**/*.mjs\""
+    "format": "prettier --write \"src/**/*.ts\" vite.config.ts eslint.config.js \"scripts/**/*.mjs\" \"tests/**/*.{ts,mjs}\"",
+    "format:check": "prettier --check \"src/**/*.ts\" vite.config.ts eslint.config.js \"scripts/**/*.mjs\" \"tests/**/*.{ts,mjs}\""
   },
   "engines": {
     "node": ">=22.0.0"

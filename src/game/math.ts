@@ -64,8 +64,12 @@ function kernelCos(x: number, y: number) {
 }
 
 export function sin(x: number): number {
-    if (!Number.isFinite(x)) return NaN;
-    if (Math.abs(x) <= PIO4) return kernelSin(x, 0);
+    if (!Number.isFinite(x)) {
+        return NaN;
+    }
+    if (Math.abs(x) <= PIO4) {
+        return kernelSin(x, 0);
+    }
     reduce(x);
     const { n, y0, y1 } = reduced;
     switch (n & 3) {
@@ -81,8 +85,12 @@ export function sin(x: number): number {
 }
 
 export function cos(x: number): number {
-    if (!Number.isFinite(x)) return NaN;
-    if (Math.abs(x) <= PIO4) return kernelCos(x, 0);
+    if (!Number.isFinite(x)) {
+        return NaN;
+    }
+    if (Math.abs(x) <= PIO4) {
+        return kernelCos(x, 0);
+    }
     reduce(x);
     const { n, y0, y1 } = reduced;
     switch (n & 3) {
@@ -117,7 +125,9 @@ function pow2(k: number) {
     let base = k < 0 ? 0.5 : 2;
     let e = Math.abs(k);
     while (e > 0) {
-        if (e & 1) result *= base;
+        if (e & 1) {
+            result *= base;
+        }
         base *= base;
         e >>= 1;
     }
@@ -125,10 +135,18 @@ function pow2(k: number) {
 }
 
 export function exp(x: number): number {
-    if (Number.isNaN(x)) return NaN;
-    if (x > EXP_MAX) return Infinity;
-    if (x < EXP_MIN) return 0;
-    if (x === 0) return 1;
+    if (Number.isNaN(x)) {
+        return NaN;
+    }
+    if (x > EXP_MAX) {
+        return Infinity;
+    }
+    if (x < EXP_MIN) {
+        return 0;
+    }
+    if (x === 0) {
+        return 1;
+    }
     const k = Math.round(x * INV_LN2);
     const hi = x - k * LN2_HI;
     const lo = k * LN2_LO;
@@ -136,11 +154,17 @@ export function exp(x: number): number {
     const t = r * r;
     const c = r - t * (P1 + t * (P2 + t * (P3 + t * (P4 + t * P5))));
     const y = 1 - (lo - (r * c) / (2 - c) - hi);
-    if (k === 0) return y;
+    if (k === 0) {
+        return y;
+    }
     // Split the scaling so neither factor overflows or loses bits before the
     // final rounding.
-    if (k > 1000) return y * pow2(k - 1000) * pow2(1000);
-    if (k < -1000) return y * pow2(k + 1000) * pow2(-1000);
+    if (k > 1000) {
+        return y * pow2(k - 1000) * pow2(1000);
+    }
+    if (k < -1000) {
+        return y * pow2(k + 1000) * pow2(-1000);
+    }
     return y * pow2(k);
 }
 
@@ -162,7 +186,9 @@ const AT = [
 ];
 
 export function atan(x: number): number {
-    if (Number.isNaN(x)) return NaN;
+    if (Number.isNaN(x)) {
+        return NaN;
+    }
     const ax = Math.abs(x);
     if (ax >= 7.378697629483821e19) {
         return x > 0 ? ATAN_HI[3] + ATAN_LO[3] : -ATAN_HI[3] - ATAN_LO[3];
@@ -170,7 +196,9 @@ export function atan(x: number): number {
     let id: number;
     let v: number;
     if (ax < 0.4375) {
-        if (ax < 7.450580596923828e-9) return x;
+        if (ax < 7.450580596923828e-9) {
+            return x;
+        }
         id = -1;
         v = x;
     } else if (ax < 1.1875) {
@@ -196,16 +224,24 @@ export function atan(x: number): number {
             w * (AT[2] + w * (AT[4] + w * (AT[6] + w * (AT[8] + w * AT[10])))));
     const s2 =
         w * (AT[1] + w * (AT[3] + w * (AT[5] + w * (AT[7] + w * AT[9]))));
-    if (id < 0) return v - v * (s1 + s2);
+    if (id < 0) {
+        return v - v * (s1 + s2);
+    }
     const result = ATAN_HI[id] - (v * (s1 + s2) - ATAN_LO[id] - v);
     return x < 0 ? -result : result;
 }
 
 export function atan2(y: number, x: number): number {
-    if (Number.isNaN(x) || Number.isNaN(y)) return NaN;
+    if (Number.isNaN(x) || Number.isNaN(y)) {
+        return NaN;
+    }
     const negativeX = x < 0 || Object.is(x, -0);
-    if (y === 0) return negativeX ? (Object.is(y, -0) ? -PI : PI) : y;
-    if (x === 0) return y > 0 ? PIO2_HI : -PIO2_HI;
+    if (y === 0) {
+        return negativeX ? (Object.is(y, -0) ? -PI : PI) : y;
+    }
+    if (x === 0) {
+        return y > 0 ? PIO2_HI : -PIO2_HI;
+    }
     if (!Number.isFinite(x)) {
         if (!Number.isFinite(y)) {
             const corner = x > 0 ? PIO4 : 3 * PIO4;
@@ -213,9 +249,13 @@ export function atan2(y: number, x: number): number {
         }
         return x > 0 ? (y > 0 ? 0 : -0) : y > 0 ? PI : -PI;
     }
-    if (!Number.isFinite(y)) return y > 0 ? PIO2_HI : -PIO2_HI;
+    if (!Number.isFinite(y)) {
+        return y > 0 ? PIO2_HI : -PIO2_HI;
+    }
     const z = atan(Math.abs(y / x));
-    if (x > 0) return y < 0 ? -z : z;
+    if (x > 0) {
+        return y < 0 ? -z : z;
+    }
     const result = PI - (z - PI_LO);
     return y < 0 ? -result : result;
 }
@@ -223,14 +263,20 @@ export function atan2(y: number, x: number): number {
 export function hypot(x: number, y: number): number {
     let a = Math.abs(x);
     let b = Math.abs(y);
-    if (a === Infinity || b === Infinity) return Infinity;
-    if (Number.isNaN(a) || Number.isNaN(b)) return NaN;
+    if (a === Infinity || b === Infinity) {
+        return Infinity;
+    }
+    if (Number.isNaN(a) || Number.isNaN(b)) {
+        return NaN;
+    }
     if (a < b) {
         const swap = a;
         a = b;
         b = swap;
     }
-    if (a === 0) return 0;
+    if (a === 0) {
+        return 0;
+    }
     const r = b / a;
     return a * Math.sqrt(1 + r * r);
 }

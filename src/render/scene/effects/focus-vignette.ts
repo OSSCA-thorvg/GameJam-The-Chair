@@ -1,6 +1,7 @@
-import type { Vector } from '../../types';
-import type { RenderCtx } from '../../context';
 import { FOCUS_LOSS_DURATION } from '../../../game/systems/focus/decide';
+
+import type { RenderCtx } from '../../context';
+import type { Vector } from '../../types';
 
 const BEAT_RATE = 1;
 const TIERS = [
@@ -18,7 +19,7 @@ export function focusVignetteAlpha(
     focus: number,
     noticeLife: number | null,
     time: number,
-) {
+): { alpha: number; inner: 0.5 | 0.42 | 0.57 | 0.64 } {
     const tier =
         TIERS.find((item) => focus <= item.below) ?? TIERS[TIERS.length - 1];
     let alpha = 0;
@@ -33,23 +34,27 @@ export function focusVignetteAlpha(
     return { alpha, inner: tier.inner };
 }
 
-export function focusVignette(ctx: RenderCtx) {
+export function focusVignette(ctx: RenderCtx): void {
     const state = ctx.state;
-    if (ctx.mode !== 'play') return;
+    if (ctx.mode !== 'play') {
+        return;
+    }
     const { alpha, inner } = focusVignetteAlpha(
         state.focus,
         state.focusNotice?.life ?? null,
         ctx.t,
     );
-    if (alpha < 0.01) return;
-    const w = ctx.W / ctx.scale,
-        h = ctx.H / ctx.scale;
-    const left = ctx.cam,
-        top = -ctx.vertical;
-    const cx = left + w / 2,
-        cy = top + h / 2;
-    const ix = (w / 2) * inner,
-        iy = (h / 2) * inner;
+    if (alpha < 0.01) {
+        return;
+    }
+    const w = ctx.W / ctx.scale;
+    const h = ctx.H / ctx.scale;
+    const left = ctx.cam;
+    const top = -ctx.vertical;
+    const cx = left + w / 2;
+    const cy = top + h / 2;
+    const ix = (w / 2) * inner;
+    const iy = (h / 2) * inner;
     const fill = ctx.radialFill(
         cx,
         cy,

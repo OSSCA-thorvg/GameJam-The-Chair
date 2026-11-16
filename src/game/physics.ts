@@ -1,7 +1,8 @@
-import { LEVEL, PHYSICS } from './level';
 import { clamp, contact } from './geometry';
-import type { DeepReadonly, Player, Point } from './types';
+import { LEVEL, PHYSICS } from './level';
 import * as Det from './math';
+
+import type { DeepReadonly, Player, Point } from './types';
 
 export type Drive = {
     grounded: boolean;
@@ -97,7 +98,9 @@ export function collide(
             const ry = part.x * sn + part.y * c;
             for (const ob of solids) {
                 const hit = contact(p.x + rx, p.y + ry, part.r, ob);
-                if (!hit) continue;
+                if (!hit) {
+                    continue;
+                }
                 if (part.head && hit.ny < headDown && hit.depth > headDepth) {
                     return { p, ground, headHit: { x: p.x + rx, y: p.y + ry } };
                 }
@@ -112,13 +115,15 @@ export function collide(
                     p.vy += hit.ny * impulse;
                     p.w += (cr * impulse) / inertia;
                 }
-                if (part.wheel && hit.ny < wheelGround) ground = true;
+                if (part.wheel && hit.ny < wheelGround) {
+                    ground = true;
+                }
             }
         }
     }
     return { p, ground, headHit: null };
 }
 
-export function fellOffFloor(p: Readonly<Point>) {
+export function fellOffFloor(p: Readonly<Point>): boolean {
     return p.y > LEVEL.floor + PHYSICS.fallDepth;
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
+
 import {
     planStageFour,
     STAGE_FOUR_RECORDING,

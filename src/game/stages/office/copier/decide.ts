@@ -1,7 +1,8 @@
 import { FOCUS_DAMAGE, LEVEL } from '../../../level';
-import type { Paper, Point } from '../../../types';
-import type { FocusHit } from '../../../systems/focus/decide';
 import * as Det from '../../../math';
+
+import type { FocusHit } from '../../../systems/focus/decide';
+import type { Paper, Point } from '../../../types';
 
 export type Copier = {
     x: number;
@@ -131,8 +132,8 @@ export function urgentCopierStep(
 ): UrgentResult {
     const spec = LEVEL.urgentCopier;
     const next = { ...copier, cool: Math.max(0, copier.cool - dt) };
-    let fire = false,
-        started = false;
+    let fire = false;
+    let started = false;
     if (
         next.scan === 0 &&
         next.burst === 0 &&
@@ -156,7 +157,9 @@ export function urgentCopierStep(
             fire = true;
             next.burst--;
             next.next = spec.shotGap;
-            if (next.burst === 0) next.cool = spec.rest;
+            if (next.burst === 0) {
+                next.cool = spec.rest;
+            }
         }
     }
     return { copier: next, fire, started };
@@ -200,9 +203,15 @@ export function urgentShot(copier: Readonly<UrgentCopier>): Paper[] {
         Array.from({ length: count }, (_, i) =>
             sheet(F - 120, 130 + i * 40 + (shot % 3) * 25, -230 - i * 18, i),
         );
-    if (pattern === 'low') return low();
-    if (pattern === 'lob') return lob(5);
-    if (pattern === 'fan') return shot % 2 === 1 ? lob(4) : low();
+    if (pattern === 'low') {
+        return low();
+    }
+    if (pattern === 'lob') {
+        return lob(5);
+    }
+    if (pattern === 'fan') {
+        return shot % 2 === 1 ? lob(4) : low();
+    }
     return shot === 0 ? [sheet(F - 55, 230, -90, 0, 'bundle')] : lob(4);
 }
 
@@ -256,6 +265,6 @@ export function papersStep(
     return { papers: moved, hits };
 }
 
-export function trimPapers(papers: readonly Paper[]) {
+export function trimPapers(papers: readonly Paper[]): Paper[] {
     return papers.filter((z) => z.life > 0).slice(-60);
 }

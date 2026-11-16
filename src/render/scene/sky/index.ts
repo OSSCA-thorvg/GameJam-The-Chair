@@ -1,9 +1,6 @@
-import { skyPlatforms, STAGE_FOUR } from '../../../game/stages/sky/data';
-import type { RenderCtx } from '../../context';
-import { player } from '../player';
-import { sprayPlume } from '../effects/spray';
 import { drawSkyReveal } from './reveal';
-import { breadCloud as cloud } from '../shared/cloud-art';
+import { sprayPlume } from '../effects/spray';
+import { player } from '../player';
 import { skyCoursePlatform } from './course-art';
 import { skyBuilding, skyFlag } from './course-decor';
 import { skyKnockKeycaps } from './gear';
@@ -13,11 +10,15 @@ import {
     skySprayGauge,
     skyWarningScraps,
 } from './wind';
+import { skyPlatforms, STAGE_FOUR } from '../../../game/stages/sky/data';
+import { breadCloud as cloud } from '../shared/cloud-art';
+
+import type { RenderCtx } from '../../context';
 
 function atmosphere(ctx: RenderCtx) {
-    const top = -ctx.vertical,
-        height = ctx.H / ctx.scale,
-        bottom = top + height;
+    const top = -ctx.vertical;
+    const height = ctx.H / ctx.scale;
+    const bottom = top + height;
     ctx.gradientPolygon(
         [
             [ctx.cam, top],
@@ -49,7 +50,7 @@ function atmosphere(ctx: RenderCtx) {
     }
 }
 
-export function drawSky(ctx: RenderCtx) {
+export function drawSky(ctx: RenderCtx): void {
     ctx.commands = [];
     ctx.ox = ctx.oy = ctx.rotation = 0;
     ctx.localScale = 1;
@@ -67,7 +68,9 @@ export function drawSky(ctx: RenderCtx) {
     }
     for (let i = 1; i < STAGE_FOUR.checkpoints.length; i++) {
         const cp = STAGE_FOUR.checkpoints[i];
-        if (Math.abs(cp.x - ctx.cam - ctx.VW / 2) > ctx.VW) continue;
+        if (Math.abs(cp.x - ctx.cam - ctx.VW / 2) > ctx.VW) {
+            continue;
+        }
         skyFlag(ctx, cp.x, cp.y, i <= ctx.state.checkpoint);
     }
     skyHazardsArt(ctx);

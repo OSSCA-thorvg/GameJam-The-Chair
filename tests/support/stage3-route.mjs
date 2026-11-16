@@ -7,7 +7,9 @@ const LIMIT = STAGE_THREE.airSprayLimit;
 
 function quietFor(vent, time) {
     const phase = ventPhase(vent, time);
-    if (phase.kind !== 'idle') return 0;
+    if (phase.kind !== 'idle') {
+        return 0;
+    }
     return vent.period - vent.warn - vent.blow - phase.age;
 }
 const ventQuiet = (index, seconds) => (state) =>
@@ -18,12 +20,12 @@ const ductQuietFor = (seconds) => (state) =>
     state.ductReaction.kind === 'done' &&
     state.ductReaction.rest < STAGE_THREE.duct.gustPeriod - seconds;
 
-const FLOOR = 368,
-    R1 = 248,
-    L1 = 78,
-    R2 = -92,
-    L2 = -262,
-    UPPER = -172;
+const FLOOR = 368;
+const R1 = 248;
+const L1 = 78;
+const R2 = -92;
+const L2 = -262;
+const UPPER = -172;
 
 const ROUTE = [
     { how: 'start' },
@@ -97,10 +99,12 @@ export function driveStageThree(
     let phase = 0;
     let sub = 'go';
     for (let i = 0; i < 120 * 150; i++) {
-        const state = game.getSnapshot(),
-            p = state.player;
+        const state = game.getSnapshot();
+        const p = state.player;
         observe(state, phase);
-        if (stop(state)) return state;
+        if (stop(state)) {
+            return state;
+        }
         const step = ROUTE[phase];
         const toward = (x) => {
             const error = x - p.x - p.vx * 0.32;
@@ -120,15 +124,23 @@ export function driveStageThree(
             ) {
                 game.jump();
             }
-            if (state.hasExtinguisher) phase++;
+            if (state.hasExtinguisher) {
+                phase++;
+            }
         } else if (step.how === 'rise') {
             const keys = toward(step.x);
-            if (p.y + p.vy * 0.2 > step.y) keys.push('spray');
+            if (p.y + p.vy * 0.2 > step.y) {
+                keys.push('spray');
+            }
             game.setInput(...keys);
-            if (Math.abs(p.x - step.x) < 40 && p.y < step.y + 15) phase++;
+            if (Math.abs(p.x - step.x) < 40 && p.y < step.y + 15) {
+                phase++;
+            }
         } else if (step.how === 'roll') {
             game.setInput(...toward(step.x));
-            if (Math.abs(p.x - step.x) < 40 && state.ground) phase++;
+            if (Math.abs(p.x - step.x) < 40 && state.ground) {
+                phase++;
+            }
         } else if (step.how === 'wait') {
             game.setInput(...(state.ground ? toward(step.x) : []));
             if (ductJustGusted(state) && state.ground) {
@@ -180,7 +192,9 @@ export function driveStageThree(
                     }
                 } else if (sub === 'run') {
                     game.setInput('right');
-                    if (p.x >= step.takeoff) sub = 'launch';
+                    if (p.x >= step.takeoff) {
+                        sub = 'launch';
+                    }
                 }
                 if (sub === 'launch') {
                     game.setInput(
@@ -201,7 +215,9 @@ export function driveStageThree(
                     keys.push(...toward(tx));
                 } else if (step.how === 'leap') {
                     keys.push('right');
-                    if (!high && left > 0) keys.push('spray');
+                    if (!high && left > 0) {
+                        keys.push('spray');
+                    }
                 } else if (
                     !high &&
                     left > 1 &&
@@ -214,7 +230,9 @@ export function driveStageThree(
                     keys.push(...toward(tx));
                 }
                 game.setInput(...keys);
-                if (state.ground) sub = 'go';
+                if (state.ground) {
+                    sub = 'go';
+                }
             }
         } else if (step.how === 'board') {
             game.setInput('right');

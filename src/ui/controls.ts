@@ -1,4 +1,5 @@
 import { STAGE_PRESENTATION } from '../presentation/stages';
+
 import type { Game, GameStatus } from '../game/game';
 import type { Input } from '../game/types';
 
@@ -75,7 +76,7 @@ export function actionForKey(key: string, state: GameStatus): Action | null {
     return null;
 }
 
-export function applyControlLabels(root: ParentNode) {
+export function applyControlLabels(root: ParentNode): void {
     root.querySelectorAll<HTMLElement>('[data-control-label]').forEach((el) => {
         const action = el.dataset.controlLabel;
         el.textContent =
@@ -98,17 +99,21 @@ export function bindControls(
     game: Game,
     hooks: ControlHooks,
     signal: AbortSignal,
-) {
+): void {
     const options = { signal };
     applyControlLabels(root);
 
     window.addEventListener(
         'keydown',
         (e) => {
-            if (!hooks.accepting(e)) return;
+            if (!hooks.accepting(e)) {
+                return;
+            }
             const state = game.status();
             const action = actionForKey(e.key, state);
-            if (!action) return;
+            if (!action) {
+                return;
+            }
             if (action === 'pause') {
                 if (
                     !e.repeat &&
@@ -127,12 +132,18 @@ export function bindControls(
                 }
                 return;
             }
-            if (state.mode !== 'play') return;
+            if (state.mode !== 'play') {
+                return;
+            }
             e.preventDefault();
             const held = HELD[action];
-            if (held) game.press(held);
-            else if (!e.repeat && action === 'jump') game.jump();
-            else if (!e.repeat && action === 'meeting') game.interact();
+            if (held) {
+                game.press(held);
+            } else if (!e.repeat && action === 'jump') {
+                game.jump();
+            } else if (!e.repeat && action === 'meeting') {
+                game.interact();
+            }
         },
         options,
     );
@@ -146,7 +157,9 @@ export function bindControls(
             for (const [action, input] of Object.entries(HELD) as Array<
                 [Action, Input]
             >) {
-                if (CONTROLS[action].keys.includes(k)) game.release(input);
+                if (CONTROLS[action].keys.includes(k)) {
+                    game.release(input);
+                }
             }
         },
         options,

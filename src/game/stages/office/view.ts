@@ -1,7 +1,8 @@
-import { LEVEL } from '../../level';
 import { clonePlain } from '../../data';
-import type { OfficeState } from './state';
+import { LEVEL } from '../../level';
 import { monitorPhase } from './monitor/decide';
+
+import type { OfficeState } from './state';
 
 type PaperSource = Pick<
     OfficeState,

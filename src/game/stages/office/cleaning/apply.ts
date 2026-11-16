@@ -1,13 +1,14 @@
+import { applyFocusHit } from '../../../systems/focus/apply';
+
+import type { CleaningResult } from './decide';
 import type { CoreState } from '../../../state';
 import type { GameEvent } from '../../../types';
-import { applyFocusHit } from '../../../systems/focus/apply';
-import type { CleaningResult } from './decide';
 export function applyCleaning(
     s: CoreState,
     out: GameEvent[],
     result: CleaningResult,
     dt: number,
-) {
+): boolean {
     s.office.cleaning = result.cleaning;
     s.office.bucket = result.bucket;
     if (result.splash) {
@@ -19,10 +20,14 @@ export function applyCleaning(
         out.push({ type: 'cue', id: 'water-spilled' });
         out.push({ type: 'cue', id: 'water-comment' });
     }
-    if (result.followup) out.push({ type: 'cue', id: 'water-followup' });
+    if (result.followup) {
+        out.push({ type: 'cue', id: 'water-followup' });
+    }
     if (result.soak) {
         s.office.soakedOnSpill = s.office.bucket.spills;
-        if (!applyFocusHit(s, out, result.soak)) return false;
+        if (!applyFocusHit(s, out, result.soak)) {
+            return false;
+        }
     }
     out.push({ type: 'water-step', dt });
     return true;

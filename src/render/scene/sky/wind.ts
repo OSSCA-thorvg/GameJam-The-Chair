@@ -1,19 +1,18 @@
-import {
-    STAGE_FOUR,
-    skyGust,
-    skyHazards,
-    type SkyHazard,
-} from '../../../game/stages/sky/data';
-import type { RenderCtx } from '../../context';
 import { skyGearArt } from './gear';
 import { robotParrotArt } from './robot-parrot';
+import { STAGE_FOUR, skyGust, skyHazards } from '../../../game/stages/sky/data';
 
-export function skyWarningScraps(ctx: RenderCtx) {
+import type { SkyHazard } from '../../../game/stages/sky/data';
+import type { RenderCtx } from '../../context';
+
+export function skyWarningScraps(ctx: RenderCtx): void {
     const { warn, strength } = skyGust(ctx.t);
     const live = warn * (1 - strength);
-    if (live <= 0.02) return;
-    const top = -ctx.vertical,
-        height = ctx.H / ctx.scale;
+    if (live <= 0.02) {
+        return;
+    }
+    const top = -ctx.vertical;
+    const height = ctx.H / ctx.scale;
     for (let i = 0; i < 6; i++) {
         const x =
             ctx.cam +
@@ -53,7 +52,9 @@ function paperBundle(ctx: RenderCtx, h: SkyHazard) {
     ctx.rect(-18, -13, 32, 26, '#d9d2bf');
     ctx.rect(-19, -15, 32, 24, '#fbf6e8');
     ctx.rect(-19, -15, 32, 5, '#e0503f');
-    for (let y = -6; y < 7; y += 4) ctx.rod(-14, y, 8, y, 1, '#9a9e9d');
+    for (let y = -6; y < 7; y += 4) {
+        ctx.rod(-14, y, 8, y, 1, '#9a9e9d');
+    }
     ctx.rect(-6, -19, 10, 6, '#3c4658');
     ctx.ellipse(-11, 4, 4, 4, '#e0503f66');
     ctx.ox = ctx.oy = ctx.rotation = 0;
@@ -293,7 +294,7 @@ function birdVariant(h: SkyHazard) {
     return pick < LOVEBIRDS.length ? LOVEBIRDS[pick] : null;
 }
 
-function lovebird(ctx: RenderCtx, h: SkyHazard, L: Lovebird) {
+function lovebird(ctx: RenderCtx, h: SkyHazard, appearance: Lovebird) {
     const flap = Math.sin(h.spin * 1.3);
     ctx.ox = h.x;
     ctx.oy = h.y;
@@ -306,7 +307,7 @@ function lovebird(ctx: RenderCtx, h: SkyHazard, L: Lovebird) {
             [28, 5 + flap * 2],
             [14, 6],
         ],
-        L.tail,
+        appearance.tail,
     );
     ctx.rod(17, 2, 26, 2 + flap * 2, 1.2, '#e2603a');
     ctx.polygon(
@@ -316,12 +317,12 @@ function lovebird(ctx: RenderCtx, h: SkyHazard, L: Lovebird) {
             [21, -20 * flap - 1],
             [10, 2],
         ],
-        L.flight,
+        appearance.flight,
     );
-    ctx.ellipse(3, 2, 15, 11, L.body);
-    ctx.ellipse(13, 0, 6, 6, L.rump);
-    ctx.ellipse(-10, -4, 10.5, 10, L.head);
-    if (L.collar) {
+    ctx.ellipse(3, 2, 15, 11, appearance.body);
+    ctx.ellipse(13, 0, 6, 6, appearance.rump);
+    ctx.ellipse(-10, -4, 10.5, 10, appearance.head);
+    if (appearance.collar) {
         ctx.polygon(
             [
                 [-5, -6],
@@ -330,7 +331,7 @@ function lovebird(ctx: RenderCtx, h: SkyHazard, L: Lovebird) {
                 [-6, 6],
                 [-9, 3],
             ],
-            L.collar,
+            appearance.collar,
         );
     }
     ctx.polygon(
@@ -341,10 +342,12 @@ function lovebird(ctx: RenderCtx, h: SkyHazard, L: Lovebird) {
             [-9, -7],
             [-16, -4],
         ],
-        L.mask,
+        appearance.mask,
     );
-    if (L.ring) ctx.ellipse(-13, -5, 3.6, 3.6, '#f7f4ee');
-    ctx.ellipse(-13, -5, 2, 2, L.eye);
+    if (appearance.ring) {
+        ctx.ellipse(-13, -5, 3.6, 3.6, '#f7f4ee');
+    }
+    ctx.ellipse(-13, -5, 2, 2, appearance.eye);
     ctx.ellipse(-13.5, -5.6, 0.7, 0.7, '#ffffff');
     ctx.effectPath(
         [-19, -7],
@@ -353,7 +356,7 @@ function lovebird(ctx: RenderCtx, h: SkyHazard, L: Lovebird) {
             [-24, 2, -22, 2, -21, 0],
             [-20, -2, -19, -3, -18, -3],
         ],
-        L.beak,
+        appearance.beak,
     );
     ctx.polygon(
         [
@@ -372,7 +375,7 @@ function lovebird(ctx: RenderCtx, h: SkyHazard, L: Lovebird) {
             [19, 6 * flap + 5],
             [6, 5],
         ],
-        L.wing,
+        appearance.wing,
     );
     ctx.rod(2, 12, 1, 16, 1.3, '#9aa4b1');
     ctx.rod(7, 12, 7, 16, 1.3, '#9aa4b1');
@@ -386,11 +389,14 @@ function bird(ctx: RenderCtx, h: SkyHazard) {
         return;
     }
     const variant = birdVariant(h);
-    if (variant) lovebird(ctx, h, variant);
-    else macaw(ctx, h);
+    if (variant) {
+        lovebird(ctx, h, variant);
+    } else {
+        macaw(ctx, h);
+    }
 }
 
-export function skyHazardsArt(ctx: RenderCtx) {
+export function skyHazardsArt(ctx: RenderCtx): void {
     const visible = skyHazards(ctx.t).filter(
         (h) => h.x > ctx.cam - 60 && h.x < ctx.cam + ctx.VW + 60,
     );
@@ -400,19 +406,27 @@ export function skyHazardsArt(ctx: RenderCtx) {
             key: 'sky-paper-bundles',
             motionBlur: { distance: 7 * ctx.scale, angle: 180 },
         });
-        for (const h of papers) paperBundle(ctx, h);
+        for (const h of papers) {
+            paperBundle(ctx, h);
+        }
         ctx.endLayer();
     }
     skyGearArt(
         ctx,
         visible.filter((h) => h.kind === 'gear'),
     );
-    for (const h of visible) if (h.kind === 'bird') bird(ctx, h);
+    for (const h of visible) {
+        if (h.kind === 'bird') {
+            bird(ctx, h);
+        }
+    }
 }
 
-export function skyKnockFeathers(ctx: RenderCtx) {
+export function skyKnockFeathers(ctx: RenderCtx): void {
     const sky = ctx.state.sky;
-    if (sky.knockKind !== 'bird' || sky.knock <= 0) return;
+    if (sky.knockKind !== 'bird' || sky.knock <= 0) {
+        return;
+    }
     const age = 1 - sky.knock / STAGE_FOUR.knock.cooldown;
     for (let i = 0; i < 7; i++) {
         const angle = i * 0.9 + 0.4;
@@ -437,7 +451,7 @@ export function skyKnockFeathers(ctx: RenderCtx) {
     ctx.localScale = 1;
 }
 
-export function skySprayGauge(ctx: RenderCtx) {
+export function skySprayGauge(ctx: RenderCtx): void {
     const state = ctx.state;
     if (
         state.sky.phase !== 'course' ||
@@ -445,14 +459,16 @@ export function skySprayGauge(ctx: RenderCtx) {
     ) {
         return;
     }
-    const limit = STAGE_FOUR.airSprayLimit,
-        left = limit - state.sky.airSprays;
-    const x = ctx.player.x,
-        y = ctx.player.y - 112;
+    const limit = STAGE_FOUR.airSprayLimit;
+    const left = limit - state.sky.airSprays;
+    const x = ctx.player.x;
+    const y = ctx.player.y - 112;
     ctx.rect(x - 24, y - 7, 48, 14, '#1d2c3fa8');
     for (let i = 0; i < limit; i++) {
         const cx = x - 14 + i * 14;
         ctx.ellipse(cx, y, 4.6, 4.6, i < left ? '#fff2ce' : '#5d6d82');
-        if (i < left) ctx.ellipse(cx - 1.3, y - 1.4, 1.6, 1.4, '#ffffff');
+        if (i < left) {
+            ctx.ellipse(cx - 1.3, y - 1.4, 1.6, 1.4, '#ffffff');
+        }
     }
 }

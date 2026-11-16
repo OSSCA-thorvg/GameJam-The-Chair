@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const {
@@ -58,8 +59,8 @@ test('the first peak earns a check, then only the background target rises one gr
         moved,
         'one move, no repeating goal chase',
     );
-    const before = render(peak + 24),
-        after = render(peak + 220);
+    const before = render(peak + 24);
+    const after = render(peak + 220);
     const rail = (commands) =>
         commands.find(
             (command) =>

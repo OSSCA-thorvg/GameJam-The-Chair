@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { createGame } from './support/harness.mjs';
 import { bundled } from './support/load.mjs';
 

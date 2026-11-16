@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const { createRenderCtx, breadCloud, puffCloud, CLOUD_TONES } =
@@ -19,8 +20,8 @@ const context = () =>
 
 test('shared bread clouds use the exact stage four silhouette, gradients and underside fade', () => {
     for (const near of [false, true]) {
-        const retained = context(),
-            reference = context();
+        const retained = context();
+        const reference = context();
         breadCloud(retained, 500, 300, 1, 901, near);
         puffCloud(reference, 500, 300, 1, 901, CLOUD_TONES.bread, {
             alpha: near ? 0.95 : 0.72,

@@ -1,7 +1,8 @@
 import { STAGE_THREE } from '../../../game/stages/rooftop/data';
-import type { RenderCtx } from '../../context';
-import { CLOUD_TONES, puffCloud } from '../shared/cloud-art';
 import { roofFor, roofShape } from '../office/skyline';
+import { CLOUD_TONES, puffCloud } from '../shared/cloud-art';
+
+import type { RenderCtx } from '../../context';
 
 const DUSK: Array<[number, string]> = [
     [0, '#8798b5'],
@@ -15,8 +16,8 @@ const DAY: Array<[number, string]> = [
     [0.8, '#b6cfd4'],
     [1, '#c6d5d6'],
 ];
-const DAY_FROM = -650,
-    DAY_AT = -1820;
+const DAY_FROM = -650;
+const DAY_AT = -1820;
 
 function mixHex(a: string, b: string, k: number) {
     const channel = (hex: string, i: number) =>
@@ -33,9 +34,9 @@ function mixHex(a: string, b: string, k: number) {
     );
 }
 
-export function rooftopSky(ctx: RenderCtx) {
-    const top = -ctx.vertical,
-        bottom = ctx.H / ctx.scale - ctx.vertical;
+export function rooftopSky(ctx: RenderCtx): void {
+    const top = -ctx.vertical;
+    const bottom = ctx.H / ctx.scale - ctx.vertical;
     const day =
         ctx.state.firstFlight.kind === 'course'
             ? 0
@@ -60,8 +61,8 @@ export function rooftopSky(ctx: RenderCtx) {
         ),
     );
     for (let layer = 0; layer < 3; layer++) {
-        const spacing = 88 + layer * 23,
-            parallax = 0.12 + layer * 0.11;
+        const spacing = 88 + layer * 23;
+        const parallax = 0.12 + layer * 0.11;
         const offset = ctx.cam * (1 - parallax);
         const first = Math.floor((ctx.cam - offset) / spacing) - 1;
         const horizon = 470 - layer * 28;
@@ -69,9 +70,9 @@ export function rooftopSky(ctx: RenderCtx) {
             const seed = Math.abs(Math.imul(i + 121, 1597) ^ (layer * 157));
             const h = 65 + (seed % (120 + layer * 42));
             const nudge = ((((seed >>> 4) % 9) - 4) / 4) * spacing * 0.2;
-            const x = i * spacing + offset + nudge,
-                y = horizon - h,
-                w = spacing * (0.55 + (seed % 7) * 0.06);
+            const x = i * spacing + offset + nudge;
+            const y = horizon - h;
+            const w = spacing * (0.55 + (seed % 7) * 0.06);
             const body = ['#bbafb5', '#9c9aa9', '#7c899d'][layer];
             ctx.rect(x, y, w, h + 200, body);
             roofShape(
@@ -101,8 +102,8 @@ export function rooftopSky(ctx: RenderCtx) {
     }
     ctx.beginLayer({ key: 'rooftop-clouds' });
     for (let i = -1; i < 7; i++) {
-        const x = i * 330 + ctx.cam * 0.72,
-            y = -360 - ((i + 6) % 3) * 95;
+        const x = i * 330 + ctx.cam * 0.72;
+        const y = -360 - ((i + 6) % 3) * 95;
         puffCloud(
             ctx,
             x,
@@ -136,15 +137,17 @@ function wallPanels(
             [1, '#304660'],
         ]),
     );
-    const colWidth = 126,
-        rowHeight = 118;
+    const colWidth = 126;
+    const rowHeight = 118;
     for (let col = 0; col < width / colWidth; col++) {
         for (let row = 0; row < height / rowHeight; row++) {
-            const px = x + 16 + col * colWidth,
-                py = y + 16 + row * rowHeight;
-            const w = Math.min(108, x + width - px - 8),
-                h = Math.min(100, y + height - py - 8);
-            if (w < 4 || h < 4) continue;
+            const px = x + 16 + col * colWidth;
+            const py = y + 16 + row * rowHeight;
+            const w = Math.min(108, x + width - px - 8);
+            const h = Math.min(100, y + height - py - 8);
+            if (w < 4 || h < 4) {
+                continue;
+            }
             ctx.rect(px - 2, py - 2, w + 4, h + 4, '#58738c');
             ctx.rect(px, py, w, h, '#2d445f');
             ctx.gradientPolygon(
@@ -175,7 +178,7 @@ function column(ctx: RenderCtx, x: number, top: number, bottom: number) {
 
 const CEILING_LAMPS = [-180, -30, 120, 270];
 
-export function rooftopCeilingLight(ctx: RenderCtx) {
+export function rooftopCeilingLight(ctx: RenderCtx): void {
     for (const x of CEILING_LAMPS) {
         ctx.gradientPolygon(
             [
@@ -192,7 +195,7 @@ export function rooftopCeilingLight(ctx: RenderCtx) {
     }
 }
 
-export function rooftopWalls(ctx: RenderCtx) {
+export function rooftopWalls(ctx: RenderCtx): void {
     wallPanels(ctx, -400, -72, 850, 492);
     ctx.rect(-400, -72, 850, 14, '#273d56');
     ctx.rod(-300, -38, 420, -38, 12, '#8192a4');
@@ -340,7 +343,9 @@ function shaftCeiling(ctx: RenderCtx) {
         ]),
     );
     ctx.rect(1200, -556, 606, 4, '#8193a6');
-    for (let x = 1236; x < 1800; x += 96) ctx.rect(x, -552, 4, 10, '#2d4258');
+    for (let x = 1236; x < 1800; x += 96) {
+        ctx.rect(x, -552, 4, 10, '#2d4258');
+    }
     ctx.rod(1510, -552, 1510, -536, 2, '#3a4f66');
     ctx.ellipse(1510, -530, 7, 6, '#f6d79c');
     ctx.gradientPolygon(
@@ -357,7 +362,7 @@ function shaftCeiling(ctx: RenderCtx) {
     );
 }
 
-export function rooftopPlatforms(ctx: RenderCtx) {
+export function rooftopPlatforms(ctx: RenderCtx): void {
     if (ctx.visible({ left: 1180, top: -660, right: 1820, bottom: -420 }, 40)) {
         shaftCeiling(ctx);
     }
@@ -365,8 +370,12 @@ export function rooftopPlatforms(ctx: RenderCtx) {
         if (b.x > ctx.cam + ctx.VW + 80 || b.x + b.width < ctx.cam - 80) {
             continue;
         }
-        if (b.id === 'shaft-left') continue;
-        if (b.id === 'catwalk') continue;
+        if (b.id === 'shaft-left') {
+            continue;
+        }
+        if (b.id === 'catwalk') {
+            continue;
+        }
         if (b.id.endsWith('pad') || b.id === 'duct') {
             shelf(ctx, b.x, b.y, b.width);
             continue;

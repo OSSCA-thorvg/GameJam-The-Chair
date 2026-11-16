@@ -1,12 +1,13 @@
+import { graphTarget } from './graph-target';
 import {
     GRAPH_CORNERS,
     GRAPH_LENGTH,
     STAGE_THREE,
     graphPointAt,
 } from '../../../game/stages/rooftop/data';
+
 import type { RenderCtx } from '../../context';
 import type { Curve, Vector } from '../../types';
-import { graphTarget } from './graph-target';
 
 const ROOF = -144;
 const EDGE = STAGE_THREE.edge;
@@ -38,8 +39,8 @@ function quad(left: number, top: number, right: number, bottom: number) {
 }
 
 function structure(ctx: RenderCtx) {
-    const steel = '#4a5568',
-        dark = '#353e4d';
+    const steel = '#4a5568';
+    const dark = '#353e4d';
     for (const x of [TOWER.left, TOWER.right - 6]) {
         ctx.rect(x, TOWER.top, 8, ROOF - TOWER.top, steel);
     }
@@ -140,7 +141,7 @@ function floodlights(ctx: RenderCtx, since: number | null) {
     });
 }
 
-export function rooftopGraphSign(ctx: RenderCtx) {
+export function rooftopGraphSign(ctx: RenderCtx): void {
     const flight = ctx.state.firstFlight;
     const surging = flight.kind !== 'course';
     const distance =
@@ -166,7 +167,9 @@ export function rooftopGraphSign(ctx: RenderCtx) {
     graphTarget(ctx, distance);
     restingLine(ctx, surging);
     chartTip(ctx, surging);
-    if (!surging) return;
+    if (!surging) {
+        return;
+    }
     surgeLine(ctx, shown);
 }
 
@@ -243,8 +246,8 @@ function restingLine(ctx: RenderCtx, surging: boolean) {
                 const alpha = Math.round(255 * Math.sin(k * Math.PI))
                     .toString(16)
                     .padStart(2, '0');
-                const x = at.x,
-                    y = at.y - 20;
+                const x = at.x;
+                const y = at.y - 20;
                 ctx.polygon(
                     [
                         [x - 6, y - 9],
@@ -330,10 +333,10 @@ function tipArrow(
     color: string,
     size = 1,
 ) {
-    const nx = -at.ty * size,
-        ny = at.tx * size,
-        fx = at.tx * size,
-        fy = at.ty * size;
+    const nx = -at.ty * size;
+    const ny = at.tx * size;
+    const fx = at.tx * size;
+    const fy = at.ty * size;
     const tip: Vector = [at.x + fx * 16, at.y + fy * 16];
     ctx.polygon(
         [

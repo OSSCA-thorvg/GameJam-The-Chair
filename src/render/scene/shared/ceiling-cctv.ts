@@ -1,18 +1,26 @@
+import { aim, cctvModel } from './cctv-models';
+import { createSkyProjection } from './projection';
+import { cctvLamp } from '../orbit/watch';
+
+import type { CctvKind } from './cctv-models';
+import type { Point3 } from './projection';
 import type { RenderCtx } from '../../context';
-import { aim, cctvModel, type CctvKind } from './cctv-models';
-import { createSkyProjection, type Point3 } from './projection';
-import { cctvLamp, type LampState } from '../orbit/watch';
+import type { LampState } from '../orbit/watch';
 
 const CEILING = 57;
 const DROP = 14;
 const SIZE = 0.62;
 const KIND: CctvKind = 'long';
 const TOP = 15;
-const LENGTH = 60 / 84,
-    MIDDLE = -4;
+const LENGTH = 60 / 84;
+const MIDDLE = -4;
 const ACROSS = 260;
 
-export function ceilingCctvs(ctx: RenderCtx, spacing: number, offset = 0) {
+export function ceilingCctvs(
+    ctx: RenderCtx,
+    spacing: number,
+    offset = 0,
+): void {
     const first = Math.floor((ctx.cam - 80 - offset) / spacing) + 1;
     for (let i = first; i * spacing + offset < ctx.cam + ctx.VW + 80; i++) {
         cctv(ctx, i * spacing + offset, i);
@@ -38,14 +46,14 @@ function cctv(ctx: RenderCtx, x: number, index: number) {
         0.08,
         Math.min(1.1, Math.atan2(dy, Math.hypot(dx, ACROSS))),
     );
-    const cy = Math.cos(yaw),
-        syaw = Math.sin(yaw),
-        ct = Math.cos(tilt),
-        st = Math.sin(tilt);
+    const cy = Math.cos(yaw);
+    const syaw = Math.sin(yaw);
+    const ct = Math.cos(tilt);
+    const st = Math.sin(tilt);
     const place = ([long, v, w]: Point3): Point3 => {
         const u = (long - MIDDLE) * LENGTH;
-        const pu = u * ct + (v - TOP) * st,
-            pv = -u * st + (v - TOP) * ct;
+        const pu = u * ct + (v - TOP) * st;
+        const pv = -u * st + (v - TOP) * ct;
         return [
             anchor[0] + (pu * cy + w * syaw) * SIZE,
             anchor[1] + pv * SIZE,
@@ -78,7 +86,9 @@ function cctv(ctx: RenderCtx, x: number, index: number) {
 }
 
 function glow(ctx: RenderCtx, [x, y]: [number, number], state: LampState) {
-    if (state === 'idle') return;
+    if (state === 'idle') {
+        return;
+    }
     const radius = (state === 'flash' ? 22 : 9) * ctx.scale;
     ctx.commands.push({
         kind: 'path',

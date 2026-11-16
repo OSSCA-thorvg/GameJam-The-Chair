@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { canonicalJson } from './support/canonical-json.mjs';
 
 test('fingerprints ignore object insertion order at every depth', () => {

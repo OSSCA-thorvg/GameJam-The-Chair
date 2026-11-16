@@ -1,32 +1,31 @@
+import { createGame } from './game/game';
+import { createRecorder, REPLAY_DEFAULTS } from './game/replay';
 import {
     browserLocale,
     isMessage,
     LOCALE_STORAGE_KEY,
     translate,
-    type Locale,
 } from './i18n';
-import { createGame } from './game/game';
 import { createEffects } from './render/effects';
 import { createRenderer } from './render/renderer';
+import { openingState } from './render/scene/opening/timeline';
+import markup from './scene.html?raw';
 import { createFeedback } from './ui/feedback';
 import { createHud } from './ui/hud';
 import { bindInput } from './ui/input';
-import {
-    createRecorder,
-    REPLAY_DEFAULTS,
-    type ReplayFile,
-} from './game/replay';
-import { createErrorLog, replayData, saveBrowserData } from './ui/replay-store';
-import { bindReplayMenu } from './ui/replay-menu';
-import { createReplayPlayer } from './ui/replay-player';
-import { showStartupSplash } from './ui/splash';
 import { createOpening } from './ui/opening';
-import { openingState } from './render/scene/opening/timeline';
-import type { StageId } from './game/stages/building/data';
-import type { Input } from './game/types';
-import markup from './scene.html?raw';
 import { bindOrientation } from './ui/orientation';
 import { createPerfOverlay } from './ui/perf-overlay';
+import { bindReplayMenu } from './ui/replay-menu';
+import { createReplayPlayer } from './ui/replay-player';
+import { createErrorLog, replayData, saveBrowserData } from './ui/replay-store';
+import { showStartupSplash } from './ui/splash';
+
+import type { ReplayFile } from './game/replay';
+import type { StageId } from './game/stages/building/data';
+import type { Input } from './game/types';
+import type { Locale } from './i18n';
+
 import './style.css';
 const app = document.querySelector('#app');
 if (!app) {
@@ -83,7 +82,9 @@ for (const button of root.querySelectorAll<HTMLButtonElement>(
 )) {
     button.addEventListener('click', () => {
         const selected = button.dataset.locale;
-        if (selected !== 'en' && selected !== 'ko') return;
+        if (selected !== 'en' && selected !== 'ko') {
+            return;
+        }
         locale = selected;
         try {
             localStorage.setItem(LOCALE_STORAGE_KEY, locale);
@@ -176,9 +177,13 @@ const game = createGame({
         keepBrowserData();
     },
 });
-if (directStage !== null) game.startStage(directStage);
+if (directStage !== null) {
+    game.startStage(directStage);
+}
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden) keepBrowserData();
+    if (document.hidden) {
+        keepBrowserData();
+    }
 });
 window.addEventListener('pagehide', keepBrowserData);
 const describeError = (value: unknown) =>
@@ -186,7 +191,9 @@ const describeError = (value: unknown) =>
         ? { message: value.message, stack: value.stack }
         : { message: String(value) };
 function logWindowError(value: unknown) {
-    if (reportedErrors.has(value)) return;
+    if (reportedErrors.has(value)) {
+        return;
+    }
     errorLog.add(
         { tick: -1, at: 'window', ...describeError(value) },
         lastStage,
@@ -225,11 +232,15 @@ const hintedGame: typeof game = {
 const unbind = bindInput(root, hintedGame, {
     blocked: () => simulationFailed || player.active || opening.active,
     onStart() {
-        if (!opening.seen) opening.start(() => unbind.sync());
+        if (!opening.seen) {
+            opening.start(() => unbind.sync());
+        }
     },
 });
 function watchReplay(file: ReplayFile) {
-    if (game.status().mode === 'play') game.pause();
+    if (game.status().mode === 'play') {
+        game.pause();
+    }
     game.clearInput();
     player.open(file);
     unbind.sync();
@@ -252,7 +263,9 @@ let hudMs = 0;
 let replayWasActive = false;
 let presentationErrorReported = false;
 function draw() {
-    if (replayWasActive !== player.active) renderer?.resetView();
+    if (replayWasActive !== player.active) {
+        renderer?.resetView();
+    }
     replayWasActive = player.active;
     const live = game.getSnapshot();
     const liveEvents = game.drainEvents();
@@ -294,10 +307,14 @@ function draw() {
                 undefined,
                 cutscene,
             );
-        } else renderer?.draw(state, visual, undefined, undefined, cues);
+        } else {
+            renderer?.draw(state, visual, undefined, undefined, cues);
+        }
         const hudStart = perf.enabled ? performance.now() : 0;
         hud.draw(state, cues, visual, !!cutscene);
-        if (perf.enabled) hudMs = performance.now() - hudStart;
+        if (perf.enabled) {
+            hudMs = performance.now() - hudStart;
+        }
     } catch (error) {
         if (!presentationErrorReported) {
             console.error('Presentation failed', error);
@@ -329,15 +346,21 @@ function frame(ms: number) {
     let advanced = { ticks: 0, dropped: 0 };
     try {
         if (!simulationFailed) {
-            if (player.active) player.advance(dt);
-            else if (opening.active) opening.advance(dt);
-            else advanced = game.advance(dt);
+            if (player.active) {
+                player.advance(dt);
+            } else if (opening.active) {
+                opening.advance(dt);
+            } else {
+                advanced = game.advance(dt);
+            }
         }
     } catch (error) {
         logWindowError(error);
         showFailure();
     }
-    if (!player.active && !opening.active) effects.advance(dt);
+    if (!player.active && !opening.active) {
+        effects.advance(dt);
+    }
     const simMs = profiling ? performance.now() - simStart : 0;
     hudMs = 0;
     draw();
@@ -395,5 +418,7 @@ const officeStageOne = {
         officeStageOne?: typeof officeStageOne;
     }
 ).officeStageOne = officeStageOne;
-if (!startupSplashVisible) draw();
+if (!startupSplashVisible) {
+    draw();
+}
 requestAnimationFrame(frame);

@@ -3,10 +3,11 @@ import {
     ductTimings,
     ventPhase,
 } from '../../../game/stages/rooftop/data';
-import type { RenderCtx } from '../../context';
 import { ART } from '../../art';
 
-export function rooftopDuct(ctx: RenderCtx) {
+import type { RenderCtx } from '../../context';
+
+export function rooftopDuct(ctx: RenderCtx): void {
     const duct = STAGE_THREE.duct;
     const reaction = ctx.state.ductReaction;
     const age =
@@ -24,8 +25,8 @@ export function rooftopDuct(ctx: RenderCtx) {
         );
     });
     const shake = twitching ? Math.sin(age * 110) * 2.3 : 0;
-    const x = duct.x + shake,
-        y = duct.y;
+    const x = duct.x + shake;
+    const y = duct.y;
     const top = -150;
     ctx.effectPath(
         [x + 20, y - 33],
@@ -112,8 +113,8 @@ export function rooftopDuct(ctx: RenderCtx) {
         if (burst.age < timing.inhale) {
             for (let i = 0; i < 7; i++) {
                 const u = (burst.age * 5 + i / 7) % 1;
-                const px = x - 160 * (1 - u),
-                    py = y + Math.sin(i * 2.3) * (1 - u) * 30;
+                const px = x - 160 * (1 - u);
+                const py = y + Math.sin(i * 2.3) * (1 - u) * 30;
                 ctx.ellipse(
                     px,
                     py,
@@ -145,7 +146,9 @@ export function rooftopDuct(ctx: RenderCtx) {
         }
     }
     const sneezeAge = age - duct.inhaleDuration - duct.twitchDuration;
-    if (sneezeAge >= 0) ductProps(ctx, x, y, sneezeAge);
+    if (sneezeAge >= 0) {
+        ductProps(ctx, x, y, sneezeAge);
+    }
 }
 
 function hash(n: number) {
@@ -226,7 +229,9 @@ function ductSteam(
     for (let i = 0; i < count; i++) {
         const born = (i / count) * emit;
         const t = age - born;
-        if (t <= 0) continue;
+        if (t <= 0) {
+            continue;
+        }
         const life = duration - born;
         const seed = i * 7.31 + strength * 13;
         const late = born / emit;
@@ -264,9 +269,11 @@ function ductSteam(
             fade *
             (0.5 + 0.25 * hash(seed + 8)) *
             (0.75 + 0.25 * strength);
-        if (alpha < 0.01) continue;
-        const hx = px - r * 0.12,
-            hy = py - r * 0.22;
+        if (alpha < 0.01) {
+            continue;
+        }
+        const hx = px - r * 0.12;
+        const hy = py - r * 0.22;
         ctx.effectPath(
             [px - r, py],
             [
@@ -294,18 +301,22 @@ function ductSteam(
     for (let i = 0; i < strands; i++) {
         const seed = 91 + i * 3.7 + strength * 5;
         const t = age - i * 0.025;
-        if (t <= 0) continue;
+        if (t <= 0) {
+            continue;
+        }
         const reach =
             (230 + 120 * hash(seed)) * strength * (1 - Math.exp(-3.2 * t));
         const lift = 30 * t * t + (16 * (hash(seed + 1) - 0.5) * reach) / 100;
         const curl = (hash(seed + 2) - 0.5) * 70 * Math.min(1, t * 2);
         const fade =
             fadeIn * Math.pow(Math.max(0, 1 - age / duration), 1.6) * 0.2;
-        if (fade < 0.01 || reach < 20) continue;
-        const sx = mouthX - 40,
-            sy = y + (hash(seed + 3) - 0.5) * 30;
-        const ex = mouthX - reach,
-            ey = sy - lift - reach * 0.12;
+        if (fade < 0.01 || reach < 20) {
+            continue;
+        }
+        const sx = mouthX - 40;
+        const sy = y + (hash(seed + 3) - 0.5) * 30;
+        const ex = mouthX - reach;
+        const ey = sy - lift - reach * 0.12;
         ctx.strokePath(
             [sx, sy],
             [
@@ -601,7 +612,9 @@ function flight(x: number, y: number, age: number, f: Flight) {
 function ductProps(ctx: RenderCtx, x: number, y: number, age: number) {
     const from = x + 6;
     for (const f of PROPS) {
-        if (f.kind === 'spill') coffeeSpill(ctx, from, y, age, f);
+        if (f.kind === 'spill') {
+            coffeeSpill(ctx, from, y, age, f);
+        }
     }
     for (const f of PROPS) {
         const at = flight(from, y, age, f);
@@ -615,12 +628,17 @@ function ductProps(ctx: RenderCtx, x: number, y: number, age: number) {
         ctx.oy = at.y;
         ctx.rotation = at.rotation;
         ctx.localScale = SCALE[f.kind];
-        if (f.kind === 'can') energyCan(ctx);
-        else if (f.kind === 'cup' || f.kind === 'spill') {
+        if (f.kind === 'can') {
+            energyCan(ctx);
+        } else if (f.kind === 'cup' || f.kind === 'spill') {
             coffeeCup(ctx, f.kind === 'spill' && !at.flying);
-        } else if (f.kind === 'badge') idBadge(ctx, at.flying ? age : -1);
-        else if (f.kind === 'paper') printout(ctx);
-        else necktie(ctx, at.flying ? age + f.delay * 9 : -1);
+        } else if (f.kind === 'badge') {
+            idBadge(ctx, at.flying ? age : -1);
+        } else if (f.kind === 'paper') {
+            printout(ctx);
+        } else {
+            necktie(ctx, at.flying ? age + f.delay * 9 : -1);
+        }
     }
     ctx.ox = ctx.oy = ctx.rotation = 0;
     ctx.localScale = 1;
@@ -683,14 +701,18 @@ function coffeeSpill(
     for (let i = 0; i < 7; i++) {
         const release = f.delay + 0.08 + i * 0.04;
         const t = age - release;
-        if (t < 0) continue;
-        const h = Math.sin(i * 12.9898) * 43758.5453,
-            r = h - Math.floor(h);
+        if (t < 0) {
+            continue;
+        }
+        const h = Math.sin(i * 12.9898) * 43758.5453;
+        const r = h - Math.floor(h);
         const start = flight(x, y, release, f);
-        const landX = f.to[0] - 30 + r * 50,
-            landY = f.to[1] + 3.5;
+        const landX = f.to[0] - 30 + r * 50;
+        const landY = f.to[1] + 3.5;
         const u = Math.min(1, t / (0.28 + r * 0.15));
-        if (u >= 1) continue;
+        if (u >= 1) {
+            continue;
+        }
         const px = start.x + (landX - start.x) * u;
         const py =
             start.y +
@@ -699,10 +721,12 @@ function coffeeSpill(
         ctx.ellipse(px, py, 1.4, 1.8, '#5b3a22d0');
     }
     const after = age - f.delay - f.time;
-    if (after <= 0) return;
+    if (after <= 0) {
+        return;
+    }
     const spread = 1 - Math.exp(-after * 2.2);
-    const left = f.to[0] - 10 - 22 * spread,
-        right = f.to[0] + 4 + 8 * spread;
+    const left = f.to[0] - 10 - 22 * spread;
+    const right = f.to[0] + 4 + 8 * spread;
     const top = f.to[1] + 4;
     ctx.effectPath(
         [left, top],
@@ -824,13 +848,13 @@ function necktie(ctx: RenderCtx, flutter: number) {
         DUCT_PROP_COLORS.tie,
     );
     for (let i = 0; i < 3; i++) {
-        const sy = -10 + i * 11,
-            k = (sy + 17) / 39;
+        const sy = -10 + i * 11;
+        const k = (sy + 17) / 39;
         ctx.rod(-7 + w * k, sy + 4, 7 + w * k, sy - 2, 2.4, '#e3b450');
     }
 }
 
-export function rooftopVents(ctx: RenderCtx) {
+export function rooftopVents(ctx: RenderCtx): void {
     for (const vent of STAGE_THREE.vents) {
         const phase = ventPhase(vent, ctx.state.time);
         const rattle =
@@ -840,8 +864,9 @@ export function rooftopVents(ctx: RenderCtx) {
         ctx.withTransform({}, () => {
             ctx.ox = vent.x + (vent.axis === 'x' ? rattle * 0.6 : rattle * 0.4);
             ctx.oy = vent.y + (vent.axis === 'x' ? rattle * 0.4 : 0);
-            if (vent.axis === 'y') ctx.rotation = -Math.PI / 2;
-            else if (vent.dir > 0) {
+            if (vent.axis === 'y') {
+                ctx.rotation = -Math.PI / 2;
+            } else if (vent.dir > 0) {
                 ctx.ox = 2 * ctx.ox;
                 ctx.rotation = Math.PI;
                 ctx.mirror = { y: 0, k: 1 };

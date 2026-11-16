@@ -1,6 +1,7 @@
-import type { Point } from '../../types';
 import { deepFreeze } from '../../data';
 import * as Det from '../../math';
+
+import type { Point } from '../../types';
 
 const blocks = [
     { id: 'room', x: -400, y: 420, width: 850, height: 380 },
@@ -137,7 +138,11 @@ export const STAGE_THREE = deepFreeze({
 });
 
 export type DuctBurst = { kind: 'first' | 'gust'; age: number };
-export function ductTimings(kind: DuctBurst['kind']) {
+export function ductTimings(kind: DuctBurst['kind']): {
+    inhale: number;
+    twitch: number;
+    sneeze: number;
+} {
     const d = STAGE_THREE.duct;
     if (kind === 'first') {
         return {
@@ -160,19 +165,23 @@ export function ventPhase(vent: Vent, time: number): VentPhase {
     const t =
         (((time - vent.offset) % vent.period) + vent.period) % vent.period;
     const quiet = vent.period - vent.warn - vent.blow;
-    if (t < quiet) return { kind: 'idle', age: t };
-    if (t < quiet + vent.warn) return { kind: 'warn', age: t - quiet };
+    if (t < quiet) {
+        return { kind: 'idle', age: t };
+    }
+    if (t < quiet + vent.warn) {
+        return { kind: 'warn', age: t - quiet };
+    }
     return { kind: 'blow', age: t - quiet - vent.warn };
 }
 
-export function inVentBlast(vent: Vent, p: Readonly<Point>) {
+export function inVentBlast(vent: Vent, p: Readonly<Point>): boolean {
     const along = vent.axis === 'x' ? p.x - vent.x : p.y - vent.y;
     const across = vent.axis === 'x' ? p.y - vent.y : p.x - vent.x;
     const ahead = along * vent.dir;
     return ahead >= 0 && ahead <= vent.reach && Math.abs(across) <= vent.spread;
 }
 
-export function onSlickPaper(p: Readonly<Point>, ground: boolean) {
+export function onSlickPaper(p: Readonly<Point>, ground: boolean): boolean {
     return (
         ground &&
         STAGE_THREE.slick.some(
@@ -205,9 +214,11 @@ export function graphPointAt(dist: number): {
 } {
     const d = Math.max(0, Math.min(GRAPH_LENGTH, dist));
     let i = 1;
-    while (i < GRAPH.length - 1 && GRAPH_DIST[i] < d) i++;
-    const a = GRAPH[i - 1],
-        b = GRAPH[i];
+    while (i < GRAPH.length - 1 && GRAPH_DIST[i] < d) {
+        i++;
+    }
+    const a = GRAPH[i - 1];
+    const b = GRAPH[i];
     const span = GRAPH_DIST[i] - GRAPH_DIST[i - 1];
     const k = span > 0 ? (d - GRAPH_DIST[i - 1]) / span : 0;
     return {
@@ -221,12 +232,14 @@ export function graphPointAt(dist: number): {
 export function graphCatch(p: Readonly<Point>): number | null {
     const g = STAGE_THREE.graph;
     for (let i = 1; i <= g.catchUntil; i++) {
-        const a = GRAPH[i - 1],
-            b = GRAPH[i];
-        if (p.x < a.x || p.x > b.x) continue;
+        const a = GRAPH[i - 1];
+        const b = GRAPH[i];
+        if (p.x < a.x || p.x > b.x) {
+            continue;
+        }
         const k = (p.x - a.x) / (b.x - a.x);
-        const wheels = p.y + 28,
-            line = a.y + (b.y - a.y) * k;
+        const wheels = p.y + 28;
+        const line = a.y + (b.y - a.y) * k;
         if (wheels < line - g.catchBelow || wheels > line + g.catchAbove) {
             return null;
         }

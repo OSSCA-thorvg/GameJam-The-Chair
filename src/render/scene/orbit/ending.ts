@@ -1,11 +1,12 @@
+import { panoramaX } from './heights';
+import { translate } from '../../../i18n';
+import { LABEL_FONT, SPEECH_FONT } from '../../fonts';
+import { laptopScreenPoint } from '../sky/ending-art';
+
+import type { OrbitState } from '../../../game/stages/orbit/data';
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-import type { OrbitState } from '../../../game/stages/orbit/data';
 import type { SkyProjection } from '../shared/projection';
-import { LABEL_FONT, SPEECH_FONT } from '../../fonts';
-import { translate } from '../../../i18n';
-import { panoramaX } from './heights';
-import { laptopScreenPoint } from '../sky/ending-art';
 
 export const ORBIT_ENDING = {
     calm: 5,
@@ -89,8 +90,10 @@ export function endingNebula(
     strength: number,
     spin = 0,
     bottom = ctx.H,
-) {
-    if (strength <= 0) return;
+): void {
+    if (strength <= 0) {
+        return;
+    }
     const layer = { key: 'orbit-nebula', blend: 'screen' as const };
     const clouds: Array<[number, number, number, string, number]> = [
         [0.68, 0.2, 0.34, '#5b3fb0', 0.55],
@@ -101,11 +104,15 @@ export function endingNebula(
     ];
     for (const [px, y, r, color, opacity] of clouds) {
         const x = panoramaX(px, spin);
-        if (x < -r - 0.2 || x > 1 + r + 0.2) continue;
-        const cx = x * ctx.W,
-            cy = y * ctx.H,
-            radius = r * ctx.W;
-        if (cy - radius >= bottom) continue;
+        if (x < -r - 0.2 || x > 1 + r + 0.2) {
+            continue;
+        }
+        const cx = x * ctx.W;
+        const cy = y * ctx.H;
+        const radius = r * ctx.W;
+        if (cy - radius >= bottom) {
+            continue;
+        }
         const lower = Math.min(cy + radius, bottom);
         ctx.commands.push({
             kind: 'path',
@@ -133,10 +140,12 @@ export function endingNebula(
         [0.9, 0.34],
         [0.45, 0.18],
     ]) {
-        const cx = panoramaX(px, spin) * ctx.W,
-            cy = y * ctx.H,
-            ray = ctx.W * 0.008;
-        if (cy - ray >= bottom) continue;
+        const cx = panoramaX(px, spin) * ctx.W;
+        const cy = y * ctx.H;
+        const ray = ctx.W * 0.008;
+        if (cy - ray >= bottom) {
+            continue;
+        }
         const c = '#ffffff' + alpha(0.9 * strength);
         ctx.commands.push({
             kind: 'path',
@@ -167,12 +176,14 @@ export function endingChairLights(
     ctx: RenderCtx,
     chair: SkyProjection,
     e: OrbitEndingState,
-) {
-    if (!e.parked) return;
+): void {
+    if (!e.parked) {
+        return;
+    }
     const light = 1 - e.lightsOut;
     if (light > 0) {
-        const [x, y] = chair.project([42, 14, 0]),
-            r = ctx.H * 0.09;
+        const [x, y] = chair.project([42, 14, 0]);
+        const r = ctx.H * 0.09;
         ctx.commands.push({
             kind: 'path',
             points: [
@@ -195,8 +206,10 @@ export function endingChairLights(
     }
 }
 
-export function endingFade(ctx: RenderCtx, e: OrbitEndingState) {
-    if (e.dark <= 0) return;
+export function endingFade(ctx: RenderCtx, e: OrbitEndingState): void {
+    if (e.dark <= 0) {
+        return;
+    }
     ctx.commands.push({
         kind: 'path',
         points: [
@@ -208,7 +221,9 @@ export function endingFade(ctx: RenderCtx, e: OrbitEndingState) {
         fill: '#000000' + alpha(e.dark),
         layer: { key: 'orbit-ending-black' },
     });
-    if (e.title <= 0) return;
+    if (e.title <= 0) {
+        return;
+    }
     ctx.screenText(
         'THE END',
         ctx.W / 2,
@@ -223,16 +238,18 @@ export function endingSignal(
     ctx: RenderCtx,
     head: Vector,
     e: OrbitEndingState,
-) {
+): void {
     const E = ORBIT_ENDING;
     const show =
         smooth((e.t - (E.signal - 1)) / 0.6) *
         (1 - smooth((e.t - (E.disconnect + 0.4)) / 0.8));
-    if (!e.parked || show <= 0) return;
-    const size = ctx.clamp(ctx.W / 55, 10, 20),
-        [cx, cy] = [head[0] + size * 2.2, head[1] - size * 0.6];
-    const lit = 3 - Math.floor(e.signalLost),
-        flicker = e.signalLost % 1 > 0.55 && Math.floor(ctx.t * 8) % 2 === 0;
+    if (!e.parked || show <= 0) {
+        return;
+    }
+    const size = ctx.clamp(ctx.W / 55, 10, 20);
+    const [cx, cy] = [head[0] + size * 2.2, head[1] - size * 0.6];
+    const lit = 3 - Math.floor(e.signalLost);
+    const flicker = e.signalLost % 1 > 0.55 && Math.floor(ctx.t * 8) % 2 === 0;
     const layer = { key: 'orbit-signal', opacity: show };
     ctx.commands.push({
         kind: 'path',
@@ -271,8 +288,10 @@ export function endingLaptopScreen(
     chair: SkyProjection,
     e: OrbitEndingState,
     bob: number,
-) {
-    if (!e.parked) return;
+): void {
+    if (!e.parked) {
+        return;
+    }
     const quad = (
         u0: number,
         v0: number,
@@ -290,18 +309,24 @@ export function endingLaptopScreen(
             ],
             color,
         );
-    if (e.lightsOut >= 1) return quad(0.04, 0.06, 0.96, 0.94, '#1b1f27');
+    if (e.lightsOut >= 1) {
+        return quad(0.04, 0.06, 0.96, 0.94, '#1b1f27');
+    }
     quad(0.04, 0.06, 0.96, 0.94, e.lightsOut > 0.5 ? '#1b1f27' : '#dce8f2');
-    if (e.lightsOut > 0.5) return;
+    if (e.lightsOut > 0.5) {
+        return;
+    }
     if (e.message < 0.5) {
         for (let i = 0; i < 6; i++) {
-            const v = 0.8 - i * 0.12,
-                typing =
-                    i === 5 ? 0.3 + 0.5 * (((e.t - e.still) * 0.6) % 1) : 0.82;
+            const v = 0.8 - i * 0.12;
+            const typing =
+                i === 5 ? 0.3 + 0.5 * (((e.t - e.still) * 0.6) % 1) : 0.82;
             quad(0.1, v - 0.025, 0.1 + 0.78 * typing, v + 0.025, '#8fa6ba');
         }
     }
-    if (e.message <= 0) return;
+    if (e.message <= 0) {
+        return;
+    }
     quad(0.05, 0.12, 0.95, 0.88, '#ffffff', 1.3);
     quad(0.05, 0.8, 0.95, 0.88, '#c9d4de', 1.6);
     quad(0.08, 0.44, 0.15, 0.56, '#d9534f', 1.6);
@@ -309,7 +334,9 @@ export function endingLaptopScreen(
 
 function twoLines(text: string): string[] {
     const spaces = [...text].flatMap((c, i) => (c === ' ' ? [i] : []));
-    if (!spaces.length) return [text];
+    if (!spaces.length) {
+        return [text];
+    }
     const cut = spaces.reduce((best, i) =>
         Math.abs(i - text.length / 2) < Math.abs(best - text.length / 2)
             ? i
@@ -323,24 +350,30 @@ export function endingLaptopText(
     chair: SkyProjection,
     e: OrbitEndingState,
     bob: number,
-) {
-    if (!e.parked || e.message <= 0 || e.lightsOut > 0.5) return;
-    const left = chair.project(laptopScreenPoint(0.18, 0.48, bob)),
-        right = chair.project(laptopScreenPoint(0.74, 0.48, bob));
-    const top = chair.project(laptopScreenPoint(0.46, 0.76, bob)),
-        bottom = chair.project(laptopScreenPoint(0.46, 0.18, bob));
+): void {
+    if (!e.parked || e.message <= 0 || e.lightsOut > 0.5) {
+        return;
+    }
+    const left = chair.project(laptopScreenPoint(0.18, 0.48, bob));
+    const right = chair.project(laptopScreenPoint(0.74, 0.48, bob));
+    const top = chair.project(laptopScreenPoint(0.46, 0.76, bob));
+    const bottom = chair.project(laptopScreenPoint(0.46, 0.18, bob));
     const facing =
         (right[0] - left[0]) * (top[1] - left[1]) -
         (right[1] - left[1]) * (top[0] - left[0]);
-    if (facing >= 0) return;
+    if (facing >= 0) {
+        return;
+    }
     const lines = twoLines(translate('orbit.disconnected', ctx.locale));
-    const room = Math.hypot(right[0] - left[0], right[1] - left[1]),
-        height = Math.hypot(top[0] - bottom[0], top[1] - bottom[1]);
+    const room = Math.hypot(right[0] - left[0], right[1] - left[1]);
+    const height = Math.hypot(top[0] - bottom[0], top[1] - bottom[1]);
     const widest = Math.max(
         ...lines.map((line) => ctx.measureText(line, 1, SPEECH_FONT)),
     );
     const size = Math.min(height / (lines.length * 1.25), room / widest);
-    if (size < 4) return;
+    if (size < 4) {
+        return;
+    }
     const rotation = Math.atan2(right[1] - left[1], right[0] - left[0]);
     lines.forEach((line, i) => {
         const v = 0.48 + (((lines.length - 1) / 2 - i) * 0.58) / lines.length;

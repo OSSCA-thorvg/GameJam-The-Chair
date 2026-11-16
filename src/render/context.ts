@@ -1,7 +1,11 @@
-import type { Locale } from '../i18n';
+import { ART } from './art';
+import { fitGlyphs, fontCss, LABEL_FONT, SIGN_FONT } from './fonts';
 import { LEVEL } from '../game/level';
-import type { GameSnapshot } from '../game/game';
-import type { DeepReadonly, Mode } from '../game/types';
+
+import type { EffectsState } from './effects';
+import type { FontName } from './fonts';
+import type { KeysTried } from './key-hints';
+import type { PersonalBoxReaction } from './personal-box-motion';
 import type {
     Vector,
     Curve,
@@ -15,17 +19,9 @@ import type {
     Bounds,
     TextSpec,
 } from './types';
-import {
-    fitGlyphs,
-    fontCss,
-    LABEL_FONT,
-    SIGN_FONT,
-    type FontName,
-} from './fonts';
-import { ART } from './art';
-import type { EffectsState } from './effects';
-import type { PersonalBoxReaction } from './personal-box-motion';
-import type { KeysTried } from './key-hints';
+import type { GameSnapshot } from '../game/game';
+import type { DeepReadonly, Mode } from '../game/types';
+import type { Locale } from '../i18n';
 
 export type RenderCtx = {
     locale: Locale;
@@ -214,7 +210,11 @@ export type StrokeInput = {
     dashOffset?: number;
 };
 
-export function createRenderResources(bg: CanvasRenderingContext2D) {
+export function createRenderResources(bg: CanvasRenderingContext2D): {
+    bg: CanvasRenderingContext2D;
+    retained: Map<string, DrawCommand[]>;
+    textWidth(content: string, font: FontName): number;
+} {
     return {
         bg,
         retained: new Map<string, DrawCommand[]>(),
@@ -312,7 +312,9 @@ function drawingMethods(
         y *= getCtx().localScale;
         let wy = x * s + y * c + getCtx().oy;
         const mirror = getCtx().mirror;
-        if (mirror) wy = mirror.y + (mirror.y - wy) * mirror.k;
+        if (mirror) {
+            wy = mirror.y + (mirror.y - wy) * mirror.k;
+        }
         return [
             (x * c - y * s + getCtx().ox - getCtx().cam) * getCtx().scale,
             (wy + getCtx().vertical) * getCtx().scale,
@@ -320,7 +322,9 @@ function drawingMethods(
     };
     const push = (cmd: DrawCommand) => {
         const layer = getCtx().layer;
-        if (layer) cmd.layer = layer;
+        if (layer) {
+            cmd.layer = layer;
+        }
         getCtx().commands.push(cmd);
     };
     const polygon: RenderCtx['polygon'] = (points, color, opts) => {
@@ -375,8 +379,12 @@ function drawingMethods(
     const effectPath: RenderCtx['effectPath'] = (start, curves, fill, opts) => {
         const cmd = getCtx().pathCommand(start, curves);
         cmd.fill = fill;
-        if (opts?.blend) cmd.blend = opts.blend;
-        if (opts?.trim) cmd.trim = opts.trim;
+        if (opts?.blend) {
+            cmd.blend = opts.blend;
+        }
+        if (opts?.trim) {
+            cmd.trim = opts.trim;
+        }
         push(cmd);
     };
     const strokePath: RenderCtx['strokePath'] = (
@@ -398,8 +406,12 @@ function drawingMethods(
                     ? undefined
                     : stroke.dashOffset * unit,
         };
-        if (opts?.blend) cmd.blend = opts.blend;
-        if (opts?.trim) cmd.trim = opts.trim;
+        if (opts?.blend) {
+            cmd.blend = opts.blend;
+        }
+        if (opts?.trim) {
+            cmd.trim = opts.trim;
+        }
         push(cmd);
     };
     const radialFill: RenderCtx['radialFill'] = (
@@ -457,10 +469,10 @@ function drawingMethods(
         });
     };
     const visible: RenderCtx['visible'] = (bounds, margin = 0) => {
-        const left = getCtx().cam - margin,
-            right = getCtx().cam + getCtx().VW + margin;
-        const top = -getCtx().vertical - margin,
-            bottom = getCtx().H / getCtx().scale - getCtx().vertical + margin;
+        const left = getCtx().cam - margin;
+        const right = getCtx().cam + getCtx().VW + margin;
+        const top = -getCtx().vertical - margin;
+        const bottom = getCtx().H / getCtx().scale - getCtx().vertical + margin;
         return (
             bounds.right > left &&
             bounds.left < right &&
@@ -469,7 +481,9 @@ function drawingMethods(
         );
     };
     const retainedGroup: RenderCtx['retainedGroup'] = (key, bounds, draw) => {
-        if (!getCtx().visible(bounds)) return;
+        if (!getCtx().visible(bounds)) {
+            return;
+        }
         let geometry = retained.get(key);
         if (!geometry) {
             const saved = {
@@ -603,8 +617,8 @@ function drawingMethods(
         const halfWidth =
             (getCtx().textWidth(content, font) * size) / 2 + outline;
         const halfHeight = size * 0.6 + outline;
-        const c = Math.cos(rotation),
-            s = Math.sin(rotation);
+        const c = Math.cos(rotation);
+        const s = Math.sin(rotation);
         const box = (
             [
                 [-halfWidth, -halfHeight],

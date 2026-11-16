@@ -1,18 +1,19 @@
-import { FIXED_STEP } from '../game/level';
-import { viewState } from '../game/game';
-import {
-    buildTimeline,
-    seekTimeline,
-    type ReplayCursor,
-    type ReplayFile,
-    type ReplaySettings,
-    type Timeline,
-} from '../game/replay';
-import type { GameEvent } from '../game/types';
-import { translate, type Locale, type Message } from '../i18n';
-import { createEffects } from '../render/effects';
 import { createFeedback } from './feedback';
 import { buildPersonalBoxTrack, personalBoxAt } from './personal-box-replay';
+import { viewState } from '../game/game';
+import { FIXED_STEP } from '../game/level';
+import { buildTimeline, seekTimeline } from '../game/replay';
+import { translate } from '../i18n';
+import { createEffects } from '../render/effects';
+
+import type {
+    ReplayCursor,
+    ReplayFile,
+    ReplaySettings,
+    Timeline,
+} from '../game/replay';
+import type { GameEvent } from '../game/types';
+import type { Locale, Message } from '../i18n';
 
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
 const HOLD_SECONDS = 1;
@@ -23,7 +24,7 @@ export function createReplayPlayer(
     getSettings: () => ReplaySettings,
     onClose: () => void,
     { closable = true } = {},
-) {
+): ReplayPlayer {
     const q = <T extends HTMLElement>(selector: string) =>
         root.querySelector<T>(selector);
     const bar = q<HTMLElement>('[data-replay-bar]');
@@ -50,7 +51,9 @@ export function createReplayPlayer(
     let personalBoxTrack: ReturnType<typeof buildPersonalBoxTrack> = [];
 
     function receive(events: readonly GameEvent[]) {
-        if (!cursor) return;
+        if (!cursor) {
+            return;
+        }
         const state = cursor.state;
         effects.observe({
             stage: state.stage,
@@ -59,7 +62,9 @@ export function createReplayPlayer(
             player: state.p,
             mode: state.mode,
         });
-        if (!events.length) return;
+        if (!events.length) {
+            return;
+        }
         const view = viewState(cursor.state);
         for (const event of events) {
             effects.receive(event);
@@ -79,7 +84,9 @@ export function createReplayPlayer(
     }
 
     function advanceCursor(manual: boolean): boolean {
-        if (!cursor) return false;
+        if (!cursor) {
+            return false;
+        }
         while (cursor.pending() === 'command') {
             const mode = cursor.state.mode;
             if (
@@ -94,13 +101,17 @@ export function createReplayPlayer(
             receive(cursor.next() ?? []);
         }
         const events = cursor.next();
-        if (!events) return false;
+        if (!events) {
+            return false;
+        }
         receive(events);
         return true;
     }
 
     function seek(tick: number) {
-        if (!timeline) return;
+        if (!timeline) {
+            return;
+        }
         const target = Math.max(
             timeline.startTick,
             Math.min(timeline.endTick, Math.round(tick)),
@@ -124,9 +135,13 @@ export function createReplayPlayer(
     }
 
     function sync() {
-        if (!timeline || !cursor) return;
+        if (!timeline || !cursor) {
+            return;
+        }
         const tick = cursor.state.tick;
-        if (seekInput) seekInput.value = String(tick);
+        if (seekInput) {
+            seekInput.value = String(tick);
+        }
         if (timeLabel) {
             timeLabel.textContent = `${((tick - timeline.startTick) * FIXED_STEP).toFixed(2)} / ${((timeline.endTick - timeline.startTick) * FIXED_STEP).toFixed(2)} s`;
         }
@@ -141,11 +156,15 @@ export function createReplayPlayer(
     }
 
     function notes() {
-        if (!timeline) return '';
+        if (!timeline) {
+            return '';
+        }
         const seconds = (tick: number) =>
             ((tick - timeline!.startTick) * FIXED_STEP).toFixed(2) + 's';
         const parts: string[] = [];
-        if (timeline.versionMismatch) parts.push(t('replay.otherVersion'));
+        if (timeline.versionMismatch) {
+            parts.push(t('replay.otherVersion'));
+        }
         if (timeline.divergedAt !== null) {
             parts.push(
                 `${t('replay.diverged')} ${seconds(timeline.divergedAt)}`,
@@ -156,12 +175,16 @@ export function createReplayPlayer(
                 `${t('replay.errorAt')} ${seconds(timeline.error.tick)}: ${timeline.error.message}`,
             );
         }
-        if (timeline.file.truncated) parts.push(t('replay.truncated'));
+        if (timeline.file.truncated) {
+            parts.push(t('replay.truncated'));
+        }
         return parts.join(' · ');
     }
 
     function drawMarkers() {
-        if (!markerTrack || !timeline) return;
+        if (!markerTrack || !timeline) {
+            return;
+        }
         markerTrack.replaceChildren();
         const span = Math.max(1, timeline.endTick - timeline.startTick);
         for (const marker of timeline.markers) {
@@ -200,7 +223,9 @@ export function createReplayPlayer(
         'click',
         () => {
             setPlaying(false);
-            if (cursor) seek(cursor.state.tick - 1);
+            if (cursor) {
+                seek(cursor.state.tick - 1);
+            }
         },
         options,
     );
@@ -253,7 +278,9 @@ export function createReplayPlayer(
                 ...(closable ? { Escape: () => close() } : {}),
             };
             const action = handled[e.key];
-            if (!action) return;
+            if (!action) {
+                return;
+            }
             e.preventDefault();
             e.stopImmediatePropagation();
             action();
@@ -283,10 +310,14 @@ export function createReplayPlayer(
             seekInput.max = String(timeline.endTick);
             seekInput.step = '1';
         }
-        if (noteLabel) noteLabel.textContent = notes();
+        if (noteLabel) {
+            noteLabel.textContent = notes();
+        }
         drawMarkers();
         seek(timeline.startTick);
-        if (bar) bar.hidden = false;
+        if (bar) {
+            bar.hidden = false;
+        }
         root.classList.add('replaying');
         setPlaying(true);
         playButton?.focus();
@@ -294,11 +325,15 @@ export function createReplayPlayer(
     }
 
     function close() {
-        if (!timeline) return;
+        if (!timeline) {
+            return;
+        }
         timeline = null;
         cursor = null;
         playing = false;
-        if (bar) bar.hidden = true;
+        if (bar) {
+            bar.hidden = true;
+        }
         root.classList.remove('replaying');
         onClose();
     }
@@ -326,7 +361,9 @@ export function createReplayPlayer(
         },
         setPlaying,
         advance(dt: number) {
-            if (!timeline || !playing || !Number.isFinite(dt) || dt < 0) return;
+            if (!timeline || !playing || !Number.isFinite(dt) || dt < 0) {
+                return;
+            }
             effects.advance(Math.min(dt, 0.25) * speed);
             acc += Math.min(dt, 0.25) * speed;
             while (acc >= FIXED_STEP) {
@@ -336,8 +373,9 @@ export function createReplayPlayer(
                     continue;
                 }
                 if (!stepOnce()) {
-                    if (loop) seek(timeline.startTick);
-                    else {
+                    if (loop) {
+                        seek(timeline.startTick);
+                    } else {
                         playing = false;
                         break;
                     }
@@ -359,4 +397,20 @@ export function createReplayPlayer(
     };
 }
 
-export type ReplayPlayer = ReturnType<typeof createReplayPlayer>;
+export type ReplayPlayer = {
+    open(file: ReplayFile): Timeline;
+    close(): void;
+    readonly active: boolean;
+    readonly timeline: Timeline | null;
+    readonly tick: number;
+    readonly state: ReplayCursor['state'] | null;
+    readonly playing: boolean;
+    seek(tick: number): void;
+    setPlaying(value: boolean): void;
+    advance(dt: number): void;
+    view(): ReturnType<typeof viewState> | null;
+    drainEvents(): GameEvent[];
+    effects(): ReturnType<ReturnType<typeof createEffects>['snapshot']>;
+    feedback(): ReturnType<ReturnType<typeof createFeedback>['snapshot']>;
+    destroy(): void;
+};

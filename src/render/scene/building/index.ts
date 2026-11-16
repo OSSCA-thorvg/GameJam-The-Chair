@@ -1,5 +1,8 @@
-import { ceilingCctvs } from '../shared/ceiling-cctv';
-import type { Message } from '../../../i18n';
+import { bubble, chairBubble } from './bubble';
+import { dispatchRoom } from './dispatch-room';
+import { chairLift, expressFloor } from './express';
+import { meetingDoor, meetingRoom } from './meeting-room';
+import { obstacleHop, orientationFloor } from './orientation';
 import {
     STAGE_TWO,
     TYPING_SOUNDS,
@@ -10,16 +13,14 @@ import {
     chairChatLine,
     chairChatOnce,
 } from '../../../game/stages/building/data';
+import { player } from '../player';
+import { officeAppearance, typingWorker } from './workers';
+import { ceilingCctvs } from '../shared/ceiling-cctv';
+import { practiceFloor, checkpointFlag, chairPictogram } from '../shared/decor';
+
+import type { Message } from '../../../i18n';
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-import { chairLift, expressFloor } from './express';
-import { obstacleHop, orientationFloor } from './orientation';
-import { practiceFloor, checkpointFlag, chairPictogram } from '../shared/decor';
-import { player } from '../player';
-import { bubble, chairBubble } from './bubble';
-import { officeAppearance, typingWorker } from './workers';
-import { meetingDoor, meetingRoom } from './meeting-room';
-import { dispatchRoom } from './dispatch-room';
 
 const OFFICE_BUBBLE_TOP = 70;
 function chair(ctx: RenderCtx, x: number, y: number) {
@@ -47,7 +48,9 @@ function chair(ctx: RenderCtx, x: number, y: number) {
 }
 function cabinActors(ctx: RenderCtx, start: number) {
     const departure = ctx.state.corridor.departure;
-    if (departure.kind !== 'descending') return;
+    if (departure.kind !== 'descending') {
+        return;
+    }
     const age = departure.age;
     const aperture = 1 - ctx.clamp((age - 1.3) / 0.7, 0, 1);
     const [left, top] = ctx.screenPoint(
@@ -68,11 +71,13 @@ function cabinActors(ctx: RenderCtx, start: number) {
         ] satisfies Array<[0 | 1, number, number]>) {
             const clipped: Vector[] = [];
             for (let i = 0; i < points.length; i++) {
-                const a = points[i],
-                    b = points[(i + 1) % points.length];
+                const a = points[i];
+                const b = points[(i + 1) % points.length];
                 const insideA = (a[axis] - edge) * direction >= 0;
                 const insideB = (b[axis] - edge) * direction >= 0;
-                if (insideA) clipped.push(a);
+                if (insideA) {
+                    clipped.push(a);
+                }
                 if (insideA !== insideB) {
                     const t = (edge - a[axis]) / (b[axis] - a[axis]);
                     clipped.push([
@@ -83,7 +88,9 @@ function cabinActors(ctx: RenderCtx, start: number) {
             }
             points = clipped;
         }
-        if (points.length < 3 || aperture === 0) return [];
+        if (points.length < 3 || aperture === 0) {
+            return [];
+        }
         return [{ ...command, points }];
     });
     ctx.commands.push(...visible);
@@ -266,8 +273,8 @@ function liftForeground(ctx: RenderCtx) {
             x < lx + 105;
             x += 120
         ) {
-            const a = Math.max(x, lx - 105),
-                b = Math.min(x + 100, lx + 105);
+            const a = Math.max(x, lx - 105);
+            const b = Math.min(x + 100, lx + 105);
             if (a < b) {
                 ctx.rod(
                     a,
@@ -344,8 +351,8 @@ function chairSpeech(ctx: RenderCtx) {
                 ? localAge >= 0 && localAge < interval - 0.35
                 : said && localAge % interval < interval - 0.35;
         if (shown) {
-            const left = ctx.cam + 180,
-                right = ctx.cam + ctx.VW - 180;
+            const left = ctx.cam + 180;
+            const right = ctx.cam + ctx.VW - 180;
             const x = Math.max(left, Math.min(right, speaker.x));
             if (
                 c.chat.kind === 'dismissed' ||
@@ -377,7 +384,9 @@ function chairActors(ctx: RenderCtx) {
             ? Math.min(1, departure.age / CHAIR_DEPARTURE.descending) * 165
             : 0;
     state.furniture.forEach((item, i) => {
-        if (!item.released) return;
+        if (!item.released) {
+            return;
+        }
         if (
             departure.kind === 'none' &&
             item.cheer > 0 &&
@@ -435,7 +444,7 @@ function chairActors(ctx: RenderCtx) {
     }
 }
 
-export function drawBuilding(ctx: RenderCtx) {
+export function drawBuilding(ctx: RenderCtx): void {
     const departure = ctx.state.corridor.departure;
     buildingBackdrop(ctx);
     if (ctx.state.corridor.room.kind === 'meeting') {

@@ -1,19 +1,22 @@
-import { PHYSICS } from './level';
 import { clonePlain } from './data';
-import type { CoreState, ExtinguisherState, Progress } from './state';
-import type { DeepReadonly } from './types';
-import type { StageDefinition } from './stages/types';
-import { STAGES } from './stages/index';
-import { stageSolids } from './step';
+import { PHYSICS } from './level';
 import { focusBlockedIn, stageHooks } from './stages/hooks';
+import { STAGES } from './stages/index';
 import {
     createOfficeSnapshot,
     createBuildingSnapshot,
     createRooftopSnapshot,
-    type OfficeSnapshot,
-    type BuildingSnapshot,
-    type RooftopSnapshot,
 } from './stages/view';
+import { stageSolids } from './step';
+
+import type { StageDefinition } from './stages/types';
+import type {
+    OfficeSnapshot,
+    BuildingSnapshot,
+    RooftopSnapshot,
+} from './stages/view';
+import type { CoreState, ExtinguisherState, Progress } from './state';
+import type { DeepReadonly } from './types';
 
 type SessionSnapshot = Pick<CoreState, 'mode' | 'time' | 'lossReason'>;
 type ProgressSource = Pick<

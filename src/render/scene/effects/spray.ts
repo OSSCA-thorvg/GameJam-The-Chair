@@ -1,6 +1,7 @@
+import { skyWindResponse, sprayOrigin } from '../sky/wind-response';
+
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-import { skyWindResponse, sprayOrigin } from '../sky/wind-response';
 
 type Plume = {
     origin: Vector;
@@ -12,12 +13,14 @@ type Plume = {
     age: number;
 };
 
-export function sprayPlume(ctx: RenderCtx) {
+export function sprayPlume(ctx: RenderCtx): void {
     const spray = ctx.state.spray;
     const continuous =
         (ctx.state.stage === 4 && ctx.state.sky.phase !== 'course') ||
         ctx.state.firstFlight.kind !== 'course';
-    if (!continuous && spray.burst <= 0) return;
+    if (!continuous && spray.burst <= 0) {
+        return;
+    }
     const age = continuous
         ? 0.9 + Math.sin(ctx.t * 14) * 0.045
         : spray.burst / 0.24;
@@ -31,7 +34,9 @@ export function sprayPlume(ctx: RenderCtx) {
         age,
     };
     plumeCone(ctx, shape);
-    if (continuous) plumePuffs(ctx, shape);
+    if (continuous) {
+        plumePuffs(ctx, shape);
+    }
     plumeSwirl(ctx, shape);
 }
 

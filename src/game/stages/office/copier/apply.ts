@@ -1,22 +1,19 @@
+import { paperShot, trimPapers, urgentShot } from './decide';
 import { RULES } from '../../../level';
+import { applyFocusHit } from '../../../systems/focus/apply';
+
+import type { CopierResult, PaperHit, UrgentResult } from './decide';
 import type { CoreState } from '../../../state';
 import type { GameEvent, Paper } from '../../../types';
-import { applyFocusHit } from '../../../systems/focus/apply';
-import {
-    paperShot,
-    trimPapers,
-    urgentShot,
-    type CopierResult,
-    type PaperHit,
-    type UrgentResult,
-} from './decide';
 export function applyCopier(
     s: CoreState,
     out: GameEvent[],
     result: CopierResult,
-) {
+): void {
     s.office.copier = result.copier;
-    if (!result.fire) return;
+    if (!result.fire) {
+        return;
+    }
     s.office.papers.push(...paperShot(s.office.copier));
     s.office.copier.bursts++;
     out.push({ type: 'volley' });
@@ -29,12 +26,14 @@ export function applyUrgentCopier(
     s: CoreState,
     out: GameEvent[],
     result: UrgentResult,
-) {
+): void {
     s.office.urgent = result.copier;
     if (result.started && result.copier.volley === 1) {
         out.push({ type: 'cue', id: 'urgent-volley' });
     }
-    if (!result.fire) return;
+    if (!result.fire) {
+        return;
+    }
     s.office.papers.push(...urgentShot(s.office.urgent));
 }
 
@@ -43,7 +42,7 @@ export function applyPapers(
     out: GameEvent[],
     result: { papers: Paper[]; hits: readonly PaperHit[] },
     dt: number,
-) {
+): boolean {
     for (const hit of result.hits) {
         s.office.paperHits++;
         if (!applyFocusHit(s, out, hit.focus)) {

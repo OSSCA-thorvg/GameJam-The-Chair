@@ -1,5 +1,5 @@
-import type { Message } from '../../../i18n';
 import type { GameSnapshot } from '../../../game/game';
+import type { Message } from '../../../i18n';
 
 export const OPENING_BEATS = {
     sixPm: 0,
@@ -76,7 +76,9 @@ const easeOut = (u: number) => 1 - (1 - u) ** 3;
 const lerp = (a: number, b: number, u: number) => a + (b - a) * u;
 const pop = (t: number, at: number, length = 0.5) => {
     const age = t - at;
-    if (age < 0 || age > length) return 0;
+    if (age < 0 || age > length) {
+        return 0;
+    }
     return Math.sin((age / length) * Math.PI * 3) * (1 - age / length);
 };
 
@@ -93,19 +95,27 @@ function bubble(
     from: number,
     to: number,
 ): OpeningBubble | null {
-    if (t < from || t > to) return null;
+    if (t < from || t > to) {
+        return null;
+    }
     const alpha = Math.min(1, (to - t) / 0.25);
     return { speaker, style, message, age: t - from, alpha };
 }
 
 function clockHours(t: number) {
     const B = OPENING_BEATS;
-    if (t < B.irisClose) return 18;
-    if (t < B.spinToEight) return 19;
+    if (t < B.irisClose) {
+        return 18;
+    }
+    if (t < B.spinToEight) {
+        return 19;
+    }
     if (t < B.eightPm) {
         return 19 + smooth(progress(t, B.spinToEight, B.eightPm));
     }
-    if (t < B.spinToNine) return 20;
+    if (t < B.spinToNine) {
+        return 20;
+    }
     return 20 + smooth(progress(t, B.spinToNine, B.ninePm));
 }
 
@@ -145,7 +155,9 @@ function cover(t: number) {
         return { office: true, iris: null, clockScale: 1 };
     }
     for (const [open, opened, close, closed] of VISITS) {
-        if (t < open || t >= closed) continue;
+        if (t < open || t >= closed) {
+            continue;
+        }
         if (t < opened) {
             const u = easeIn(progress(t, open, opened));
             return { office: true, iris: u, clockScale: 1 + 2.4 * u };
@@ -161,10 +173,12 @@ function cover(t: number) {
 
 function creaking(t: number) {
     const B = OPENING_BEATS;
-    if (t < B.creak || t >= B.creakClose) return { strain: 0, pulse: 0 };
+    if (t < B.creak || t >= B.creakClose) {
+        return { strain: 0, pulse: 0 };
+    }
     const strain = progress(t, B.creak, B.creakClose - 0.4);
-    const age = t - B.creak,
-        span = B.creakClose - B.creak;
+    const age = t - B.creak;
+    const span = B.creakClose - B.creak;
     const beats = age / 0.9 + ((age * age) / (2 * span)) * (1 / 0.35 - 1 / 0.9);
     const phase = beats % 1;
     const pulse =
@@ -176,9 +190,11 @@ function creaking(t: number) {
 
 function buck(t: number, at: number) {
     const age = t - at;
-    if (age < 0 || age > 1) return { backrest: 0, riderPop: 0, jolt: 0 };
-    const back = 0.18,
-        snap = 0.26;
+    if (age < 0 || age > 1) {
+        return { backrest: 0, riderPop: 0, jolt: 0 };
+    }
+    const back = 0.18;
+    const snap = 0.26;
     const backrest =
         age < back
             ? -0.5 * smooth(age / back)
@@ -201,7 +217,9 @@ export function openingFrame(time: number): OpeningFrame {
     if (t >= B.pushIn && t < B.sevenPm) {
         closeness = smooth(progress(t, B.pushIn, B.chairHope));
     }
-    if (t >= B.creakOpen) closeness = 1;
+    if (t >= B.creakOpen) {
+        closeness = 1;
+    }
     const zoom = lerp(WIDE_ZOOM, CLOSE_ZOOM, closeness);
     const handoff = smooth(progress(t, B.handoff, B.end));
 
@@ -337,7 +355,7 @@ export function openingFrame(time: number): OpeningFrame {
     };
 }
 
-export function openingFocusY(frame: OpeningFrame, chairY: number) {
+export function openingFocusY(frame: OpeningFrame, chairY: number): number {
     const closeness = (frame.zoom - WIDE_ZOOM) / (CLOSE_ZOOM - WIDE_ZOOM);
     return lerp(
         WIDE_FOCUS_Y,

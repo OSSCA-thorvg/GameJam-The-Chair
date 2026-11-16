@@ -1,12 +1,10 @@
-import { replayLength, type Recorder, type ReplayFile } from '../game/replay';
-import { isMessage, translate, type Locale, type Message } from '../i18n';
-import {
-    copyText,
-    downloadJson,
-    replayData,
-    stamp,
-    type ErrorLog,
-} from './replay-store';
+import { replayLength } from '../game/replay';
+import { isMessage, translate } from '../i18n';
+import { copyText, downloadJson, replayData, stamp } from './replay-store';
+
+import type { Recorder, ReplayFile } from '../game/replay';
+import type { Locale, Message } from '../i18n';
+import type { ErrorLog } from './replay-store';
 
 type Hooks = {
     recorder: Recorder;
@@ -24,7 +22,7 @@ export function bindReplayMenu(
     root: HTMLElement,
     getLocale: () => Locale,
     hooks: Hooks,
-) {
+): { destroy(): void } {
     const controller = new AbortController();
     const options = { signal: controller.signal };
     const message = root.querySelector<HTMLElement>('[data-replay-message]');
@@ -33,7 +31,9 @@ export function bindReplayMenu(
     const pauseMenu = root.querySelector<HTMLElement>('[data-pause-menu]');
     const t = (text: Message) => translate(text, getLocale());
     const say = (text: Message) => {
-        if (message) message.textContent = t(text);
+        if (message) {
+            message.textContent = t(text);
+        }
     };
     const on = (selector: string, action: () => void) =>
         root
@@ -104,7 +104,9 @@ export function bindReplayMenu(
     }
 
     function render() {
-        if (!list || !menu?.open) return;
+        if (!list || !menu?.open) {
+            return;
+        }
         const button = (text: Message, symbol: string, action: () => void) => {
             const element = document.createElement('button');
             element.type = 'button';
@@ -145,8 +147,11 @@ export function bindReplayMenu(
 
     on('[data-replay-watch]', () => {
         const file = hooks.recorder.latest();
-        if (file) hooks.watch(file);
-        else say('replay.none');
+        if (file) {
+            hooks.watch(file);
+        } else {
+            say('replay.none');
+        }
     });
     on('[data-replay-copy]', () => {
         copyText(JSON.stringify(replayData(hooks.recorder, hooks.errorLog)))

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { loadSource } from './support/load.mjs';
+
 import { orientationHop } from './support/harness.mjs';
+import { loadSource } from './support/load.mjs';
 
 const { createGame, applyCorridor, STAGE_TWO } = await loadSource(`
     export { createGame } from './src/game/game';
@@ -85,7 +86,9 @@ test('a wedged rider rolls within its gap with left and right but never through 
             game.getSnapshot().player.x - game.getSnapshot().furniture[0].x;
         const before = offset();
         game.setInput(key);
-        for (let i = 0; i < 30; i++) game.step(dt);
+        for (let i = 0; i < 30; i++) {
+            game.step(dt);
+        }
         assert.ok(
             side * (offset() - before) > 20,
             `${key} rolls between the chairs`,
@@ -138,7 +141,9 @@ test('a hop off the orientation convoy still tilts with left and right', () => {
         const game = aboard();
         game.jump();
         game.setInput(...keys);
-        for (let i = 0; i < 48; i++) game.step(dt);
+        for (let i = 0; i < 48; i++) {
+            game.step(dt);
+        }
         assert.equal(game.getSnapshot().corridor.convoy, 'airborne');
         return game.getSnapshot().player.a;
     };
@@ -227,7 +232,9 @@ test('flying over the group does not count as joining, grounded admission welcom
     }
     assert.deepEqual(phases, ['wary', 'realizing', 'welcoming', 'orientation']);
     s.p.x = s.building.furniture[0].x + 600;
-    for (let i = 0; i < 120; i++) tick(s);
+    for (let i = 0; i < 120; i++) {
+        tick(s);
+    }
     s.p.x = (s.building.furniture[0].x + s.building.furniture[2].x) / 2;
     tick(s);
     assert.equal(
@@ -241,9 +248,9 @@ test('flying over the group does not count as joining, grounded admission welcom
 function rideOrientation(game, hop, until) {
     const lines = [];
     for (let i = 0; i < 120 * 60; i++) {
-        const state = game.getSnapshot(),
-            p = state.player,
-            chat = state.corridor.chat;
+        const state = game.getSnapshot();
+        const p = state.player;
+        const chat = state.corridor.chat;
         if (
             chat.kind === 'orientation' &&
             chat.age >= 0 &&
@@ -251,12 +258,20 @@ function rideOrientation(game, hop, until) {
         ) {
             lines.push({ line: chat.line, x: p.x });
         }
-        if (until(state)) return { state, lines };
+        if (until(state)) {
+            return { state, lines };
+        }
         const keys = state.corridor.convoy === 'free' ? ['right'] : [];
         const correction = -p.a * 12 - p.w * 4;
-        if (correction < -0.4) keys.push('q');
-        if (correction > 0.4) keys.push('e');
-        if (hop(state)) game.jump();
+        if (correction < -0.4) {
+            keys.push('q');
+        }
+        if (correction > 0.4) {
+            keys.push('e');
+        }
+        if (hop(state)) {
+            game.jump();
+        }
         game.setInput(...keys);
         game.step(dt);
     }

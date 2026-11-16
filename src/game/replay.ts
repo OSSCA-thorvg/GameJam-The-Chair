@@ -1,10 +1,12 @@
-import { parseCommand, type Command } from './commands';
-import { CONFIG_VERSION } from './stages/index';
+import { parseCommand } from './commands';
 import { clonePlain, configHash, deepFreeze } from './data';
+import { CONFIG_VERSION } from './stages/index';
 import { SIMULATED, applyCommand, stepGame } from './step';
+import { assertGameState } from './validation';
+
+import type { Command } from './commands';
 import type { CoreState } from './state';
 import type { GameEvent } from './types';
-import { assertGameState } from './validation';
 
 export const REPLAY_FORMAT = 5;
 
@@ -60,7 +62,9 @@ export function normalizeReplaySettings(input: unknown): ReplaySettings {
         unknown
     >;
     const settings: ReplaySettings = { ...REPLAY_DEFAULTS };
-    if (typeof source.enabled === 'boolean') settings.enabled = source.enabled;
+    if (typeof source.enabled === 'boolean') {
+        settings.enabled = source.enabled;
+    }
     for (const key of Object.keys(RANGES) as Array<keyof typeof RANGES>) {
         const value = Number(source[key]);
         if (
@@ -103,7 +107,7 @@ export function hashState(state: Readonly<CoreState>): string {
     return configHash(state);
 }
 
-export function replayLength(file: Readonly<ReplayFile>) {
+export function replayLength(file: Readonly<ReplayFile>): number {
     return file.endTick - file.start.tick;
 }
 
@@ -116,7 +120,9 @@ function isArray(value: unknown): value is unknown[] {
 }
 
 export function parseReplayError(value: unknown): ReplayError | null {
-    if (value === undefined || value === null) return null;
+    if (value === undefined || value === null) {
+        return null;
+    }
     if (
         !isRecord(value) ||
         typeof value.tick !== 'number' ||
@@ -152,8 +158,12 @@ export function parseReplay(text: string): ReplayFile {
     } catch {
         throw new Error('not JSON');
     }
-    if (!isRecord(data)) throw new Error('unknown format');
-    if (data.format !== REPLAY_FORMAT) throw new Error('unknown format');
+    if (!isRecord(data)) {
+        throw new Error('unknown format');
+    }
+    if (data.format !== REPLAY_FORMAT) {
+        throw new Error('unknown format');
+    }
     try {
         assertGameState(data.start, 'start state');
     } catch (error) {
@@ -172,7 +182,9 @@ export function parseReplay(text: string): ReplayFile {
     if (data.endTick - start.tick > REPLAY_FILE_LIMITS.ticks) {
         throw new Error('replay is too long');
     }
-    if (!isArray(data.commands)) throw new Error('missing commands');
+    if (!isArray(data.commands)) {
+        throw new Error('missing commands');
+    }
     if (data.commands.length > REPLAY_FILE_LIMITS.commands) {
         throw new Error('too many commands');
     }
@@ -192,7 +204,9 @@ export function parseReplay(text: string): ReplayFile {
         commands.push([entry[0], parseCommand(entry[1])]);
         last = entry[0];
     }
-    if (!isArray(data.hashes)) throw new Error('missing hashes');
+    if (!isArray(data.hashes)) {
+        throw new Error('missing hashes');
+    }
     if (data.hashes.length > REPLAY_FILE_LIMITS.hashes) {
         throw new Error('too many hashes');
     }
@@ -230,7 +244,9 @@ export function parseReplay(text: string): ReplayFile {
         throw new Error('bad version');
     }
     const truncated = data.truncated === undefined ? false : data.truncated;
-    if (typeof truncated !== 'boolean') throw new Error('bad truncated flag');
+    if (typeof truncated !== 'boolean') {
+        throw new Error('bad truncated flag');
+    }
     const error = parseReplayError(data.error);
     return {
         format: REPLAY_FORMAT,
@@ -248,12 +264,22 @@ export function parseReplay(text: string): ReplayFile {
 export function createRecorder(
     getSettings: () => ReplaySettings,
     seed: number | null = null,
-) {
+): {
+    onAttemptStart(json: string): void;
+    onCommand(tick: number, command: Command): void;
+    onStep(state: Readonly<CoreState>): void;
+    onError(error: ReplayError): void;
+    readonly recording: boolean;
+    attempts(): ReplayFile[];
+    latest(minTicks?: number): ReplayFile | null;
+} {
     let current: ReplayFile | null = null;
     const finished: ReplayFile[] = [];
 
     function finish() {
-        if (!current) return;
+        if (!current) {
+            return;
+        }
         const file = current;
         current = null;
         // A retry or stage change ends an attempt; drop those trailing commands
@@ -267,16 +293,22 @@ export function createRecorder(
         ) {
             file.commands.pop();
         }
-        if (replayLength(file) <= 0 && !file.error) return;
+        if (replayLength(file) <= 0 && !file.error) {
+            return;
+        }
         finished.push(file);
         const keep = getSettings().keepAttempts;
-        while (finished.length > keep) finished.shift();
+        while (finished.length > keep) {
+            finished.shift();
+        }
     }
 
     return {
         onAttemptStart(json: string) {
             finish();
-            if (!getSettings().enabled) return;
+            if (!getSettings().enabled) {
+                return;
+            }
             const start = JSON.parse(json) as CoreState;
             current = {
                 format: REPLAY_FORMAT,
@@ -291,7 +323,9 @@ export function createRecorder(
             };
         },
         onCommand(tick: number, command: Command) {
-            if (!current || current.truncated) return;
+            if (!current || current.truncated) {
+                return;
+            }
             if (
                 current.commands.length >=
                 Math.min(getSettings().maxCommands, REPLAY_FILE_LIMITS.commands)
@@ -302,7 +336,9 @@ export function createRecorder(
             current.commands.push([tick, clonePlain(command)]);
         },
         onStep(state: Readonly<CoreState>) {
-            if (!current || current.truncated || current.error) return;
+            if (!current || current.truncated || current.error) {
+                return;
+            }
             const lastTick = current.start.tick + REPLAY_FILE_LIMITS.ticks;
             if (state.tick > lastTick) {
                 current.endTick = lastTick;
@@ -315,11 +351,15 @@ export function createRecorder(
             }
         },
         onError(error: ReplayError) {
-            if (!current || current.error) return;
+            if (!current || current.error) {
+                return;
+            }
             current.error = clonePlain(error);
             // A failing step happens on the next tick: simulate up to it so
             // playback reproduces the error.
-            if (error.at === 'step') current.endTick = error.tick + 1;
+            if (error.at === 'step') {
+                current.endTick = error.tick + 1;
+            }
         },
         get recording() {
             return !!current;
@@ -360,7 +400,13 @@ export type Timeline = {
 export function createCursor(
     file: Readonly<ReplayFile>,
     from: Keyframe = { state: file.start, index: 0 },
-) {
+): {
+    readonly state: CoreState;
+    readonly index: number;
+    pending(): 'command' | 'step' | 'end';
+    next(): GameEvent[] | null;
+    keyframe(): Keyframe;
+} {
     let state = from.state;
     let index = from.index;
     const commands = file.commands;
@@ -382,12 +428,16 @@ export function createCursor(
         },
         next(): GameEvent[] | null {
             const kind = this.pending();
-            if (kind === 'end') return null;
+            if (kind === 'end') {
+                return null;
+            }
             const result =
                 kind === 'command'
                     ? applyCommand(state, commands[index][1])
                     : stepGame(state);
-            if (kind === 'command') index++;
+            if (kind === 'command') {
+                index++;
+            }
             state = result.state;
             return result.events;
         },
@@ -438,7 +488,9 @@ export function buildTimeline(
             markers.push({ tick: before.tick, kind: 'error' });
             break;
         }
-        if (!events) break;
+        if (!events) {
+            break;
+        }
         const after = cursor.state;
         if (after.deaths > before.deaths) {
             markers.push({ tick: after.tick, kind: 'death' });
@@ -477,15 +529,27 @@ export function buildTimeline(
 }
 
 // Position after the step reaching `tick`, before commands at that tick.
-export function seekTimeline(timeline: Readonly<Timeline>, tick: number) {
+export function seekTimeline(
+    timeline: Readonly<Timeline>,
+    tick: number,
+): {
+    readonly state: CoreState;
+    readonly index: number;
+    pending(): 'command' | 'step' | 'end';
+    next(): GameEvent[] | null;
+    keyframe(): Keyframe;
+} {
     const target = Math.max(
         timeline.startTick,
         Math.min(timeline.endTick, tick),
     );
     let keyframe = timeline.keyframes[0];
     for (const candidate of timeline.keyframes) {
-        if (candidate.state.tick <= target) keyframe = candidate;
-        else break;
+        if (candidate.state.tick <= target) {
+            keyframe = candidate;
+        } else {
+            break;
+        }
     }
     const cursor = createCursor(timeline.file, keyframe);
     while (cursor.state.tick < target && cursor.pending() !== 'end') {
@@ -544,7 +608,9 @@ export function readReplaySources(text: string): {
         if (!isArray(attempts)) {
             throw new Error('replay attempts must be an array');
         }
-        if (!isArray(errors)) throw new Error('replay errors must be an array');
+        if (!isArray(errors)) {
+            throw new Error('replay errors must be an array');
+        }
         if (attempts.length + errors.length > REPLAY_FILE_LIMITS.sources) {
             throw new Error('too many replays inside');
         }
@@ -572,7 +638,9 @@ export function readReplaySources(text: string): {
                 const serialized = JSON.stringify(value.replay);
                 const file = parseReplay(serialized);
                 const parsed = parseReplayError(value);
-                if (!parsed) return;
+                if (!parsed) {
+                    return;
+                }
                 const time =
                     typeof value.time === 'string' && value.time.length <= 200
                         ? value.time
@@ -599,7 +667,9 @@ export function readReplaySources(text: string): {
         if (!attempts.length && !errors.length) {
             throw new Error('no replays inside');
         }
-        if (!sources.length) throw new Error('no usable replay inside');
+        if (!sources.length) {
+            throw new Error('no usable replay inside');
+        }
         return { sources, data: raw };
     }
     const file = parseReplay(text);

@@ -1,8 +1,8 @@
-import { type GameSnapshot } from '../game/game';
-import { type EffectsState } from '../render/effects';
-import { type Locale } from '../i18n';
+import type { GameSnapshot } from '../game/game';
+import type { Locale } from '../i18n';
+import type { EffectsState } from '../render/effects';
+import type { OpeningFrame } from '../render/scene/opening/timeline';
 import type { SceneTalk } from '../render/types';
-import { type OpeningFrame } from '../render/scene/opening/timeline';
 
 export type PreviewScene = {
     id: string;

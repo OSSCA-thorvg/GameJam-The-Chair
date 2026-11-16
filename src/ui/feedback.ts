@@ -1,13 +1,11 @@
-import { translate, type Locale, type Message } from '../i18n';
-import type { GameEvent } from '../game/types';
-import {
-    REACTION_LIFE,
-    SPEECH_LIFE,
-    type Reaction,
-    type Speech,
-} from './types';
-import type { GameSnapshot } from '../game/game';
+import { translate } from '../i18n';
+import { REACTION_LIFE, SPEECH_LIFE } from './types';
 import { ART } from '../render/art';
+
+import type { Locale, Message } from '../i18n';
+import type { Reaction, Speech } from './types';
+import type { GameSnapshot } from '../game/game';
+import type { GameEvent } from '../game/types';
 const NPC_COPY = {
     manager: { name: 'person.manager', text: 'npc.manager.leave' },
     cleaner: { name: 'person.kim', text: 'npc.cleaner.mop' },
@@ -43,7 +41,25 @@ const STAGE_CLEAR: Record<
         button: 'button.retryStage',
     },
 };
-export function createFeedback(getLocale: () => Locale = () => 'en') {
+export function createFeedback(getLocale: () => Locale = () => 'en'): {
+    receive: (event: GameEvent, state: GameSnapshot) => void;
+    snapshot: () => {
+        reaction: {
+            text: string;
+            life: number;
+            face: string;
+            priority: number;
+        } | null;
+        speech: { text: string; name: string; x: number; life: number } | null;
+        status: string;
+        panel: {
+            k: string;
+            title: string;
+            button: string;
+            desc: string;
+        } | null;
+    };
+} {
     let reaction: (Omit<Reaction, 'text'> & { text: Message }) | null = null;
     let speech:
         | (Omit<Speech, 'text' | 'name'> & { text: Message; name: Message })
@@ -92,7 +108,9 @@ export function createFeedback(getLocale: () => Locale = () => 'en') {
         if (event.type === 'tick' && speech && (speech.life -= event.dt) <= 0) {
             speech = null;
         }
-        if (event.type !== 'cue') return;
+        if (event.type !== 'cue') {
+            return;
+        }
         if (state.stage === 1) {
             const person = event.person;
             switch (event.id) {

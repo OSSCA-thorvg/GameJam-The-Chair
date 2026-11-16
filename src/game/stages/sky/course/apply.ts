@@ -1,11 +1,13 @@
-import { startStage, setPlayer, type CoreState } from '../../../state';
-import type { GameEvent, Input } from '../../../types';
-import { STAGES } from '../../index';
 import { skyStep } from './decide';
 import { FOCUS_DAMAGE } from '../../../level';
+import { startStage, setPlayer } from '../../../state';
 import { applyFocusHit } from '../../../systems/focus/apply';
 import { applyFocusRecovery } from '../../../systems/focus/recovery';
-export function applySky(s: CoreState, out: GameEvent[], dt: number) {
+import { STAGES } from '../../index';
+
+import type { CoreState } from '../../../state';
+import type { GameEvent, Input } from '../../../types';
+export function applySky(s: CoreState, out: GameEvent[], dt: number): void {
     const held = (input: Input) => (s.keys.includes(input) ? 1 : 0);
     const r = skyStep(
         {
@@ -31,14 +33,18 @@ export function applySky(s: CoreState, out: GameEvent[], dt: number) {
     s.checkpoint = r.checkpoint;
     s.extinguisher.burst = r.sprayBurst;
     s.extinguisher.direction = r.sprayDir;
-    if (r.speed !== null) s.actualSpeed = r.speed;
+    if (r.speed !== null) {
+        s.actualSpeed = r.speed;
+    }
     if (r.reached) {
         s.focus.value = 100;
         s.focus.recoveryClock = 0;
         out.push({ type: 'cue', id: 'checkpoint' });
     }
     if (r.hit) {
-        if (r.hit.kind === 'paper') out.push({ type: 'cue', id: 'paper-hit' });
+        if (r.hit.kind === 'paper') {
+            out.push({ type: 'cue', id: 'paper-hit' });
+        }
         const damage =
             r.hit.kind === 'paper'
                 ? FOCUS_DAMAGE.skyPaper
@@ -56,8 +62,12 @@ export function applySky(s: CoreState, out: GameEvent[], dt: number) {
         }
     }
     // Takeover skips shared focus recovery; apply it here.
-    if (s.sky.phase === 'course') applyFocusRecovery(s, dt, false);
-    if (r.fell) s.deaths++;
+    if (s.sky.phase === 'course') {
+        applyFocusRecovery(s, dt, false);
+    }
+    if (r.fell) {
+        s.deaths++;
+    }
     if (r.won) {
         s.completedStage = 4;
         const time = s.time;

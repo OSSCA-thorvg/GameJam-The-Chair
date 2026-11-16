@@ -1,8 +1,12 @@
-import { setPlayer, type CoreState } from '../../../state';
-import type { GameEvent } from '../../../types';
 import { BIN_REST } from './decide';
-export function applyBinFall(s: CoreState, out: GameEvent[]) {
-    if (s.mode !== 'play') return;
+import { setPlayer } from '../../../state';
+
+import type { CoreState } from '../../../state';
+import type { GameEvent } from '../../../types';
+export function applyBinFall(s: CoreState, out: GameEvent[]): void {
+    if (s.mode !== 'play') {
+        return;
+    }
     s.office.inBin = true;
     s.office.dirty = true;
     s.office.binFalls++;

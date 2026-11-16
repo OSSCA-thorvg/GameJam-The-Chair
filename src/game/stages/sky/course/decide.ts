@@ -1,3 +1,4 @@
+import * as Det from '../../../math';
 import {
     STAGE_FOUR,
     skyHazards,
@@ -5,11 +6,10 @@ import {
     skyPlatforms,
     skySurface,
     skyWind,
-    type SkyHazardKind,
-    type SkyState,
 } from '../data';
+
 import type { Player, Point } from '../../../types';
-import * as Det from '../../../math';
+import type { SkyHazardKind, SkyState } from '../data';
 
 // Offset parrot focus IDs to avoid collisions with floating gear IDs.
 const ROBOT_FOCUS_ID = 1_000_000;
@@ -46,9 +46,9 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
     const p = { ...input.p };
     let { ground, coyote, jumpQ, checkpoint, sprayBurst } = input;
     let sprayDir = { ...input.sprayDir };
-    let reached = false,
-        fell = false,
-        won = false;
+    let reached = false;
+    let fell = false;
+    let won = false;
     let hit: SkyResult['hit'] = null;
     const { direction, time } = input;
     const result = (speed: number | null): SkyResult => ({
@@ -113,7 +113,9 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
             sky.lift = Math.min(1, sky.lift + dt * 0.45);
         }
         sky.knock = Math.max(0, sky.knock - dt);
-        if (sky.knock === 0) sky.knockKind = null;
+        if (sky.knock === 0) {
+            sky.knockKind = null;
+        }
         const wind = skyWind(time);
         const targetTilt = -0.12 - (1 - wind) * 1.12;
         sky.signTilt +=
@@ -124,7 +126,9 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
             sky.drawer = Math.min(1, sky.drawer + dt * 1.5);
             const lean = (p.x - 4205) / 135;
             sky.deskTilt += (lean * 0.16 - sky.deskTilt) * Math.min(1, dt * 3);
-        } else sky.deskTilt *= Det.exp(-dt);
+        } else {
+            sky.deskTilt *= Det.exp(-dt);
+        }
         const platforms = skyPlatforms(sky, time);
         const standing = platforms.find(
             (platform) => platform.id === sky.standing,
@@ -221,7 +225,9 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
                 break;
             }
         }
-        if (ground) sky.airSprays = 0;
+        if (ground) {
+            sky.airSprays = 0;
+        }
         if (p.y > STAGE_FOUR.fallY) {
             Object.assign(p, STAGE_FOUR.checkpoints[checkpoint], {
                 vx: 0,
@@ -235,7 +241,9 @@ export function skyStep(input: SkyInput, dt: number): SkyResult {
             sky.airSprays = 0;
             sky.knock = 0;
             sky.knockKind = null;
-            if (checkpoint === 0) sky.phase = 'arrival';
+            if (checkpoint === 0) {
+                sky.phase = 'arrival';
+            }
             sprayBurst = 0.24;
         }
     }

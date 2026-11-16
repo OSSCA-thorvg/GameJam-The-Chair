@@ -5,14 +5,19 @@ export const { createGame, replayCommands, stepGame, applyCommand } =
 
 export function begin(seed, start = {}) {
     const game = createGame({ seed, progress: start.progress });
-    if (start.stage) game.startStage(start.stage);
-    else game.reset();
+    if (start.stage) {
+        game.startStage(start.stage);
+    } else {
+        game.reset();
+    }
     return game;
 }
 
 export function play(game, commands, from, to) {
     let next = commands.findIndex(([tick]) => tick >= from);
-    if (next < 0) next = commands.length;
+    if (next < 0) {
+        next = commands.length;
+    }
     for (let tick = from; tick < to; tick++) {
         while (next < commands.length && commands[next][0] === tick) {
             const [, method, ...args] = commands[next++];
@@ -36,7 +41,9 @@ export function sampleCommands(
     const commands = [[0, 'setInput', 'right']];
     for (let tick = 30; tick < ticks; tick += 75) {
         commands.push([tick, 'jump']);
-        if (spray && tick % 150 === 30) commands.push([tick, 'spray']);
+        if (spray && tick % 150 === 30) {
+            commands.push([tick, 'spray']);
+        }
         commands.push([tick + 20, 'setInput', 'right', tick % 2 ? 'q' : 'e']);
         commands.push([tick + 40, 'setInput', 'right']);
     }
@@ -81,14 +88,22 @@ export function balancePolicy(state, game) {
                 wait = true;
             }
         }
-        if (state.ground && p.x > 1495 && p.x < 1575) game.jump();
+        if (state.ground && p.x > 1495 && p.x < 1575) {
+            game.jump();
+        }
     }
     const correction = -p.a * 12 - p.w * 4;
     const keys = wait ? [] : ['right'];
-    if (correction < -0.4) keys.push('q');
-    if (correction > 0.4) keys.push('e');
+    if (correction < -0.4) {
+        keys.push('q');
+    }
+    if (correction > 0.4) {
+        keys.push('e');
+    }
     game.setInput(...keys);
-    if (state.mode === 'dead' || state.mode === 'won') game.reset();
+    if (state.mode === 'dead' || state.mode === 'won') {
+        game.reset();
+    }
 }
 
 const EXPRESS = { pit: { left: 10650, right: 10990 } };
@@ -98,7 +113,9 @@ const ORIENTATION = [
 ];
 export function orientationHop(state) {
     const p = state.player;
-    if (!state.ground) return false;
+    if (!state.ground) {
+        return false;
+    }
     return ORIENTATION.some((x) => {
         const time = (x - p.x) / Math.max(1, p.vx);
         return time > 0.36 && time < 0.44;
@@ -107,17 +124,27 @@ export function orientationHop(state) {
 export function createExpressRider(stayAboard = false) {
     let off = false;
     return (state, game) => {
-        const p = state.player,
-            { convoy, pace } = state.corridor;
-        if (off) return ['right'];
+        const p = state.player;
+        const { convoy, pace } = state.corridor;
+        if (off) {
+            return ['right'];
+        }
         if (pace !== 'express' && state.stage === 2 && orientationHop(state)) {
             game.jump();
         }
-        if (convoy === 'free') return null;
-        if (pace !== 'express') return [];
-        if (convoy !== 'carried' || !state.ground) return [];
+        if (convoy === 'free') {
+            return null;
+        }
+        if (pace !== 'express') {
+            return [];
+        }
+        if (convoy !== 'carried' || !state.ground) {
+            return [];
+        }
         const toLip = EXPRESS.pit.left - p.x;
-        if (toLip > 0 && toLip < 35) game.jump();
+        if (toLip > 0 && toLip < 35) {
+            game.jump();
+        }
         if (!stayAboard && p.x > EXPRESS.pit.right + 120) {
             game.jump();
             off = true;
@@ -134,13 +161,19 @@ export function corridorPolicy(stayAboard) {
         const p = state.player;
         const correction = -p.a * 12 - p.w * 4;
         const keys = express(state, game) ?? ['right'];
-        if (correction < -0.4) keys.push('q');
-        if (correction > 0.4) keys.push('e');
+        if (correction < -0.4) {
+            keys.push('q');
+        }
+        if (correction > 0.4) {
+            keys.push('e');
+        }
         game.setInput(...keys);
         if (!entered && state.canEnterMeeting) {
             entered = true;
             game.interact();
         }
-        if (state.mode === 'dead') game.reset();
+        if (state.mode === 'dead') {
+            game.reset();
+        }
     };
 }

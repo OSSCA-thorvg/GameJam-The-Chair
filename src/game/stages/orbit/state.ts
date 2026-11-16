@@ -1,4 +1,6 @@
-import { STAGE_FIVE, type OrbitState } from './data';
+import { STAGE_FIVE } from './data';
+
+import type { OrbitState } from './data';
 export type { OrbitState } from './data';
 
 export function createOrbitState(): OrbitState {

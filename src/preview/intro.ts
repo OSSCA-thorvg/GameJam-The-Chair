@@ -1,16 +1,18 @@
-import { createGame, type GameSnapshot } from '../game/game';
+import { createGame } from '../game/game';
 import { FIXED_STEP } from '../game/level';
-import { createEffects } from '../render/effects';
-import { REACTION_LIFE, SPEECH_LIFE } from '../ui/types';
 import { translate } from '../i18n';
+import { FRAME_TIME } from './recording';
+import { createEffects } from '../render/effects';
 import {
     OPENING_BEATS,
     OPENING_DURATION,
     openingFrame,
     openingState,
 } from '../render/scene/opening/timeline';
-import { type PreviewScene } from './types';
-import { FRAME_TIME } from './recording';
+import { REACTION_LIFE, SPEECH_LIFE } from '../ui/types';
+
+import type { PreviewScene } from './types';
+import type { GameSnapshot } from '../game/game';
 
 export function sceneTalk(): PreviewScene {
     const game = createGame();
@@ -19,11 +21,13 @@ export function sceneTalk(): PreviewScene {
     const frames: GameSnapshot[] = [];
     for (let frame = 0; frame * FRAME_TIME <= 4.2; frame++) {
         frames.push(game.getSnapshot());
-        for (let i = 0; i < 2; i++) game.step(FIXED_STEP);
+        for (let i = 0; i < 2; i++) {
+            game.step(FIXED_STEP);
+        }
         game.drainEvents();
     }
-    const REACT = 0.6,
-        SPEAK = 1.4;
+    const REACT = 0.6;
+    const SPEAK = 1.4;
     const managerX =
         frames[0].people.find((person) => person.id === 'manager')?.x ?? 320;
     return {

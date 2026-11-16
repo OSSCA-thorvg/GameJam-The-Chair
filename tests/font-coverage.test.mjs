@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { readFileSync } from 'node:fs';
+import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const { messageTexts, fitGlyphs, SIGN_FONT, LABEL_FONT, SPEECH_FONT, entries } =
@@ -33,16 +34,18 @@ function codepoints(path) {
         if (format === 4) {
             const segs = view.getUint16(sub + 6) / 2;
             for (let s = 0; s < segs; s++) {
-                const end = view.getUint16(sub + 14 + s * 2),
-                    start = view.getUint16(sub + 16 + segs * 2 + s * 2);
-                const delta = view.getInt16(sub + 16 + segs * 4 + s * 2),
-                    rangeAt = sub + 16 + segs * 6 + s * 2,
-                    range = view.getUint16(rangeAt);
+                const end = view.getUint16(sub + 14 + s * 2);
+                const start = view.getUint16(sub + 16 + segs * 2 + s * 2);
+                const delta = view.getInt16(sub + 16 + segs * 4 + s * 2);
+                const rangeAt = sub + 16 + segs * 6 + s * 2;
+                const range = view.getUint16(rangeAt);
                 for (let c = start; c <= end && c !== 0xffff; c++) {
                     const glyph = range
                         ? view.getUint16(rangeAt + range + (c - start) * 2)
                         : (c + delta) & 0xffff;
-                    if (glyph) found.add(c);
+                    if (glyph) {
+                        found.add(c);
+                    }
                 }
             }
         } else if (format === 12) {
@@ -107,7 +110,9 @@ test('every font subset carries the glyphs of the copy it draws in both language
         const missing = new Set();
         for (const text of entries(keys)) {
             for (const c of fitGlyphs(text).replace(/♪/g, '')) {
-                if (c.trim() && !cmap.has(c.codePointAt(0))) missing.add(c);
+                if (c.trim() && !cmap.has(c.codePointAt(0))) {
+                    missing.add(c);
+                }
             }
         }
         assert.deepEqual(

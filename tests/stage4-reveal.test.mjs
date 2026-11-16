@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const {
@@ -278,8 +279,8 @@ test('the crown stays covered by hair throughout the orbit', () => {
     const covers = ([x, y], vertices) => {
         let inside = false;
         for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
-            const a = vertices[i],
-                b = vertices[j];
+            const a = vertices[i];
+            const b = vertices[j];
             if (
                 a[1] > y !== b[1] > y &&
                 x < ((b[0] - a[0]) * (y - a[1])) / (b[1] - a[1]) + a[0]
@@ -320,10 +321,10 @@ test('the rear hair has a swept crown and a tapered nape instead of a rectangula
     endingHair(view, 0);
     const commands = view.commands();
     const vertices = commands.flatMap((command) => command.points);
-    const left = Math.min(...vertices.map(([x]) => x)),
-        right = Math.max(...vertices.map(([x]) => x));
-    const top = Math.min(...vertices.map(([, y]) => y)),
-        bottom = Math.max(...vertices.map(([, y]) => y));
+    const left = Math.min(...vertices.map(([x]) => x));
+    const right = Math.max(...vertices.map(([x]) => x));
+    const top = Math.min(...vertices.map(([, y]) => y));
+    const bottom = Math.max(...vertices.map(([, y]) => y));
     const edge = (x, end) =>
         vertices
             .filter(([px]) => Math.abs(px - x) < (right - left) * 0.08)
@@ -366,8 +367,8 @@ const isArm = (color) =>
 const lensPanes = (commands) =>
     commands.filter((command) => command.fill === '#83c8e4');
 const lensBounds = (pane) => {
-    const xs = pane.points.map(([x]) => x),
-        ys = pane.points.map(([, y]) => y);
+    const xs = pane.points.map(([x]) => x);
+    const ys = pane.points.map(([, y]) => y);
     return {
         left: Math.min(...xs),
         right: Math.max(...xs),
@@ -510,8 +511,8 @@ const bounds = (commands) => {
         ...command.points,
         ...(command.curves ?? []).map((curve) => curve.slice(-2)),
     ]);
-    const xs = points.map(([x]) => x),
-        ys = points.map(([, y]) => y);
+    const xs = points.map(([x]) => x);
+    const ys = points.map(([, y]) => y);
     return {
         left: Math.min(...xs),
         right: Math.max(...xs),
@@ -564,8 +565,8 @@ test('the reveal turns steadily from the side to behind the chair, keeping it ce
             Math.abs((chair.left + chair.right) / 2 - 500) < 30,
             'the chair stays centred',
         );
-        const width = chair.right - chair.left,
-            model = alone.right - alone.left;
+        const width = chair.right - chair.left;
+        const model = alone.right - alone.left;
         assert.ok(
             width <= model * 1.05 && width > model * 0.6,
             `at about the same size (${(width / model).toFixed(2)})`,
@@ -585,8 +586,8 @@ test('the watchers stay out of the flat side view and turn up, without fading, a
         0,
         'nothing in the 2D side view',
     );
-    const early = watch('reveal', settle + turn * 0.3),
-        late = watch('reveal', settle + turn * 0.8);
+    const early = watch('reveal', settle + turn * 0.3);
+    const late = watch('reveal', settle + turn * 0.8);
     assert.ok(
         early.length > 0 && late.length > early.length,
         'more cameras come into view as the turn goes on',
@@ -641,8 +642,8 @@ test('the departure leaves scenery behind before the quiet side view and is seek
         revealFrame('reveal', age).filter(
             (command) => command.layer?.key === 'sky-ending-departure',
         );
-    const start = scenery(0),
-        leaving = scenery(SKY_DEPARTURE * 0.57);
+    const start = scenery(0);
+    const leaving = scenery(SKY_DEPARTURE * 0.57);
     assert.ok(start.length > 0 && leaving.length > 0);
     assert.ok(leaving[0].layer.opacity < start[0].layer.opacity);
     const bounds = (commands) => {

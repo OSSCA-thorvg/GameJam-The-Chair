@@ -1,20 +1,23 @@
-import { translate } from '../../../i18n';
 import { LEVEL } from '../../../game/level';
 import {
     URGENT_VOLLEY_ID,
     urgentPattern,
 } from '../../../game/stages/office/copier/decide';
+import { translate } from '../../../i18n';
+import { SIGN_FONT } from '../../fonts';
+
 import type { DeepReadonly, Paper } from '../../../game/types';
 import type { RenderCtx } from '../../context';
-import { SIGN_FONT } from '../../fonts';
 import type { Vector } from '../../types';
 
-export function urgentCopierDraw(ctx: RenderCtx) {
+export function urgentCopierDraw(ctx: RenderCtx): void {
     const c = ctx.urgentCopier;
-    const F = ctx.F,
-        t = ctx.t,
-        x = c.x;
-    if (x < ctx.cam - 200 || x > ctx.cam + ctx.VW + 200) return;
+    const F = ctx.F;
+    const t = ctx.t;
+    const x = c.x;
+    if (x < ctx.cam - 200 || x > ctx.cam + ctx.VW + 200) {
+        return;
+    }
     const scanning = c.scan > 0;
     const firing = c.burst > 0 && !scanning;
     const awake = scanning || firing;
@@ -24,7 +27,9 @@ export function urgentCopierDraw(ctx: RenderCtx) {
     const bx = x + shake;
 
     ctx.ellipse(x + 4, F - 4, 86, 6, '#515c6d60');
-    for (const wx of [-58, 58]) ctx.ellipse(bx + wx, F - 7, 7, 7, '#2c333f');
+    for (const wx of [-58, 58]) {
+        ctx.ellipse(bx + wx, F - 7, 7, 7, '#2c333f');
+    }
     ctx.gradientPolygon(
         [
             [bx - 74, F - 172],
@@ -60,7 +65,9 @@ export function urgentCopierDraw(ctx: RenderCtx) {
             ? ctx.tint('#ffb347', 0.4 + glow * 0.6)
             : '#4b5463',
     );
-    for (const sx of [-30, -6]) ctx.rect(bx + sx, F - 76, 14, 4, '#9aa2ae');
+    for (const sx of [-30, -6]) {
+        ctx.rect(bx + sx, F - 76, 14, 4, '#9aa2ae');
+    }
 
     const lid = scanning ? Math.min(1, progress * 4) * 0.35 : 0;
     ctx.rect(bx - 70, F - 186, 140, 14, '#d9d7cc');
@@ -122,8 +129,8 @@ export function urgentCopierDraw(ctx: RenderCtx) {
                 bx + Math.cos(a) * reach,
                 lampY + Math.sin(a) * reach * 0.35,
             ];
-            const nx = -Math.sin(a) * 26,
-                ny = Math.cos(a) * 26 * 0.35;
+            const nx = -Math.sin(a) * 26;
+            const ny = Math.cos(a) * 26 * 0.35;
             ctx.gradientPolygon(
                 [
                     [bx, lampY],
@@ -248,7 +255,7 @@ function speechBurst(
 export function urgentPapersDraw(
     ctx: RenderCtx,
     papers: ReadonlyArray<DeepReadonly<Paper>>,
-) {
+): void {
     const flying = papers.filter(
         (z) => z.volley >= URGENT_VOLLEY_ID && !z.landed && z.kind === 'sheet',
     );
@@ -258,13 +265,20 @@ export function urgentPapersDraw(
             key: 'urgent-sheets',
             motionBlur: { distance: 12, angle: dir },
         });
-        for (const z of flying) sheet(ctx, z);
+        for (const z of flying) {
+            sheet(ctx, z);
+        }
         ctx.endLayer();
     }
     for (const z of papers) {
-        if (z.volley < URGENT_VOLLEY_ID) continue;
-        if (z.kind === 'bundle') bundle(ctx, z);
-        else if (z.landed) sheet(ctx, z);
+        if (z.volley < URGENT_VOLLEY_ID) {
+            continue;
+        }
+        if (z.kind === 'bundle') {
+            bundle(ctx, z);
+        } else if (z.landed) {
+            sheet(ctx, z);
+        }
     }
 }
 
@@ -286,6 +300,8 @@ function bundle(ctx: RenderCtx, z: DeepReadonly<Paper>) {
         ctx.rect(-22 + i, -14 + i * 3, 44, 18, i === 0 ? '#fbf6e8' : '#ddd6c2');
     }
     ctx.rect(-22, -14, 44, 5, '#e0503f');
-    for (const sx of [-14, 10]) ctx.rect(sx, -12, 6, 2, '#8a93a0');
+    for (const sx of [-14, 10]) {
+        ctx.rect(sx, -12, 6, 2, '#8a93a0');
+    }
     ctx.ox = ctx.oy = ctx.rotation = 0;
 }

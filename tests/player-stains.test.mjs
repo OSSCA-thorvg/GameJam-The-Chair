@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const { createRenderCtx, riderStains, MAX_STAIN_LAYERS } = await loadSource(`

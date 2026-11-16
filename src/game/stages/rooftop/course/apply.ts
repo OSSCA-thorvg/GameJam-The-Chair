@@ -1,11 +1,15 @@
-import { setPlayer, type CoreState } from '../../../state';
-import type { GameEvent } from '../../../types';
 import { entranceStep, flightStep, graphRideStep, rooftopStep } from './decide';
-import * as Det from '../../../math';
 import { FOCUS_DAMAGE } from '../../../level';
+import * as Det from '../../../math';
+import { setPlayer } from '../../../state';
 import { applyFocusHit } from '../../../systems/focus/apply';
-export function applyRooftopEntrance(s: CoreState, dt: number) {
-    if (s.rooftop.entrance.kind !== 'opening') return false;
+
+import type { CoreState } from '../../../state';
+import type { GameEvent } from '../../../types';
+export function applyRooftopEntrance(s: CoreState, dt: number): boolean {
+    if (s.rooftop.entrance.kind !== 'opening') {
+        return false;
+    }
     const r = entranceStep(s.rooftop.entrance, dt);
     s.rooftop.entrance = r.entrance;
     setPlayer(s, r.pose);
@@ -17,7 +21,7 @@ export function applyRooftopEntrance(s: CoreState, dt: number) {
     return true;
 }
 
-export function applyRooftop(s: CoreState, out: GameEvent[], dt: number) {
+export function applyRooftop(s: CoreState, out: GameEvent[], dt: number): void {
     const r = rooftopStep(
         {
             p: s.p,
@@ -65,7 +69,9 @@ export function applyFlight(
     dt: number,
 ): false | 'flight' | 'arrived' {
     const flight = s.rooftop.flight;
-    if (flight.kind === 'course') return false;
+    if (flight.kind === 'course') {
+        return false;
+    }
     if (flight.kind === 'ride') {
         const r = graphRideStep(flight, s.p, dt);
         s.rooftop.flight = r.flight;

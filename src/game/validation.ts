@@ -1,5 +1,5 @@
-import type { CoreState } from './state';
 import { STAGES } from './stages';
+import { office, building, rooftop, sky, orbit } from './stages/validation';
 import {
     exactFields,
     record,
@@ -15,7 +15,8 @@ import {
     person,
     impact,
 } from './validation/primitives';
-import { office, building, rooftop, sky, orbit } from './stages/validation';
+
+import type { CoreState } from './state';
 
 const STAGE_IDS = Object.values(STAGES).map((stage) => stage.id);
 const MAX_CHECKPOINT = Math.max(

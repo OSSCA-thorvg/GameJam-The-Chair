@@ -1,6 +1,7 @@
+import { WATER_GRAVITY, bucketMouth, pourLaunch } from '../../bucket';
+
 import type { RenderCtx } from '../../context';
 import type { Curve, PathCommand, Vector } from '../../types';
-import { WATER_GRAVITY, bucketMouth, pourLaunch } from '../../bucket';
 
 type Path = { start: Vector; curves: Curve[] };
 
@@ -63,7 +64,9 @@ export type PuddleShape = {
 
 export function puddleShape(ctx: RenderCtx): PuddleShape | null {
     const cleaning = ctx.cleaning;
-    if (!cleaning.spilled) return null;
+    if (!cleaning.spilled) {
+        return null;
+    }
     const landed = ctx.waterPuddle;
     const zone = smooth(ctx.clamp((cleaning.age - 0.45) / 1.3, 0, 1));
     const zoneLeft = cleaning.x + zone * (cleaning.a - cleaning.x);
@@ -78,7 +81,9 @@ export function puddleShape(ctx: RenderCtx): PuddleShape | null {
         left = Math.min(left, zoneLeft);
         right = Math.max(right, zoneRight);
     }
-    if (!(right - left > 4)) return null;
+    if (!(right - left > 4)) {
+        return null;
+    }
     const wet = Math.max(landed?.wet ?? 0, zone);
     const cx = (left + right) / 2;
     const cy = ctx.F + 3;
@@ -113,7 +118,7 @@ export function drawPuddle(
     ctx: RenderCtx,
     shape: PuddleShape,
     reflect: () => void,
-) {
+): void {
     const { cx, cy, rx, ry, outline, clip } = shape;
     ctx.beginLayer({ key: 'puddle-wet', blend: 'multiply' });
     ctx.effectPath(
@@ -213,7 +218,9 @@ function sheets(ctx: RenderCtx, age: number): Sheet[] {
         const launch = pourLaunch(x, ctx.F, side, te);
         if (launch.flow < 0.1) {
             flush(false);
-            if (s >= span) break;
+            if (s >= span) {
+                break;
+            }
             continue;
         }
         const vx = launch.vx;
@@ -226,11 +233,15 @@ function sheets(ctx: RenderCtx, age: number): Sheet[] {
         const landedHere = p[1] >= floor;
         if (landedHere) {
             const prev = current.at(-1);
-            if (!prev) break;
+            if (!prev) {
+                break;
+            }
             const k = (floor - prev.p[1]) / (p[1] - prev.p[1]);
             p = [prev.p[0] + (p[0] - prev.p[0]) * k, floor];
         }
-        if (!current.length) attached = i === 0;
+        if (!current.length) {
+            attached = i === 0;
+        }
         const neck = ctx.clamp(
             Math.sqrt(Math.hypot(launch.vx, launch.vy) / speed),
             0.5,
@@ -247,7 +258,9 @@ function sheets(ctx: RenderCtx, age: number): Sheet[] {
             flush(true);
             return result;
         }
-        if (s >= span) break;
+        if (s >= span) {
+            break;
+        }
     }
     flush(false);
     return result;
@@ -263,11 +276,15 @@ function sheetOutline(
     const right: Vector[] = [];
     pts.forEach((q, i) => {
         let w = q.w;
-        if (!sheet.attached) w *= smooth(Math.min(1, (i + 0.3) / 3));
+        if (!sheet.attached) {
+            w *= smooth(Math.min(1, (i + 0.3) / 3));
+        }
         if (!sheet.landed) {
             w *= 0.55 + 0.45 * smooth(Math.min(1, (n - 1 - i) / 3));
         }
-        if (sheet.landed && i === n - 1) w *= 1.35;
+        if (sheet.landed && i === n - 1) {
+            w *= 1.35;
+        }
         const nx = -q.dir[1];
         const ny = q.dir[0];
         left.push([q.p[0] + nx * w, q.p[1] + ny * w]);
@@ -304,7 +321,7 @@ function sheetOutline(
     };
 }
 
-export function drawPour(ctx: RenderCtx) {
+export function drawPour(ctx: RenderCtx): void {
     const cleaning = ctx.cleaning;
     const age = ctx.state.bucketAge;
     const side = cleaning.splashDir;
@@ -329,7 +346,9 @@ export function drawPour(ctx: RenderCtx) {
                 dy += q.dir[1];
             }
         }
-        if (!curtains.length) [dx, dy] = mouth.out;
+        if (!curtains.length) {
+            [dx, dy] = mouth.out;
+        }
         const shapes = curtains.map((c) => ({
             sheet: c,
             ...sheetOutline(c, age),
@@ -448,7 +467,9 @@ export function drawPour(ctx: RenderCtx) {
                 mask,
             });
             for (const { sheet } of shapes) {
-                if (sheet.points.length < 3) continue;
+                if (sheet.points.length < 3) {
+                    continue;
+                }
                 const edge = sheet.points.map(
                     (q) =>
                         [

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { bundled } from './support/load.mjs';
 
 const sys = await bundled({
@@ -147,7 +148,9 @@ test('the copier aims, waits, then fires a four-sheet burst; the first shot is h
     for (let i = 0; i < 200; i++) {
         const r = sys.copierStep(state.copier, 500, true, 1 / 120);
         state = r;
-        if (r.fire) shots++;
+        if (r.fire) {
+            shots++;
+        }
     }
     assert.equal(state.copier.volley, 1);
     assert.equal(state.copier.dir, -1);
@@ -240,10 +243,10 @@ test('a chair falling onto the slumping sales graph rides it up and climbs to th
             .firstFlight.kind,
         'course',
     );
-    let flight = caught,
-        p = base.p,
-        top = Infinity,
-        right = 0;
+    let flight = caught;
+    let p = base.p;
+    let top = Infinity;
+    let right = 0;
     for (let i = 0; i < 120 * 10 && flight.kind === 'ride'; i++) {
         const r = sys.graphRideStep(flight, p, 1 / 120);
         assert.ok(
@@ -564,7 +567,9 @@ test('the executive printer scans before every urgent volley and follows a fixed
     for (let i = 1; i < 240 && firstShot === null; i++) {
         r = sys.urgentCopierStep(c, c.x - 300, dt);
         c = r.copier;
-        if (r.fire) firstShot = i * dt;
+        if (r.fire) {
+            firstShot = i * dt;
+        }
     }
     assert.ok(
         firstShot >= 0.6 - dt && firstShot < 0.62,
@@ -573,11 +578,11 @@ test('the executive printer scans before every urgent volley and follows a fixed
 });
 
 test('urgent sheets: skimming ones need a jump, a stapled bundle shoves the chair back', () => {
-    const F = 420,
-        dt = 1 / 120;
+    const F = 420;
+    const dt = 1 / 120;
     const flyAt = (papers, chair) => {
-        let list = papers,
-            hits = [];
+        let list = papers;
+        let hits = [];
         for (let i = 0; i < 240 && !hits.length; i++) {
             ({ papers: list, hits } = sys.papersStep(
                 list,

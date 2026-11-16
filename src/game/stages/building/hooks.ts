@@ -1,6 +1,3 @@
-import type { StageHooks } from '../types';
-import { STAGE_TWO } from './data';
-import { inOrientation } from './corridor/decide';
 import {
     meetingReachable,
     applyConvoyLanding,
@@ -10,6 +7,10 @@ import {
     applyLiftRide,
     applyMeeting,
 } from './corridor/apply';
+import { inOrientation } from './corridor/decide';
+import { STAGE_TWO } from './data';
+
+import type { StageHooks } from '../types';
 
 export const buildingHooks: StageHooks = {
     takeover(s, out, dt) {
@@ -70,7 +71,9 @@ export const buildingHooks: StageHooks = {
     canJump: (s) => s.building.corridor.room.kind === 'corridor',
     interact: (s) => applyInteract(s),
     leave: (s) => {
-        if (s.mode === 'play') applyLeaveMeeting(s);
+        if (s.mode === 'play') {
+            applyLeaveMeeting(s);
+        }
     },
     canInteract: (s) => meetingReachable(s),
 };

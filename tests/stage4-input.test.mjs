@@ -1,8 +1,9 @@
-import { installInputEnvironment, inputButton } from './support/input.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { driveStageFour } from './support/stage4-route.mjs';
+
+import { installInputEnvironment, inputButton } from './support/input.mjs';
 import { bundled } from './support/load.mjs';
+import { driveStageFour } from './support/stage4-route.mjs';
 const { createGame, bindInput } = await bundled({
     stdin: {
         contents: `export { createGame } from './src/game/game'; export { bindInput } from './src/ui/input';`,
@@ -16,17 +17,21 @@ const { createGame, bindInput } = await bundled({
 
 test('stage 4 ending completes automatically and gameplay buttons do not change its depth', async (t) => {
     const { key } = installInputEnvironment(t);
-    const jumpButton = inputButton(),
-        backButton = inputButton();
+    const jumpButton = inputButton();
+    const backButton = inputButton();
     const game = createGame();
     game.startStage(4);
     const reached = {};
     try {
         driveStageFour(game, (state) => {
-            if (state.sky.phase === 'depth') throw reached;
+            if (state.sky.phase === 'depth') {
+                throw reached;
+            }
         });
     } catch (e) {
-        if (e !== reached) throw e;
+        if (e !== reached) {
+            throw e;
+        }
     }
     game.clearInput();
     const root = {
@@ -42,7 +47,9 @@ test('stage 4 ending completes automatically and gameplay buttons do not change 
     const unbind = bindInput(root, game);
     const depthAfter = (frames = 30) => {
         const before = game.getSnapshot().sky.depth;
-        for (let i = 0; i < frames; i++) game.step(1 / 120);
+        for (let i = 0; i < frames; i++) {
+            game.step(1 / 120);
+        }
         return game.getSnapshot().sky.depth - before;
     };
     try {

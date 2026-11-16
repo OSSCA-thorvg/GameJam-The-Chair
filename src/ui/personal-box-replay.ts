@@ -1,13 +1,17 @@
-import { createCursor, type Timeline } from '../game/replay';
-import {
-    createPersonalBoxObserver,
-    type PersonalBoxReaction,
-} from '../render/personal-box-motion';
+import { createCursor } from '../game/replay';
+import { createPersonalBoxObserver } from '../render/personal-box-motion';
 
-export function buildPersonalBoxTrack(timeline: Timeline) {
+import type { Timeline } from '../game/replay';
+import type { PersonalBoxReaction } from '../render/personal-box-motion';
+
+export function buildPersonalBoxTrack(
+    timeline: Timeline,
+): Array<{ tick: number; reaction: PersonalBoxReaction }> {
     const observer = createPersonalBoxObserver();
     const entries: Array<{ tick: number; reaction: PersonalBoxReaction }> = [];
-    if (timeline.file.start.stage !== 3) return entries;
+    if (timeline.file.start.stage !== 3) {
+        return entries;
+    }
     const cursor = createCursor({
         ...timeline.file,
         endTick: timeline.endTick,
@@ -43,7 +47,9 @@ export function personalBoxAt(
 ): PersonalBoxReaction {
     let reaction: PersonalBoxReaction = { kind: 'idle' };
     for (const entry of entries) {
-        if (entry.tick > tick) break;
+        if (entry.tick > tick) {
+            break;
+        }
         reaction = entry.reaction;
     }
     return reaction;

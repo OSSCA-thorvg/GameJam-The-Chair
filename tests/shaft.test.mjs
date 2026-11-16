@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { driveStageThree } from './support/stage3-route.mjs';
+
 import { bundled } from './support/load.mjs';
+import { driveStageThree } from './support/stage3-route.mjs';
 
 const {
     createGame,
@@ -50,7 +51,9 @@ function rooftop(
 
 function firstTime(vent, kind) {
     for (let t = 0; t < vent.period; t += dt) {
-        if (ventPhase(vent, t).kind === kind) return t + dt;
+        if (ventPhase(vent, t).kind === kind) {
+            return t + dt;
+        }
     }
     throw new Error(`vent never ${kind}`);
 }
@@ -69,13 +72,15 @@ test('the shaft has no open column: holding spray straight up never gets past th
         game.restore(start);
         for (let i = 0; i < 1200; i++) {
             const s = game.getSnapshot();
-            if (Math.abs(s.player.x - x) < 15 && s.ground) break;
+            if (Math.abs(s.player.x - x) < 15 && s.ground) {
+                break;
+            }
             game.setInput(s.player.x < x ? 'right' : 'left');
             game.step(dt);
         }
         game.setInput('spray');
-        let top = Infinity,
-            higher = null;
+        let top = Infinity;
+        let higher = null;
         for (let i = 0; i < 120 * 10; i++) {
             game.step(dt);
             game.drainEvents();
@@ -121,7 +126,9 @@ test('an awake duct gusts on its own and knocks a rider in front of it', () => {
         i++
     ) {
         const r = rooftopStep(input, dt);
-        if (r.p.vx < 0 && knocked === null) knocked = i * dt;
+        if (r.p.vx < 0 && knocked === null) {
+            knocked = i * dt;
+        }
         input = {
             ...input,
             p: r.p,

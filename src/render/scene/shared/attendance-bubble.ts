@@ -1,8 +1,10 @@
-import { translate, type Message } from '../../../i18n';
+import { translate } from '../../../i18n';
+import { SPEECH_FONT } from '../../fonts';
+import { PathBuilder, push } from '../opening/shapes';
+
+import type { Message } from '../../../i18n';
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-import { PathBuilder, push } from '../opening/shapes';
-import { SPEECH_FONT } from '../../fonts';
 
 export const ATTENDANCE = {
     lead: 1.2,
@@ -43,15 +45,17 @@ export function attendanceBubble(
     anchor: Vector,
     age: number,
     message: Message = 'orbit.attendance',
-) {
-    if (age < 0 || age > ATTENDANCE.fade + ATTENDANCE.out) return;
+): void {
+    if (age < 0 || age > ATTENDANCE.fade + ATTENDANCE.out) {
+        return;
+    }
     const alpha = 1 - ctx.clamp((age - ATTENDANCE.fade) / ATTENDANCE.out, 0, 1);
     const size = ctx.clamp(ctx.W / 46, 13, 20);
     const text = translate(message, ctx.locale);
     const measure = (line: string) => ctx.measureText(line, size, SPEECH_FONT);
-    const w = measure(text) + size * 1.8,
-        h = size * 2.5,
-        gap = size * 0.9;
+    const w = measure(text) + size * 1.8;
+    const h = size * 2.5;
+    const gap = size * 0.9;
     const x = ctx.clamp(anchor[0] - w / 2, 10, Math.max(10, ctx.W - 10 - w));
     const y = ctx.clamp(anchor[1] - gap - h, 10, Math.max(10, ctx.H - 10 - h));
     const scale = 0.45 + 0.55 * easeOutBack(Math.min(1, age / 0.22));

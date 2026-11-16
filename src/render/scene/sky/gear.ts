@@ -1,4 +1,6 @@
-import { STAGE_FOUR, type SkyHazard } from '../../../game/stages/sky/data';
+import { STAGE_FOUR } from '../../../game/stages/sky/data';
+
+import type { SkyHazard } from '../../../game/stages/sky/data';
 import type { RenderCtx } from '../../context';
 
 const G = {
@@ -58,8 +60,12 @@ function monitor(ctx: RenderCtx, h: SkyHazard) {
             [1, '#2f5590'],
         ]),
     );
-    for (let y = -7; y < 8; y += 4) ctx.rod(-14, y, 14, y, 0.5, '#ffffff55');
-    for (let x = -8; x < 17; x += 8) ctx.rod(x, -10, x, 8, 0.5, '#ffffff55');
+    for (let y = -7; y < 8; y += 4) {
+        ctx.rod(-14, y, 14, y, 0.5, '#ffffff55');
+    }
+    for (let x = -8; x < 17; x += 8) {
+        ctx.rod(x, -10, x, 8, 0.5, '#ffffff55');
+    }
     ctx.polygon(
         [
             [-16, -10],
@@ -213,8 +219,10 @@ function tower(ctx: RenderCtx, h: SkyHazard) {
 
 const ART = { monitor, keyboard, mouse, tower };
 
-export function skyGearArt(ctx: RenderCtx, gear: readonly SkyHazard[]) {
-    if (!gear.length) return;
+export function skyGearArt(ctx: RenderCtx, gear: readonly SkyHazard[]): void {
+    if (!gear.length) {
+        return;
+    }
     ctx.beginLayer({ key: 'sky-office-gear' });
     for (const h of gear) {
         ctx.ox = h.x;
@@ -228,9 +236,11 @@ export function skyGearArt(ctx: RenderCtx, gear: readonly SkyHazard[]) {
     ctx.endLayer();
 }
 
-export function skyKnockKeycaps(ctx: RenderCtx) {
+export function skyKnockKeycaps(ctx: RenderCtx): void {
     const sky = ctx.state.sky;
-    if (sky.knockKind !== 'gear' || sky.knock <= 0) return;
+    if (sky.knockKind !== 'gear' || sky.knock <= 0) {
+        return;
+    }
     const age = 1 - sky.knock / STAGE_FOUR.knock.cooldown;
     const fade = 1 - age;
     ctx.beginLayer({ key: 'sky-gear-spark', blend: 'add', opacity: fade });

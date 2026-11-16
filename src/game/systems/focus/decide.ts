@@ -33,7 +33,9 @@ export function focusAfterHit(
     hit: FocusHit,
 ): (FocusState & { lost: boolean }) | null {
     const token = hit.kind + ':' + hit.id;
-    if (f.processedEvents.includes(token)) return null;
+    if (f.processedEvents.includes(token)) {
+        return null;
+    }
     const value = Math.max(0, f.value - hit.damage);
     return {
         value,
@@ -50,7 +52,9 @@ export function focusRecovery(
     dt: number,
 ): Pick<FocusState, 'value' | 'recoveryClock' | 'notice'> {
     let notice = f.notice ? { ...f.notice, life: f.notice.life - dt } : null;
-    if (notice && notice.life <= 0) notice = null;
+    if (notice && notice.life <= 0) {
+        notice = null;
+    }
     if (blocked || f.value >= 100) {
         return { value: f.value, recoveryClock: 0, notice };
     }
@@ -64,7 +68,10 @@ export function focusRecovery(
     return { value, recoveryClock, notice };
 }
 
-export function focusLossStep(time: number, dt: number) {
+export function focusLossStep(
+    time: number,
+    dt: number,
+): { time: number; over: boolean } {
     const next = time + dt;
     return { time: next, over: next >= FOCUS_LOSS_DURATION };
 }

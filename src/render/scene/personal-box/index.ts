@@ -1,8 +1,9 @@
-import type { RenderCtx } from '../../context';
-import { PERSONAL_BOX, personalBoxPose } from '../../personal-box-motion';
 import { personalBoxBadge } from './badge';
+import { PERSONAL_BOX, personalBoxPose } from '../../personal-box-motion';
 
-export function personalBox(ctx: RenderCtx) {
+import type { RenderCtx } from '../../context';
+
+export function personalBox(ctx: RenderCtx): void {
     const { ox, oy, rotation, localScale } = ctx;
     ctx.ox = PERSONAL_BOX.x;
     ctx.oy = PERSONAL_BOX.y;
@@ -168,8 +169,8 @@ function mug(ctx: RenderCtx) {
 
 function plant(ctx: RenderCtx) {
     const pose = personalBoxPose(ctx.personalBox, ctx.t);
-    const tipX = 95 + Math.sin(pose.bend) * 34,
-        tipY = -24 - Math.cos(pose.bend) * 34;
+    const tipX = 95 + Math.sin(pose.bend) * 34;
+    const tipY = -24 - Math.cos(pose.bend) * 34;
     ctx.strokePath([94, -23], [[94, -32, tipX, -44, tipX, tipY]], {
         width: 2,
         color: '#617e72',

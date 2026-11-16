@@ -1,16 +1,17 @@
-import { LEVEL } from '../../../game/level';
-import { ART } from '../../art';
-import { playerChair } from './chair';
 import { PLAYER_OUTLINES } from './art';
+import { playerChair } from './chair';
 import {
     chairStains,
     riderFaceStains,
     riderSplash,
     riderStains,
 } from './stains';
+import { LEVEL } from '../../../game/level';
+import { ART } from '../../art';
+
 import type { RenderCtx } from '../../context';
 
-export function player(ctx: RenderCtx) {
+export function player(ctx: RenderCtx): void {
     const p = ctx.player;
     const state = ctx.state;
     ctx.ox = p.x + ART.player.offsetX;
@@ -43,7 +44,9 @@ export function player(ctx: RenderCtx) {
 
 function chairAfterimages(ctx: RenderCtx) {
     const shiver = ctx.chairPose.shiver;
-    if (shiver <= 0) return;
+    if (shiver <= 0) {
+        return;
+    }
     const base = { ox: ctx.ox, oy: ctx.oy };
     ctx.beginLayer({ key: 'opening-chair-afterimage', opacity: 0.5 * shiver });
     for (const side of [-1, 1]) {
@@ -75,8 +78,8 @@ function focusTension(ctx: RenderCtx) {
 
 function shiftLocal(ctx: RenderCtx, dx: number, dy: number) {
     const k = ctx.localScale;
-    const c = Math.cos(ctx.rotation),
-        s = Math.sin(ctx.rotation);
+    const c = Math.cos(ctx.rotation);
+    const s = Math.sin(ctx.rotation);
     ctx.ox += (dx * c - dy * s) * k;
     ctx.oy += (dx * s + dy * c) * k;
 }
@@ -388,8 +391,10 @@ function riderEffects(ctx: RenderCtx) {
     }
 }
 
-export function debugCollisions(ctx: RenderCtx) {
-    if (!ART.debugCollisions) return;
+export function debugCollisions(ctx: RenderCtx): void {
+    if (!ART.debugCollisions) {
+        return;
+    }
     ctx.ox = ctx.player.x;
     ctx.oy = ctx.player.y;
     ctx.rotation = ctx.player.a;

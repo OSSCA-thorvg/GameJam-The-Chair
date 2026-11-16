@@ -1,7 +1,8 @@
-import type { RenderCtx } from '../../context';
-import type { Vector } from '../../types';
 import { LABEL_FONT } from '../../fonts';
 import { PathBuilder, push } from '../opening/shapes';
+
+import type { RenderCtx } from '../../context';
+import type { Vector } from '../../types';
 
 export type KeyFace = 'left' | 'right' | 'up' | { text: string };
 
@@ -23,7 +24,11 @@ function keyPath([x, y]: Vector, w: number, h: number, r: number) {
         .corner(x, y, x + r, y);
 }
 
-export function keycapSize(ctx: RenderCtx, face: KeyFace, size: number) {
+export function keycapSize(
+    ctx: RenderCtx,
+    face: KeyFace,
+    size: number,
+): { w: number; h: number; depth: number } {
     const h = size * 1.9;
     const w =
         typeof face === 'string'
@@ -32,12 +37,15 @@ export function keycapSize(ctx: RenderCtx, face: KeyFace, size: number) {
     return { w, h, depth: size * 0.35 };
 }
 
-export function keycapPress(age: number) {
+export function keycapPress(age: number): 1 | 0 {
     const beat = (age * 1.1) % 1;
     return beat < 0.1 || (beat > 0.2 && beat < 0.3) ? 1 : 0;
 }
 
-export function keycapPop(age: number, pop = 0.25) {
+export function keycapPop(
+    age: number,
+    pop = 0.25,
+): { alpha: number; scale: number } {
     const u = Math.max(0, Math.min(1, age / pop));
     return { alpha: u, scale: 1 + 0.25 * Math.sin(u * Math.PI) };
 }
@@ -59,8 +67,8 @@ function arrow(
         [0.05, 0.12],
         [-0.5, 0.12],
     ];
-    const c = Math.cos(angle),
-        sn = Math.sin(angle);
+    const c = Math.cos(angle);
+    const sn = Math.sin(angle);
     const [first, ...rest] = shape.map(([x, y]): Vector => [
         cx + (x * c - y * sn) * s,
         cy + (x * sn + y * c) * s,
@@ -79,10 +87,10 @@ export function keycap(
     size: number,
     alpha: number,
     press: number,
-) {
+): void {
     const { w, h, depth } = keycapSize(ctx, face, size);
-    const [x, y] = at,
-        top = y + depth * press;
+    const [x, y] = at;
+    const top = y + depth * press;
     push(
         ctx,
         keyPath([x, y + depth], w, h, size * 0.45).command(

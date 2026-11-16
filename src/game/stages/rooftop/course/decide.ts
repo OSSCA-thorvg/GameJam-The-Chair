@@ -1,4 +1,5 @@
-import type { Player } from '../../../types';
+import * as Det from '../../../math';
+import { STAGE_FOUR } from '../../sky/data';
 import {
     GRAPH_LENGTH,
     STAGE_THREE,
@@ -7,10 +8,10 @@ import {
     graphPointAt,
     inVentBlast,
     ventPhase,
-    type DuctBurst,
 } from '../data';
-import { STAGE_FOUR } from '../../sky/data';
-import * as Det from '../../../math';
+
+import type { Player } from '../../../types';
+import type { DuctBurst } from '../data';
 
 export type RooftopEntrance =
     { kind: 'opening'; age: number } | { kind: 'ready' };
@@ -98,8 +99,11 @@ export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
             index * 100000 +
                 Math.floor((input.time - vent.offset) / vent.period),
         );
-        if (vent.axis === 'x') p.vx += vent.dir * vent.force * dt;
-        else p.vy += vent.dir * vent.force * dt;
+        if (vent.axis === 'x') {
+            p.vx += vent.dir * vent.force * dt;
+        } else {
+            p.vy += vent.dir * vent.force * dt;
+        }
     }
     const ground = duct.knocked ? false : input.ground;
     const pickup =

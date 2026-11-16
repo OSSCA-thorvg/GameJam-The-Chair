@@ -1,20 +1,17 @@
+import { runCommand, spray } from './commands';
 import { FIXED_STEP, PHYSICS } from './level';
-import type { DeepReadonly, GameEvent, Mode, Point } from './types';
-import {
-    cloneState,
-    resetAttempt,
-    setPlayer,
-    snapshot,
-    type CoreState,
-} from './state';
-import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages/index';
-import { stageHooks } from './stages/hooks';
-import { runCommand, spray, type Command } from './commands';
+import * as Det from './math';
 import { collide, drivePlayer, fellOffFloor } from './physics';
+import { stageHooks } from './stages/hooks';
+import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages/index';
+import { cloneState, resetAttempt, setPlayer, snapshot } from './state';
 import { applyFocusLoss } from './systems/focus/apply';
 import { applyFocusRecovery } from './systems/focus/recovery';
 import { applyHeadHit, applyImpact } from './systems/impact/apply';
-import * as Det from './math';
+
+import type { Command } from './commands';
+import type { CoreState } from './state';
+import type { DeepReadonly, GameEvent, Mode, Point } from './types';
 
 export const SIMULATED: readonly Mode[] = ['play', 'impact', 'focuslost'];
 
@@ -26,7 +23,9 @@ export function stepGame(
 ): StepResult {
     const s = cloneState(state);
     const events: GameEvent[] = [];
-    for (const command of commands) runCommand(s, command, events);
+    for (const command of commands) {
+        runCommand(s, command, events);
+    }
     advanceMode(s, events);
     return { state: s, events };
 }
@@ -97,17 +96,25 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
     const hooks = stageHooks(s.stage);
     const stage = STAGES[s.stage];
     s.history.push(snapshot(s));
-    if (s.history.length > 60) s.history.shift();
+    if (s.history.length > 60) {
+        s.history.shift();
+    }
     s.time += dt;
     s.rollCooldown = Math.max(0, s.rollCooldown - dt);
     s.reverseCooldown = Math.max(0, s.reverseCooldown - dt);
     s.extinguisher.cooldown = Math.max(0, s.extinguisher.cooldown - dt);
     s.extinguisher.burst = Math.max(0, s.extinguisher.burst - dt);
     hooks.timers?.(s, dt);
-    if (s.keys.includes('spray')) spray(s, out);
+    if (s.keys.includes('spray')) {
+        spray(s, out);
+    }
     out.push({ type: 'tick', dt });
-    if (hooks.takeover?.(s, out, dt)) return;
-    if (hooks.hazards && !hooks.hazards(s, out, dt)) return;
+    if (hooks.takeover?.(s, out, dt)) {
+        return;
+    }
+    if (hooks.hazards && !hooks.hazards(s, out, dt)) {
+        return;
+    }
 
     const p = s.p;
     const was = s.ground;
@@ -118,7 +125,9 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
     s.jumpQ = Math.max(0, s.jumpQ - dt);
     hooks.beforeDrive?.(s, out, was);
     if (s.jumpQ > 0 && s.coyote > 0) {
-        if (p.x < PHYSICS.upright.tutorialUntilX) s.practiceJump = true;
+        if (p.x < PHYSICS.upright.tutorialUntilX) {
+            s.practiceJump = true;
+        }
         p.vy = -PHYSICS.jump.speed;
         p.w -= inputDir * PHYSICS.jump.spin;
         s.ground = false;
@@ -153,7 +162,9 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
             dt,
         ),
     );
-    if (hooks.afterMove?.(s, out, dt, prev)) return;
+    if (hooks.afterMove?.(s, out, dt, prev)) {
+        return;
+    }
     const hit = collide(p, stageSolids(s));
     setPlayer(s, hit.p);
     s.ground = hit.ground;
@@ -162,8 +173,12 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
         return;
     }
     hooks.afterCollide?.(s, out, dt, prev);
-    if (s.mode !== 'play') return;
-    if (hooks.checkpointsOpen?.(s) ?? true) reachCheckpoints(s, out);
+    if (s.mode !== 'play') {
+        return;
+    }
+    if (hooks.checkpointsOpen?.(s) ?? true) {
+        reachCheckpoints(s, out);
+    }
     applyFocusRecovery(s, dt, hooks.focusBlocked?.(s) ?? false);
     if (s.ground) {
         p.w -= Det.sin(p.a) * dt;
@@ -209,15 +224,18 @@ function playStep(s: CoreState, out: GameEvent[], dt: number) {
     }
     hooks.afterScore?.(s, out, dt);
     if (fellOffFloor(p)) {
-        if (hooks.onFall) hooks.onFall(s, out);
-        else {
+        if (hooks.onFall) {
+            hooks.onFall(s, out);
+        } else {
             s.deaths++;
             resetAttempt(s, out);
         }
         return;
     }
     if (stage.finishAtGoal && p.x > stage.goal) {
-        if (s.stage > s.completedStage) s.completedStage = s.stage;
+        if (s.stage > s.completedStage) {
+            s.completedStage = s.stage;
+        }
         s.mode = 'won';
         s.keys = [];
         out.push({ type: 'cue', id: 'stage-clear' });
@@ -234,9 +252,13 @@ export function stageSolids(
 
 function reachCheckpoints(s: CoreState, out: GameEvent[]) {
     const stage = STAGES[s.stage];
-    if (stage.checkpointRule === 'land' && !s.ground) return;
+    if (stage.checkpointRule === 'land' && !s.ground) {
+        return;
+    }
     for (let i = s.checkpoint + 1; i < stage.checkpoints.length; i++) {
-        if (!inCheckpointArea(stage.checkpoints[i], s.p)) continue;
+        if (!inCheckpointArea(stage.checkpoints[i], s.p)) {
+            continue;
+        }
         s.checkpoint = i;
         s.focus.value = 100;
         s.focus.recoveryClock = 0;

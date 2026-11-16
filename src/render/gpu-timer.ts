@@ -25,7 +25,9 @@ export type TimerGl = Pick<
 > & { createQuery(): WebGLQuery | null };
 
 export function createGpuTimer(gl: TimerGl | null): GpuTimer | null {
-    if (!gl || !gl.getExtension('EXT_disjoint_timer_query_webgl2')) return null;
+    if (!gl || !gl.getExtension('EXT_disjoint_timer_query_webgl2')) {
+        return null;
+    }
     const pending: WebGLQuery[] = [];
     const spare: WebGLQuery[] = [];
     let active: WebGLQuery | null = null;
@@ -36,15 +38,21 @@ export function createGpuTimer(gl: TimerGl | null): GpuTimer | null {
 
     return {
         begin() {
-            if (active || pending.length >= MAX_PENDING) return false;
+            if (active || pending.length >= MAX_PENDING) {
+                return false;
+            }
             const query = spare.pop() ?? gl.createQuery();
-            if (!query) return false;
+            if (!query) {
+                return false;
+            }
             gl.beginQuery(TIME_ELAPSED_EXT, query);
             active = query;
             return true;
         },
         end() {
-            if (!active) return;
+            if (!active) {
+                return;
+            }
             gl.endQuery(TIME_ELAPSED_EXT);
             pending.push(active);
             active = null;
@@ -53,7 +61,9 @@ export function createGpuTimer(gl: TimerGl | null): GpuTimer | null {
             const out: number[] = [];
             // A disjoint event makes every outstanding result meaningless.
             if (gl.getParameter(GPU_DISJOINT_EXT)) {
-                for (const query of pending.splice(0)) recycle(query);
+                for (const query of pending.splice(0)) {
+                    recycle(query);
+                }
                 return out;
             }
             while (
@@ -69,7 +79,9 @@ export function createGpuTimer(gl: TimerGl | null): GpuTimer | null {
             return out;
         },
         dispose() {
-            if (active) gl.endQuery(TIME_ELAPSED_EXT);
+            if (active) {
+                gl.endQuery(TIME_ELAPSED_EXT);
+            }
             for (const query of [
                 ...pending,
                 ...spare,

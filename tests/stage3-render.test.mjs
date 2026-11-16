@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { driveStageThree } from './support/stage3-route.mjs';
+
 import { bundled } from './support/load.mjs';
+import { driveStageThree } from './support/stage3-route.mjs';
 const {
     createGame,
     createRenderCtx,
@@ -251,12 +252,16 @@ test('rooftop renders the live course and first flight in both languages and nar
             if (state.hasExtinguisher && !frames.has('pickup')) {
                 frames.set('pickup', state);
             }
-            if (phase === 8 && !frames.has('shaft')) frames.set('shaft', state);
+            if (phase === 8 && !frames.has('shaft')) {
+                frames.set('shaft', state);
+            }
             if (state.ductReaction.kind === 'reacting') {
                 const age = state.ductReaction.age;
                 const name =
                     age < 0.12 ? 'inhale' : age < 0.2 ? 'twitch' : 'sneeze';
-                if (!frames.has(name)) frames.set(name, state);
+                if (!frames.has(name)) {
+                    frames.set(name, state);
+                }
             }
             if (state.checkpoint === 4 && !frames.has('upper')) {
                 frames.set('upper', state);
@@ -303,8 +308,11 @@ test('rooftop renders the live course and first flight in both languages and nar
                     W: width,
                     H: 510,
                 });
-                if (state.stage === 4) drawCloudStart(ctx);
-                else drawRooftop(ctx);
+                if (state.stage === 4) {
+                    drawCloudStart(ctx);
+                } else {
+                    drawRooftop(ctx);
+                }
                 assert.ok(
                     ctx.commands.some(
                         (command) => typeof command.fill !== 'string',
@@ -376,7 +384,9 @@ test('rooftop renders the live course and first flight in both languages and nar
                 for (const label of labels) {
                     assert.doesNotMatch(label, /[←→↑↓↗↖]/);
                 }
-                if (name === 'pickup') assert.ok(labels.includes('Space'));
+                if (name === 'pickup') {
+                    assert.ok(labels.includes('Space'));
+                }
                 if (locale === 'en') {
                     for (const label of labels) {
                         assert.doesNotMatch(label, /[가-힣]/);

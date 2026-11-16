@@ -1,11 +1,12 @@
-import { parseState, createGame } from '../game/game';
-import type { Input } from '../game/types';
-import { STAGE_FIVE } from '../game/stages/orbit/data';
-import { ORBIT_ENDING } from '../render/scene/orbit/ending';
-import { createEffects } from '../render/effects';
-import { type PreviewScene } from './types';
-import { recordedScene, capture, stepGame, moveToward } from './recording';
 import { orbitKeys } from './autopilot';
+import { recordedScene, capture, stepGame, moveToward } from './recording';
+import { parseState, createGame } from '../game/game';
+import { STAGE_FIVE } from '../game/stages/orbit/data';
+import { createEffects } from '../render/effects';
+import { ORBIT_ENDING } from '../render/scene/orbit/ending';
+
+import type { PreviewScene } from './types';
+import type { Input } from '../game/types';
 
 export function orbitRoute(): PreviewScene {
     const game = createGame();
@@ -16,9 +17,11 @@ export function orbitRoute(): PreviewScene {
     const { air, space, shadow } = STAGE_FIVE.heights;
     let previous = '';
     for (let i = 0; i < 9000; i++) {
-        const state = game.getSnapshot(),
-            orbit = state.orbit;
-        if (!orbit) break;
+        const state = game.getSnapshot();
+        const orbit = state.orbit;
+        if (!orbit) {
+            break;
+        }
         game.setInput(...orbitKeys(state));
         stepGame(game, effects);
         frames.push(capture(game, effects));
@@ -133,9 +136,11 @@ export function orbitSatelliteLightScene(): PreviewScene {
     const first = STAGE_FIVE.satelliteLight.beams[0];
     let previous = '';
     for (let i = 0; i < 2400; i++) {
-        const state = game.getSnapshot(),
-            orbit = state.orbit;
-        if (!orbit || orbit.z > first.to + 200) break;
+        const state = game.getSnapshot();
+        const orbit = state.orbit;
+        if (!orbit || orbit.z > first.to + 200) {
+            break;
+        }
         game.setInput(...orbitKeys(state));
         stepGame(game, effects);
         frames.push(capture(game, effects));
@@ -168,10 +173,12 @@ export function orbitSatelliteLightLitScene(): PreviewScene {
     const first = STAGE_FIVE.satelliteLight.beams[0];
     let previous = '';
     for (let i = 0; i < 2400; i++) {
-        const state = game.getSnapshot(),
-            orbit = state.orbit,
-            p = state.player;
-        if (!orbit || orbit.z > first.to) break;
+        const state = game.getSnapshot();
+        const orbit = state.orbit;
+        const p = state.player;
+        if (!orbit || orbit.z > first.to) {
+            break;
+        }
         const target =
             orbit.aims[0].x +
             first.half.x +

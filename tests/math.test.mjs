@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const Det = await loadSource(`export * as Det from './src/game/math';`).then(
@@ -14,7 +15,9 @@ const bits = (x) => {
     return view.getBigUint64(0).toString(16).padStart(16, '0');
 };
 const ulps = (a, b) => {
-    if (a === b) return 0;
+    if (a === b) {
+        return 0;
+    }
     const view = new DataView(new ArrayBuffer(16));
     view.setFloat64(0, a);
     view.setFloat64(8, b);
@@ -119,7 +122,9 @@ test('the core never calls engine-approximated Math functions', () => {
     const banned =
         /\bMath\.(sin|cos|tan|asin|acos|atan2?|sinh|cosh|tanh|asinh|acosh|atanh|exp|expm1|log(1p|2|10)?|pow|cbrt|hypot)\s*\(/;
     for (const path of files('src/game')) {
-        if (path === join('src', 'game', 'math.ts')) continue;
+        if (path === join('src', 'game', 'math.ts')) {
+            continue;
+        }
         const code = readFileSync(path, 'utf8')
             .replace(/\/\/.*$/gm, '')
             .replace(/\/\*[\s\S]*?\*\//g, '');

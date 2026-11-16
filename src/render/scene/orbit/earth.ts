@@ -1,6 +1,7 @@
+import { STAGE_FIVE } from '../../../game/stages/orbit/data';
+
 import type { RenderCtx } from '../../context';
 import type { DrawCommand, Vector } from '../../types';
-import { STAGE_FIVE } from '../../../game/stages/orbit/data';
 
 const R = 6371;
 type V3 = [number, number, number];
@@ -35,7 +36,7 @@ const alpha = (value: number) =>
 const H = STAGE_FIVE.heights;
 const NEAR = 20;
 
-export function earthAltitude(z: number) {
+export function earthAltitude(z: number): number {
     return (
         12 +
         110 * smooth((z - H.air) / (H.space - H.air)) +
@@ -58,8 +59,8 @@ export function groundTrack(z: number): [number, number] {
     const u =
         Math.max(0, Math.min(1, z / STAGE_FIVE.checkpoint.z)) *
         (TRACK.length - 3);
-    const i = Math.min(TRACK.length - 4, Math.floor(u)),
-        t = u - i;
+    const i = Math.min(TRACK.length - 4, Math.floor(u));
+    const t = u - i;
     const [a, b, c, d] = TRACK.slice(i, i + 4);
     const spline = (k: 0 | 1) =>
         0.5 *
@@ -450,9 +451,9 @@ export type EarthCamera = {
 function earthView(z: number, yaw: number, camera: EarthCamera, spin = 0) {
     const h = earthAltitude(z);
     const [lon, lat] = groundTrack(z);
-    const from = Math.min(z, STAGE_FIVE.checkpoint.z - 200),
-        [aLon, aLat] = groundTrack(from),
-        [bLon, bLat] = groundTrack(from + 200);
+    const from = Math.min(z, STAGE_FIVE.checkpoint.z - 200);
+    const [aLon, aLat] = groundTrack(from);
+    const [bLon, bLat] = groundTrack(from + 200);
     const up = globe(lon, lat);
     const ahead = add(globe(bLon, bLat), globe(aLon, aLat), -1);
     let forward = unit(add(ahead, up, -dot(ahead, up)));
@@ -464,19 +465,19 @@ function earthView(z: number, yaw: number, camera: EarthCamera, spin = 0) {
     const limb = R / (R + h);
     const { cx, cy, focal, roll, pitch } = camera;
     const lookAhead = add(
-            scale(forward, Math.cos(pitch)),
-            up,
-            -Math.sin(pitch),
-        ),
-        lookUp = add(scale(up, Math.cos(pitch)), forward, Math.sin(pitch));
-    const cos = Math.cos(roll),
-        sin = Math.sin(roll);
+        scale(forward, Math.cos(pitch)),
+        up,
+        -Math.sin(pitch),
+    );
+    const lookUp = add(scale(up, Math.cos(pitch)), forward, Math.sin(pitch));
+    const cos = Math.cos(roll);
+    const sin = Math.sin(roll);
     const toCamera = (n: V3): V3 => {
         let v = n;
         const along = dot(n, up);
         if (along < limb) {
-            const flat = add(n, up, -along),
-                size = Math.hypot(...flat);
+            const flat = add(n, up, -along);
+            const size = Math.hypot(...flat);
             v = add(
                 scale(up, limb),
                 size > 1e-9 ? scale(flat, 1 / size) : forward,
@@ -487,8 +488,8 @@ function earthView(z: number, yaw: number, camera: EarthCamera, spin = 0) {
         return [dot(at, right), dot(at, lookUp), dot(at, lookAhead)];
     };
     const toScreen = ([ax, ay, az]: V3): Vector => {
-        const x = (ax * focal) / az,
-            y = (-ay * focal) / az;
+        const x = (ax * focal) / az;
+        const y = (-ay * focal) / az;
         return [cx + x * cos - y * sin, cy + x * sin + y * cos];
     };
     const project = (n: V3): Vector => {
@@ -496,11 +497,13 @@ function earthView(z: number, yaw: number, camera: EarthCamera, spin = 0) {
         return toScreen([at[0], at[1], Math.max(at[2], NEAR)]);
     };
     const outline = (points: V3[]): Vector[] => {
-        const cam = points.map(toCamera),
-            out: V3[] = [];
+        const cam = points.map(toCamera);
+        const out: V3[] = [];
         cam.forEach((a, i) => {
             const b = cam[(i + 1) % cam.length];
-            if (a[2] >= NEAR) out.push(a);
+            if (a[2] >= NEAR) {
+                out.push(a);
+            }
             if (a[2] >= NEAR !== b[2] >= NEAR) {
                 const t = (NEAR - a[2]) / (b[2] - a[2]);
                 out.push([
@@ -543,8 +546,10 @@ export function orbitEarth(
     strength: number,
     night: number,
     spin = 0,
-) {
-    if (strength <= 0) return;
+): Vector | undefined {
+    if (strength <= 0) {
+        return;
+    }
     const view = earthView(travel, yaw, camera, spin);
     const { horizon, middle } = view;
     const far = Math.max(ctx.W, ctx.H) * 4;
@@ -576,7 +581,9 @@ export function orbitEarth(
         );
     for (const land of LAND_ORDER) {
         const points = land.points;
-        if (!points.some(view.visible)) continue;
+        if (!points.some(view.visible)) {
+            continue;
+        }
         const v = view.outline(points);
         if (v.length) {
             ctx.commands.push({
@@ -595,10 +602,12 @@ export function orbitEarth(
             });
         }
     }
-    const drift = ctx.t * 0.015,
-        cloud = '#ffffff' + alpha(0.5 * (1 - night * 0.85) * strength);
+    const drift = ctx.t * 0.015;
+    const cloud = '#ffffff' + alpha(0.5 * (1 - night * 0.85) * strength);
     CLOUDS.forEach(([lon, lat, r, stretch], k) => {
-        if (!view.visible(globe(lon + drift, lat))) return;
+        if (!view.visible(globe(lon + drift, lat))) {
+            return;
+        }
         const v = view.outline(
             Array.from({ length: 9 }, (_, i) => {
                 const a = (i / 9) * Math.PI * 2;
@@ -627,9 +636,13 @@ export function orbitEarth(
             layer: surface,
         });
         for (const land of LAND_DENSE) {
-            if (land.inland) continue;
+            if (land.inland) {
+                continue;
+            }
             const points = land.points;
-            if (!points.some(view.visible)) continue;
+            if (!points.some(view.visible)) {
+                continue;
+            }
             const v = view.outline(points);
             if (v.length) {
                 ctx.commands.push({
@@ -651,7 +664,9 @@ export function orbitEarth(
             clip,
         };
         for (const [lon, lat, size] of CITIES) {
-            if (!view.visible(globe(lon, lat))) continue;
+            if (!view.visible(globe(lon, lat))) {
+                continue;
+            }
             const [x, y] = view.project(globe(lon, lat));
             const r = (size * ctx.W) / 420;
             ctx.commands.push({
@@ -723,7 +738,7 @@ export function earthHorizonAhead(
     camera: EarthCamera,
     yaw: number,
     spin = 0,
-) {
+): Vector {
     return earthView(travel, yaw, camera, spin).middle;
 }
 
@@ -734,13 +749,15 @@ export function earthSkyBottom(
     width: number,
     height: number,
     spin = 0,
-) {
+): number {
     const horizon = earthView(travel, yaw, camera, spin).horizon;
     const skyY: number[] = [];
     for (let i = 0; i < horizon.length - 1; i++) {
-        const a = horizon[i],
-            b = horizon[i + 1];
-        if (a[0] >= 0 && a[0] <= width) skyY.push(a[1]);
+        const a = horizon[i];
+        const b = horizon[i + 1];
+        if (a[0] >= 0 && a[0] <= width) {
+            skyY.push(a[1]);
+        }
         for (const x of [0, width]) {
             if ((a[0] < x && b[0] > x) || (a[0] > x && b[0] < x)) {
                 skyY.push(a[1] + ((b[1] - a[1]) * (x - a[0])) / (b[0] - a[0]));
@@ -748,6 +765,8 @@ export function earthSkyBottom(
         }
     }
     const last = horizon[horizon.length - 1];
-    if (last[0] >= 0 && last[0] <= width) skyY.push(last[1]);
+    if (last[0] >= 0 && last[0] <= width) {
+        skyY.push(last[1]);
+    }
     return skyY.length ? Math.min(height, Math.max(...skyY) + 16) : height;
 }

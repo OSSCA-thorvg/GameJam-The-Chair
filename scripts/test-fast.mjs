@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 
 const SLOW = new Set([
     'golden.test.mjs',

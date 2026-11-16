@@ -1,6 +1,9 @@
 type MeetingInput = { stage: number; corridor?: { room: { kind: string } } };
 
-export function createMeetingVisits() {
+export function createMeetingVisits(): {
+    observe(next: MeetingInput): void;
+    snapshot: () => number;
+} {
     let visits = 0;
     let stage: number | null = null;
     let room: string | null = null;
@@ -11,9 +14,13 @@ export function createMeetingVisits() {
                 room = null;
             }
             stage = next.stage;
-            if (!next.corridor) return;
+            if (!next.corridor) {
+                return;
+            }
             const kind = next.corridor.room.kind;
-            if (kind === 'entering' && room !== 'entering') visits++;
+            if (kind === 'entering' && room !== 'entering') {
+                visits++;
+            }
             room = kind;
         },
         snapshot: () => visits,

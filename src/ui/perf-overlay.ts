@@ -1,11 +1,9 @@
-import { translate, type Locale } from '../i18n';
-import {
-    createLayerOverrides,
-    createRenderStats,
-    type LayerOverrides,
-    type RenderStats,
-} from '../render/perf';
+import { translate } from '../i18n';
 import { createLayerPanel } from './perf-layers';
+import { createLayerOverrides, createRenderStats } from '../render/perf';
+
+import type { Locale } from '../i18n';
+import type { LayerOverrides, RenderStats } from '../render/perf';
 
 export type FrameSample = {
     frameMs: number;
@@ -93,7 +91,7 @@ export function createPerfOverlay(
     root: HTMLElement,
     getLocale: () => Locale,
     deps: PerfDeps,
-) {
+): PerfOverlay {
     const stats = createRenderStats();
     const samples = Array.from({ length: HISTORY }, createFrameSample);
     let head = 0;
@@ -141,7 +139,9 @@ export function createPerfOverlay(
     }
 
     function setOpen(next: boolean) {
-        if (next === open) return;
+        if (next === open) {
+            return;
+        }
         open = next;
         panel.hidden = !open;
         deps.profile(open ? stats : null);
@@ -158,7 +158,9 @@ export function createPerfOverlay(
         heapPeak = 0;
         wasmStart = null;
         note.textContent = '';
-        if (open) applyLocale();
+        if (open) {
+            applyLocale();
+        }
     }
 
     function window1s() {
@@ -171,17 +173,19 @@ export function createPerfOverlay(
             hud: 0,
         };
         const gpuPicked: number[] = [];
-        let elapsed = 0,
-            tickSum = 0,
-            tickMax = 0,
-            droppedSum = 0,
-            cost = 0;
+        let elapsed = 0;
+        let tickSum = 0;
+        let tickMax = 0;
+        let droppedSum = 0;
+        let cost = 0;
         for (let k = 0; k < count && elapsed < 1000; k++) {
             const i = (head - 1 - k + HISTORY) % HISTORY;
             const frame = samples[i];
             picked.push(frame.frameMs);
             elapsed += frame.frameMs;
-            for (const name of SERIES) sums[name] += frame.segments[name];
+            for (const name of SERIES) {
+                sums[name] += frame.segments[name];
+            }
             tickSum += frame.ticks;
             tickMax = Math.max(tickMax, frame.ticks);
             droppedSum += frame.droppedMs;
@@ -194,8 +198,13 @@ export function createPerfOverlay(
         const n = Math.max(1, picked.length);
         const sorted = [...picked].sort((a, b) => a - b);
         const avg = elapsed / n;
-        const avgs = {} as Record<Series, number>;
-        for (const name of SERIES) avgs[name] = sums[name] / n;
+        const avgs: Record<Series, number> = {
+            sim: sums.sim / n,
+            build: sums.build / n,
+            sync: sums.sync / n,
+            render: sums.render / n,
+            hud: sums.hud / n,
+        };
         return {
             samples: picked.length,
             fps: elapsed > 0 ? (picked.length * 1000) / elapsed : 0,
@@ -258,7 +267,9 @@ export function createPerfOverlay(
     }
 
     function drawGraph() {
-        if (!g) return;
+        if (!g) {
+            return;
+        }
         const dpr = Math.min(devicePixelRatio || 1, 2);
         const width = graph.clientWidth || 280;
         const height = graph.clientHeight || 64;
@@ -292,7 +303,9 @@ export function createPerfOverlay(
             let base = 0;
             for (const name of SERIES) {
                 const value = frame.segments[name];
-                if (value <= 0) continue;
+                if (value <= 0) {
+                    continue;
+                }
                 g.fillStyle = COLORS[name];
                 g.fillRect(
                     x,
@@ -319,10 +332,15 @@ export function createPerfOverlay(
         for (let k = 0; k < count; k++) {
             const i = (head - count + k + HISTORY) % HISTORY;
             const frame = samples[i];
-            if (Number.isNaN(frame.gpuMs)) continue;
+            if (Number.isNaN(frame.gpuMs)) {
+                continue;
+            }
             const x = (HISTORY - count + k + 0.5) * bar;
-            if (drawing) g.lineTo(x, y(frame.gpuMs));
-            else g.moveTo(x, y(frame.gpuMs));
+            if (drawing) {
+                g.lineTo(x, y(frame.gpuMs));
+            } else {
+                g.moveTo(x, y(frame.gpuMs));
+            }
             drawing = true;
         }
         g.stroke();
@@ -350,8 +368,12 @@ export function createPerfOverlay(
         const s = deps.surface();
         const heap = jsHeap();
         const wasm = wasmMemory();
-        if (heap) heapPeak = Math.max(heapPeak, heap.used);
-        if (wasm !== null) wasmStart ??= wasm;
+        if (heap) {
+            heapPeak = Math.max(heapPeak, heap.used);
+        }
+        if (wasm !== null) {
+            wasmStart ??= wasm;
+        }
         const seg = w.segments;
         const lines = [
             `FPS ${w.fps.toFixed(1)}   frame ${ms(w.frame.avg)} / p95 ${ms(w.frame.p95)} / max ${ms(w.frame.max)} ms`,
@@ -388,7 +410,9 @@ export function createPerfOverlay(
     }
 
     function record(sample: FrameSample) {
-        if (!open) return;
+        if (!open) {
+            return;
+        }
         const start = performance.now();
         const i = head;
         const frame = samples[i];
@@ -403,9 +427,13 @@ export function createPerfOverlay(
         frame.gpuMs = stats.gpuMs.length
             ? stats.gpuMs.reduce((a, b) => a + b, 0) / stats.gpuMs.length
             : NaN;
-        if (count === HISTORY && frame.reordered) reorders--;
+        if (count === HISTORY && frame.reordered) {
+            reorders--;
+        }
         frame.reordered = stats.reorder;
-        if (stats.reorder) reorders++;
+        if (stats.reorder) {
+            reorders++;
+        }
         head = (head + 1) % HISTORY;
         count = Math.min(HISTORY, count + 1);
         drawGraph();
@@ -420,7 +448,9 @@ export function createPerfOverlay(
         if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) {
             return;
         }
-        if (event.key !== 'F3' && event.code !== 'Backquote') return;
+        if (event.key !== 'F3' && event.code !== 'Backquote') {
+            return;
+        }
         if (
             event.target instanceof Element &&
             /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)
@@ -451,7 +481,9 @@ export function createPerfOverlay(
     try {
         initial = new URLSearchParams(location.search).get('debug') === '1';
     } catch {}
-    if (initial) setOpen(true);
+    if (initial) {
+        setOpen(true);
+    }
 
     return {
         get enabled() {
@@ -475,3 +507,47 @@ export function createPerfOverlay(
         },
     };
 }
+
+export type PerfOverlay = {
+    readonly enabled: boolean;
+    toggle: (next?: boolean) => void;
+    layers: {
+        hide: (key: string, on?: boolean) => void;
+        flatten: (key: string, on?: boolean) => void;
+        reset: () => void;
+        list: () => string[];
+    };
+    record: (sample: FrameSample) => void;
+    snapshot: () => {
+        at: string;
+        userAgent: string;
+        surface: PerfSurface | null;
+        window: {
+            samples: number;
+            fps: number;
+            frame: { avg: number; p95: number; max: number };
+            segments: Record<
+                'sim' | 'build' | 'sync' | 'render' | 'hud',
+                number
+            >;
+            ticks: { avg: number; max: number };
+            droppedMs: number;
+            overlayMs: number;
+            gpu: {
+                avg: number;
+                p95: number;
+                max: number;
+                samples: number;
+            } | null;
+        };
+        render: RenderStats & { reordersInHistory: number };
+        layerOverrides: { hidden: string[]; flat: string[] };
+        memory: {
+            jsHeap: { used: number; total: number; limit: number } | null;
+            jsHeapPeak: number | null;
+            wasm: number | null;
+            wasmGrowth: number | null;
+        };
+    };
+    destroy(): void;
+};

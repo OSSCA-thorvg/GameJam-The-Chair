@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
+
 import { GOLDEN_SCENARIOS } from '../tests/support/golden.mjs';
 
 const TEST = new URL('../tests/golden.test.mjs', import.meta.url);
@@ -17,7 +18,9 @@ for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {
             `No EXPECTED entry for "${name}" in tests/golden.test.mjs`,
         );
     }
-    if (match[2] !== value) changed.push(`${name}: ${match[2]} → ${value}`);
+    if (match[2] !== value) {
+        changed.push(`${name}: ${match[2]} → ${value}`);
+    }
     source = source.replace(pattern, `$1'${value}'`);
 }
 if (!changed.length) {

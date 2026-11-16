@@ -88,7 +88,7 @@ const shapes = new Map<string, CloudShape>();
 
 export function seeded(seed: number) {
     let a = (Math.imul(seed | 0, 0x9e3779b1) ^ 0x5bd1e995) >>> 0;
-    return () => {
+    return (): number => {
         a = (a + 0x6d2b79f5) >>> 0;
         let t = a;
         t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -107,22 +107,26 @@ function envelope(
     let edge: number | null = null;
     for (const l of lumps) {
         const u = (x - l.x) / l.rx;
-        if (u * u > 1) continue;
+        if (u * u > 1) {
+            continue;
+        }
         const y = l.y + side * l.ry * Math.sqrt(1 - u * u);
-        if (edge === null || (side < 0 ? y < edge : y > edge)) edge = y;
+        if (edge === null || (side < 0 ? y < edge : y > edge)) {
+            edge = y;
+        }
     }
     return edge;
 }
 
 function smoothLoop(points: Vector[], from: number, to: number): Curve[] {
-    const n = points.length,
-        at = (i: number) => points[((i % n) + n) % n];
+    const n = points.length;
+    const at = (i: number) => points[((i % n) + n) % n];
     const curves: Curve[] = [];
     for (let i = from; i < to; i++) {
-        const p0 = at(i - 1),
-            p1 = at(i),
-            p2 = at(i + 1),
-            p3 = at(i + 2);
+        const p0 = at(i - 1);
+        const p1 = at(i);
+        const p2 = at(i + 1);
+        const p3 = at(i + 2);
         curves.push([
             p1[0] + (p2[0] - p0[0]) / 6,
             p1[1] + (p2[1] - p0[1]) / 6,
@@ -159,26 +163,28 @@ function buildShape(seed: number, samples: number): CloudShape {
         ...puffs.map((p) => ({ x: p.x, y: p.y, rx: p.r, ry: p.r })),
         base,
     ];
-    const left = Math.min(...lumps.map((l) => l.x - l.rx)) + 0.01,
-        right = Math.max(...lumps.map((l) => l.x + l.rx)) - 0.01;
+    const left = Math.min(...lumps.map((l) => l.x - l.rx)) + 0.01;
+    const right = Math.max(...lumps.map((l) => l.x + l.rx)) - 0.01;
     const xs = Array.from({ length: samples + 1 }, (_, k) => {
         const u = k / samples;
         return (
             left + ((right - left) * (u + (1 - Math.cos(Math.PI * u)) / 2)) / 2
         );
     });
-    const crown: Vector[] = [],
-        belly: Vector[] = [];
+    const crown: Vector[] = [];
+    const belly: Vector[] = [];
     for (const x of xs) {
-        const top = envelope(lumps, x, -1),
-            under = envelope(lumps, x, 1);
-        if (top === null || under === null) continue;
+        const top = envelope(lumps, x, -1);
+        const under = envelope(lumps, x, 1);
+        if (top === null || under === null) {
+            continue;
+        }
         crown.push([x, top]);
         belly.push([x, Math.min(FLAT_BOTTOM, under)]);
     }
     const points = [...crown, ...belly.slice(1, -1).reverse()];
-    const crestFrom = Math.round(crown.length * 0.05),
-        crestTo = Math.round(crown.length * 0.95);
+    const crestFrom = Math.round(crown.length * 0.05);
+    const crestTo = Math.round(crown.length * 0.95);
     return {
         start: points[0],
         outline: smoothLoop(points, 0, points.length),
@@ -194,7 +200,9 @@ function shapeFor(seed: number, detail: 'full' | 'reduced') {
     const key = `${seed}:${detail}`;
     let shape = shapes.get(key);
     if (!shape) {
-        if (shapes.size > 256) shapes.clear();
+        if (shapes.size > 256) {
+            shapes.clear();
+        }
         shapes.set(
             key,
             (shape = buildShape(seed, detail === 'full' ? 64 : 32)),
@@ -224,7 +232,7 @@ export function puffCloud(
     seed: number,
     tone: CloudTone,
     options: CloudOptions = {},
-) {
+): void {
     const projected = size * ctx.localScale * ctx.scale;
     const detail =
         options.detail === 'full' ||
@@ -233,10 +241,10 @@ export function puffCloud(
             : 'reduced';
     const shape = shapeFor(seed, detail);
     const alpha = options.alpha ?? 1;
-    const ox = ctx.ox,
-        oy = ctx.oy,
-        scale = ctx.localScale,
-        rotation = ctx.rotation;
+    const ox = ctx.ox;
+    const oy = ctx.oy;
+    const scale = ctx.localScale;
+    const rotation = ctx.rotation;
     ctx.ox = x;
     ctx.oy = y;
     ctx.localScale = size;
@@ -280,9 +288,9 @@ export function puffCloud(
             ? shape.puffs
             : shape.puffs.filter((_, index) => index % 2 === 0);
     for (const puff of litPuffs) {
-        const cx = puff.x - puff.r * 0.16,
-            cy = puff.y - puff.r * 0.2,
-            r = puff.r * 0.72;
+        const cx = puff.x - puff.r * 0.16;
+        const cy = puff.y - puff.r * 0.2;
+        const r = puff.r * 0.72;
         const [start, curves] = circle(cx, cy, r);
         ctx.effectPath(
             start,
@@ -319,7 +327,7 @@ export function breadCloud(
     size: number,
     seed: number,
     near = false,
-) {
+): void {
     puffCloud(ctx, x, y, size, seed, CLOUD_TONES.bread, {
         alpha: near ? 0.95 : 0.72,
         fade: true,

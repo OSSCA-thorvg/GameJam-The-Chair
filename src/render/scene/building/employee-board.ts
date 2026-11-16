@@ -1,8 +1,9 @@
-import { translate } from '../../../i18n';
-import type { RenderCtx } from '../../context';
 import { STAGE_THREE } from '../../../game/stages/rooftop/data';
+import { translate } from '../../../i18n';
 
-export function employeeBoard(ctx: RenderCtx) {
+import type { RenderCtx } from '../../context';
+
+export function employeeBoard(ctx: RenderCtx): void {
     ctx.rect(51, 86, 172, 132, '#26334455');
     ctx.rect(47, 82, 172, 132, '#263c53');
     ctx.gradientPolygon(
@@ -19,7 +20,9 @@ export function employeeBoard(ctx: RenderCtx) {
     );
     ctx.rod(51, 86, 215, 86, 2, '#a9bac6');
     for (const x of [55, 211]) {
-        for (const y of [89, 207]) ctx.ellipse(x, y, 1.5, 1.5, '#bac4cb');
+        for (const y of [89, 207]) {
+            ctx.ellipse(x, y, 1.5, 1.5, '#bac4cb');
+        }
     }
     ctx.rect(56, 90, 154, 20, '#314b61');
     ctx.label(

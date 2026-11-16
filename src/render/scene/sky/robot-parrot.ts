@@ -85,7 +85,7 @@ const MIRROR: Stops = [
     [1, '#3a4452'],
 ];
 
-function dropletBody(ctx: RenderCtx, h: SkyHazard, M: Stops, eye = 4) {
+function dropletBody(ctx: RenderCtx, h: SkyHazard, gradient: Stops, eye = 4) {
     const flap = Math.sin(h.spin);
     const ripple = Math.sin(h.spin * 2.3) * 1.2;
     ctx.effectPath(
@@ -94,7 +94,7 @@ function dropletBody(ctx: RenderCtx, h: SkyHazard, M: Stops, eye = 4) {
             [26, -6, 40, -6 + flap * 3, 52, -3 + flap * 3],
             [40, 2 + flap * 2, 26, 6, 13, 5],
         ],
-        chrome(ctx, 12, -6, 12, 6, M),
+        chrome(ctx, 12, -6, 12, 6, gradient),
     );
     ctx.effectPath(
         [2, -3],
@@ -102,7 +102,7 @@ function dropletBody(ctx: RenderCtx, h: SkyHazard, M: Stops, eye = 4) {
             [8, -16 * flap - 8, 16, -28 * flap - 6, 26, -24 * flap - 2],
             [18, -12 * flap - 1, 12, -2, 12, 1],
         ],
-        chrome(ctx, 0, -30, 26, 0, M),
+        chrome(ctx, 0, -30, 26, 0, gradient),
     );
     ctx.effectPath(
         [-22, -10],
@@ -112,7 +112,7 @@ function dropletBody(ctx: RenderCtx, h: SkyHazard, M: Stops, eye = 4) {
             [-6, 12, -14, 6, -18, 2],
             [-24, -2, -26, -6, -22, -10],
         ],
-        chrome(ctx, 0, -16, 0, 12, M),
+        chrome(ctx, 0, -16, 0, 12, gradient),
     );
     ctx.effectPath([-16, -12], [[-8, -15, 4, -11, 12, -6]], '#ffffffaa');
     ctx.effectPath(
@@ -121,7 +121,7 @@ function dropletBody(ctx: RenderCtx, h: SkyHazard, M: Stops, eye = 4) {
             [-28, -10, -33, -5, -31, 1],
             [-28, 0, -25, -1, -22, -1],
         ],
-        chrome(ctx, -33, -10, -22, 2, M),
+        chrome(ctx, -33, -10, -22, 2, gradient),
     );
     lensEye(ctx, h, -14, -5, eye);
     ctx.effectPath(
@@ -130,7 +130,7 @@ function dropletBody(ctx: RenderCtx, h: SkyHazard, M: Stops, eye = 4) {
             [8, 10 * flap + 2, 18, 12 * flap + 4, 24, 8 * flap + 8],
             [12, 8, 4, 6, -2, -1],
         ],
-        chrome(ctx, -2, -2, 24, 10, M),
+        chrome(ctx, -2, -2, 24, 10, gradient),
     );
 }
 
@@ -172,12 +172,19 @@ function blackChrome(ctx: RenderCtx, h: SkyHazard) {
     );
 }
 
-export function robotParrotArt(ctx: RenderCtx, h: SkyHazard, robot: SkyRobot) {
+export function robotParrotArt(
+    ctx: RenderCtx,
+    h: SkyHazard,
+    robot: SkyRobot,
+): void {
     ctx.ox = h.x;
     ctx.oy = h.y;
     ctx.localScale = 1.45;
-    if (robot === 'liquid') dropletBody(ctx, h, MIRROR);
-    else blackChrome(ctx, h);
+    if (robot === 'liquid') {
+        dropletBody(ctx, h, MIRROR);
+    } else {
+        blackChrome(ctx, h);
+    }
     ctx.ox = ctx.oy = ctx.rotation = 0;
     ctx.localScale = 1;
 }

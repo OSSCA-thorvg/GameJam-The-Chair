@@ -74,7 +74,7 @@ function cycle(time: number, period: number) {
     return time - Math.floor(time / period) * period;
 }
 
-export function skyGust(time: number) {
+export function skyGust(time: number): { warn: number; strength: number } {
     const w = STAGE_FOUR.wind;
     const t = cycle(time, w.period);
     const start = w.calm + w.warn;
@@ -100,11 +100,11 @@ export function skyGust(time: number) {
     return { warn, strength };
 }
 
-export function skyHeadwind(time: number) {
+export function skyHeadwind(time: number): number {
     return STAGE_FOUR.wind.base + STAGE_FOUR.wind.gust * skyGust(time).strength;
 }
 
-export function skyWind(time: number) {
+export function skyWind(time: number): number {
     return skyGust(time).strength;
 }
 
@@ -220,7 +220,7 @@ export function skyPlatforms(
         },
     ];
 }
-export function skySurface(platform: Readonly<SkyPlatform>, x: number) {
+export function skySurface(platform: Readonly<SkyPlatform>, x: number): number {
     return (
         platform.y +
         (x - platform.x - platform.width / 2) * Det.tan(platform.angle)
@@ -358,8 +358,8 @@ export function skyHazards(time: number): SkyHazard[] {
         const age = cycle(shifted, lane.period);
         const glide = (lane.from - lane.to) / lane.speed;
         const { swoop, reach, height, climb } = BIRD_PATH;
-        let x: number,
-            y = lane.y + Det.sin(age * 2.4 + i) * 26;
+        let x: number;
+        let y = lane.y + Det.sin(age * 2.4 + i) * 26;
         if (age < swoop) {
             const k = 1 - age / swoop;
             x = lane.from + reach * k;

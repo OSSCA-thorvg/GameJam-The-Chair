@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { load } from './support/load.mjs';
 
 const { createGame } = await load('src/game/game.ts');
@@ -84,7 +85,10 @@ test('pause menu shows unlocked stages and hides spray controls until equipped',
         assert.equal(elements.get('[data-spray-help]').hidden, true);
         assert.equal(elements.get('[data-spray]').hidden, true);
     } finally {
-        if (originalMatchMedia === undefined) delete globalThis.matchMedia;
-        else /** @type {any} */ (globalThis).matchMedia = originalMatchMedia;
+        if (originalMatchMedia === undefined) {
+            delete globalThis.matchMedia;
+        } else /** @type {any} */ {
+            globalThis.matchMedia = originalMatchMedia;
+        }
     }
 });

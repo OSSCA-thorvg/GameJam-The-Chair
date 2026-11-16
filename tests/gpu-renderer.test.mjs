@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const { chooseRenderer, isSoftwareGl, createGpuTimer } = await loadSource(`
@@ -127,7 +128,9 @@ test('GPU timer drops results after a disjoint event and stops queuing when the 
         timer.end();
     }
     assert.equal(timer.begin(), false, 'at most eight frames wait for results');
-    for (const q of gl.queries.keys()) gl.finish(q, 3);
+    for (const q of gl.queries.keys()) {
+        gl.finish(q, 3);
+    }
     gl.disjoint = true;
     assert.deepEqual(
         timer.collect(),

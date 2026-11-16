@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { load } from './support/load.mjs';
 
 const { configHash } = await load('src/game/data.ts');

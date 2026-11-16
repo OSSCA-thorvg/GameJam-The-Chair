@@ -1,11 +1,18 @@
-import { LEVEL } from '../game/level';
-import type { GameEvent } from '../game/types';
 import { EFFECT_STYLE } from './art';
 import { WATER_GRAVITY, bucketMouth, pourFlow, pourLaunch } from './bucket';
-import { createPersonalBoxObserver } from './personal-box-motion';
+import { createDeathShot } from './death-shot';
 import { createKeyHints } from './key-hints';
 import { createMeetingVisits } from './meeting-visits';
-import { createDeathShot } from './death-shot';
+import { createPersonalBoxObserver } from './personal-box-motion';
+import { LEVEL } from '../game/level';
+
+import type { DeathShot } from './death-shot';
+import type { HintKey } from './key-hints';
+import type {
+    PersonalBoxReaction,
+    PersonalBoxInput,
+} from './personal-box-motion';
+import type { GameEvent } from '../game/types';
 export { EFFECT_STYLE } from './art';
 export type Speck = {
     x: number;
@@ -51,7 +58,7 @@ export type WaterPuddle = {
     reachRight: number;
     wet: number;
 };
-export function createEffects() {
+export function createEffects(): Effects {
     const personalBox = createPersonalBoxObserver();
     const keyHints = createKeyHints();
     const meetingVisits = createMeetingVisits();
@@ -86,7 +93,9 @@ export function createEffects() {
         if (event.type === 'cue' && event.id === 'practice-cleared') {
             practiceBurst = 1.3;
         }
-        if (event.type === 'cue' && event.id === 'checkpoint') saveFlash = 1.5;
+        if (event.type === 'cue' && event.id === 'checkpoint') {
+            saveFlash = 1.5;
+        }
         if (event.type === 'tick') {
             practiceBurst = Math.max(0, practiceBurst - event.dt);
             saveFlash = Math.max(0, saveFlash - event.dt);
@@ -139,7 +148,9 @@ export function createEffects() {
         }
     }
     function random() {
-        if (!waterPour) return 0.5;
+        if (!waterPour) {
+            return 0.5;
+        }
         let t = (waterPour.seed = (waterPour.seed + 0x6d2b79f5) | 0);
         t = Math.imul(t ^ (t >>> 15), t | 1);
         t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -148,7 +159,9 @@ export function createEffects() {
 
     function emitWater(dt: number) {
         const pour = waterPour;
-        if (!pour) return;
+        if (!pour) {
+            return;
+        }
         pour.age += dt;
         const q = pourFlow(pour.age);
         const mouth = bucketMouth(pour.x, F, pour.side, pour.age);
@@ -161,7 +174,9 @@ export function createEffects() {
         const oy = spill.vy / spillSpeed;
         const opening = 0.08 + 0.2 * q;
         if (q > 0.16) {
-            if (!pour.flowing) pour.chain++;
+            if (!pour.flowing) {
+                pour.chain++;
+            }
             pour.flowing = true;
             pour.emit += dt * 110;
             while (pour.emit >= 1) {
@@ -212,7 +227,9 @@ export function createEffects() {
                 floor: F + random() * 6,
             });
         }
-        if (pour.age > 2.3) waterPour = null;
+        if (pour.age > 2.3) {
+            waterPour = null;
+        }
     }
 
     function land(z: WaterDrop) {
@@ -282,13 +299,17 @@ export function createEffects() {
 
     function stepWater(dt: number) {
         emitWater(dt);
-        for (const r of waterRipples) r.age += dt;
+        for (const r of waterRipples) {
+            r.age += dt;
+        }
         waterRipples = waterRipples.filter((r) => r.age < r.life);
         const alive: WaterDrop[] = [];
         for (const z of waterDrops) {
             z.life -= dt;
             z.vy += WATER_GRAVITY * dt;
-            if (z.kind !== 'stream') z.vx *= Math.exp(-0.5 * dt);
+            if (z.kind !== 'stream') {
+                z.vx *= Math.exp(-0.5 * dt);
+            }
             z.x += z.vx * dt;
             z.y += z.vy * dt;
             if (z.y >= z.floor) {
@@ -353,6 +374,35 @@ export function createEffects() {
         }),
     };
 }
-export type EffectsState = ReturnType<
-    ReturnType<typeof createEffects>['snapshot']
->;
+export type EffectsState = {
+    specks: Speck[];
+    waterDrops: WaterDrop[];
+    waterRipples: WaterRipple[];
+    waterPour: WaterPour | null;
+    waterPuddle: WaterPuddle | null;
+    paperFace: number;
+    glare: number;
+    copierFlash: number;
+    practiceBurst: number;
+    saveFlash: number;
+    personalBox: PersonalBoxReaction;
+    keysTried: Readonly<Record<HintKey, boolean>>;
+    meetingVisit: number;
+    deathShot: DeathShot | null;
+};
+
+export type Effects = {
+    receive: (event: GameEvent) => void;
+    observe: (
+        input: PersonalBoxInput &
+            Partial<
+                Parameters<ReturnType<typeof createMeetingVisits>['observe']>[0]
+            > & {
+                mode?: string;
+            },
+    ) => void;
+    restorePersonalBox: (next: PersonalBoxReaction) => void;
+    pressKey: (key: HintKey) => void;
+    advance: (dt: number) => void;
+    snapshot: () => EffectsState;
+};

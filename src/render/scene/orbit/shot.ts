@@ -1,39 +1,5 @@
-import type { RenderCtx } from '../../context';
-import {
-    createSkyProjection,
-    placedProjection,
-    type Point3,
-} from '../shared/projection';
-import { orbitEdgePuffs, orbitSlipstream, orbitSpeedLines } from './flight';
-import { endingChair } from '../sky/ending-art';
-import { skyDeparture } from '../sky/departure';
-import {
-    basinCloudSeeds,
-    orbitCloudBank,
-    orbitSky,
-    type CloudBankOptions,
-} from './atmosphere';
-import {
-    ORBIT_WATCH,
-    orbitBeacon,
-    orbitCloudGlints,
-    orbitWatchers,
-    orbitWatchGlow,
-} from './watch';
-import { ATTENDANCE, attendanceBubble } from '../shared/attendance-bubble';
-import {
-    orbitSatelliteLight,
-    satelliteChairGlow,
-    satelliteGlare,
-    satelliteLitChair,
-    satelliteLightWarmth,
-    satelliteSpots,
-    type Aim,
-} from './satellite-light';
-import { orbitViewfinder } from './viewfinder';
-import { orbitReaction } from './reaction';
-import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './heights';
-import { earthSkyBottom, orbitEarth, type EarthCamera } from './earth';
+import { basinCloudSeeds, orbitCloudBank, orbitSky } from './atmosphere';
+import { earthSkyBottom, orbitEarth } from './earth';
 import {
     endingChairLights,
     endingFade,
@@ -41,10 +7,39 @@ import {
     endingLaptopText,
     endingNebula,
     endingSignal,
-    type OrbitEndingState,
 } from './ending';
-import { STAGE_FIVE as C } from '../../../game/stages/orbit/data';
+import { orbitEdgePuffs, orbitSlipstream, orbitSpeedLines } from './flight';
+import { inOpacity, orbitHeights, orbitHighSky, orbitShadow } from './heights';
+import { orbitReaction } from './reaction';
+import {
+    orbitSatelliteLight,
+    satelliteChairGlow,
+    satelliteGlare,
+    satelliteLitChair,
+    satelliteLightWarmth,
+    satelliteSpots,
+} from './satellite-light';
+import { orbitViewfinder } from './viewfinder';
+import {
+    ORBIT_WATCH,
+    orbitBeacon,
+    orbitCloudGlints,
+    orbitWatchers,
+    orbitWatchGlow,
+} from './watch';
 import { gearAt } from '../../../game/stages/orbit/course/decide';
+import { STAGE_FIVE as C } from '../../../game/stages/orbit/data';
+import { ATTENDANCE, attendanceBubble } from '../shared/attendance-bubble';
+import { createSkyProjection, placedProjection } from '../shared/projection';
+import { skyDeparture } from '../sky/departure';
+import { endingChair } from '../sky/ending-art';
+
+import type { CloudBankOptions } from './atmosphere';
+import type { EarthCamera } from './earth';
+import type { OrbitEndingState } from './ending';
+import type { Aim } from './satellite-light';
+import type { RenderCtx } from '../../context';
+import type { Point3 } from '../shared/projection';
 
 export type OrbitShot = {
     since: number;
@@ -85,8 +80,8 @@ const CAMERA = {
 };
 
 function gearFeel(travel: number, speed: number) {
-    const gear = gearAt(travel),
-        at = (list: readonly number[]) => list[gear.index];
+    const gear = gearAt(travel);
+    const at = (list: readonly number[]) => list[gear.index];
     const since =
         gear.index > 0 ? (travel - gear.from) / Math.max(60, speed) : Infinity;
     const kick =
@@ -141,7 +136,9 @@ function backdrop(
                 { key: 'orbit-basin-sky', opacity: shot.basin },
                 () => orbitSky(ctx),
             );
-        } else orbitSky(ctx);
+        } else {
+            orbitSky(ctx);
+        }
     }
     if (clouds > 0) {
         ctx.commands.push({
@@ -177,11 +174,11 @@ function backdrop(
     return { heights, horizon };
 }
 
-export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
+export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot): void {
     const { travel, p, turn, ending, since } = shot;
     const clouds = 1 - orbitHeights(travel).air;
-    const wide = ending.wide,
-        blend = smooth(shot.entry);
+    const wide = ending.wide;
+    const blend = smooth(shot.entry);
     const mix = (a: number, b: number, k: number) => a + (b - a) * k;
     const look = 0;
     const follow = (v: number, dv: number) =>
@@ -258,8 +255,8 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     const { heights, horizon } = backdrop(ctx, shot, clouds, earth, turned);
     const facing = { cos: Math.cos(look), sin: Math.sin(look) };
     const point = (x: number, y: number, z: number): Point3 => {
-        const across = x - cam.x,
-            ahead = z - travel;
+        const across = x - cam.x;
+        const ahead = z - travel;
         return [
             ahead * facing.cos + across * facing.sin,
             15 + y - cam.y,
@@ -273,24 +270,24 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
         (1 - focus);
     const satelliteLightPoint = (x: number, y: number, z: number) =>
         point(x, y - sink, z);
-    const bank = mix(p.a * 0.65, 0, wide),
-        pitch =
-            mix(Math.max(-0.2, Math.min(0.2, p.vy / 900)), 0, wide) +
-            0.32 * ending.recline;
+    const bank = mix(p.a * 0.65, 0, wide);
+    const pitch =
+        mix(Math.max(-0.2, Math.min(0.2, p.vy / 900)), 0, wide) +
+        0.32 * ending.recline;
     const swivel = ending.swivel * Math.PI;
     const shudder = edge * 2.6;
-    const pivot = -25,
-        offset: Point3 = [
-            0,
-            -sink + p.y - cam.y + Math.sin(ctx.t * 61) * shudder,
-            p.x - cam.x + Math.cos(ctx.t * 53) * shudder,
-        ];
+    const pivot = -25;
+    const offset: Point3 = [
+        0,
+        -sink + p.y - cam.y + Math.sin(ctx.t * 61) * shudder,
+        p.x - cam.x + Math.cos(ctx.t * 53) * shudder,
+    ];
     const chair = placedProjection(view, ([x0, y, z0]) => {
-        const x = x0 * Math.cos(swivel) - z0 * Math.sin(swivel),
-            z = x0 * Math.sin(swivel) + z0 * Math.cos(swivel);
+        const x = x0 * Math.cos(swivel) - z0 * Math.sin(swivel);
+        const z = x0 * Math.sin(swivel) + z0 * Math.cos(swivel);
         const ly = y - pivot;
-        const x1 = x * Math.cos(pitch) - ly * Math.sin(pitch),
-            y1 = x * Math.sin(pitch) + ly * Math.cos(pitch);
+        const x1 = x * Math.cos(pitch) - ly * Math.sin(pitch);
+        const y1 = x * Math.sin(pitch) + ly * Math.cos(pitch);
         return [
             x1 + offset[0],
             y1 * Math.cos(bank) - z * Math.sin(bank) + pivot + offset[1],
@@ -319,8 +316,12 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     if (cloudsShown) {
         orbitCloudBank(ctx, view, travel, false, { ...options, alpha: clouds });
     }
-    if (turn >= ORBIT_WATCH.glintsFrom) orbitCloudGlints(ctx, clouds);
-    if (turn >= ORBIT_WATCH.beacon.appear) orbitBeacon(ctx, view, point);
+    if (turn >= ORBIT_WATCH.glintsFrom) {
+        orbitCloudGlints(ctx, clouds);
+    }
+    if (turn >= ORBIT_WATCH.beacon.appear) {
+        orbitBeacon(ctx, view, point);
+    }
     const lamps =
         turn > 0
             ? orbitWatchers(
@@ -422,7 +423,10 @@ export function drawOrbitShot(ctx: RenderCtx, shot: OrbitShot) {
     endingChairLights(ctx, chair, ending);
     const head = chair.project([4, 70, 0]);
     orbitReaction(ctx, head, since, since >= 0 && light.warmth >= 1);
-    if (ending.parked) endingSignal(ctx, head, ending);
-    else attendanceBubble(ctx, head, since + ATTENDANCE.lead);
+    if (ending.parked) {
+        endingSignal(ctx, head, ending);
+    } else {
+        attendanceBubble(ctx, head, since + ATTENDANCE.lead);
+    }
     endingFade(ctx, ending);
 }

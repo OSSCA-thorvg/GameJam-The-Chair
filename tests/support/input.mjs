@@ -15,8 +15,11 @@ export function installInputEnvironment(t) {
     );
     t.after(() => {
         for (const [name, descriptor] of saved) {
-            if (descriptor) Object.defineProperty(globalThis, name, descriptor);
-            else delete globalThis[name];
+            if (descriptor) {
+                Object.defineProperty(globalThis, name, descriptor);
+            } else {
+                delete globalThis[name];
+            }
         }
     });
     const window = new EventTarget();

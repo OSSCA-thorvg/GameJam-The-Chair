@@ -1,6 +1,7 @@
-import type { Point } from '../../types';
-import type { Message } from '../../../i18n';
 import { deepFreeze } from '../../data';
+
+import type { Message } from '../../../i18n';
+import type { Point } from '../../types';
 
 export const TYPING_SOUNDS = deepFreeze([
     'typing.1',
@@ -104,7 +105,7 @@ export const STAGE_TWO = deepFreeze({
         ],
     ] satisfies Point[][],
 });
-export function overPit(x: number) {
+export function overPit(x: number): boolean {
     return x > STAGE_TWO.express.pit.left && x < STAGE_TWO.express.pit.right;
 }
 export type ChairChat =
@@ -182,8 +183,14 @@ export const CHAIR_CHAT_INTERVAL = deepFreeze({
 export function chairChatLine(
     chat: Exclude<ChairChat, { kind: 'waiting' }>,
     seed: number,
-) {
-    if (chat.kind === 'orientation') return ORIENTATION.lines[chat.line];
+): {
+    readonly speaker: 0 | 1 | 2;
+    readonly text: Message;
+    readonly at?: number;
+} {
+    if (chat.kind === 'orientation') {
+        return ORIENTATION.lines[chat.line];
+    }
     const lines = CHAIR_CHAT[chat.kind];
     const topic = chat.kind === 'gossip' ? seed % (lines.length / 3) : 0;
     return lines[
@@ -191,7 +198,9 @@ export function chairChatLine(
             lines.length
     ];
 }
-export function chairChatOnce(kind: ChairChat['kind']) {
+export function chairChatOnce(
+    kind: ChairChat['kind'],
+): kind is 'orientation' | 'trip' {
     return kind === 'orientation' || kind === 'trip';
 }
 export type ChairDepartureReason = 'companions' | 'clock-out' | 'abduction';

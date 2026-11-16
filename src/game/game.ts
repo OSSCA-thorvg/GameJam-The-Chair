@@ -1,19 +1,15 @@
 import { FIXED_STEP } from './level';
-import type { Input, GameEvent, Mode, StageId } from './types';
-import type { SkyState } from './stages/sky/data';
-import {
-    cloneState,
-    createCore,
-    parseState,
-    serializeState,
-    type CoreState,
-    type Progress,
-} from './state';
-import type { Command } from './commands';
+import { viewState } from './snapshot';
+import { cloneState, createCore, parseState, serializeState } from './state';
 import { SIMULATED, applyCommand, stepGame } from './step';
 import { applyFocusLoss } from './systems/focus/apply';
 import { applyImpact } from './systems/impact/apply';
-import { viewState, type GameSnapshot } from './snapshot';
+
+import type { Command } from './commands';
+import type { GameSnapshot } from './snapshot';
+import type { SkyState } from './stages/sky/data';
+import type { CoreState, Progress } from './state';
+import type { Input, GameEvent, Mode, StageId } from './types';
 
 export type { GameSnapshot } from './snapshot';
 
@@ -62,7 +58,7 @@ function describe(error: unknown) {
         : { message: String(error) };
 }
 
-export function createGame(options: GameOptions = {}) {
+export function createGame(options: GameOptions = {}): Game {
     let s: CoreState = createCore({
         seed: options.seed ?? 0,
         deaths: options.progress?.deaths,
@@ -152,7 +148,9 @@ export function createGame(options: GameOptions = {}) {
         return viewState(s);
     }
     function advance(dt: number): AdvanceResult {
-        if (!Number.isFinite(dt) || dt < 0) return { ticks: 0, dropped: 0 };
+        if (!Number.isFinite(dt) || dt < 0) {
+            return { ticks: 0, dropped: 0 };
+        }
         if (!SIMULATED.includes(s.mode)) {
             const dropped = acc;
             acc = 0;
@@ -219,4 +217,27 @@ export function createGame(options: GameOptions = {}) {
     };
 }
 
-export type Game = ReturnType<typeof createGame>;
+export type Game = {
+    send: (command: Command) => void;
+    reset: () => void;
+    restart: () => void;
+    startStage: (id: StageId) => void;
+    jump: () => void;
+    spray: () => void;
+    interact: () => void;
+    leaveMeeting: () => void;
+    pause: () => void;
+    setInput: (...input: Input[]) => void;
+    press(input: Input): void;
+    release(input: Input): void;
+    clearInput: () => void;
+    step: (_dt?: number) => void;
+    advance: (dt: number) => AdvanceResult;
+    advanceImpact: (dt: number) => void;
+    advanceFocusLoss: (dt: number) => void;
+    serialize: () => string;
+    restore(json: string): void;
+    status: () => GameStatus;
+    getSnapshot: () => GameSnapshot;
+    drainEvents(): GameEvent[];
+};

@@ -5,18 +5,30 @@ export function isRecord(value: unknown): value is Data {
 }
 
 export function record(value: unknown, path: string): Data {
-    if (!isRecord(value)) throw new Error(`${path} must be an object`);
+    if (!isRecord(value)) {
+        throw new Error(`${path} must be an object`);
+    }
     return value;
 }
 
-export function exact(data: Data, allowed: readonly string[], path: string) {
+export function exact(
+    data: Data,
+    allowed: readonly string[],
+    path: string,
+): void {
     const unexpected = Object.keys(data).find((key) => !allowed.includes(key));
-    if (unexpected) throw new Error(`${path}.${unexpected} is not allowed`);
+    if (unexpected) {
+        throw new Error(`${path}.${unexpected} is not allowed`);
+    }
 }
 
 export function array(value: unknown, path: string, max: number): unknown[] {
-    if (!Array.isArray(value)) throw new Error(`${path} must be an array`);
-    if (value.length > max) throw new Error(`${path} is too large`);
+    if (!Array.isArray(value)) {
+        throw new Error(`${path} must be an array`);
+    }
+    if (value.length > max) {
+        throw new Error(`${path} is too large`);
+    }
     return value;
 }
 
@@ -62,18 +74,20 @@ export function choice<T extends string | number>(
     path: string,
 ): T {
     const selected = values.find((candidate) => candidate === value);
-    if (selected === undefined) throw new Error(`${path} has an unknown value`);
+    if (selected === undefined) {
+        throw new Error(`${path} has an unknown value`);
+    }
     return selected;
 }
 
-export function point(value: unknown, path: string) {
+export function point(value: unknown, path: string): void {
     const data = record(value, path);
     exact(data, ['x', 'y'], path);
     finite(data.x, `${path}.x`);
     finite(data.y, `${path}.y`);
 }
 
-export function player(value: unknown, path: string) {
+export function player(value: unknown, path: string): void {
     const data = record(value, path);
     exact(data, ['x', 'y', 'vx', 'vy', 'a', 'w'], path);
     for (const key of ['x', 'y', 'vx', 'vy', 'a', 'w']) {
@@ -81,7 +95,7 @@ export function player(value: unknown, path: string) {
     }
 }
 
-export function person(value: unknown, path: string) {
+export function person(value: unknown, path: string): void {
     const data = record(value, path);
     exact(data, ['id', 'x', 'said'], path);
     choice(data.id, ['manager', 'cleaner', 'admin'], `${path}.id`);
@@ -89,7 +103,7 @@ export function person(value: unknown, path: string) {
     boolean(data.said, `${path}.said`);
 }
 
-export function paper(value: unknown, path: string) {
+export function paper(value: unknown, path: string): void {
     const data = record(value, path);
     exact(
         data,
@@ -119,8 +133,10 @@ export function paper(value: unknown, path: string) {
     }
 }
 
-export function impact(value: unknown, path: string) {
-    if (value === null) return;
+export function impact(value: unknown, path: string): void {
+    if (value === null) {
+        return;
+    }
     const data = record(value, path);
     exact(data, ['frames', 'elapsed', 'point'], path);
     array(data.frames, `${path}.frames`, 61).forEach((frame, index) => {
@@ -136,6 +152,6 @@ export function exactFields<T>(
     data: Data,
     fields: Record<keyof T, true>,
     path: string,
-) {
+): void {
     exact(data, Object.keys(fields), path);
 }

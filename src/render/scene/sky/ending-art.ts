@@ -1,9 +1,10 @@
+import { endingGlasses } from './player-glasses';
+import { endingHair } from './player-hair';
 import { ART } from '../../art';
 import { PLAYER_OUTLINES } from '../player/art';
+
 import type { Vector } from '../../types';
 import type { Point3, SkyProjection } from '../shared/projection';
-import { endingHair } from './player-hair';
-import { endingGlasses } from './player-glasses';
 
 export function endingChair(
     view: SkyProjection,
@@ -13,14 +14,15 @@ export function endingChair(
     loose = -1,
     rest = 0,
     rocket = 0,
-) {
+): number {
     const draw = chairDrawing(view, elapsed, arrival);
     chairFrame(draw);
     riderBody(draw);
     riderHead(view, draw);
     riderArms(view, draw, rest);
-    if (loose < 0) extinguisher(draw, spray, rocket);
-    else {
+    if (loose < 0) {
+        extinguisher(draw, spray, rocket);
+    } else {
         extinguisher(
             looseDrawing(view, draw, loose),
             spray * Math.exp(-loose * 0.6),
@@ -36,10 +38,10 @@ function looseDrawing(
     loose: number,
 ): ChairDrawing {
     const centre: Point3 = [-46, -5, 0];
-    const axis: Point3 = [0.3, 0.5, 0.81],
-        angle = loose * 0.9;
-    const cos = Math.cos(angle),
-        sin = Math.sin(angle);
+    const axis: Point3 = [0.3, 0.5, 0.81];
+    const angle = loose * 0.9;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
     const shift: Point3 = [
         -10 * loose,
         9 * loose,
@@ -125,8 +127,8 @@ export function laptopScreenPoint(
     ];
 }
 
-function chairFrame({ C, rod, oval, profile }: ChairDrawing) {
-    rod([0, -4, 0], [0, 16, 0], 3, C.steel);
+function chairFrame({ C: palette, rod, oval, profile }: ChairDrawing) {
+    rod([0, -4, 0], [0, 16, 0], 3, palette.steel);
     for (const [x, z] of [
         [-27, 22],
         [27, 22],
@@ -134,7 +136,7 @@ function chairFrame({ C, rod, oval, profile }: ChairDrawing) {
         [27, -22],
         [0, -30],
     ]) {
-        rod([0, 13, 0], [x, 21, z], 2.5, C.steel);
+        rod([0, 13, 0], [x, 21, z], 2.5, palette.steel);
         oval(x, 23, z, 7, 8, 5, '#3f4650');
         oval(x, 23, z + 4.7, 2.5, 2.5, 0.5, '#9197a2');
     }
@@ -152,7 +154,7 @@ function chairFrame({ C, rod, oval, profile }: ChairDrawing) {
     );
 }
 
-function riderBody({ C, profile }: ChairDrawing) {
+function riderBody({ C: palette, profile }: ChairDrawing) {
     profile(PLAYER_OUTLINES.farLeg, 5, '#4e5b70', -12);
     profile(
         [
@@ -192,7 +194,7 @@ function riderBody({ C, profile }: ChairDrawing) {
         12,
     );
 
-    profile(PLAYER_OUTLINES.shirt, 16, C.shirt);
+    profile(PLAYER_OUTLINES.shirt, 16, palette.shirt);
     profile(
         [
             [-17, -62],
@@ -244,7 +246,10 @@ function riderBody({ C, profile }: ChairDrawing) {
     );
 }
 
-function riderHead(view: SkyProjection, { C, bob, oval }: ChairDrawing) {
+function riderHead(
+    view: SkyProjection,
+    { C: palette, bob, oval }: ChairDrawing,
+) {
     const face: Vector[] = [
         [-10, -77],
         [-3, -83],
@@ -255,7 +260,7 @@ function riderHead(view: SkyProjection, { C, bob, oval }: ChairDrawing) {
     view.profile(
         face.map(([x, y]) => [x, -y - 35 + bob]),
         12,
-        C.skin,
+        palette.skin,
         0,
         {
             widthAt: (_x, y) => {
@@ -265,7 +270,9 @@ function riderHead(view: SkyProjection, { C, bob, oval }: ChairDrawing) {
         },
     );
     endingHair(view, bob);
-    for (const side of [-1, 1]) oval(-7, -81, side * 13, 2.7, 3.4, 1.5, C.skin);
+    for (const side of [-1, 1]) {
+        oval(-7, -81, side * 13, 2.7, 3.4, 1.5, palette.skin);
+    }
     endingGlasses(view, bob);
 }
 
@@ -468,9 +475,13 @@ function extinguisher(
             '#f6e6df' + hex((100 / 255) * (1 - age) * (1 - rocket)),
         );
     }
-    if (rocket <= 0) return;
+    if (rocket <= 0) {
+        return;
+    }
     rod([-46, -9, 0], [-46, -4, 0], 5.5, '#2f3540');
-    if (spray > 0) rocketExhaust(oval, elapsed, spray * rocket);
+    if (spray > 0) {
+        rocketExhaust(oval, elapsed, spray * rocket);
+    }
 }
 
 const hex = (value: number) =>
@@ -523,8 +534,8 @@ function rocketExhaust(
         '#fff1c4' + hex(0.35 * Math.min(1, power)),
     );
     for (let k = 0; k < 6; k++) {
-        const along = ((k + 0.5) / 6) * core,
-            r = 8 * (1 - k / 8);
+        const along = ((k + 0.5) / 6) * core;
+        const r = 8 * (1 - k / 8);
         oval(
             -46 - along * 0.55,
             -2 + along,
@@ -536,8 +547,8 @@ function rocketExhaust(
         );
     }
     for (let k = 1; k <= 3; k++) {
-        const along = core * k * 0.26,
-            r = 5.5 - k * 0.9;
+        const along = core * k * 0.26;
+        const r = 5.5 - k * 0.9;
         oval(
             -46 - along * 0.55,
             -2 + along,

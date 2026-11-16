@@ -27,7 +27,7 @@ export function roofShape(
     width: number,
     roof: Roof,
     color: string,
-) {
+): void {
     if (roof === 'setback') {
         fill(
             box(

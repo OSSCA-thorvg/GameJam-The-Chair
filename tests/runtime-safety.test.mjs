@@ -1,5 +1,6 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 const { createGame, isStageUnlocked, createErrorLog } = await loadSource(`
 export { createGame } from './src/game/game';
@@ -62,6 +63,8 @@ test('stored errors are validated and bounded before being exposed', () => {
     } finally {
         if (previous) {
             Object.defineProperty(globalThis, 'localStorage', previous);
-        } else delete globalThis.localStorage;
+        } else {
+            delete globalThis.localStorage;
+        }
     }
 });

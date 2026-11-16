@@ -2,14 +2,16 @@ import type { Point3, SkyProjection } from '../shared/projection';
 
 const point = ([x, y, z]: Point3, bob: number): Point3 => [x, -y - 35 + bob, z];
 
-const FRONT = 15.2,
-    TOP = -87.6,
-    BOTTOM = -79,
-    INNER = 1.6,
-    OUTER = 10.6;
+const FRONT = 15.2;
+const TOP = -87.6;
+const BOTTOM = -79;
+const INNER = 1.6;
+const OUTER = 10.6;
 
-export function endingGlasses(view: SkyProjection, bob: number) {
-    for (const side of [-1, 1]) lens(view, bob, side);
+export function endingGlasses(view: SkyProjection, bob: number): void {
+    for (const side of [-1, 1]) {
+        lens(view, bob, side);
+    }
     view.rod(
         point([FRONT, -84.6, -INNER], bob),
         point([FRONT, -84.6, INNER], bob),
@@ -41,8 +43,8 @@ function facing(
 }
 
 function lens(view: SkyProjection, bob: number, side: number) {
-    const inner = side * INNER,
-        outer = side * OUTER;
+    const inner = side * INNER;
+    const outer = side * OUTER;
     facing(view, bob, FRONT, TOP, BOTTOM, inner, outer, '#83c8e4');
     facing(
         view,

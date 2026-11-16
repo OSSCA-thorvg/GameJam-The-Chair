@@ -1,8 +1,9 @@
-import type { RenderCtx } from '../../context';
 import { PLAYER_OUTLINES } from './art';
 import { skyWindResponse } from '../sky/wind-response';
 
-export function playerChair(ctx: RenderCtx) {
+import type { RenderCtx } from '../../context';
+
+export function playerChair(ctx: RenderCtx): void {
     const C = ctx.C;
     const state = ctx.state;
     const rotation = ctx.rotation;
@@ -41,9 +42,9 @@ const BACKREST_PIVOT: [number, number] = [-24, -12];
 
 function backrest(ctx: RenderCtx) {
     const angle = ctx.chairPose.backrest;
-    const [px, py] = BACKREST_PIVOT,
-        c = Math.cos(angle),
-        s = Math.sin(angle);
+    const [px, py] = BACKREST_PIVOT;
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
     const swing = ([x, y]: readonly number[]): [number, number] => [
         px + (x - px) * c - (y - py) * s,
         py + (x - px) * s + (y - py) * c,

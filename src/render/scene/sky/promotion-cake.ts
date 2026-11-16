@@ -1,7 +1,8 @@
+import { SIGN_FONT } from '../../fonts';
+
 import type { RenderCtx } from '../../context';
 import type { Curve, Vector } from '../../types';
 import type { Point3, SkyProjection } from '../shared/projection';
-import { SIGN_FONT } from '../../fonts';
 
 const INK = '#7a2f2a';
 const CREAM = '#fff6f4';
@@ -131,9 +132,9 @@ function flag2d(ctx: RenderCtx, place: Place, s: number) {
     ctx.rod(px, top, px, bottom, 3.6 * s, '#f8e4ae');
     ctx.ellipse(px, top - 3 * s, 8 * s, 8 * s, INK);
     ctx.ellipse(px, top - 3 * s, 6 * s, 6 * s, '#ffd36b');
-    const w = FLAG.width * s,
-        h = FLAG.height * s,
-        y0 = top + 10 * s;
+    const w = FLAG.width * s;
+    const h = FLAG.height * s;
+    const y0 = top + 10 * s;
     const flap = Math.sin(ctx.t * 5.5) * 4 * s;
     const cloth: Vector[] = [
         [px - 2 * s, y0],
@@ -163,9 +164,9 @@ function flag2d(ctx: RenderCtx, place: Place, s: number) {
     );
 }
 
-export function promotionCake(ctx: RenderCtx, width: number) {
-    const s = 0.52,
-        cx = width / 2 - 92;
+export function promotionCake(ctx: RenderCtx, width: number): void {
+    const s = 0.52;
+    const cx = width / 2 - 92;
     const place: Place = (x, y) => [cx + x * s, -9 + (y - BODY.base) * s];
     const quad = (x0: number, x1: number, t0: number, t1: number): Vector[] => [
         place(x0, bandY(x0, t0)),
@@ -237,9 +238,9 @@ export function promotionCake(ctx: RenderCtx, width: number) {
         );
     }
     for (const [x0, y0, angle] of WAFERS) {
-        const a = (angle * Math.PI) / 180,
-            c = Math.cos(a),
-            sn = Math.sin(a);
+        const a = (angle * Math.PI) / 180;
+        const c = Math.cos(a);
+        const sn = Math.sin(a);
         const at = (u: number, v: number) =>
             place(x0 + u * c - v * sn, y0 + u * sn + v * c);
         const stick = [at(-8, -46), at(8, -46), at(8, 12), at(-8, 12)];
@@ -259,9 +260,9 @@ export function promotionCake(ctx: RenderCtx, width: number) {
     for (const [x0, y0, angle] of LEAVES) {
         const a = (angle * Math.PI) / 180;
         const leaf = Array.from({ length: 10 }, (_, i): Vector => {
-            const u = (i / 10) * Math.PI * 2,
-                ex = Math.cos(u) * 14,
-                ey = Math.sin(u) * 7.5;
+            const u = (i / 10) * Math.PI * 2;
+            const ex = Math.cos(u) * 14;
+            const ey = Math.sin(u) * 7.5;
             return place(
                 x0 + ex * Math.cos(a) - ey * Math.sin(a),
                 y0 + ex * Math.sin(a) + ey * Math.cos(a),
@@ -353,20 +354,20 @@ export function departureCake(
     place: (p: Point3) => Point3,
     progress: number,
 ) {
-    const s = 0.55,
-        cx = 168,
-        floor = -80,
-        z0 = -70,
-        half = 36;
+    const s = 0.55;
+    const cx = 168;
+    const floor = -80;
+    const z0 = -70;
+    const half = 36;
     const turn =
         -0.75 *
         Math.min(1, progress * 1.8) ** 2 *
         (3 - 2 * Math.min(1, progress * 1.8));
-    const c = Math.cos(turn),
-        sn = Math.sin(turn);
+    const c = Math.cos(turn);
+    const sn = Math.sin(turn);
     const at = (x: number, y: number, z = 0): Point3 => {
-        const lx = x * s,
-            lz = z;
+        const lx = x * s;
+        const lz = z;
         return place([
             cx + lx * c - lz * sn,
             floor - (y - BODY.base) * s,
@@ -375,7 +376,9 @@ export function departureCake(
     };
     const yaw = (p: Point3) => at(p[0], p[1], p[2]);
     for (const [t0, t1, color] of BANDS) {
-        if (t1 - t0 < 0.1 && t0 > 0) continue;
+        if (t1 - t0 < 0.1 && t0 > 0) {
+            continue;
+        }
         const outline: Array<[number, number]> = [
             [BODY.left, bandY(BODY.left, t0)],
             [BODY.right, bandY(BODY.right, t0)],
@@ -430,8 +433,8 @@ export function departureCake(
         [11 * k * s, 4 * k * s, 11 * k * s],
         '#5aa64a',
     );
-    const poleTop = at(FLAG.pole, FLAG.top, 0),
-        poleBottom = at(FLAG.pole, FLAG.top + FLAG.length, 0);
+    const poleTop = at(FLAG.pole, FLAG.top, 0);
+    const poleBottom = at(FLAG.pole, FLAG.top + FLAG.length, 0);
     view.rod(poleBottom, poleTop, 3 * s, '#f8e4ae');
     view.oval(at(FLAG.pole, FLAG.top - 3, 0), [7 * s, 7 * s, 7 * s], '#ffd36b');
     const flap = Math.sin(ctx.t * 5.5) * 4;
@@ -443,20 +446,22 @@ export function departureCake(
         at(FLAG.pole - 2, y0 + FLAG.height),
     ];
     view.polygon(cloth, '#d95e5cff');
-    return () => {
+    return (): void => {
         const [a, b, cc, d] = cloth.map(view.project);
         const centre: Vector = [
             (a[0] + b[0] + cc[0] + d[0]) / 4,
             (a[1] + b[1] + cc[1] + d[1]) / 4,
         ];
-        const across = Math.hypot(b[0] - a[0], b[1] - a[1]),
-            tall = Math.hypot(d[0] - a[0], d[1] - a[1]);
+        const across = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        const tall = Math.hypot(d[0] - a[0], d[1] - a[1]);
         const word = ctx.locale === 'ko' ? '승진' : 'PROMOTED';
         const size = Math.min(
             tall * 0.55,
             (across * 0.78) / Math.max(0.01, ctx.textWidth(word, SIGN_FONT)),
         );
-        if (size < 4) return;
+        if (size < 4) {
+            return;
+        }
         const rotation = Math.atan2(a[1] - b[1], a[0] - b[0]);
         ctx.screenText(word, centre[0], centre[1], size, '#fff5d8', {
             rotation,

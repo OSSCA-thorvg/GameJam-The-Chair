@@ -1,39 +1,32 @@
-import { STAGE_PRESENTATION } from '../presentation/stages';
 import { gameplayCamera } from './camera';
+import { createRenderCtx, createRenderResources } from './context';
+import { deathShotBurst, deathShotCloseness, DEATH_SHOT } from './death-shot';
+import { createGpuTimer } from './gpu-timer';
+import { createPaintPool, paint, thorvgTextWidth } from './paint';
+import { resetRenderStats } from './perf';
+import { drawBuilding } from './scene/building';
+import { STAGE_PRESENTATION } from '../presentation/stages';
+import { deathBurst } from './scene/effects/death-burst';
+import { focusVignette } from './scene/effects/focus-vignette';
+import { drawWorld } from './scene/office/world';
+import { drawOpening, openingFocusY } from './scene/opening';
+import { drawOrbit } from './scene/orbit';
+import { drawRooftop } from './scene/rooftop';
+import { drawStageTitle, drawTalk } from './scene/shared/talk';
+import { drawTitle } from './scene/shared/title';
+import { drawCloudStart } from './scene/sky/clouds';
+import { loadThorvg, thorvgRenderer } from './thorvg';
+
+import type { RenderCtx } from './context';
+import type { DeathShot } from './death-shot';
+import type { EffectsState } from './effects';
+import type { GpuTimer } from './gpu-timer';
+import type { LayerOverrides, RenderStats } from './perf';
+import type { OpeningFrame } from './scene/opening';
+import type { SceneTalk } from './types';
+import type { GameSnapshot } from '../game/game';
 import type { Locale } from '../i18n';
 import type { Canvas, ThorVGNamespace } from '@thorvg/webcanvas';
-import { loadThorvg, thorvgRenderer } from './thorvg';
-import { createGpuTimer, type GpuTimer } from './gpu-timer';
-import type { GameSnapshot } from '../game/game';
-import type { EffectsState } from './effects';
-import {
-    createRenderCtx,
-    createRenderResources,
-    type RenderCtx,
-} from './context';
-import { drawOrbit } from './scene/orbit';
-import { drawWorld } from './scene/office/world';
-import { drawBuilding } from './scene/building';
-import { drawRooftop } from './scene/rooftop';
-import { drawCloudStart } from './scene/sky/clouds';
-import { focusVignette } from './scene/effects/focus-vignette';
-import { drawStageTitle, drawTalk } from './scene/shared/talk';
-import type { SceneTalk } from './types';
-import { createPaintPool, paint, thorvgTextWidth } from './paint';
-import { drawOpening, openingFocusY, type OpeningFrame } from './scene/opening';
-import { drawTitle } from './scene/shared/title';
-import {
-    deathShotBurst,
-    deathShotCloseness,
-    DEATH_SHOT,
-    type DeathShot,
-} from './death-shot';
-import { deathBurst } from './scene/effects/death-burst';
-import {
-    resetRenderStats,
-    type LayerOverrides,
-    type RenderStats,
-} from './perf';
 
 export const VIEW_WIDTH = 1000;
 export const VIEW_HEIGHT = 510;
@@ -44,7 +37,7 @@ const EYES: [number, number] = [9, -83];
 export function createRenderer(
     root: HTMLElement,
     getLocale: () => Locale = () => 'en',
-) {
+): Renderer {
     const base = root.querySelector<HTMLCanvasElement>('[data-base]');
     const cn = root.querySelector<HTMLCanvasElement>('[data-tvg]');
     const bg = base?.getContext('2d');
@@ -62,7 +55,7 @@ function setup(
     getLocale: () => Locale,
 ) {
     const resources = createRenderResources(bg);
-    let ctx: RenderCtx;
+    let lastFrame: RenderCtx | null = null;
     const viewport = {
         W: 800,
         H: 510,
@@ -112,22 +105,30 @@ function setup(
         talk?: SceneTalk,
         titleTime?: number,
     ) {
-        ctx = createRenderCtx(resources, next, effects);
+        const ctx = createRenderCtx(resources, next, effects);
+        lastFrame = ctx;
         Object.assign(ctx, viewport, cameraState);
         ctx.locale = getLocale();
         const water =
             next.focusNotice?.kind === 'water' ? next.focusNotice.life : 0;
-        if (!next.soaked) soaks = 0;
-        else if (water > lastWaterLife) soaks++;
+        if (!next.soaked) {
+            soaks = 0;
+        } else if (water > lastWaterLife) {
+            soaks++;
+        }
         ctx.soaks = soaks;
         lastWaterLife = water;
 
         const t = ctx.t;
         const baseWidth = VIEW_WIDTH;
         const baseVertical = gameplayCamera(ctx, lastTime, lastStage, camera);
-        if (opening) openingCamera(opening, baseWidth, baseVertical);
-        else if (effects.deathShot) deathCamera(effects.deathShot);
-        else closeUpFrom = null;
+        if (opening) {
+            openingCamera(ctx, opening, baseWidth, baseVertical);
+        } else if (effects.deathShot) {
+            deathCamera(ctx, effects.deathShot);
+        } else {
+            closeUpFrom = null;
+        }
         cameraState = { cam: ctx.cam, wheel: ctx.wheel };
         lastStage = next.stage;
         lastTime = t;
@@ -155,10 +156,16 @@ function setup(
                 ? deathShotBurst(effects.deathShot)
                 : null;
             if (burst !== null) {
-                deathBurst(ctx, ctx.screenPoint(...riderPoint(HEAD)), burst);
+                deathBurst(
+                    ctx,
+                    ctx.screenPoint(...riderPoint(ctx, HEAD)),
+                    burst,
+                );
             }
             focusVignette(ctx);
-            if (talk) drawTalk(ctx, talk);
+            if (talk) {
+                drawTalk(ctx, talk);
+            }
             drawStageTitle(ctx);
         }
         if (stats) {
@@ -177,9 +184,13 @@ function setup(
                 overrides ?? undefined,
             );
         } finally {
-            if (timed) timing!.end();
+            if (timed) {
+                timing!.end();
+            }
         }
-        if (stats && timing) stats.gpuMs = timing.collect();
+        if (stats && timing) {
+            stats.gpuMs = timing.collect();
+        }
         return {
             cam: ctx.cam,
             scale: ctx.scale,
@@ -189,6 +200,7 @@ function setup(
     }
 
     function openingCamera(
+        ctx: RenderCtx,
         frame: OpeningFrame,
         baseWidth: number,
         baseVertical: number,
@@ -214,25 +226,30 @@ function setup(
         ctx.wheel = 0;
     }
 
-    function riderPoint([lx, ly]: [number, number]): [number, number] {
-        const c = Math.cos(ctx.player.a),
-            s = Math.sin(ctx.player.a);
+    function riderPoint(
+        ctx: RenderCtx,
+        [lx, ly]: [number, number],
+    ): [number, number] {
+        const c = Math.cos(ctx.player.a);
+        const s = Math.sin(ctx.player.a);
         return [ctx.player.x + lx * c - ly * s, ctx.player.y + lx * s + ly * c];
     }
 
-    function deathCamera(shot: DeathShot) {
+    function deathCamera(ctx: RenderCtx, shot: DeathShot) {
         if (!closeUpFrom || shot.age < closeUpAge) {
             closeUpFrom = { cam: ctx.cam };
         }
         closeUpAge = shot.age;
         const u = deathShotCloseness(shot);
         ctx.cam = closeUpFrom.cam;
-        if (u <= 0) return;
-        const width0 = ctx.VW,
-            scale0 = ctx.scale;
+        if (u <= 0) {
+            return;
+        }
+        const width0 = ctx.VW;
+        const scale0 = ctx.scale;
         const restX = closeUpFrom.cam + width0 / 2;
         const restY = ctx.H / (2 * scale0) - ctx.vertical;
-        const [fx, fy] = riderPoint(shot.kind === 'focus' ? EYES : HEAD);
+        const [fx, fy] = riderPoint(ctx, shot.kind === 'focus' ? EYES : HEAD);
         const cx = restX + (fx - restX) * u;
         const cy = restY + (fy - restY) * u;
         ctx.VW = width0 / (1 + (DEATH_SHOT[shot.kind].zoom - 1) * u);
@@ -252,7 +269,9 @@ function setup(
     async function initRenderer() {
         try {
             TVG = await loadThorvg().catch(() => loadThorvg());
-            if (!root.isConnected) return;
+            if (!root.isConnected) {
+                return;
+            }
             tvg = new TVG.Canvas(cn, { width: viewport.W, height: viewport.H });
             resources.textWidth = thorvgTextWidth(TVG);
             renderer = 'thorvg';
@@ -278,7 +297,7 @@ function setup(
         info: () => ({
             renderer,
             renderError,
-            commands: ctx.commands.length,
+            commands: lastFrame?.commands.length ?? 0,
         }),
         profile(next: RenderStats | null) {
             stats = next;
@@ -318,3 +337,34 @@ function setup(
         },
     };
 }
+
+export type Renderer = {
+    draw: (
+        next: GameSnapshot,
+        effects: EffectsState,
+        camera?: number,
+        opening?: OpeningFrame,
+        talk?: SceneTalk,
+        titleTime?: number,
+    ) => { cam: number; scale: number; vertical: number; width: number };
+    resetView(): void;
+    ready: Promise<void>;
+    info: () => {
+        renderer: string;
+        renderError: string | null;
+        commands: number;
+    };
+    profile(next: RenderStats | null): void;
+    layerOverrides(next: LayerOverrides | null): void;
+    surface: () => {
+        backend: string;
+        requested: string;
+        gpuTimer: 'idle' | 'n/a' | 'on' | 'unsupported';
+        renderError: string | null;
+        width: number;
+        height: number;
+        dpr: number;
+        raster: { width: number; height: number; dpr: number };
+    };
+    destroy(): void;
+};

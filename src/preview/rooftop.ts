@@ -1,3 +1,4 @@
+import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
 import { parseState, createGame } from '../game/game';
 import {
     ductTimings,
@@ -5,8 +6,8 @@ import {
     GRAPH_CORNERS,
 } from '../game/stages/rooftop/data';
 import { createEffects } from '../render/effects';
-import { type PreviewScene, type PreviewFrame } from './types';
-import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
+
+import type { PreviewScene, PreviewFrame } from './types';
 
 export function rooftopEntrance(): PreviewScene {
     const game = createGame();

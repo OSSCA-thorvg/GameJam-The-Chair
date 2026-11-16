@@ -1,12 +1,13 @@
-import { FIXED_STEP, FOCUS_DAMAGE, LEVEL, PHYSICS, RULES } from '../level';
 import { configHash, deepFreeze } from '../data';
+import { FIXED_STEP, FOCUS_DAMAGE, LEVEL, PHYSICS, RULES } from '../level';
+import { building, buildingConfig } from './building/definition';
+import { office, officeConfig } from './office/definition';
+import { orbit, orbitConfig } from './orbit/definition';
+import { rooftop, rooftopConfig } from './rooftop/definition';
+import { sky, skyConfig } from './sky/definition';
+
 import type { DeepReadonly, Point, StageId } from '../types';
 import type { Checkpoint, StageDefinition } from './types';
-import { office, officeConfig } from './office/definition';
-import { building, buildingConfig } from './building/definition';
-import { rooftop, rooftopConfig } from './rooftop/definition';
-import { orbit, orbitConfig } from './orbit/definition';
-import { sky, skyConfig } from './sky/definition';
 
 export type { Checkpoint, StageDefinition, StageHooks } from './types';
 
@@ -28,7 +29,10 @@ export function stageSpawn(stage: StageId, checkpoint: number): Point {
     return { x: mark.x, y: mark.y };
 }
 
-export function inCheckpointArea(mark: DeepReadonly<Checkpoint>, p: Point) {
+export function inCheckpointArea(
+    mark: DeepReadonly<Checkpoint>,
+    p: Point,
+): boolean {
     const { left, right, top, bottom } = mark.area;
     return p.x >= left && p.x < right && p.y > top && p.y < bottom;
 }

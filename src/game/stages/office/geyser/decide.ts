@@ -1,7 +1,8 @@
 import { FOCUS_DAMAGE, LEVEL } from '../../../level';
-import type { Point } from '../../../types';
-import type { FocusHit } from '../../../systems/focus/decide';
 import { nextRandom } from '../../../rng';
+
+import type { FocusHit } from '../../../systems/focus/decide';
+import type { Point } from '../../../types';
 
 export type GeyserPhase = 'rest' | 'warning' | 'burst';
 export function geyserPhase(
@@ -10,8 +11,12 @@ export function geyserPhase(
 ): { kind: GeyserPhase; age: number; remaining: number } {
     const p =
         (((t + geyser.offset) % geyser.period) + geyser.period) % geyser.period;
-    if (p < 2.3) return { kind: 'rest', age: p, remaining: 2.3 - p };
-    if (p < 3.1) return { kind: 'warning', age: p - 2.3, remaining: 3.1 - p };
+    if (p < 2.3) {
+        return { kind: 'rest', age: p, remaining: 2.3 - p };
+    }
+    if (p < 3.1) {
+        return { kind: 'warning', age: p - 2.3, remaining: 3.1 - p };
+    }
     return { kind: 'burst', age: p - 3.1, remaining: geyser.period - p };
 }
 
@@ -30,9 +35,15 @@ export function geyserHits(
     const hits: GeyserHit[] = [];
     for (let i = 0; i < LEVEL.geysers.length; i++) {
         const g = LEVEL.geysers[i];
-        if (geyserPhase(g, time).kind !== 'burst') continue;
-        if (Math.abs(p.x - g.x) > 34) continue;
-        if (p.y < LEVEL.floor - 160) continue;
+        if (geyserPhase(g, time).kind !== 'burst') {
+            continue;
+        }
+        if (Math.abs(p.x - g.x) > 34) {
+            continue;
+        }
+        if (p.y < LEVEL.floor - 160) {
+            continue;
+        }
         const draw = nextRandom(rng);
         rng = draw.state;
         hits.push({

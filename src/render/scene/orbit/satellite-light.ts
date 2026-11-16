@@ -1,12 +1,13 @@
-import type { RenderCtx } from '../../context';
-import type { Player } from '../../../game/types';
-import type { Color, PathCommand, LayerSpec, Vector } from '../../types';
-import { STAGE_FIVE } from '../../../game/stages/orbit/data';
 import {
     gearAt,
     satelliteLightArrival,
 } from '../../../game/stages/orbit/course/decide';
+import { STAGE_FIVE } from '../../../game/stages/orbit/data';
+
 import type { RoutePoint } from './watch';
+import type { Player } from '../../../game/types';
+import type { RenderCtx } from '../../context';
+import type { Color, PathCommand, LayerSpec, Vector } from '../../types';
 import type { SkyProjection } from '../shared/projection';
 
 type Beam = (typeof STAGE_FIVE.satelliteLight.beams)[number];
@@ -15,16 +16,16 @@ export type Aim = { x: number; y: number };
 const P = STAGE_FIVE.satelliteLight;
 const LENS_UP = 560;
 const LEAD = 650;
-const SHAFT_LEAD = 0.8,
-    SATELLITE_LEAD = 2.2;
+const SHAFT_LEAD = 0.8;
+const SATELLITE_LEAD = 2.2;
 const FIRST_SIGHT = 2400;
 const FOLD = 0.35;
 
-const WARM = '#fff3c4',
-    PALE = '#ffe9a8',
-    GOLD = '#ffd66e',
-    EDGE = '#ffe08a',
-    SHADE = '#6b4a12';
+const WARM = '#fff3c4';
+const PALE = '#ffe9a8';
+const GOLD = '#ffd66e';
+const EDGE = '#ffe08a';
+const SHADE = '#6b4a12';
 const PLANE: LayerSpec = { key: 'orbit-satellite-light-plane' };
 
 const smooth = (value: number) => {
@@ -39,7 +40,11 @@ const hex = (color: string, alpha: number) =>
 
 const EYE = { ahead: 1700, up: 60, radius: 120 };
 
-export function satelliteSpot(beam: Beam, aim: Aim, travel: number) {
+export function satelliteSpot(
+    beam: Beam,
+    aim: Aim,
+    travel: number,
+): { x: number; y: number; z: number } {
     if (beam.shape === 'circle') {
         return { x: aim.x * 0.3, y: EYE.up, z: travel + EYE.ahead };
     }
@@ -51,8 +56,8 @@ export function satelliteSpot(beam: Beam, aim: Aim, travel: number) {
 }
 
 function outline(b: Beam, aim: Aim, grow = 1): Array<{ x: number; y: number }> {
-    const hx = b.half.x * grow,
-        hy = b.half.y * grow;
+    const hx = b.half.x * grow;
+    const hy = b.half.y * grow;
     if (b.shape === 'circle') {
         return Array.from({ length: 32 }, (_, i) => ({
             x: aim.x + hx * Math.cos((i * Math.PI) / 16),
@@ -71,7 +76,7 @@ export function satelliteSpots(
     aims: readonly Aim[],
     travel: number,
     speed: number,
-) {
+): Array<{ x: number; y: number; z: number }> {
     return P.beams.flatMap((b, i) =>
         b.shape !== 'circle' &&
         travel < b.to &&
@@ -97,8 +102,8 @@ function hull(points: Vector[]) {
             out.push(p);
             return out;
         }, []);
-    const lower = half(sorted),
-        upper = half([...sorted].reverse());
+    const lower = half(sorted);
+    const upper = half([...sorted].reverse());
     return [...lower.slice(0, -1), ...upper.slice(0, -1)];
 }
 
@@ -114,20 +119,26 @@ function shaft(
 ): PathCommand | null {
     const arrival = satelliteLightArrival(b, travel, speed);
     const near = Math.max(b.from, travel + 1);
-    if (b.to <= near || arrival > P.warn + SHAFT_LEAD) return null;
-    const spot = satelliteSpot(b, aim, travel),
-        points: Vector[] = [];
+    if (b.to <= near || arrival > P.warn + SHAFT_LEAD) {
+        return null;
+    }
+    const spot = satelliteSpot(b, aim, travel);
+    const points: Vector[] = [];
     for (const z of [near, Math.min(b.to, travel + EYE.ahead - 100)]) {
         for (const at of outline(b, aim)) {
             const q = point(at.x, at.y, z);
-            if (view.depth(q) <= 30) return null;
+            if (view.depth(q) <= 30) {
+                return null;
+            }
             points.push(view.project(q));
         }
     }
     const lens = point(spot.x, spot.y - 30, spot.z);
-    if (view.depth(lens) > 30) points.push(view.project(lens));
-    const from = view.project(lens),
-        to = view.project(point(aim.x, aim.y - b.half.y, near));
+    if (view.depth(lens) > 30) {
+        points.push(view.project(lens));
+    }
+    const from = view.project(lens);
+    const to = view.project(point(aim.x, aim.y - b.half.y, near));
     const fade =
         strength *
         smooth((P.warn + SHAFT_LEAD - arrival) / 1.2) *
@@ -153,8 +164,8 @@ function spike(
     width: number,
     alpha: number,
 ): PathCommand {
-    const c = Math.cos(angle),
-        s = Math.sin(angle);
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
     const tip = (k: number): Vector => [
         at[0] + c * length * k,
         at[1] + s * length * k,
@@ -181,9 +192,11 @@ function spike(
 }
 
 function lensFlare(ctx: RenderCtx, at: Vector, strength: number) {
-    if (strength <= 0.02) return;
-    const breathe = 1 + 0.12 * Math.sin(ctx.t * 5),
-        radius = 70 * breathe * (0.5 + 0.5 * strength);
+    if (strength <= 0.02) {
+        return;
+    }
+    const breathe = 1 + 0.12 * Math.sin(ctx.t * 5);
+    const radius = 70 * breathe * (0.5 + 0.5 * strength);
     ctx.commands.push({
         kind: 'path',
         points: [
@@ -223,12 +236,27 @@ function lensFlare(ctx: RenderCtx, at: Vector, strength: number) {
     }
 }
 
-export function satelliteLightStage(b: Beam, travel: number, speed: number) {
+export function satelliteLightStage(
+    b: Beam,
+    travel: number,
+    speed: number,
+):
+    | { kind: 'fold'; k: number }
+    | { kind: 'on'; k: number }
+    | { kind: 'lock'; k: number }
+    | { kind: 'track'; k: number }
+    | null {
     const arrival = satelliteLightArrival(b, travel, speed);
     const past = (travel - b.to) / Math.max(STAGE_FIVE.cruise * 0.4, speed);
-    if (past > FOLD || arrival > P.warn) return null;
-    if (past > 0) return { kind: 'fold' as const, k: 1 - past / FOLD };
-    if (arrival <= 0) return { kind: 'on' as const, k: 1 };
+    if (past > FOLD || arrival > P.warn) {
+        return null;
+    }
+    if (past > 0) {
+        return { kind: 'fold' as const, k: 1 - past / FOLD };
+    }
+    if (arrival <= 0) {
+        return { kind: 'on' as const, k: 1 };
+    }
     const lock = gearAt(b.from).lock;
     if (arrival <= lock) {
         return { kind: 'lock' as const, k: 1 - arrival / lock };
@@ -246,10 +274,12 @@ function rectangle(
     strength: number,
 ) {
     const stage = satelliteLightStage(b, travel, speed);
-    if (!stage) return;
+    if (!stage) {
+        return;
+    }
     const shrink = stage.kind === 'fold' ? smooth(stage.k) : 1;
-    const hx = b.half.x * shrink,
-        hy = b.half.y * shrink;
+    const hx = b.half.x * shrink;
+    const hy = b.half.y * shrink;
     const corners = outline(b, aim, shrink).map((at) => plane(at.x, at.y));
     const edge = (stroke: PathCommand['stroke']) =>
         ctx.commands.push({
@@ -285,8 +315,8 @@ function rectangle(
         return;
     }
     if (stage.kind === 'lock') {
-        const k = stage.k,
-            snap = k < 0.15 ? 1 - k / 0.15 : 0;
+        const k = stage.k;
+        const snap = k < 0.15 ? 1 - k / 0.15 : 0;
         if (snap > 0) {
             const flash = outline(b, aim, 1 + 0.18 * snap).map((at) =>
                 plane(at.x, at.y),
@@ -314,16 +344,16 @@ function rectangle(
             dashOffset: -ctx.t * 60,
             cap: 'round',
         });
-        const out = (1 - k) * 50,
-            L = Math.min(hx, hy) * 0.5;
+        const out = (1 - k) * 50;
+        const L = Math.min(hx, hy) * 0.5;
         for (const [sx, sy] of [
             [-1, 1],
             [1, 1],
             [1, -1],
             [-1, -1],
         ]) {
-            const x = aim.x + sx * (hx + out),
-                y = aim.y + sy * (hy + out);
+            const x = aim.x + sx * (hx + out);
+            const y = aim.y + sy * (hy + out);
             ctx.commands.push({
                 kind: 'path',
                 points: [
@@ -355,14 +385,18 @@ function bigLens(
     strength: number,
 ) {
     const arrival = satelliteLightArrival(b, travel, speed);
-    if (travel > b.to || arrival > P.warn + SATELLITE_LEAD) return;
-    const spot = satelliteSpot(b, aim, travel),
-        centre = point(spot.x, spot.y, spot.z);
-    if (view.depth(centre) <= 30) return;
-    const [cx, cy] = view.project(centre),
-        edge = view.project(point(spot.x + EYE.radius, spot.y, spot.z));
-    const r = Math.abs(edge[0] - cx),
-        shown = strength * smooth((P.warn + SATELLITE_LEAD - arrival) / 1.5);
+    if (travel > b.to || arrival > P.warn + SATELLITE_LEAD) {
+        return;
+    }
+    const spot = satelliteSpot(b, aim, travel);
+    const centre = point(spot.x, spot.y, spot.z);
+    if (view.depth(centre) <= 30) {
+        return;
+    }
+    const [cx, cy] = view.project(centre);
+    const edge = view.project(point(spot.x + EYE.radius, spot.y, spot.z));
+    const r = Math.abs(edge[0] - cx);
+    const shown = strength * smooth((P.warn + SATELLITE_LEAD - arrival) / 1.5);
     const ring = (radius: number, color: string, alpha: number) =>
         ctx.commands.push({
             kind: 'path',
@@ -414,8 +448,10 @@ export function orbitSatelliteLight(
     travel: number,
     speed: number,
     strength = 1,
-) {
-    if (strength <= 0) return;
+): void {
+    if (strength <= 0) {
+        return;
+    }
     const aimOf = (i: number) => aims[i] ?? { x: 0, y: 0 };
     P.beams.forEach((b, i) => {
         if (b.shape === 'circle') {
@@ -431,13 +467,15 @@ export function orbitSatelliteLight(
     );
     P.beams.forEach((b, i) => {
         const stage = satelliteLightStage(b, travel, speed);
-        if (!stage || stage.kind === 'track' || stage.kind === 'fold') return;
-        const spot = satelliteSpot(b, aimOf(i), travel),
-            lens = point(
-                spot.x,
-                spot.y - (b.shape === 'circle' ? 0 : 30),
-                spot.z,
-            );
+        if (!stage || stage.kind === 'track' || stage.kind === 'fold') {
+            return;
+        }
+        const spot = satelliteSpot(b, aimOf(i), travel);
+        const lens = point(
+            spot.x,
+            spot.y - (b.shape === 'circle' ? 0 : 30),
+            spot.z,
+        );
         if (view.depth(lens) > 30) {
             lensFlare(
                 ctx,
@@ -456,10 +494,12 @@ export function satelliteGlare(
     chairAt: Vector,
     warmth: number,
     pulse: number,
-) {
-    if (warmth <= 0) return;
-    const inside = warmth >= 1,
-        alpha = inside ? 0.16 + 0.05 * pulse : (0.1 * warmth) / 0.4;
+): void {
+    if (warmth <= 0) {
+        return;
+    }
+    const inside = warmth >= 1;
+    const alpha = inside ? 0.16 + 0.05 * pulse : (0.1 * warmth) / 0.4;
     const radius = Math.hypot(ctx.W, ctx.H) * 0.6;
     const screen: Vector[] = [
         [0, 0],
@@ -490,11 +530,13 @@ export function satelliteLightWarmth(
     aims: readonly Aim[],
     p: Readonly<Pick<Player, 'x' | 'y'>>,
     z: number,
-) {
+): { warmth: number; toward: { x: number; y: number } } {
     let best = { warmth: 0, toward: { x: 0, y: 0 } };
     P.beams.forEach((b, i) => {
         const aim = aims.at(i);
-        if (!aim) return;
+        if (!aim) {
+            return;
+        }
         const round =
             b.shape === 'circle'
                 ? Math.hypot(p.x - aim.x, p.y - aim.y) -
@@ -534,7 +576,9 @@ export function satelliteLitChair(
     chair: SkyProjection,
     amount: number,
 ): SkyProjection {
-    if (amount <= 0) return chair;
+    if (amount <= 0) {
+        return chair;
+    }
     const tint = (color: string) =>
         '#' +
         TINT.map((gold, i) => {
@@ -559,8 +603,10 @@ export function satelliteChairGlow(
     chair: SkyProjection,
     light: ReturnType<typeof satelliteLightWarmth>,
     pulse: number,
-) {
-    if (light.warmth <= 0) return;
+): void {
+    if (light.warmth <= 0) {
+        return;
+    }
     const [x, y] = chair.project([0, 15, 0]);
     const radius =
         Math.hypot(

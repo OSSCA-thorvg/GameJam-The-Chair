@@ -5,7 +5,7 @@ export const BUCKET_TIP = 1.25;
 const RIM_LEFT: Vector = [-23, -50];
 const RIM_RIGHT: Vector = [20, -50];
 
-export function bucketAngle(side: number, age: number, tilt = 1) {
+export function bucketAngle(side: number, age: number, tilt = 1): number {
     return (
         side *
         Math.min(1, Math.max(0, age) / BUCKET_FALL_TIME) *
@@ -63,9 +63,11 @@ export function bucketMouth(
     };
 }
 
-export function pourFlow(age: number) {
+export function pourFlow(age: number): number {
     const u = age - 0.17;
-    if (u <= 0) return 0;
+    if (u <= 0) {
+        return 0;
+    }
     const envelope = u < 0.07 ? u / 0.07 : Math.exp(-(u - 0.07) * 2.5);
     const depth = Math.min(0.5, Math.max(0, u - 0.15) * 0.9);
     const glug =
@@ -75,7 +77,7 @@ export function pourFlow(age: number) {
 
 export const WATER_GRAVITY = 980;
 
-export function pourSpeed(age: number) {
+export function pourSpeed(age: number): number {
     const u = age - 0.17 - 0.07;
     return 75 + 150 * (u <= 0 ? 1 : Math.exp(-u * 2.5));
 }

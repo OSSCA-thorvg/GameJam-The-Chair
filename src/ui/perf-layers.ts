@@ -1,4 +1,6 @@
-import { translate, type Locale } from '../i18n';
+import { translate } from '../i18n';
+
+import type { Locale } from '../i18n';
 import type { LayerInfo, LayerOverrides } from '../render/perf';
 
 type Row = {
@@ -16,7 +18,20 @@ const KEEP_MS = 3000;
 export function createLayerPanel(
     getLocale: () => Locale,
     overrides: LayerOverrides,
-) {
+): {
+    element: HTMLDetailsElement;
+    update: (
+        layers: LayerInfo[],
+        canvasArea: number,
+        renderMs: number,
+        now: number,
+    ) => void;
+    applyLocale: () => void;
+    set: (key: string, action: Action, on: boolean) => void;
+    clear: () => void;
+    keys: () => string[];
+    destroy(): void;
+} {
     const root = document.createElement('details');
     root.className = 'perf-layers';
     const summary = document.createElement('summary');
@@ -32,7 +47,9 @@ export function createLayerPanel(
 
     function row(key: string) {
         let r = rows.get(key);
-        if (r) return r;
+        if (r) {
+            return r;
+        }
         const el = document.createElement('div');
         el.className = 'perf-layer';
         el.dataset.key = key;
@@ -67,7 +84,9 @@ export function createLayerPanel(
 
     function applyLocale() {
         reset.textContent = translate('perf.resetLayers', getLocale());
-        for (const r of rows.values()) applyLocaleTo(r);
+        for (const r of rows.values()) {
+            applyLocaleTo(r);
+        }
     }
 
     function set(key: string, action: Action, on: boolean) {
@@ -111,7 +130,9 @@ export function createLayerPanel(
             event.target instanceof Element
                 ? event.target.closest('button')
                 : null;
-        if (!button) return;
+        if (!button) {
+            return;
+        }
         button.blur();
         if (button.dataset.perfLayerReset !== undefined) {
             event.preventDefault();
@@ -145,7 +166,9 @@ export function createLayerPanel(
             m.shapes += layer.shapes;
             m.area += layer.area;
             m.uses++;
-            for (const effect of layer.effects) m.effects.add(effect);
+            for (const effect of layer.effects) {
+                m.effects.add(effect);
+            }
             merged.set(layer.key, m);
         }
         for (const [key, m] of merged) {
@@ -163,7 +186,9 @@ export function createLayerPanel(
             const overridden =
                 overrides.hidden.has(key) || overrides.flat.has(key);
             if (overridden && !merged.has(key)) {
-                if (r.text !== '—') r.info.textContent = r.text = '—';
+                if (r.text !== '—') {
+                    r.info.textContent = r.text = '—';
+                }
                 continue;
             }
             if (!overridden && now - r.seen > KEEP_MS) {
@@ -186,7 +211,9 @@ export function createLayerPanel(
         clear,
         keys: () => [...rows.keys()],
         destroy() {
-            for (const r of rows.values()) r.el.remove();
+            for (const r of rows.values()) {
+                r.el.remove();
+            }
             rows.clear();
         },
     };

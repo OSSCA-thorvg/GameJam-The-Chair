@@ -1,14 +1,11 @@
-import {
-    parseState,
-    createGame,
-    type Game,
-    type GameSnapshot,
-} from '../game/game';
-import type { Input } from '../game/types';
+import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
+import { parseState, createGame } from '../game/game';
 import { STAGE_TWO } from '../game/stages/building/data';
 import { createEffects } from '../render/effects';
-import { type PreviewScene } from './types';
-import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
+
+import type { PreviewScene } from './types';
+import type { Game, GameSnapshot } from '../game/game';
+import type { Input } from '../game/types';
 
 export function convoyRide(x: number, line: number, said = false): Game {
     const game = createGame();
@@ -37,8 +34,10 @@ export function convoyRide(x: number, line: number, said = false): Game {
     return game;
 }
 
-export function orientationHop(state: GameSnapshot) {
-    if (!state.ground) return false;
+export function orientationHop(state: GameSnapshot): boolean {
+    if (!state.ground) {
+        return false;
+    }
     const p = state.player;
     return STAGE_TWO.orientation.obstacles.some((obstacle) => {
         const time = (obstacle.x - p.x) / Math.max(1, p.vx);
@@ -60,7 +59,9 @@ export function orientationRun(
     const frames = [capture(game, effects)];
     for (let i = 0; i < frameCount; i++) {
         const state = game.getSnapshot();
-        if (hop && orientationHop(state)) game.jump();
+        if (hop && orientationHop(state)) {
+            game.jump();
+        }
         game.setInput(
             ...(state.corridor.convoy === 'carried'
                 ? []
@@ -88,12 +89,13 @@ export function expressRun(
     const frames = [capture(game, effects)];
     let off = false;
     for (let i = 0; i < 300; i++) {
-        const state = game.getSnapshot(),
-            p = state.player,
-            c = state.corridor;
+        const state = game.getSnapshot();
+        const p = state.player;
+        const c = state.corridor;
         let keys: Input[] = [];
-        if (off || c.convoy === 'free') keys = ['right'];
-        else if (c.convoy === 'carried' && state.ground) {
+        if (off || c.convoy === 'free') {
+            keys = ['right'];
+        } else if (c.convoy === 'carried' && state.ground) {
             if (rampJump && pit.left - p.x > 0 && pit.left - p.x < 35) {
                 game.jump();
             }
@@ -106,7 +108,9 @@ export function expressRun(
         game.setInput(...keys);
         stepGame(game, effects);
         frames.push(capture(game, effects));
-        if (game.getSnapshot().deaths > 0) break;
+        if (game.getSnapshot().deaths > 0) {
+            break;
+        }
     }
     return {
         ...recordedScene(

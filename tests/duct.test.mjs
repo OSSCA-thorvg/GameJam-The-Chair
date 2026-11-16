@@ -1,7 +1,8 @@
-import { runUntil } from './support/until.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { bundled } from './support/load.mjs';
+import { runUntil } from './support/until.mjs';
 const {
     createCore,
     viewState,

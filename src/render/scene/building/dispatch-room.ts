@@ -1,11 +1,12 @@
-import { translate } from '../../../i18n';
-import { STAGE_TWO } from '../../../game/stages/building/data';
-import type { RenderCtx } from '../../context';
-import { worker } from './workers';
 import { bubble } from './bubble';
 import { dispatchDoorOpening, doorPanel } from './meeting-doors';
+import { worker } from './workers';
+import { STAGE_TWO } from '../../../game/stages/building/data';
+import { translate } from '../../../i18n';
 
-export function dispatchRoom(ctx: RenderCtx) {
+import type { RenderCtx } from '../../context';
+
+export function dispatchRoom(ctx: RenderCtx): void {
     const c = ctx.state.corridor;
     const mx = STAGE_TWO.dispatch.room;
     ctx.rect(mx - 78, 180, 156, 240, '#687f80');

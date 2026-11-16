@@ -1,7 +1,12 @@
-import { cachePreviewRegistration } from './preview/registration';
 import { createGame } from './game/game';
-import { createEffects } from './render/effects';
-import { SPLASH_DURATION } from './ui/splash-meta';
+import {
+    orientationRun,
+    expressRun,
+    meetingVisit,
+    chairDispatch,
+    officeTyping,
+} from './preview/building';
+import { sceneTalk, opening, titleScreen } from './preview/intro';
 import {
     cleanerRecovery,
     bucketPour,
@@ -16,18 +21,18 @@ import {
     urgentCopier,
 } from './preview/office';
 import {
+    orbitRoute,
+    orbitEndingScene,
+    orbitSatelliteLightScene,
+    orbitSatelliteLightLitScene,
+} from './preview/orbit';
+import { cachePreviewRegistration } from './preview/registration';
+import {
     rooftopEntrance,
     rooftopTakeoff,
     shaftHazards,
     ductSneeze,
 } from './preview/rooftop';
-import {
-    orientationRun,
-    expressRun,
-    meetingVisit,
-    chairDispatch,
-    officeTyping,
-} from './preview/building';
 import {
     cloudEntry,
     skyGustCycle,
@@ -41,13 +46,9 @@ import {
     skyEnding,
     skyToOrbit,
 } from './preview/sky';
-import {
-    orbitRoute,
-    orbitEndingScene,
-    orbitSatelliteLightScene,
-    orbitSatelliteLightLitScene,
-} from './preview/orbit';
-import { sceneTalk, opening, titleScreen } from './preview/intro';
+import { createEffects } from './render/effects';
+import { SPLASH_DURATION } from './ui/splash-meta';
+
 import type { PreviewRegistration } from './preview/registration';
 export type { PreviewScene } from './preview/types';
 

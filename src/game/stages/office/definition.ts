@@ -1,6 +1,8 @@
-import { LEVEL } from '../../level';
 import { polyRect } from '../../geometry';
-import { startMark, type StageDefinition } from '../types';
+import { LEVEL } from '../../level';
+import { startMark } from '../types';
+
+import type { StageDefinition } from '../types';
 
 const F = LEVEL.floor;
 

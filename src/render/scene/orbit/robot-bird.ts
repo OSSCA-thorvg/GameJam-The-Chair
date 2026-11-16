@@ -10,8 +10,8 @@ function outline({ start, curves }: Path, steps = 6): Vector[] {
     let [x0, y0] = start;
     for (const [ax, ay, bx, by, x1, y1] of curves) {
         for (let i = 0; i < steps; i++) {
-            const t = i / steps,
-                s = 1 - t;
+            const t = i / steps;
+            const s = 1 - t;
             const x =
                 s * s * s * x0 +
                 3 * s * s * t * ax +
@@ -153,7 +153,7 @@ export function robotBirdModel(
     robot: SkyRobot,
     place: Place,
     spin: number,
-) {
+): { eyes: Point3[]; glow: number } {
     const f = FINISH[robot];
     view.profile(TAIL, 3, f.tail, 0, { place });
     view.profile(BODY, HALF, f.body, 0, {
@@ -178,8 +178,8 @@ export function robotBirdModel(
         });
     }
     const angle = 0.95 + 0.55 * Math.sin(spin);
-    const cos = Math.cos(angle),
-        sin = Math.sin(angle);
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
     for (const side of [-1, 1]) {
         const root = side * bodyWidth(-6) * 0.8;
         const wing = ([u, v, z]: Point3): Point3 => {

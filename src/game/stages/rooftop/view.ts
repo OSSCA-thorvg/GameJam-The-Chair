@@ -1,4 +1,5 @@
 import { clonePlain } from '../../data';
+
 import type { RooftopState } from './state';
 
 type RooftopSource = Pick<

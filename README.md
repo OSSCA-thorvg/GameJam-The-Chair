@@ -66,3 +66,7 @@ Both members contributed across shared areas.
 - Fonts: Black Han Sans, Do Hyeon, and Jua, licensed under SIL OFL 1.1. See [font licenses](src/assets/fonts/).
 - Created for the OSSCA ThorVG Game Jam.
 - Project license: [MIT](LICENSE).
+
+## Development
+
+Coding conventions and verification commands are in [Coding style](CODING_STYLE.md).

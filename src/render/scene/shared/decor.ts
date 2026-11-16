@@ -1,7 +1,8 @@
 import { LEVEL } from '../../../game/level';
+
 import type { RenderCtx } from '../../context';
 
-export function plant(ctx: RenderCtx, x: number) {
+export function plant(ctx: RenderCtx, x: number): void {
     const F = ctx.F;
     ctx.ellipse(x + 2, F - 10, 20, 3.2, '#515c6d40');
     ctx.rect(x - 14, F - 40, 28, 30, '#f2efe6');
@@ -23,8 +24,8 @@ export function plant(ctx: RenderCtx, x: number) {
         base: string,
         hi: string,
     ) => {
-        const c = Math.cos(angle),
-            s = Math.sin(angle);
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
         const rot = (lx: number, ly: number): [number, number] => [
             cx + (lx * c - ly * flip * s),
             cy + (lx * s + ly * flip * c),
@@ -94,7 +95,7 @@ export function plant(ctx: RenderCtx, x: number) {
     drawLeaf(x - 1, F - 108, 20, 10, -1.57, 1, green, greenHi);
 }
 
-export function desk(ctx: RenderCtx, x: number) {
+export function desk(ctx: RenderCtx, x: number): void {
     const F = ctx.F;
     const C = ctx.C;
     ctx.ellipse(x + 10, F - 25, 8, 2.1, '#515c6d46');
@@ -140,7 +141,7 @@ export function desk(ctx: RenderCtx, x: number) {
     ctx.rect(x + 40, F - 110, 63, 5, '#526274');
 }
 
-export function binBack(ctx: RenderCtx) {
+export function binBack(ctx: RenderCtx): void {
     const F = ctx.F;
     const bin = ctx.bin;
     ctx.rect(bin.a - 8, F - 16, 176, 10, '#5b6e70');
@@ -156,7 +157,7 @@ export function binBack(ctx: RenderCtx) {
     ctx.ellipse(bin.x, F - 8, 79, 12, '#303d44');
 }
 
-export function binFront(ctx: RenderCtx) {
+export function binFront(ctx: RenderCtx): void {
     const F = ctx.F;
     const bin = ctx.bin;
     ctx.polygon(
@@ -175,12 +176,16 @@ export function binFront(ctx: RenderCtx) {
     ctx.rect(bin.x - 27, F + 35, 54, 29, '#d7dcc7');
 }
 
-export function practiceFloor(ctx: RenderCtx) {
-    if (ctx.cam > 340) return;
+export function practiceFloor(ctx: RenderCtx): void {
+    if (ctx.cam > 340) {
+        return;
+    }
     const F = ctx.F;
     const C = ctx.C;
     ctx.rect(45, F - 3, 260, 6, '#d2c8a3');
-    for (let x = 55; x < 300; x += 26) ctx.rect(x, F + 12, 13, 3, '#e4dabb');
+    for (let x = 55; x < 300; x += 26) {
+        ctx.rect(x, F + 12, 13, 3, '#e4dabb');
+    }
     ctx.polygon(
         [
             [290, F + 7],
@@ -220,7 +225,7 @@ export function checkpointFlag(
     x: number,
     y: number,
     active: boolean,
-) {
+): void {
     const raising =
         active && Math.abs(ctx.player.x - x) < 170
             ? ctx.clamp((1.5 - ctx.saveFlash) / 0.45, 0, 1)
@@ -249,7 +254,7 @@ export function chairPictogram(
     x: number,
     kind: 'exit' | 'lift',
     top = 120,
-) {
+): void {
     const y = top;
     ctx.rect(x - 36, y, 72, 43, '#557f78');
     ctx.rect(x - 23, y + 7, 19, 29, '#d5e6da');

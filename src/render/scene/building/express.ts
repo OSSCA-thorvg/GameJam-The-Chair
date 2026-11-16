@@ -1,12 +1,13 @@
 import { STAGE_TWO } from '../../../game/stages/building/data';
+
 import type { RenderCtx } from '../../context';
 
 const FLOOR = 420;
 const { pit, ramp, launch } = STAGE_TWO.express;
-const EXPRESS_SPEED = 360,
-    GRAVITY = 950;
+const EXPRESS_SPEED = 360;
+const GRAVITY = 950;
 
-export function chairLift(x: number) {
+export function chairLift(x: number): number {
     if (x >= ramp.start && x < pit.left) {
         return ((x - ramp.start) / (pit.left - ramp.start)) * ramp.rise;
     }
@@ -17,9 +18,11 @@ export function chairLift(x: number) {
     return 0;
 }
 
-export function expressFloor(ctx: RenderCtx) {
+export function expressFloor(ctx: RenderCtx): void {
     const { cam, VW, t } = ctx;
-    if (ramp.start > cam + VW + 120 || pit.right < cam - 120) return;
+    if (ramp.start > cam + VW + 120 || pit.right < cam - 120) {
+        return;
+    }
 
     ctx.gradientPolygon(
         [
@@ -98,11 +101,11 @@ export function expressFloor(ctx: RenderCtx) {
         { width: 3, color: '#b48a5a', cap: 'round' },
     );
     for (let i = 0; i < 3; i++) {
-        const x = ramp.start + 40 + i * 36,
-            y =
-                FLOOR -
-                ((x - ramp.start) / (pit.left - ramp.start)) * ramp.rise -
-                5;
+        const x = ramp.start + 40 + i * 36;
+        const y =
+            FLOOR -
+            ((x - ramp.start) / (pit.left - ramp.start)) * ramp.rise -
+            5;
         ctx.polygon(
             [
                 [x - 6, y - 4],

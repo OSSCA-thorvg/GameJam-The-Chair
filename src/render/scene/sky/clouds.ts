@@ -1,12 +1,13 @@
 import { STAGE_THREE } from '../../../game/stages/rooftop/data';
 import { STAGE_FOUR } from '../../../game/stages/sky/data';
-import type { RenderCtx } from '../../context';
 import {
     blendCloudTone,
     CLOUD_TONES,
     puffCloud,
     seeded,
 } from '../shared/cloud-art';
+
+import type { RenderCtx } from '../../context';
 
 type Placement = { x: number; y: number; size: number; seed: number };
 
@@ -15,8 +16,8 @@ const ASCENT: readonly Placement[] = (() => {
     const random = seeded(4242);
     const placements: Placement[] = [];
     for (let tries = 0; placements.length < 13 && tries < 600; tries++) {
-        const x = random(),
-            y = -800 - random() * 1250;
+        const x = random();
+        const y = -800 - random() * 1250;
         const crowded = placements.some(
             (c) => Math.hypot((c.x - x) * SPREAD * 0.7, c.y - y) < 280,
         );
@@ -46,7 +47,7 @@ function ascentTone(ctx: RenderCtx) {
     return blendCloudTone(CLOUD_TONES.ascent, CLOUD_TONES.bread, eased);
 }
 
-export function ascentClouds(ctx: RenderCtx) {
+export function ascentClouds(ctx: RenderCtx): void {
     ctx.beginLayer({ key: 'ascent-clouds' });
     const tone = ascentTone(ctx);
     for (const c of ASCENT) {

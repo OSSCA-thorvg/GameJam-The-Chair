@@ -1,9 +1,10 @@
-import { runUntil } from './support/until.mjs';
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { readFileSync } from 'node:fs';
+import test from 'node:test';
+
 import { balancePolicy } from './support/harness.mjs';
 import { bundled } from './support/load.mjs';
+import { runUntil } from './support/until.mjs';
 
 const R = await bundled({
     stdin: {
@@ -54,7 +55,9 @@ test('a recorded attempt replays to the same state with matching hashes and mark
     game.startStage(1);
     for (let i = 0; i < 120 * 30; i++) {
         const state = game.getSnapshot();
-        if (state.mode === 'dead' || state.mode === 'won') break;
+        if (state.mode === 'dead' || state.mode === 'won') {
+            break;
+        }
         balancePolicy(state, game);
         game.advance([1 / 60, 1 / 144, 0.011][i % 3]);
     }
@@ -97,9 +100,13 @@ test('a changed command shows up as a divergence from the recorded hashes', () =
     const { game, recorder } = recordedGame();
     game.startStage(2);
     game.setInput('right');
-    for (let i = 0; i < 600; i++) game.step();
+    for (let i = 0; i < 600; i++) {
+        game.step();
+    }
     game.setInput();
-    for (let i = 0; i < 600; i++) game.step();
+    for (let i = 0; i < 600; i++) {
+        game.step();
+    }
     const file = recorder.latest();
     file.commands[1] = [file.commands[1][0], { type: 'keys', keys: ['left'] }];
     const timeline = R.buildTimeline(file);
@@ -110,7 +117,9 @@ test('a changed command shows up as a divergence from the recorded hashes', () =
 test('a throwing command is recorded and reproduced by the replay', () => {
     const { game, recorder, errors } = recordedGame();
     game.startStage(2);
-    for (let i = 0; i < 100; i++) game.step();
+    for (let i = 0; i < 100; i++) {
+        game.step();
+    }
     assert.throws(() => game.startStage(9));
     assert.equal(errors.length, 1);
     assert.equal(errors[0].at, 'command');
@@ -124,7 +133,9 @@ test('a throwing command is recorded and reproduced by the replay', () => {
 test('recorder follows its settings: off, command limit and kept attempts', () => {
     const off = recordedGame({ enabled: false });
     off.game.startStage(1);
-    for (let i = 0; i < 200; i++) off.game.step();
+    for (let i = 0; i < 200; i++) {
+        off.game.step();
+    }
     assert.equal(off.recorder.latest(0), null);
 
     const short = recordedGame({ maxCommands: 100 });
@@ -145,7 +156,9 @@ test('recorder follows its settings: off, command limit and kept attempts', () =
     const kept = recordedGame({ keepAttempts: 2 });
     for (let attempt = 0; attempt < 5; attempt++) {
         kept.game.startStage(1);
-        for (let i = 0; i < 100; i++) kept.game.step();
+        for (let i = 0; i < 100; i++) {
+            kept.game.step();
+        }
     }
     assert.equal(
         kept.recorder.attempts().length,
@@ -301,9 +314,13 @@ test('checked-in replay files still play back exactly', () => {
 test('replay data bundles, single files and old error logs all open as replay lists', () => {
     const { game, recorder } = recordedGame();
     game.startStage(1);
-    for (let i = 0; i < 200; i++) game.step();
+    for (let i = 0; i < 200; i++) {
+        game.step();
+    }
     game.startStage(2);
-    for (let i = 0; i < 200; i++) game.step();
+    for (let i = 0; i < 200; i++) {
+        game.step();
+    }
     const attempts = recorder.attempts();
     const bundle = {
         kind: 'the-chair-replay-data',
@@ -375,7 +392,9 @@ test('replay hashes tolerate reordered nested keys in the starting state', () =>
     const { game, recorder } = recordedGame();
     game.startStage(1);
     game.setInput('right');
-    for (let i = 0; i < 240; i++) game.step();
+    for (let i = 0; i < 240; i++) {
+        game.step();
+    }
     const file = recorder.latest();
     file.start = JSON.parse(
         JSON.stringify(file.start, (_key, value) => {

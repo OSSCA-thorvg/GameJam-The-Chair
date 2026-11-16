@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const {
@@ -89,8 +90,8 @@ test('rooftop scene omits distant structures and restores them when the camera r
 });
 
 test('small projected clouds use fewer curves while retaining ThorVG gradients', () => {
-    const distant = stageContext(4),
-        near = stageContext(4);
+    const distant = stageContext(4);
+    const near = stageContext(4);
     puffCloud(distant, 500, 250, 0.45, 77, CLOUD_TONES.bread);
     puffCloud(near, 500, 250, 1.5, 77, CLOUD_TONES.bread);
     const curves = (ctx) =>

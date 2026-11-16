@@ -1,11 +1,14 @@
-import type { RenderCtx } from '../../context';
-import type { OpeningFrame } from './timeline';
 import { linear, radial, screenRect } from './shapes';
 import { officeTint } from '../office/window-view';
 
-export function drawSunbeams(ctx: RenderCtx, frame: OpeningFrame) {
+import type { OpeningFrame } from './timeline';
+import type { RenderCtx } from '../../context';
+
+export function drawSunbeams(ctx: RenderCtx, frame: OpeningFrame): void {
     const strength = (1 - frame.dusk) * frame.lighting;
-    if (strength <= 0) return;
+    if (strength <= 0) {
+        return;
+    }
     const F = ctx.F;
     ctx.beginLayer({
         key: 'opening-sunbeams',
@@ -42,9 +45,11 @@ export function drawSunbeams(ctx: RenderCtx, frame: OpeningFrame) {
     ctx.endLayer();
 }
 
-export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame) {
+export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame): void {
     const { dusk, lighting } = frame;
-    if (lighting <= 0) return;
+    if (lighting <= 0) {
+        return;
+    }
     const tint = officeTint(dusk);
     ctx.beginLayer({
         key: 'opening-dusk',
@@ -89,10 +94,16 @@ export function drawOfficeLight(ctx: RenderCtx, frame: OpeningFrame) {
     }
 }
 
-export function drawChairMood(ctx: RenderCtx, frame: OpeningFrame) {
-    if (frame.hum > 0) drawJoy(ctx, frame);
-    if (frame.creakPulse > 0) drawCreak(ctx, frame);
-    if (frame.rage > 0) drawRage(ctx, frame);
+export function drawChairMood(ctx: RenderCtx, frame: OpeningFrame): void {
+    if (frame.hum > 0) {
+        drawJoy(ctx, frame);
+    }
+    if (frame.creakPulse > 0) {
+        drawCreak(ctx, frame);
+    }
+    if (frame.rage > 0) {
+        drawRage(ctx, frame);
+    }
 }
 
 function note(ctx: RenderCtx, color: string, big: boolean) {
@@ -116,12 +127,12 @@ function note(ctx: RenderCtx, color: string, big: boolean) {
 }
 
 function drawJoy(ctx: RenderCtx, frame: OpeningFrame) {
-    const p = ctx.player,
-        t = frame.t;
+    const p = ctx.player;
+    const t = frame.t;
     ctx.beginLayer({ key: 'opening-notes', opacity: frame.hum });
     for (let i = 0; i < 5; i++) {
-        const u = (t * 0.9 + i / 5) % 1,
-            side = i % 2 ? 1 : -1;
+        const u = (t * 0.9 + i / 5) % 1;
+        const side = i % 2 ? 1 : -1;
         ctx.ox = p.x + 10 + side * (45 + u * 30) + Math.sin(u * 7 + i) * 6;
         ctx.oy = p.y - 70 - u * 60;
         ctx.rotation = Math.sin(t * 5 + i) * 0.3;
@@ -131,11 +142,11 @@ function drawJoy(ctx: RenderCtx, frame: OpeningFrame) {
     ctx.ox = ctx.oy = ctx.rotation = 0;
     ctx.localScale = 1;
     for (let i = 0; i < 6; i++) {
-        const angle = (i / 6) * Math.PI * 2 + t * 0.8,
-            twinkle = Math.max(0, Math.sin(t * 7 + i * 2.1));
-        const cx = p.x + 8 + Math.cos(angle) * 78,
-            cy = p.y - 40 + Math.sin(angle) * 58,
-            r = 2 + 5 * twinkle;
+        const angle = (i / 6) * Math.PI * 2 + t * 0.8;
+        const twinkle = Math.max(0, Math.sin(t * 7 + i * 2.1));
+        const cx = p.x + 8 + Math.cos(angle) * 78;
+        const cy = p.y - 40 + Math.sin(angle) * 58;
+        const r = 2 + 5 * twinkle;
         ctx.polygon(
             [
                 [cx, cy - r * 1.6],
@@ -154,8 +165,8 @@ function drawJoy(ctx: RenderCtx, frame: OpeningFrame) {
 }
 
 function drawCreak(ctx: RenderCtx, frame: OpeningFrame) {
-    const p = ctx.player,
-        reach = 8 + 14 * frame.creak;
+    const p = ctx.player;
+    const reach = 8 + 14 * frame.creak;
     ctx.beginLayer({ key: 'opening-creak', opacity: frame.creakPulse });
     for (const [x, y, aim] of [
         [-30, 26, Math.PI * 0.85],
@@ -163,8 +174,8 @@ function drawCreak(ctx: RenderCtx, frame: OpeningFrame) {
         [-30, -16, Math.PI * 1.1],
     ]) {
         for (const spread of [-0.45, 0, 0.45]) {
-            const a = aim + spread,
-                from = 9;
+            const a = aim + spread;
+            const from = 9;
             ctx.rod(
                 p.x + x + Math.cos(a) * from,
                 p.y + y + Math.sin(a) * from,
@@ -199,8 +210,8 @@ function angerMark(ctx: RenderCtx, x: number, y: number, scale: number) {
 }
 
 function drawRage(ctx: RenderCtx, frame: OpeningFrame) {
-    const p = ctx.player,
-        t = frame.t;
+    const p = ctx.player;
+    const t = frame.t;
     ctx.beginLayer({ key: 'opening-rage', opacity: frame.rage });
     angerMark(ctx, p.x - 50, p.y - 8, 1 + 0.22 * Math.max(0, Math.sin(t * 13)));
     ctx.endLayer();
@@ -211,10 +222,10 @@ function floorDust(ctx: RenderCtx, t: number, shake: number) {
     const p = ctx.player;
     ctx.beginLayer({ key: 'opening-floor-dust', opacity: shake });
     for (let i = 0; i < 6; i++) {
-        const u = (t * 2.6 + i / 6) % 1,
-            side = i % 2 ? 1 : -1;
-        const x = p.x + side * (22 + i * 4 + u * 10),
-            y = ctx.F + 2 - Math.sin(u * Math.PI) * (8 + (i % 3) * 4);
+        const u = (t * 2.6 + i / 6) % 1;
+        const side = i % 2 ? 1 : -1;
+        const x = p.x + side * (22 + i * 4 + u * 10);
+        const y = ctx.F + 2 - Math.sin(u * Math.PI) * (8 + (i % 3) * 4);
         ctx.ellipse(x, y, 1.8, 1.4, ctx.tint('#c9c3b4', 1 - u));
     }
     ctx.endLayer();
@@ -224,9 +235,11 @@ export function drawRageFlash(
     ctx: RenderCtx,
     frame: OpeningFrame,
     since: number,
-) {
+): void {
     const age = frame.t - since;
-    if (age < 0 || age > 0.25) return;
+    if (age < 0 || age > 0.25) {
+        return;
+    }
     ctx.beginLayer({
         key: 'opening-flash',
         blend: 'screen',

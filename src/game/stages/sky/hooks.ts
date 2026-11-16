@@ -1,6 +1,7 @@
-import type { StageHooks } from '../types';
 import { applySky } from './course/apply';
 import { STAGE_FOUR } from './data';
+
+import type { StageHooks } from '../types';
 
 export const skyHooks: StageHooks = {
     takeover(s, out, dt) {

@@ -1,7 +1,7 @@
 import js from '@eslint/js';
-import globals from 'globals';
 import prettier from 'eslint-config-prettier/flat';
 import importPlugin from 'eslint-plugin-import';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 const ENGINE_MATH =
@@ -67,6 +67,12 @@ export default tseslint.config(
     {
         files: ['tests/**/*.ts'],
         extends: [tseslint.configs.recommended],
+        languageOptions: {
+            parserOptions: {
+                projectService: true,
+                tsconfigRootDir: import.meta.dirname,
+            },
+        },
     },
     {
         files: ['scripts/**/*.mjs', 'tests/**/*.mjs'],
@@ -194,5 +200,66 @@ export default tseslint.config(
             ],
         },
     },
+    {
+        files: ['**/*.{js,mjs,ts}'],
+        plugins: { import: importPlugin },
+        rules: {
+            'import/order': [
+                'error',
+                {
+                    groups: [
+                        'builtin',
+                        'external',
+                        'internal',
+                        ['parent', 'sibling', 'index'],
+                        'type',
+                    ],
+                    'newlines-between': 'always',
+                    alphabetize: { order: 'asc', caseInsensitive: true },
+                },
+            ],
+            'import/no-duplicates': ['error', { 'prefer-inline': false }],
+            'no-else-return': ['error', { allowElseIf: false }],
+            'one-var': ['error', 'never'],
+            'max-lines-per-function': [
+                'warn',
+                { max: 100, skipBlankLines: true, skipComments: true },
+            ],
+            'max-depth': ['warn', 4],
+            'max-params': ['warn', 5],
+            complexity: ['warn', 15],
+        },
+    },
+    {
+        files: ['src/**/*.ts', 'tests/**/*.ts', 'vite.config.ts'],
+        rules: {
+            '@typescript-eslint/naming-convention': [
+                'error',
+                {
+                    selector: 'variable',
+                    format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
+                    leadingUnderscore: 'allow',
+                },
+                { selector: 'function', format: ['camelCase', 'PascalCase'] },
+                {
+                    selector: 'parameter',
+                    format: ['camelCase'],
+                    leadingUnderscore: 'allow',
+                },
+                { selector: 'typeLike', format: ['PascalCase'] },
+            ],
+            '@typescript-eslint/consistent-type-imports': [
+                'error',
+                { prefer: 'type-imports', fixStyle: 'separate-type-imports' },
+            ],
+            '@typescript-eslint/consistent-type-exports': 'error',
+            '@typescript-eslint/consistent-type-assertions': [
+                'error',
+                { assertionStyle: 'as', objectLiteralTypeAssertions: 'never' },
+            ],
+            '@typescript-eslint/explicit-module-boundary-types': 'error',
+        },
+    },
     prettier,
+    { rules: { curly: ['error', 'all'] } },
 );

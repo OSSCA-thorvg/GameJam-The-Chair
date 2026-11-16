@@ -8,9 +8,10 @@ import {
     boolean,
     paper,
 } from '../../validation/primitives';
+
 import type { OfficeState } from './state';
 
-export function office(value: unknown, path: string) {
+export function office(value: unknown, path: string): void {
     const data = record(value, path);
     exactFields<OfficeState>(
         data,

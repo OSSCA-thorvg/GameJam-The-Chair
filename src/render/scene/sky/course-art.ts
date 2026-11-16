@@ -1,6 +1,7 @@
-import type { RenderCtx } from '../../context';
-import type { SkyPlatform } from '../../../game/stages/sky/data';
 import { promotionCake } from './promotion-cake';
+
+import type { SkyPlatform } from '../../../game/stages/sky/data';
+import type { RenderCtx } from '../../context';
 
 function metalPanel(
     ctx: RenderCtx,
@@ -34,9 +35,9 @@ function rivet(ctx: RenderCtx, x: number, y: number) {
 }
 
 function desk(ctx: RenderCtx, width: number, small: boolean, drawer: number) {
-    const left = -width / 2,
-        right = width / 2,
-        height = small ? 53 : 82;
+    const left = -width / 2;
+    const right = width / 2;
+    const height = small ? 53 : 82;
     ctx.rod(left + 30, height * 0.72, right - 20, height * 0.72, 5, '#46546b');
     for (const x of [left + 19, right - 22]) {
         metalPanel(ctx, x, 9, 13, height, '#96a0b4', '#59637c', '#46546b');
@@ -91,8 +92,8 @@ function desk(ctx: RenderCtx, width: number, small: boolean, drawer: number) {
             { width: 0.7, color: '#737a9133', cap: 'round' },
         );
     }
-    const closed = right - 82,
-        dx = closed + drawer * 48;
+    const closed = right - 82;
+    const dx = closed + drawer * 48;
     ctx.rect(closed - 2, 12, 69, 30, '#424d66');
     if (drawer > 0) {
         ctx.polygon(
@@ -125,8 +126,8 @@ function desk(ctx: RenderCtx, width: number, small: boolean, drawer: number) {
 }
 
 function billboard(ctx: RenderCtx, width: number) {
-    const left = -width / 2,
-        right = width / 2;
+    const left = -width / 2;
+    const right = width / 2;
     for (const x of [left + 30, right - 34]) {
         metalPanel(ctx, x - 4, 82, 8, 42, '#9ca6b2', '#5c6b83', '#424f6d');
         ctx.polygon(
@@ -182,7 +183,9 @@ function billboard(ctx: RenderCtx, width: number) {
     ctx.rect(left, -3, width, 1.5, '#f7e5c6');
     ctx.rect(left, 92, width, 5, '#69738c');
     for (const x of [left + 4, right - 4]) {
-        for (const y of [8, 88]) rivet(ctx, x, y);
+        for (const y of [8, 88]) {
+            rivet(ctx, x, y);
+        }
     }
     for (const x of [left + width * 0.25, left + width * 0.72]) {
         ctx.rod(x, -6, x, -16, 2, '#5c6b83');
@@ -248,8 +251,8 @@ function billboard(ctx: RenderCtx, width: number) {
             ctx.locale === 'ko'
                 ? ['흔들리지', '않는 기업']
                 : ['UNSHAKE', 'ABLE INC.'];
-        const textLeft = left + 14,
-            textRight = model - 34;
+        const textLeft = left + 14;
+        const textRight = model - 34;
         const maxSize = 34;
         const widest = Math.max(
             ...lines.map((line) => ctx.measureText(line, maxSize)),
@@ -267,7 +270,7 @@ function billboard(ctx: RenderCtx, width: number) {
     }
 }
 
-export function skyCoursePlatform(ctx: RenderCtx, spec: SkyPlatform) {
+export function skyCoursePlatform(ctx: RenderCtx, spec: SkyPlatform): void {
     if (
         spec.x > ctx.cam + ctx.VW + 200 ||
         spec.x + spec.width < ctx.cam - 200
@@ -277,8 +280,8 @@ export function skyCoursePlatform(ctx: RenderCtx, spec: SkyPlatform) {
     ctx.ox = spec.x + spec.width / 2;
     ctx.oy = spec.y;
     ctx.rotation = spec.angle;
-    const left = -spec.width / 2,
-        right = spec.width / 2;
+    const left = -spec.width / 2;
+    const right = spec.width / 2;
     switch (spec.kind) {
         case 'roof':
             metalPanel(
@@ -354,7 +357,9 @@ export function skyCoursePlatform(ctx: RenderCtx, spec: SkyPlatform) {
                 rivet(ctx, x + 5, 18);
                 rivet(ctx, x + 22, 17);
             }
-            for (let x = left + 16; x < right; x += 72) rivet(ctx, x, 7);
+            for (let x = left + 16; x < right; x += 72) {
+                rivet(ctx, x, 7);
+            }
             break;
         case 'sign':
             billboard(ctx, spec.width);

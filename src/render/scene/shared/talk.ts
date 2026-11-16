@@ -1,10 +1,12 @@
-import { translate, type Message } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { REACTION_LIFE, SPEECH_LIFE } from '../../../ui/types';
-import type { RenderCtx } from '../../context';
 import { LABEL_FONT, SPEECH_FONT } from '../../fonts';
-import type { SceneTalk } from '../../types';
 import { wrap } from '../opening/bubble';
 import { PathBuilder, push } from '../opening/shapes';
+
+import type { Message } from '../../../i18n';
+import type { RenderCtx } from '../../context';
+import type { SceneTalk } from '../../types';
 
 const PAPER = '#f7ecd8ed';
 const INK = '#4b493f';
@@ -67,9 +69,11 @@ function speechBubble(
     life: number,
 ) {
     const { scale, alpha } = presence(age, life);
-    if (alpha <= 0) return;
-    const padX = 13,
-        padY = 8;
+    if (alpha <= 0) {
+        return;
+    }
+    const padX = 13;
+    const padY = 8;
     const widths = lines.map((line) =>
         ctx.measureText(line.text, line.size, SPEECH_FONT),
     );
@@ -99,7 +103,7 @@ function speechBubble(
     });
 }
 
-export function drawTalk(ctx: RenderCtx, talk: SceneTalk) {
+export function drawTalk(ctx: RenderCtx, talk: SceneTalk): void {
     const { state, mode, cam, scale, vertical } = ctx;
     const size = ctx.W < 520 ? 13 : 15;
     const reaction = talk.reaction;
@@ -154,25 +158,27 @@ export function drawTalk(ctx: RenderCtx, talk: SceneTalk) {
     }
 }
 
-export function drawStageTitle(ctx: RenderCtx) {
+export function drawStageTitle(ctx: RenderCtx): void {
     const t = ctx.state.time;
-    if (ctx.mode !== 'play' || t > TITLE_TIME) return;
+    if (ctx.mode !== 'play' || t > TITLE_TIME) {
+        return;
+    }
     const text = translate(STAGE_TITLES[ctx.state.stage], ctx.locale);
     const size = ctx.W < 520 ? 14 : 17;
-    const w = ctx.measureText(text, size, LABEL_FONT) + 34,
-        h = size + 18;
+    const w = ctx.measureText(text, size, LABEL_FONT) + 34;
+    const h = size + 18;
     const drop = easeOutBack(Math.min(1, t / 0.45));
     const alpha = Math.min(1, t / 0.12, (TITLE_TIME - t) / 0.3);
-    const cx = ctx.W / 2,
-        cy = (ctx.W < 520 ? 68 : 70) + h / 2 - (1 - drop) * 50;
+    const cx = ctx.W / 2;
+    const cy = (ctx.W < 520 ? 68 : 70) + h / 2 - (1 - drop) * 50;
     const tilt = Math.sin(t * 9) * Math.max(0, 0.6 - t) * 0.08;
     const corner = (dx: number, dy: number): [number, number] => [
         cx + dx * Math.cos(tilt) - dy * Math.sin(tilt),
         cy + dx * Math.sin(tilt) + dy * Math.cos(tilt),
     ];
-    const r = 7,
-        hw = w / 2,
-        hh = h / 2;
+    const r = 7;
+    const hw = w / 2;
+    const hh = h / 2;
     const card = new PathBuilder(...corner(-hw + r, -hh))
         .line(...corner(hw - r, -hh))
         .corner(...corner(hw, -hh), ...corner(hw, -hh + r))

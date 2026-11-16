@@ -1,6 +1,7 @@
-import { isStageUnlocked } from '../game/progression';
-import type { Game } from '../game/game';
 import { bindControls } from './controls';
+import { isStageUnlocked } from '../game/progression';
+
+import type { Game } from '../game/game';
 export function bindInput(
     root: HTMLElement,
     game: Game,
@@ -8,7 +9,7 @@ export function bindInput(
         blocked = () => false,
         onStart,
     }: { blocked?: () => boolean; onStart?: () => void } = {},
-) {
+): (() => void) & { sync: () => void } {
     const controller = new AbortController();
     const options = { signal: controller.signal };
     const menu = root.querySelector<HTMLElement>('[data-pause-menu]');
@@ -26,7 +27,9 @@ export function bindInput(
     }
     function syncMenu() {
         const paused = game.status().mode === 'pause' && !blocked();
-        if (menu) menu.hidden = !paused;
+        if (menu) {
+            menu.hidden = !paused;
+        }
         pauseButton?.setAttribute('aria-expanded', String(paused));
         if (paused && !menuOpen) {
             menuOpen = true;
@@ -62,7 +65,9 @@ export function bindInput(
         panelOpen = visiblePanel;
     }
     function togglePause() {
-        if (blocked()) return;
+        if (blocked()) {
+            return;
+        }
         if (game.status().mode === 'play') {
             returnFocus =
                 document.activeElement instanceof HTMLElement
@@ -76,7 +81,9 @@ export function bindInput(
         root.querySelector<HTMLElement>(selector)?.addEventListener(
             'click',
             () => {
-                if (blocked()) return;
+                if (blocked()) {
+                    return;
+                }
                 action();
                 syncMenu();
             },
@@ -85,11 +92,15 @@ export function bindInput(
     }
     button('[data-start]', () => {
         const state = game.status();
-        if (state.mode === 'won' && state.stage === 1) game.startStage(2);
-        else if (state.mode === 'won' && state.stage === 2) game.startStage(3);
-        else {
+        if (state.mode === 'won' && state.stage === 1) {
+            game.startStage(2);
+        } else if (state.mode === 'won' && state.stage === 2) {
+            game.startStage(3);
+        } else {
             game.reset();
-            if (state.mode === 'intro') onStart?.();
+            if (state.mode === 'intro') {
+                onStart?.();
+            }
         }
     });
     for (const stage of [1, 2, 3, 4, 5] as const) {
@@ -109,7 +120,9 @@ export function bindInput(
     window.addEventListener(
         'keydown',
         (e) => {
-            if (e.key !== 'Tab' || !accepting()) return;
+            if (e.key !== 'Tab' || !accepting()) {
+                return;
+            }
             const state = game.status();
             const dialog =
                 state.mode === 'pause'
@@ -117,10 +130,12 @@ export function bindInput(
                     : panel && !panel.hidden
                       ? panel
                       : null;
-            if (!dialog) return;
+            if (!dialog) {
+                return;
+            }
             const targets = focusable(dialog);
-            const first = targets.at(0),
-                last = targets.at(-1);
+            const first = targets.at(0);
+            const last = targets.at(-1);
             if (
                 e.shiftKey &&
                 (document.activeElement === first ||
@@ -157,7 +172,9 @@ export function bindInput(
     document.addEventListener(
         'visibilitychange',
         () => {
-            if (document.hidden && game.status().mode === 'play') togglePause();
+            if (document.hidden && game.status().mode === 'play') {
+                togglePause();
+            }
         },
         options,
     );

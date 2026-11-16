@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, normalize, relative } from 'node:path';
+import test from 'node:test';
 
 const STAGES = ['office', 'building', 'rooftop', 'sky', 'orbit'];
 const STAGE_ROOT = 'src/game/stages';
@@ -43,10 +43,14 @@ const stageOf = (path) => {
 test('a stage uses only the data of other stages, never their behaviour', () => {
     for (const path of files(STAGE_ROOT)) {
         const own = stageOf(path);
-        if (!STAGES.includes(own)) continue;
+        if (!STAGES.includes(own)) {
+            continue;
+        }
         for (const target of imports(path)) {
             const other = stageOf(target);
-            if (!STAGES.includes(other) || other === own) continue;
+            if (!STAGES.includes(other) || other === own) {
+                continue;
+            }
             assert.equal(
                 target,
                 join(STAGE_ROOT, other, 'data'),
@@ -58,8 +62,12 @@ test('a stage uses only the data of other stages, never their behaviour', () => 
 
 test('shared game code reaches stage behaviour only through the stage indexes', () => {
     for (const path of files('src/game')) {
-        if (stageOf(path) && STAGES.includes(stageOf(path))) continue;
-        if (STAGE_INDEXES.includes(path)) continue;
+        if (stageOf(path) && STAGES.includes(stageOf(path))) {
+            continue;
+        }
+        if (STAGE_INDEXES.includes(path)) {
+            continue;
+        }
         for (const { target, typeOnly } of importsOf(path)) {
             const stage = stageOf(target);
             if (!STAGES.includes(stage) || typeOnly || /\/data$/.test(target)) {

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { GOLDEN_SCENARIOS } from './support/golden.mjs';
 
 // Canonical JSON fingerprints verified against unchanged gameplay at 867ac0a.

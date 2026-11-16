@@ -1,9 +1,6 @@
 import { STAGE_THREE } from '../../../game/stages/rooftop/data';
-import type { RenderCtx } from '../../context';
-import { checkpointFlag } from '../shared/decor';
-import { player } from '../player';
 import { sprayPlume } from '../effects/spray';
-import { ascentClouds } from '../sky/clouds';
+import { player } from '../player';
 import {
     rooftopCeilingLight,
     rooftopSky,
@@ -15,8 +12,12 @@ import { rooftopGraphSign } from './graph';
 import { employeeBoard } from '../building/employee-board';
 import { personalBox } from '../personal-box';
 import { rooftopSprayHint } from '../shared/control-hints';
+import { checkpointFlag } from '../shared/decor';
+import { ascentClouds } from '../sky/clouds';
 
-export function drawRooftop(ctx: RenderCtx) {
+import type { RenderCtx } from '../../context';
+
+export function drawRooftop(ctx: RenderCtx): void {
     const state = ctx.state;
     const p = ctx.player;
 
@@ -43,7 +44,9 @@ export function drawRooftop(ctx: RenderCtx) {
     if (ctx.visible({ left: 2260, top: -1060, right: 3050, bottom: 50 }, 120)) {
         rooftopGraphSign(ctx);
     }
-    if (state.firstFlight.kind === 'flight') ascentClouds(ctx);
+    if (state.firstFlight.kind === 'flight') {
+        ascentClouds(ctx);
+    }
 
     const entranceVisible = ctx.visible(
         { left: 35, top: 200, right: 215, bottom: 430 },
@@ -104,14 +107,22 @@ export function drawRooftop(ctx: RenderCtx) {
         }
     }
 
-    if (state.ground) ctx.ellipse(p.x, p.y + 28, 45, 5, '#414d6455');
+    if (state.ground) {
+        ctx.ellipse(p.x, p.y + 28, 45, 5, '#414d6455');
+    }
     const behindDoor =
         state.rooftopEntrance.kind === 'opening' &&
         state.rooftopEntrance.age < STAGE_THREE.entrance.emergeEnd;
-    if (!behindDoor && entranceVisible) entranceDoor(ctx);
+    if (!behindDoor && entranceVisible) {
+        entranceDoor(ctx);
+    }
     player(ctx);
-    if (behindDoor && entranceVisible) entranceDoor(ctx);
-    if (entranceVisible) rooftopCeilingLight(ctx);
+    if (behindDoor && entranceVisible) {
+        entranceDoor(ctx);
+    }
+    if (entranceVisible) {
+        rooftopCeilingLight(ctx);
+    }
 
     sprayPlume(ctx);
     airSprayGauge(ctx);
@@ -128,13 +139,15 @@ function airSprayGauge(ctx: RenderCtx) {
         return;
     }
     const left = STAGE_THREE.airSprayLimit - state.airSprays;
-    const x = ctx.player.x,
-        y = ctx.player.y - 112;
+    const x = ctx.player.x;
+    const y = ctx.player.y - 112;
     ctx.rect(x - 24, y - 7, 48, 14, '#1d2c3fa8');
     for (let i = 0; i < STAGE_THREE.airSprayLimit; i++) {
         const cx = x - 14 + i * 14;
         ctx.ellipse(cx, y, 4.6, 4.6, i < left ? '#fff2ce' : '#5d6d82');
-        if (i < left) ctx.ellipse(cx - 1.3, y - 1.4, 1.6, 1.4, '#ffffff');
+        if (i < left) {
+            ctx.ellipse(cx - 1.3, y - 1.4, 1.6, 1.4, '#ffffff');
+        }
     }
 }
 
@@ -149,9 +162,9 @@ function entranceDoor(ctx: RenderCtx) {
     const progress = Math.min(1, age / timing.openDuration) * (1 - closing);
     const eased = progress * progress * (3 - 2 * progress);
     const angle = eased * Math.PI * 0.46;
-    const hingeX = 54,
-        top = 229,
-        bottom = 420;
+    const hingeX = 54;
+    const top = 229;
+    const bottom = 420;
     const width = Math.cos(angle) * 143;
     const depth = Math.sin(angle) * 32;
     const edge = hingeX + width;

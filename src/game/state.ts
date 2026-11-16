@@ -1,14 +1,18 @@
-import { createFocusState, type FocusState } from './systems/focus/decide';
-import type { Impact } from './systems/impact/decide';
-import type { OrbitState } from './stages/orbit/state';
-import type { SkyState } from './stages/sky/data';
-import type { OfficeState } from './stages/office/state';
-import type { BuildingState } from './stages/building/state';
-import type { RooftopState } from './stages/rooftop/state';
-import { STAGES, stageSpawn } from './stages/index';
-import { createStageStates, prepareStageAttempt } from './stages/attempt';
 import { clonePlain } from './data';
-import { randomUint32, seedRng, type Rng } from './rng';
+import { randomUint32, seedRng } from './rng';
+import { createStageStates, prepareStageAttempt } from './stages/attempt';
+import { STAGES, stageSpawn } from './stages/index';
+import { createFocusState } from './systems/focus/decide';
+import { assertGameState } from './validation';
+
+import type { Rng } from './rng';
+import type { BuildingState } from './stages/building/state';
+import type { OfficeState } from './stages/office/state';
+import type { OrbitState } from './stages/orbit/state';
+import type { RooftopState } from './stages/rooftop/state';
+import type { SkyState } from './stages/sky/data';
+import type { FocusState } from './systems/focus/decide';
+import type { Impact } from './systems/impact/decide';
 import type {
     GameEvent,
     Input,
@@ -19,7 +23,6 @@ import type {
     Snapshot,
     StageId,
 } from './types';
-import { assertGameState } from './validation';
 
 // Survives a restart.
 export type Progress = {
@@ -177,7 +180,7 @@ export function progressOf(s: CoreState): Progress {
     };
 }
 
-export function resetAttempt(s: CoreState, out: GameEvent[]) {
+export function resetAttempt(s: CoreState, out: GameEvent[]): void {
     if (STAGES[s.stage].newSkylineEachAttempt) {
         s.skylineSeed = randomUint32(s.rng, 'cosmetic');
     }
@@ -185,7 +188,7 @@ export function resetAttempt(s: CoreState, out: GameEvent[]) {
     out.push({ type: 'reset' });
 }
 
-export function startStage(s: CoreState, id: StageId, out: GameEvent[]) {
+export function startStage(s: CoreState, id: StageId, out: GameEvent[]): void {
     s.stage = id;
     s.checkpoint = 0;
     s.lessons = { moved: false, jumped: false };
@@ -216,6 +219,6 @@ export function cloneState(s: Readonly<CoreState>): CoreState {
 
 // Preserve player identity: the play step holds this reference throughout the
 // tick.
-export function setPlayer(s: CoreState, p: Readonly<CoreState['p']>) {
+export function setPlayer(s: CoreState, p: Readonly<CoreState['p']>): void {
     Object.assign(s.p, p);
 }

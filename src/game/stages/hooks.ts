@@ -1,11 +1,12 @@
+import { buildingHooks } from './building/hooks';
+import { officeHooks } from './office/hooks';
+import { orbitHooks } from './orbit/hooks';
+import { rooftopHooks } from './rooftop/hooks';
+import { skyHooks } from './sky/hooks';
+
 import type { CoreState } from '../state';
 import type { StageId } from '../types';
 import type { StageHooks } from './types';
-import { officeHooks } from './office/hooks';
-import { buildingHooks } from './building/hooks';
-import { rooftopHooks } from './rooftop/hooks';
-import { orbitHooks } from './orbit/hooks';
-import { skyHooks } from './sky/hooks';
 
 export function stageHooks(stage: StageId): StageHooks {
     switch (stage) {
@@ -22,6 +23,6 @@ export function stageHooks(stage: StageId): StageHooks {
     }
 }
 
-export function focusBlockedIn(s: Readonly<CoreState>) {
+export function focusBlockedIn(s: Readonly<CoreState>): boolean {
     return stageHooks(s.stage).focusBlocked?.(s) ?? false;
 }

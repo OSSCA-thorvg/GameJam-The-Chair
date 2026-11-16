@@ -34,7 +34,28 @@ export function createSkyProjection(
     height: number,
     orbit: number,
     framing: SkyFraming = {},
-) {
+): {
+    project: (p: Point3) => Vector;
+    depth: (p: Point3) => number;
+    polygon: (points: Point3[], color: string) => void;
+    profile: (
+        outline: Vector[],
+        halfWidth: number,
+        color: string,
+        z?: number,
+        options?: {
+            widthAt?: (x: number, y: number) => number;
+            bevel?: number;
+            place?: (p: Point3) => Point3;
+        },
+    ) => void;
+    oval: (center: Point3, radii: Point3, color: string) => void;
+    rod: (a: Point3, b: Point3, r: number, color: string) => void;
+    commands: (split?: {
+        depth: number;
+        part: 'far' | 'near';
+    }) => DrawCommand[];
+} {
     const angle = (orbit * Math.PI) / 2;
     const distance = framing.distance ?? 480;
     const target: Point3 = [0, 15, 0];
@@ -50,8 +71,8 @@ export function createSkyProjection(
     const focal = Math.min(height * 1.65, width * 0.94) * (framing.zoom ?? 1);
     const depth = (p: Point3) => dot(sub(p, camera), forward);
     const project = (p: Point3): Vector => {
-        const relative = sub(p, camera),
-            distance = depth(p);
+        const relative = sub(p, camera);
+        const distance = depth(p);
         const x = (dot(relative, right) * focal) / distance;
         const y = (-dot(relative, up) * focal) / distance;
         const roll = framing.roll ?? 0;
@@ -72,7 +93,9 @@ export function createSkyProjection(
     const faces: Array<{ points: Point3[]; color: string; depth: number }> = [];
     const curves: Array<{ command: DrawCommand; depth: number }> = [];
     const polygon = (points: Point3[], color: string) => {
-        if (points.some((p) => depth(p) <= 30)) return;
+        if (points.some((p) => depth(p) <= 30)) {
+            return;
+        }
         const normal = points.reduce<Point3>(
             (sum, p, i) => add(sum, cross(p, points[(i + 1) % points.length])),
             [0, 0, 0],
@@ -166,7 +189,9 @@ export function createSkyProjection(
         }
     };
     const oval = (center: Point3, radii: Point3, color: string) => {
-        if (depth(center) <= 30) return;
+        if (depth(center) <= 30) {
+            return;
+        }
         const c = project(center);
         const axes: Point3[] = [
             [radii[0], 0, 0],
@@ -180,8 +205,8 @@ export function createSkyProjection(
         const a = projected.reduce((sum, p) => sum + p[0] * p[0], 0);
         const b = projected.reduce((sum, p) => sum + p[0] * p[1], 0);
         const d = projected.reduce((sum, p) => sum + p[1] * p[1], 0);
-        const delta = Math.hypot(a - d, 2 * b),
-            angle = Math.atan2(2 * b, a - d) / 2;
+        const delta = Math.hypot(a - d, 2 * b);
+        const angle = Math.atan2(2 * b, a - d) / 2;
         const major = Math.sqrt(Math.max(0, (a + d + delta) / 2));
         const minor = Math.sqrt(Math.max(0, (a + d - delta) / 2));
         const u: Vector = [Math.cos(angle) * major, Math.sin(angle) * major];
@@ -223,8 +248,8 @@ export function createSkyProjection(
                     mul(axis2, Math.cos(angle) * r),
                     mul(axis3, Math.sin(angle) * r),
                 );
-            const u = ring((i * 2 * Math.PI) / sides),
-                v = ring(((i + 1) * 2 * Math.PI) / sides);
+            const u = ring((i * 2 * Math.PI) / sides);
+            const v = ring(((i + 1) * 2 * Math.PI) / sides);
             polygon(
                 [add(a, u), add(a, v), add(b, v), add(b, u)],
                 shade(color, 0.96),

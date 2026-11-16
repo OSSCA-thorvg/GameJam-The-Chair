@@ -1,5 +1,6 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
+
 import { createGame } from './support/harness.mjs';
 import { bundled } from './support/load.mjs';
 
@@ -42,14 +43,16 @@ function applyInput(game, scenario, i) {
             ? []
             : ['right'];
     game.setInput(...keys);
-    if (scenario.kind === 'jump' && i % scenario.interval === 0) game.jump();
+    if (scenario.kind === 'jump' && i % scenario.interval === 0) {
+        game.jump();
+    }
 }
 
 test('changing effect durations and particle count cannot change gameplay', () => {
-    const plain = createGame(),
-        decorated = createGame();
-    const effects = createEffects(),
-        feedback = createFeedback();
+    const plain = createGame();
+    const decorated = createGame();
+    const effects = createEffects();
+    const feedback = createFeedback();
     const saved = { ...EFFECT_STYLE };
     Object.assign(EFFECT_STYLE, {
         paperDuration: 1000,
@@ -99,17 +102,19 @@ test('snapshots and event payloads do not expose live gameplay objects', () => {
     }
     const state = game.getSnapshot();
     for (const event of game.drainEvents()) {
-        if (event.person) event.person.x = -999;
+        if (event.person) {
+            event.person.x = -999;
+        }
     }
     assert.deepEqual(game.getSnapshot(), state);
 });
 
 test('HUD can be removed or replaced without affecting simulation', () => {
     const hud = createHud({ querySelector: () => null });
-    const feedback = createFeedback(),
-        effects = createEffects();
-    const game = createGame({ seed: 17 }),
-        reference = createGame({ seed: 17 });
+    const feedback = createFeedback();
+    const effects = createEffects();
+    const game = createGame({ seed: 17 });
+    const reference = createGame({ seed: 17 });
     game.reset();
     reference.reset();
     for (let i = 0; i < 120; i++) {
@@ -126,16 +131,20 @@ test('HUD can be removed or replaced without affecting simulation', () => {
 });
 
 test('fixed-step simulation is independent of render frequency', () => {
-    const fast = createGame(),
-        slow = createGame();
+    const fast = createGame();
+    const slow = createGame();
     fast.reset();
     slow.reset();
     fast.setInput('right');
     slow.setInput('right');
     // Exact multiples of the physics interval avoid introducing floating point
     // boundary differences.
-    for (let i = 0; i < 120; i++) fast.advance(1 / 120);
-    for (let i = 0; i < 30; i++) slow.advance(4 / 120);
+    for (let i = 0; i < 120; i++) {
+        fast.advance(1 / 120);
+    }
+    for (let i = 0; i < 30; i++) {
+        slow.advance(4 / 120);
+    }
     assert.equal(fast.serialize(), slow.serialize());
 });
 
@@ -179,12 +188,15 @@ test('renderer consumes snapshots and supports changed art without editing physi
         const descriptor = Object.getOwnPropertyDescriptor(globalThis, key);
         Object.defineProperty(globalThis, key, { value, configurable: true });
         t.after(() => {
-            if (descriptor) Object.defineProperty(globalThis, key, descriptor);
-            else delete globalThis[key];
+            if (descriptor) {
+                Object.defineProperty(globalThis, key, descriptor);
+            } else {
+                delete globalThis[key];
+            }
         });
     }
-    let paths = 0,
-        labels = 0;
+    let paths = 0;
+    let labels = 0;
     const finite = (...args) =>
         args.forEach((n) => assert.ok(Number.isFinite(n)));
     const context = {
@@ -245,10 +257,10 @@ test('renderer consumes snapshots and supports changed art without editing physi
         querySelector: (s) => canvases[s],
     });
     await Promise.resolve();
-    const game = createGame(),
-        effects = createEffects();
-    const saved = { ...ART.player },
-        debug = ART.debugCollisions;
+    const game = createGame();
+    const effects = createEffects();
+    const saved = { ...ART.player };
+    const debug = ART.debugCollisions;
     Object.assign(ART.player, { offsetX: 12, offsetY: -8, scale: 1.3 });
     ART.debugCollisions = true;
     try {
@@ -257,7 +269,9 @@ test('renderer consumes snapshots and supports changed art without editing physi
         for (let i = 0; i < 1300; i++) {
             applyInput(game, scenario, i);
             game.step(1 / 120);
-            for (const event of game.drainEvents()) effects.receive(event);
+            for (const event of game.drainEvents()) {
+                effects.receive(event);
+            }
             if (i % 40 === 0) {
                 const before = game.getSnapshot();
                 renderer.draw(before, effects.snapshot());

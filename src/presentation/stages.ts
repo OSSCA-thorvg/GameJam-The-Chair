@@ -1,5 +1,5 @@
-import type { StageId } from '../game/types';
 import type { GameSnapshot } from '../game/game';
+import type { StageId } from '../game/types';
 
 type StagePresentation = {
     scene: 'office' | 'building' | 'rooftop' | 'sky' | 'orbit';
@@ -71,7 +71,28 @@ export const STAGE_PRESENTATION = {
     },
 } satisfies Record<StageId, StagePresentation>;
 
-export function stageCamera(state: GameSnapshot) {
+export function stageCamera(state: GameSnapshot):
+    | {
+          lead: number;
+          focusY: number;
+          width: number;
+          followVertical: false;
+          followWhenWon: false;
+      }
+    | {
+          lead: number;
+          focusY: number;
+          width: number;
+          followVertical: true;
+          followWhenWon: false;
+      }
+    | {
+          lead: number;
+          focusY: number;
+          width: number;
+          followVertical: true;
+          followWhenWon: true;
+      } {
     const policy = STAGE_PRESENTATION[state.stage];
     const centred =
         (policy.scene === 'rooftop' && state.firstFlight.kind !== 'course') ||
@@ -91,7 +112,7 @@ export function stageCamera(state: GameSnapshot) {
     return { ...policy.camera, lead: centred ? 0.5 : 0.35, focusY };
 }
 
-export function hideStageHud(state: GameSnapshot) {
+export function hideStageHud(state: GameSnapshot): boolean {
     const { scene } = STAGE_PRESENTATION[state.stage];
     return (
         (scene === 'sky' &&

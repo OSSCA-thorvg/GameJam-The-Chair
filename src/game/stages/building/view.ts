@@ -1,4 +1,5 @@
 import { clonePlain } from '../../data';
+
 import type { BuildingState } from './state';
 
 type BuildingSource = Pick<BuildingState, 'furniture' | 'corridor'>;

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+import { determinismTests } from './support/determinism.mjs';
 import {
     balancePolicy,
     begin,
@@ -7,7 +9,6 @@ import {
     recordCommands,
     runWith,
 } from './support/harness.mjs';
-import { determinismTests } from './support/determinism.mjs';
 
 const OFFICE_TICKS = 120 * 45;
 const office = recordCommands(31, { stage: 1 }, OFFICE_TICKS, balancePolicy);

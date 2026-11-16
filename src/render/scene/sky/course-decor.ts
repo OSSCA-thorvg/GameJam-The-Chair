@@ -1,8 +1,11 @@
-import type { RenderCtx } from '../../context';
 import { hasWorker, officeWorker } from './office-workers';
 
-export function skyBuilding(ctx: RenderCtx) {
-    if (3450 < ctx.cam - 100 || 3000 > ctx.cam + ctx.VW + 100) return;
+import type { RenderCtx } from '../../context';
+
+export function skyBuilding(ctx: RenderCtx): void {
+    if (3450 < ctx.cam - 100 || 3000 > ctx.cam + ctx.VW + 100) {
+        return;
+    }
     const y = -1780 - ctx.state.sky.lift * 80;
     for (const x of [3020, 3070, 3360, 3410]) {
         ctx.gradientPolygon(
@@ -58,8 +61,8 @@ export function skyBuilding(ctx: RenderCtx) {
             [-192, -121, 1],
         ] as const) {
             const slot = row * 6 + i + 1;
-            const a = y + top,
-                b = y + floor;
+            const a = y + top;
+            const b = y + floor;
             if (!hasWorker(slot)) {
                 ctx.gradientPolygon(
                     [
@@ -156,7 +159,12 @@ export function skyBuilding(ctx: RenderCtx) {
     }
 }
 
-export function skyFlag(ctx: RenderCtx, x: number, y: number, saved: boolean) {
+export function skyFlag(
+    ctx: RenderCtx,
+    x: number,
+    y: number,
+    saved: boolean,
+): void {
     const color = saved ? '#dfb979' : '#b3c5cc';
     ctx.rod(x - 55, y + 28, x - 55, y - 15, 3, '#bbc5c6');
     ctx.rod(x - 56, y + 27, x - 56, y - 15, 0.8, '#f7e5c6');

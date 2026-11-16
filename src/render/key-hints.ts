@@ -8,15 +8,23 @@ const NONE: KeysTried = {
     spray: false,
 };
 
-export function createKeyHints() {
+export function createKeyHints(): {
+    press(key: HintKey): void;
+    observe(next: { stage: number }): void;
+    snapshot: () => Readonly<Record<HintKey, boolean>>;
+} {
     let tried = NONE;
     let stage: number | null = null;
     return {
         press(key: HintKey) {
-            if (!tried[key]) tried = { ...tried, [key]: true };
+            if (!tried[key]) {
+                tried = { ...tried, [key]: true };
+            }
         },
         observe(next: { stage: number }) {
-            if (stage !== null && next.stage !== stage) tried = NONE;
+            if (stage !== null && next.stage !== stage) {
+                tried = NONE;
+            }
             stage = next.stage;
         },
         snapshot: () => tried,

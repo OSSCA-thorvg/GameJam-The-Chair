@@ -1,9 +1,10 @@
-import type { Vector } from '../../types';
+import { drawPour, drawPuddle, puddleShape } from './water';
+import { bucketAngle, bucketOrigin, bucketPoint } from '../../bucket';
+import { player } from '../player';
+
 import type { DeepReadonly, Person } from '../../../game/types';
 import type { RenderCtx } from '../../context';
-import { bucketAngle, bucketOrigin, bucketPoint } from '../../bucket';
-import { drawPour, drawPuddle, puddleShape } from './water';
-import { player } from '../player';
+import type { Vector } from '../../types';
 
 type CleanerControls = {
     approach: number;
@@ -245,7 +246,9 @@ function mix(a: number, b: number, amount: number) {
 
 function sampleCleaner(age: number): CleanerControls {
     let previous = CLEANER_BEATS[0];
-    if (age <= previous.at) return previous.pose;
+    if (age <= previous.at) {
+        return previous.pose;
+    }
     for (let i = 1; i < CLEANER_BEATS.length; i++) {
         const next = CLEANER_BEATS[i];
         if (age <= next.at) {
@@ -731,7 +734,7 @@ function drawAdmin(ctx: RenderCtx) {
     );
 }
 
-export function person(ctx: RenderCtx, n: DeepReadonly<Person>) {
+export function person(ctx: RenderCtx, n: DeepReadonly<Person>): void {
     if (n.id === 'cleaner') {
         const motion = sampleCleaner(0);
         const pose = cleanerPose(ctx, n, motion, bucketPose(ctx, motion));
@@ -995,7 +998,10 @@ function drawBucket(ctx: RenderCtx, bucket: BucketPose) {
     ctx.ox = ctx.oy = ctx.rotation = 0;
 }
 
-export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
+export function cleaningDraw(
+    ctx: RenderCtx,
+    cleaner?: DeepReadonly<Person>,
+): void {
     const F = ctx.F;
     const cleaning = ctx.cleaning;
     const state = ctx.state;
@@ -1008,9 +1014,13 @@ export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
     const puddle = puddleShape(ctx);
     if (puddle) {
         drawPuddle(ctx, puddle, () => {
-            if (cleaner && pose) drawCleanerBody(ctx, cleaner, pose, motion);
+            if (cleaner && pose) {
+                drawCleanerBody(ctx, cleaner, pose, motion);
+            }
             drawBucket(ctx, bucket);
-            if (pose) drawArm(ctx, pose.frontArm, true);
+            if (pose) {
+                drawArm(ctx, pose.frontArm, true);
+            }
             if (Math.abs(p.x - puddle.cx) < puddle.rx + 70 && p.y > F - 140) {
                 player(ctx);
             }
@@ -1028,8 +1038,12 @@ export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
         3,
         '#515c6d48',
     );
-    if (cleaner && pose) drawCleanerBody(ctx, cleaner, pose, motion);
+    if (cleaner && pose) {
+        drawCleanerBody(ctx, cleaner, pose, motion);
+    }
     drawBucket(ctx, bucket);
-    if (pose) drawArm(ctx, pose.frontArm, true);
+    if (pose) {
+        drawArm(ctx, pose.frontArm, true);
+    }
     drawPour(ctx);
 }

@@ -1,10 +1,12 @@
-import { translate, type Message } from '../../../i18n';
-import { STAGE_TWO } from '../../../game/stages/building/data';
-import type { RenderCtx } from '../../context';
 import { bubble, chairBubble } from './bubble';
 import { head, officeAppearance, worker } from './workers';
+import { STAGE_TWO } from '../../../game/stages/building/data';
+import { translate } from '../../../i18n';
 import { player } from '../player';
 import { entryDoorOpening, doorPanel } from './meeting-doors';
+
+import type { Message } from '../../../i18n';
+import type { RenderCtx } from '../../context';
 
 const COMPLAINTS = [
     ['building.chairStuck', 'building.chairMinutes', 'building.chairOvertime'],
@@ -20,7 +22,10 @@ const COMPLAINTS = [
     ],
 ] satisfies Message[][];
 
-export function meetingChairPose(time: number, index: number) {
+export function meetingChairPose(
+    time: number,
+    index: number,
+): { sink: number; lean: number; sigh: number } {
     const phase = (time + index * 1.1) % 6;
     const sigh =
         phase > 1 && phase < 3 ? Math.sin(((phase - 1) / 2) * Math.PI) : 0;
@@ -100,7 +105,9 @@ function occupiedChair(
     ctx.rod(x + 8, hip - 33, x + 20, hip - 20, 8, look.sleeve);
     ctx.rod(x + 20, hip - 20, x + 36, hip - 27, 5, look.skin);
     ctx.ellipse(x + 36, hip - 27, 4, 2, look.skin);
-    if (speaking) chairVoice(ctx, x, seat);
+    if (speaking) {
+        chairVoice(ctx, x, seat);
+    }
     if (pose.sigh > 0.15) {
         const alpha = pose.sigh * 0.55;
         ctx.strokePath(
@@ -137,12 +144,14 @@ function speakingChair(age: number) {
         : null;
 }
 
-export function meetingDoor(ctx: RenderCtx) {
+export function meetingDoor(ctx: RenderCtx): void {
     const x = STAGE_TWO.meeting;
     ctx.rect(x - 78, 180, 156, 240, '#687f80');
     ctx.rect(x - 70, 187, 140, 232, '#91a29b');
     const opening = entryDoorOpening(ctx.state.corridor.room);
-    if (opening > 0) occupiedChair(ctx, x + 14, 420, 0);
+    if (opening > 0) {
+        occupiedChair(ctx, x + 14, 420, 0);
+    }
     doorPanel(ctx, x, opening);
     ctx.rect(x - 70, 147, 140, 25, '#e1d7bb');
     ctx.label(
@@ -217,7 +226,9 @@ function meetingSpeech(ctx: RenderCtx, age: number) {
         );
     } else {
         const index = speakingChair(age);
-        if (index !== null) chairSpeech(ctx, index);
+        if (index !== null) {
+            chairSpeech(ctx, index);
+        }
     }
 }
 
@@ -234,9 +245,11 @@ function chairSpeech(ctx: RenderCtx, index: number) {
     });
 }
 
-export function meetingRoom(ctx: RenderCtx) {
+export function meetingRoom(ctx: RenderCtx): void {
     const scene = ctx.state.corridor.room;
-    if (scene.kind !== 'meeting') return;
+    if (scene.kind !== 'meeting') {
+        return;
+    }
     const x = STAGE_TWO.meeting;
     meetingBoard(ctx, x);
     for (let i = 0; i < 3; i++) {

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const {
@@ -125,17 +126,19 @@ test('the reveal glides forward to exactly where stage five starts', () => {
 
 test('the cameras get time to sink in before the glide, which arrives at stage five already at cruise speed', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
-    const start = revealGlideStart(settle),
-        end = settle + turn + hold;
+    const start = revealGlideStart(settle);
+    const end = settle + turn + hold;
     const seen = (appear) => {
         for (let at = settle; at <= settle + turn; at += 1 / 120) {
-            if (revealChairOrbit(at, settle) >= appear) return at;
+            if (revealChairOrbit(at, settle) >= appear) {
+                return at;
+            }
         }
         return Infinity;
     };
     const appears = ORBIT_WATCH.reveal.map((spot) => spot.appear);
-    const first = seen(Math.min(...appears)),
-        last = seen(Math.max(...appears));
+    const first = seen(Math.min(...appears));
+    const last = seen(Math.max(...appears));
     assert.ok(
         last - first >= 3.5,
         `the cameras turn up one by one over ${(last - first).toFixed(1)} s`,
@@ -285,12 +288,12 @@ const cruising = (z) => ({
 
 test('5-1: the satellite light slows the chair and shoves it out of its rectangle', () => {
     const first = STAGE_FIVE.satelliteLight.beams[0];
-    const x = 40,
-        z = (first.from + first.to) / 2;
+    const x = 40;
+    const z = (first.from + first.to) / 2;
     assert.ok(inSatelliteLight({ aims: centred() }, chairAt(x), z));
-    let orbit = cruising(z),
-        p = chairAt(x),
-        slowest = orbit.speed;
+    let orbit = cruising(z);
+    let p = chairAt(x);
+    let slowest = orbit.speed;
     for (let i = 0; i < 120; i++) {
         ({ orbit, p } = orbitStep(orbit, p, [], 1 / 120));
         slowest = Math.min(slowest, orbit.speed);
@@ -303,8 +306,8 @@ test('5-1: the satellite light slows the chair and shoves it out of its rectangl
 });
 
 test("5-1: inside a beam's rectangle the chair is caught, and outside it nothing happens", () => {
-    const first = STAGE_FIVE.satelliteLight.beams[0],
-        r = STAGE_FIVE.satelliteLight.chairRadius;
+    const first = STAGE_FIVE.satelliteLight.beams[0];
+    const r = STAGE_FIVE.satelliteLight.chairRadius;
     assert.equal(
         STAGE_FIVE.satelliteLight.shelters,
         undefined,

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { balancePolicy, createGame, replayCommands } from './harness.mjs';
 
 function playRecorded(seed, stage, frames) {
@@ -23,9 +24,15 @@ function playRecorded(seed, stage, frames) {
     const dts = [1 / 60, 1 / 144, 1 / 30, 0.011, 1 / 90];
     for (let frame = 0; frame < frames; frame++) {
         balancePolicy(game.getSnapshot(), game);
-        if (stage === 3 && frame % 45 === 0) game.spray();
-        if (frame === 400) game.pause();
-        if (frame === 430) game.pause();
+        if (stage === 3 && frame % 45 === 0) {
+            game.spray();
+        }
+        if (frame === 400) {
+            game.pause();
+        }
+        if (frame === 430) {
+            game.pause();
+        }
         game.advance(dts[frame % dts.length]);
         game.drainEvents();
     }

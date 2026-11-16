@@ -1,17 +1,18 @@
-import type { RenderCtx } from '../../context';
-import type { DrawCommand, LayerSpec } from '../../types';
-import { seeded } from '../shared/cloud-art';
+import { robotBirdModel } from './robot-bird';
 import {
     aim,
     CCTV_KINDS,
     cctvModel,
     placer,
     rect,
-    type CctvKind,
 } from '../shared/cctv-models';
-import type { Point3, SkyProjection } from '../shared/projection';
+import { seeded } from '../shared/cloud-art';
+
 import type { SkyRobot } from '../../../game/stages/sky/data';
-import { robotBirdModel } from './robot-bird';
+import type { RenderCtx } from '../../context';
+import type { DrawCommand, LayerSpec } from '../../types';
+import type { CctvKind } from '../shared/cctv-models';
+import type { Point3, SkyProjection } from '../shared/projection';
 
 export type RoutePoint = (x: number, y: number, z: number) => Point3;
 
@@ -47,8 +48,8 @@ function routeCctvs(
     }));
 }
 
-const REVEAL_COLUMNS = [60, 210, 360, 640, 790, 940],
-    REVEAL_ROWS = [50, 170, 300, 430];
+const REVEAL_COLUMNS = [60, 210, 360, 640, 790, 940];
+const REVEAL_ROWS = [50, 170, 300, 430];
 const REVEAL_VIEW = { focal: 841.5, centerY: 188.7, camera: 480 };
 const REVEAL_BIRDS: Partial<Record<number, SkyRobot>> = {
     1: 'liquid',
@@ -70,10 +71,10 @@ function revealCctvs(seed: number, glide: number): Spot[] {
     return REVEAL_ROWS.flatMap((row, r) =>
         REVEAL_COLUMNS.map((column, c) => {
             const depth = 700 + random() * 860;
-            const sx = column + (random() - 0.5) * 90,
-                sy = row + (random() - 0.5) * 70;
-            const scale = depth / REVEAL_VIEW.focal,
-                index = r * REVEAL_COLUMNS.length + c;
+            const sx = column + (random() - 0.5) * 90;
+            const sy = row + (random() - 0.5) * 70;
+            const scale = depth / REVEAL_VIEW.focal;
+            const index = r * REVEAL_COLUMNS.length + c;
             return {
                 x: (sx - 500) * scale,
                 y: (REVEAL_VIEW.centerY - sy) * scale,
@@ -134,7 +135,9 @@ export type LampState = 'idle' | 'flash' | 'recorded';
 type Lamp = { at: Point3; state: LampState; glow?: number; rec?: boolean };
 
 export function cctvLamp(ahead: number, t: number): LampState {
-    if (ahead > ORBIT_WATCH.before) return 'idle';
+    if (ahead > ORBIT_WATCH.before) {
+        return 'idle';
+    }
     if (ahead > -ORBIT_WATCH.after) {
         return Math.floor(t * ORBIT_WATCH.blink) % 2 === 0 ? 'flash' : 'idle';
     }
@@ -151,9 +154,9 @@ const SWERVE = 200;
 function swerve(p: Point3, ahead: number): Point3 {
     const t = Math.max(0, Math.min(1, 1 - ahead / SWERVE));
     const out = 700 * t * t * (3 - 2 * t);
-    const y = p[1] - 15,
-        x = p[2],
-        r = Math.hypot(x, y) || 1;
+    const y = p[1] - 15;
+    const x = p[2];
+    const r = Math.hypot(x, y) || 1;
     return [p[0], 15 + y * (1 + out / r), x * (1 + out / r)];
 }
 
@@ -250,7 +253,7 @@ export function orbitWatchers(
     shown = 1,
     satelliteLightPoint = point,
     satellites: ReadonlyArray<{ x: number; y: number; z: number }> = [],
-) {
+): Lamp[] {
     const lamps = [...ORBIT_WATCH.reveal, ...ORBIT_WATCH.route]
         .filter(
             (spot) =>
@@ -273,20 +276,24 @@ export function orbitWatchGlow(
     view: SkyProjection,
     lamps: Lamp[],
     alpha = 1,
-) {
-    const recLayer = { key: 'orbit-cctv-rec', blend: 'screen' as const },
-        lightLayer = { key: 'orbit-cctv-light', blend: 'screen' as const };
+): void {
+    const recLayer = { key: 'orbit-cctv-rec', blend: 'screen' as const };
+    const lightLayer = { key: 'orbit-cctv-light', blend: 'screen' as const };
     const eyeLayer = { key: 'orbit-robot-eye', blend: 'screen' as const };
-    const recs: DrawCommand[] = [],
-        lights: DrawCommand[] = [],
-        eyes: DrawCommand[] = [];
+    const recs: DrawCommand[] = [];
+    const lights: DrawCommand[] = [];
+    const eyes: DrawCommand[] = [];
     for (const { at, state, glow, rec } of lamps) {
-        if (view.depth(at) < 80) continue;
+        if (view.depth(at) < 80) {
+            continue;
+        }
         if (glow) {
             eyes.push(eyeGlow(ctx, view, at, glow, state, alpha, eyeLayer));
             continue;
         }
-        if (state === 'idle' && !rec) continue;
+        if (state === 'idle' && !rec) {
+            continue;
+        }
         const [x, y] = view.project(at);
         const radius =
             ctx.clamp(30000 / view.depth(at), 10, 60) *
@@ -358,10 +365,12 @@ export function orbitBeacon(
     view: SkyProjection,
     point: RoutePoint,
     alpha = 1,
-) {
+): void {
     const { x, y, z } = ORBIT_WATCH.beacon;
     const at = point(x, y, z);
-    if (view.depth(at) < 80) return;
+    if (view.depth(at) < 80) {
+        return;
+    }
     const [cx, cy] = view.project(at);
     const twinkle =
         0.35 + 0.65 * Math.pow(Math.sin(ctx.t * 1.7) * 0.5 + 0.5, 3);
@@ -386,8 +395,8 @@ export function orbitBeacon(
         },
         layer,
     });
-    const ray = 3 + 7 * twinkle,
-        thin = 0.7;
+    const ray = 3 + 7 * twinkle;
+    const thin = 0.7;
     const color =
         '#fffaf0' +
         Math.round(ctx.clamp(twinkle * alpha, 0, 1) * 255)
@@ -417,18 +426,22 @@ export function orbitBeacon(
     });
 }
 
-export function orbitCloudGlints(ctx: RenderCtx, alpha = 1) {
-    if (alpha <= 0) return;
+export function orbitCloudGlints(ctx: RenderCtx, alpha = 1): void {
+    if (alpha <= 0) {
+        return;
+    }
     // Colours bake in the screen blend to avoid a full-canvas compositing pass.
     const layer = { key: 'orbit-cloud-glint' };
     for (const glint of ORBIT_WATCH.glints) {
         const wave = Math.sin(ctx.t * glint.rate + glint.phase);
-        if (wave < 0.55) continue;
-        const k = (wave - 0.55) / 0.45,
-            x = glint.x * ctx.W,
-            y = glint.y * ctx.H;
-        const glow = 7 + 9 * k,
-            core = 2 + 1.6 * k;
+        if (wave < 0.55) {
+            continue;
+        }
+        const k = (wave - 0.55) / 0.45;
+        const x = glint.x * ctx.W;
+        const y = glint.y * ctx.H;
+        const glow = 7 + 9 * k;
+        const core = 2 + 1.6 * k;
         const color = glint.red ? '#ffd399' : '#fffbe2';
         ctx.commands.push({
             kind: 'path',

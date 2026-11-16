@@ -1,6 +1,8 @@
-import { translate, type Message } from '../../../i18n';
-import type { RenderCtx } from '../../context';
+import { translate } from '../../../i18n';
 import { SPEECH_FONT } from '../../fonts';
+
+import type { Message } from '../../../i18n';
+import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
 
 export const CHAIR_SLATE = '#4c5368';
@@ -19,8 +21,8 @@ function body(
     if (spiky) {
         const points: Vector[] = [];
         for (let i = 0; i < 32; i++) {
-            const a = (i / 32) * Math.PI * 2,
-                r = i % 2 ? 0.84 : 1;
+            const a = (i / 32) * Math.PI * 2;
+            const r = i % 2 ? 0.84 : 1;
             points.push([
                 x + ((Math.cos(a) * width) / 2) * r,
                 y + Math.sin(a) * 32 * r,
@@ -90,7 +92,7 @@ export function bubble(
     spiky = false,
     alpha = 1,
     tail: boolean | 'right' = true,
-) {
+): void {
     const fill = ctx.tint(spiky ? '#fff1b2' : '#e2e8df', alpha);
     body(ctx, x, y, width, spiky, fill, ['#ffffff', '#e2e8df'], alpha);
     if (tail) {
@@ -132,11 +134,11 @@ export function chairBubble(
         to?: Vector;
         dots?: number;
     } = {},
-) {
+): void {
     const fill = ctx.tint(CHAIR_SLATE, alpha * 0.92);
     body(ctx, x, y, width, spiky, fill, null, alpha);
-    const edge = spiky ? 30 : 22,
-        above = to !== undefined && to[1] < y;
+    const edge = spiky ? 30 : 22;
+    const above = to !== undefined && to[1] < y;
     const start: Vector = [
         to
             ? Math.max(x - width / 2 + 16, Math.min(x + width / 2 - 16, to[0]))
@@ -160,7 +162,7 @@ export function chairTrail(
     to: Vector,
     fill: string,
     dots = 3,
-) {
+): void {
     const steps =
         dots === 3
             ? [

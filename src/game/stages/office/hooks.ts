@@ -1,14 +1,15 @@
-import type { StageHooks } from '../types';
-import { applyCopier, applyPapers, applyUrgentCopier } from './copier/apply';
-import { copierStep, papersStep, urgentCopierStep } from './copier/decide';
-import { applyCleaning } from './cleaning/apply';
-import { cleaningStep, slipping, waterExposure } from './cleaning/decide';
-import { applyGeyserHits } from './geyser/apply';
-import { geyserHits } from './geyser/decide';
 import { applyBinFall } from './bin/apply';
 import { fallsIntoBin } from './bin/decide';
+import { applyCleaning } from './cleaning/apply';
+import { cleaningStep, slipping, waterExposure } from './cleaning/decide';
+import { applyCopier, applyPapers, applyUrgentCopier } from './copier/apply';
+import { copierStep, papersStep, urgentCopierStep } from './copier/decide';
+import { applyGeyserHits } from './geyser/apply';
+import { geyserHits } from './geyser/decide';
 import { applyMonitorContact } from './monitor/apply';
 import { monitorContact } from './monitor/decide';
+
+import type { StageHooks } from '../types';
 
 export const officeHooks: StageHooks = {
     timers(s, dt) {
@@ -50,7 +51,9 @@ export const officeHooks: StageHooks = {
     },
     beforeDrive(s, out, grounded) {
         s.office.slip = slipping(s.p, s.office.cleaning, grounded);
-        if (s.office.slip && !s.office.wetSeen) s.office.wetSeen = true;
+        if (s.office.slip && !s.office.wetSeen) {
+            s.office.wetSeen = true;
+        }
         if (
             s.office.slip &&
             s.office.slipCooldown === 0 &&
@@ -62,7 +65,9 @@ export const officeHooks: StageHooks = {
     },
     drive: (s) => ({ slip: s.office.slip }),
     afterMove(s, out) {
-        if (!fallsIntoBin(s.p, s.office.binCooldown)) return false;
+        if (!fallsIntoBin(s.p, s.office.binCooldown)) {
+            return false;
+        }
         applyBinFall(s, out);
         return true;
     },

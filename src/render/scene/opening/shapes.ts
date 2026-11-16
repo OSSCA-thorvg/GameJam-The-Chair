@@ -18,7 +18,7 @@ export class PathBuilder {
         this.start = [x, y];
         this.at = [x, y];
     }
-    line(x: number, y: number) {
+    line(x: number, y: number): this {
         this.curves.push([...this.at, x, y, x, y]);
         this.at = [x, y];
         return this;
@@ -30,12 +30,12 @@ export class PathBuilder {
         by: number,
         x: number,
         y: number,
-    ) {
+    ): this {
         this.curves.push([ax, ay, bx, by, x, y]);
         this.at = [x, y];
         return this;
     }
-    corner(cx: number, cy: number, x: number, y: number) {
+    corner(cx: number, cy: number, x: number, y: number): this {
         const [px, py] = this.at;
         return this.cubic(
             px + (cx - px) * K,
@@ -57,13 +57,22 @@ export class PathBuilder {
             curves: this.curves,
             fill,
         };
-        if (stroke) cmd.stroke = stroke;
-        if (open) cmd.open = true;
+        if (stroke) {
+            cmd.stroke = stroke;
+        }
+        if (open) {
+            cmd.open = true;
+        }
         return cmd;
     }
 }
 
-export function circle(cx: number, cy: number, rx: number, ry = rx) {
+export function circle(
+    cx: number,
+    cy: number,
+    rx: number,
+    ry = rx,
+): PathBuilder {
     return new PathBuilder(cx + rx, cy)
         .corner(cx + rx, cy + ry, cx, cy + ry)
         .corner(cx - rx, cy + ry, cx - rx, cy)
@@ -71,7 +80,7 @@ export function circle(cx: number, cy: number, rx: number, ry = rx) {
         .corner(cx + rx, cy - ry, cx + rx, cy);
 }
 
-export function dialCircle(cx: number, cy: number, r: number) {
+export function dialCircle(cx: number, cy: number, r: number): PathBuilder {
     return new PathBuilder(cx, cy - r)
         .corner(cx + r, cy - r, cx + r, cy)
         .corner(cx + r, cy + r, cx, cy + r)
@@ -79,8 +88,10 @@ export function dialCircle(cx: number, cy: number, r: number) {
         .corner(cx - r, cy - r, cx, cy - r);
 }
 
-export function push(ctx: RenderCtx, cmd: DrawCommand) {
-    if (ctx.layer) cmd.layer = ctx.layer;
+export function push(ctx: RenderCtx, cmd: DrawCommand): void {
+    if (ctx.layer) {
+        cmd.layer = ctx.layer;
+    }
     ctx.commands.push(cmd);
 }
 
@@ -88,11 +99,11 @@ export function polygon(
     ctx: RenderCtx,
     points: Vector[],
     fill: string | Gradient,
-) {
+): void {
     push(ctx, { kind: 'path', points, fill });
 }
 
-export function screenRect(ctx: RenderCtx, fill: string | Gradient) {
+export function screenRect(ctx: RenderCtx, fill: string | Gradient): void {
     polygon(
         ctx,
         [
@@ -135,7 +146,7 @@ export function radial(
     };
 }
 
-export function mix(a: string, b: string, u: number) {
+export function mix(a: string, b: string, u: number): string {
     const ca = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
     const cb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
     return (
@@ -155,7 +166,7 @@ export function rotate(
     [cx, cy]: Vector,
     angle: number,
 ): Vector {
-    const c = Math.cos(angle),
-        s = Math.sin(angle);
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
     return [cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c];
 }

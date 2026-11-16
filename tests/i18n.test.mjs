@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+
 import { load } from './support/load.mjs';
 
 const { resolveLocale, pageLocale, translate, isMessage } =

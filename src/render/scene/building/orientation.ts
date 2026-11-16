@@ -1,4 +1,6 @@
-import { STAGE_TWO, type Obstacle } from '../../../game/stages/building/data';
+import { STAGE_TWO } from '../../../game/stages/building/data';
+
+import type { Obstacle } from '../../../game/stages/building/data';
 import type { RenderCtx } from '../../context';
 
 const FLOOR = 420;
@@ -30,7 +32,7 @@ const SLEEPERS = [
     },
 ];
 
-export function obstacleHop(x: number) {
+export function obstacleHop(x: number): number {
     for (const obstacle of obstacles) {
         const span = obstacle.width + 110;
         const d = x - (obstacle.x - span / 2);
@@ -41,15 +43,18 @@ export function obstacleHop(x: number) {
     return 0;
 }
 
-export function orientationFloor(ctx: RenderCtx) {
+export function orientationFloor(ctx: RenderCtx): void {
     let sleeper = 0;
     for (const obstacle of obstacles) {
-        if (obstacle.kind === 'sleeper') sleeper++;
+        if (obstacle.kind === 'sleeper') {
+            sleeper++;
+        }
         if (obstacle.x < ctx.cam - 160 || obstacle.x > ctx.cam + ctx.VW + 160) {
             continue;
         }
-        if (obstacle.kind === 'cable') cable(ctx, obstacle);
-        else {
+        if (obstacle.kind === 'cable') {
+            cable(ctx, obstacle);
+        } else {
             sleepingColleague(
                 ctx,
                 obstacle,
@@ -98,8 +103,8 @@ function sleepingColleague(
     seed: number,
 ) {
     const breath = 1 + Math.sin(ctx.t * 1.7 + seed * 1.3) * 0.12;
-    const w = width / 2,
-        h = height * breath;
+    const w = width / 2;
+    const h = height * breath;
     ctx.effectPath(
         [x - w, FLOOR],
         [

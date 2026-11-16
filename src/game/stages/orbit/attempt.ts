@@ -1,7 +1,11 @@
-import type { Attempt } from '../../state';
 import { STAGE_FIVE } from './data';
 
-export function prepareOrbitAttempt(attempt: Attempt, checkpoint: number) {
+import type { Attempt } from '../../state';
+
+export function prepareOrbitAttempt(
+    attempt: Attempt,
+    checkpoint: number,
+): void {
     attempt.extinguisher.owned = true;
     attempt.extinguisher.burst = 0.24;
     if (checkpoint > STAGE_FIVE.restarts.length) {

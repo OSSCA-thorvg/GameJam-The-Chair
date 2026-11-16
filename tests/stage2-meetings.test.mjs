@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { loadSource } from './support/load.mjs';
+
 import { corridorPolicy } from './support/harness.mjs';
+import { loadSource } from './support/load.mjs';
 
 const {
     createGame,
@@ -22,7 +23,9 @@ function travel(game, stop) {
     const policy = corridorPolicy(false);
     for (let i = 0; i < 7200; i++) {
         const s = game.getSnapshot();
-        if (stop(s)) return s;
+        if (stop(s)) {
+            return s;
+        }
         policy(s, game);
         game.step(dt);
     }
@@ -131,7 +134,9 @@ test('enter opens the first door before entering and restores halfway through th
         before.player.x,
         'enter does not teleport through the closed door',
     );
-    for (let i = 0; i < 25; i++) game.step(dt);
+    for (let i = 0; i < 25; i++) {
+        game.step(dt);
+    }
     const approach = game.getSnapshot();
     const aperture = entryDoorOpening(approach.corridor.room);
     assert.ok(aperture > 0 && aperture < 1);
@@ -153,13 +158,13 @@ test('the dispatch door starts shut and closes only after every chair clears its
     const game = createGame({ seed: 8 });
     game.startStage(2);
     const policy = corridorPolicy(false);
-    let sawOpening = false,
-        sawOpen = false,
-        sawClosing = false,
-        closed = false;
+    let sawOpening = false;
+    let sawOpen = false;
+    let sawClosing = false;
+    let closed = false;
     for (let i = 0; i < 5000; i++) {
-        const s = game.getSnapshot(),
-            c = s.corridor;
+        const s = game.getSnapshot();
+        const c = s.corridor;
         const clear = s.furniture.every(
             (chair) =>
                 chair.released &&
@@ -170,9 +175,14 @@ test('the dispatch door starts shut and closes only after every chair clears its
             c.dispatchStarted,
             clear,
         );
-        if (!c.dispatchStarted) assert.equal(aperture, 0);
-        else if (c.dispatchAge < 0.5 && aperture > 0) sawOpening = true;
-        if (aperture === 1) sawOpen = true;
+        if (!c.dispatchStarted) {
+            assert.equal(aperture, 0);
+        } else if (c.dispatchAge < 0.5 && aperture > 0) {
+            sawOpening = true;
+        }
+        if (aperture === 1) {
+            sawOpen = true;
+        }
         if (c.dispatchAge > 3.4 && aperture > 0 && aperture < 1) {
             sawClosing = true;
             assert.ok(

@@ -1,5 +1,7 @@
-import { startMark, type StageDefinition } from '../types';
+import { startMark } from '../types';
 import { STAGE_FIVE } from './data';
+
+import type { StageDefinition } from '../types';
 
 export const orbit: StageDefinition = {
     id: 5,

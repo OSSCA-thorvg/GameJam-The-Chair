@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const {
@@ -56,7 +57,9 @@ function fakeThorvg() {
         }
         add(child) {
             this.children.push(child);
-            if (this.onCanvas && this.rendered) this.stale = true;
+            if (this.onCanvas && this.rendered) {
+                this.stale = true;
+            }
             return this;
         }
     }
@@ -125,7 +128,9 @@ function fakeThorvg() {
             if (this.paints.some((paint) => paint.stale)) {
                 throw new Error('RuntimeError: null function');
             }
-            for (const paint of this.paints) paint.onCanvas = false;
+            for (const paint of this.paints) {
+                paint.onCanvas = false;
+            }
             this.paints = [];
             return this;
         }
@@ -482,9 +487,9 @@ test('a layer that changes nothing is painted as plain shapes, and one faded to 
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const stats = createRenderStats();
-    const plain = { key: 'group-only' },
-        gone = { key: 'faded', opacity: 0.001 },
-        seen = { key: 'fading', opacity: 0.5 };
+    const plain = { key: 'group-only' };
+    const gone = { key: 'faded', opacity: 0.001 };
+    const seen = { key: 'fading', opacity: 0.5 };
     ctx.commands = [
         square(20, plain),
         square(40, plain),
@@ -509,11 +514,11 @@ test('back-to-back layers that only screen-blend share one Scene; any other effe
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const stats = createRenderStats();
-    const rec = { key: 'rec', blend: 'screen' },
-        beam = { key: 'beam', blend: 'screen' },
-        beam2 = { key: 'beam', blend: 'screen' };
-    const faded = { key: 'faded', blend: 'screen', opacity: 0.5 },
-        lit = { key: 'lit', blend: 'add' };
+    const rec = { key: 'rec', blend: 'screen' };
+    const beam = { key: 'beam', blend: 'screen' };
+    const beam2 = { key: 'beam', blend: 'screen' };
+    const faded = { key: 'faded', blend: 'screen', opacity: 0.5 };
+    const lit = { key: 'lit', blend: 'add' };
     ctx.commands = [
         square(20, rec),
         square(40, beam),

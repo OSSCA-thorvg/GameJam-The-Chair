@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { begin, play, runWith } from './harness.mjs';
 
 export function determinismTests(name, start, commands, ticks) {

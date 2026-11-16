@@ -1,17 +1,29 @@
+import { focusAfterHit, focusLossStep } from './decide';
+
+import type { FocusHit } from './decide';
 import type { CoreState } from '../../state';
 import type { GameEvent } from '../../types';
-import { focusAfterHit, focusLossStep, type FocusHit } from './decide';
-export function applyFocusHit(s: CoreState, out: GameEvent[], hit: FocusHit) {
-    if (s.mode !== 'play') return false;
+export function applyFocusHit(
+    s: CoreState,
+    out: GameEvent[],
+    hit: FocusHit,
+): boolean {
+    if (s.mode !== 'play') {
+        return false;
+    }
     const r = focusAfterHit(s.focus, hit);
-    if (!r) return true;
+    if (!r) {
+        return true;
+    }
     s.focus = {
         value: r.value,
         recoveryClock: r.recoveryClock,
         processedEvents: r.processedEvents,
         notice: r.notice,
     };
-    if (r.lost) applyFocusFailure(s, out);
+    if (r.lost) {
+        applyFocusFailure(s, out);
+    }
     return !r.lost;
 }
 
@@ -26,8 +38,14 @@ function applyFocusFailure(s: CoreState, out: GameEvent[]) {
     out.push({ type: 'cue', id: 'focus-lost' });
 }
 
-export function applyFocusLoss(s: CoreState, out: GameEvent[], dt: number) {
-    if (s.mode !== 'focuslost') return;
+export function applyFocusLoss(
+    s: CoreState,
+    out: GameEvent[],
+    dt: number,
+): void {
+    if (s.mode !== 'focuslost') {
+        return;
+    }
     const r = focusLossStep(s.focusLossTime, dt);
     s.focusLossTime = r.time;
     if (r.over) {

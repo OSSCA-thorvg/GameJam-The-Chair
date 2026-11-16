@@ -1,8 +1,9 @@
-import { type Game, type GameSnapshot } from '../game/game';
-import type { Input } from '../game/types';
 import { FIXED_STEP } from '../game/level';
-import { createEffects } from '../render/effects';
-import { type PreviewScene, type PreviewFrame } from './types';
+
+import type { PreviewScene, PreviewFrame } from './types';
+import type { Game, GameSnapshot } from '../game/game';
+import type { Input } from '../game/types';
+import type { createEffects } from '../render/effects';
 
 export const FRAME_TIME = 1 / 60;
 
@@ -41,11 +42,13 @@ export function capture(
 export function stepGame(
     game: Game,
     effects: ReturnType<typeof createEffects>,
-) {
+): void {
     for (let i = 0; i < 2; i++) {
         game.step(FIXED_STEP);
         effects.observe(game.getSnapshot());
-        for (const event of game.drainEvents()) effects.receive(event);
+        for (const event of game.drainEvents()) {
+            effects.receive(event);
+        }
         effects.advance(FIXED_STEP);
     }
 }

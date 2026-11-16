@@ -1,6 +1,7 @@
+import { CLOUD_TONES, puffCloud, seeded } from '../shared/cloud-art';
+
 import type { RenderCtx } from '../../context';
 import type { SkyProjection } from '../shared/projection';
-import { CLOUD_TONES, puffCloud, seeded } from '../shared/cloud-art';
 
 const CLOUDS = (() => {
     const random = seeded(817);
@@ -15,7 +16,7 @@ const CLOUDS = (() => {
 
 export type BasinAnchor = { x: number; y: number };
 
-export function orbitSky(ctx: RenderCtx) {
+export function orbitSky(ctx: RenderCtx): void {
     ctx.commands.push({
         kind: 'path',
         points: [
@@ -65,21 +66,27 @@ function placeClouds(
     const anchor = options.anchor ?? ctx.state.player;
     const placed: PlacedCloud[] = [];
     for (const cloud of CLOUDS) {
-        if (options.only && !options.only.has(cloud.seed)) continue;
+        if (options.only && !options.only.has(cloud.seed)) {
+            continue;
+        }
         const z = options.unwrapped
             ? ((cloud.z + 12000) % 10000) - 500 - travel
             : ((cloud.z - travel + 12000) % 10000) - 500;
-        const across = cloud.x - anchor.x * 0.55,
-            turn = options.turn ?? 0;
+        const across = cloud.x - anchor.x * 0.55;
+        const turn = options.turn ?? 0;
         const ahead = z * Math.cos(turn) + across * Math.sin(turn);
-        if (ahead <= 0 || ahead < 900 !== foreground) continue;
+        if (ahead <= 0 || ahead < 900 !== foreground) {
+            continue;
+        }
         const center: [number, number, number] = [
             ahead,
             cloud.y - anchor.y * 0.45,
             across * Math.cos(turn) - z * Math.sin(turn),
         ];
         const depth = view.depth(center);
-        if (depth < (options.nearDepth ?? 200)) continue;
+        if (depth < (options.nearDepth ?? 200)) {
+            continue;
+        }
         const [x, y] = view.project(center);
         const edge = view.project([z, center[1], center[2] + cloud.radius]);
         const size = Math.abs(edge[0] - x) / 170;
@@ -115,7 +122,7 @@ export function basinCloudSeeds(
     view: SkyProjection,
     travel: number,
     anchor: BasinAnchor,
-) {
+): Set<number> {
     return new Set(
         [false, true].flatMap((foreground) =>
             placeClouds(ctx, view, travel, foreground, { anchor }).map(
@@ -131,7 +138,7 @@ export function orbitCloudBank(
     travel: number,
     foreground: boolean,
     options: CloudBankOptions = {},
-) {
+): void {
     const placed = placeClouds(ctx, view, travel, foreground, options);
     const saved = {
         scale: ctx.scale,

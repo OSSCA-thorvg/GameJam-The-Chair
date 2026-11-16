@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Requires fontTools: pip install fonttools.
+import { spawnSync } from 'node:child_process';
 import {
     mkdtempSync,
     readdirSync,
@@ -7,9 +8,9 @@ import {
     statSync,
     writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { spawnSync } from 'node:child_process';
+import { join } from 'node:path';
+
 import { loadSource } from '../tests/support/load.mjs';
 
 const FONTS = [
@@ -46,7 +47,9 @@ const literals = walk('src/render')
     )
     .join('');
 let ascii = '';
-for (let c = 0x20; c < 0x7f; c++) ascii += String.fromCharCode(c);
+for (let c = 0x20; c < 0x7f; c++) {
+    ascii += String.fromCharCode(c);
+}
 const text =
     [...new Set(ascii + allMessageText() + literals)]
         .filter((c) => c.trim())
@@ -58,7 +61,9 @@ writeFileSync(textFile, text);
 for (const font of FONTS) {
     const source = join(work, font.file);
     const res = await fetch(ORIGIN + font.source);
-    if (!res.ok) throw new Error(`${font.source}: ${res.status}`);
+    if (!res.ok) {
+        throw new Error(`${font.source}: ${res.status}`);
+    }
     writeFileSync(source, new Uint8Array(await res.arrayBuffer()));
     const out = join('src/assets/fonts', font.file);
     const run = spawnSync(
@@ -72,6 +77,8 @@ for (const font of FONTS) {
         ],
         { stdio: 'inherit' },
     );
-    if (run.status !== 0) throw new Error(`pyftsubset failed for ${font.file}`);
+    if (run.status !== 0) {
+        throw new Error(`pyftsubset failed for ${font.file}`);
+    }
     console.log(`${out}: ${statSync(out).size} bytes`);
 }

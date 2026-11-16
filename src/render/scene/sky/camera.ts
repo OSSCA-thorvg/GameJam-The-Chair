@@ -1,5 +1,5 @@
-import { STAGE_FOUR } from '../../../game/stages/sky/data';
 import { STAGE_FIVE } from '../../../game/stages/orbit/data';
+import { STAGE_FOUR } from '../../../game/stages/sky/data';
 
 export const SKY_TURN = {
     duration: STAGE_FOUR.reveal.turn,
@@ -17,20 +17,20 @@ const smooth = (value: number) => {
     return t * t * (3 - 2 * t);
 };
 
-export function revealChairOrbit(elapsed: number, settle: number) {
+export function revealChairOrbit(elapsed: number, settle: number): number {
     return smooth((elapsed - settle) / SKY_TURN.duration) * SKY_TURN.rear;
 }
 
-export const revealGlideStart = (settle: number) =>
+export const revealGlideStart = (settle: number): number =>
     settle + SKY_TURN.duration * SKY_TURN.glideFrom;
 
 export function revealTravel(
     elapsed: number,
     settle: number,
     distance: number,
-) {
-    const start = revealGlideStart(settle),
-        span = REVEAL_DURATION - start;
+): number {
+    const start = revealGlideStart(settle);
+    const span = REVEAL_DURATION - start;
     const u = Math.max(0, Math.min(1, (elapsed - start) / span));
     return (
         -distance +
@@ -39,11 +39,17 @@ export function revealTravel(
     );
 }
 
-export function revealSpeed(elapsed: number, settle: number, distance: number) {
-    const start = revealGlideStart(settle),
-        span = REVEAL_DURATION - start;
+export function revealSpeed(
+    elapsed: number,
+    settle: number,
+    distance: number,
+): number {
+    const start = revealGlideStart(settle);
+    const span = REVEAL_DURATION - start;
     const u = (elapsed - start) / span;
-    if (u <= 0 || u > 1) return u > 1 ? STAGE_FIVE.cruise : 0;
+    if (u <= 0 || u > 1) {
+        return u > 1 ? STAGE_FIVE.cruise : 0;
+    }
     return (
         (distance * (6 * u - 6 * u * u) +
             span * STAGE_FIVE.cruise * (3 * u * u - 2 * u)) /

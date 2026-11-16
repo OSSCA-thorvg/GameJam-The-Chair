@@ -1,6 +1,3 @@
-import type { RenderCtx } from '../../context';
-import type { DrawCommand, Vector } from '../../types';
-import type { OpeningFrame } from './timeline';
 import {
     circle,
     dialCircle,
@@ -13,10 +10,18 @@ import {
     rotate,
     screenRect,
 } from './shapes';
+import { roofShape } from '../office/skyline';
 import { underOfficeTint, windowView } from '../office/window-view';
-import { roofShape, type Roof } from '../office/skyline';
 
-export function clockLayout(ctx: RenderCtx, frame: OpeningFrame) {
+import type { OpeningFrame } from './timeline';
+import type { RenderCtx } from '../../context';
+import type { DrawCommand, Vector } from '../../types';
+import type { Roof } from '../office/skyline';
+
+export function clockLayout(
+    ctx: RenderCtx,
+    frame: OpeningFrame,
+): { cx: number; cy: number; R: number } {
     const R = Math.min(ctx.W * 0.5, ctx.H) * 0.3;
     return { cx: ctx.W / 2, cy: ctx.H / 2 + R * 0.05, R: R * frame.clockScale };
 }
@@ -55,10 +60,10 @@ function tower(
     body: string,
     dusk: number,
 ) {
-    const left = pane.x + t.x * pane.w,
-        width = t.w * pane.w,
-        base = pane.y + pane.h,
-        top = base - t.h * pane.h;
+    const left = pane.x + t.x * pane.w;
+    const width = t.w * pane.w;
+    const base = pane.y + pane.h;
+    const top = base - t.h * pane.h;
     polygon(
         ctx,
         [
@@ -77,9 +82,11 @@ function tower(
         t.roof,
         body,
     );
-    if (dusk <= 0.3) return;
-    const size = width * 0.14,
-        lit = underOfficeTint(windowView(dusk).lit, dusk);
+    if (dusk <= 0.3) {
+        return;
+    }
+    const size = width * 0.14;
+    const lit = underOfficeTint(windowView(dusk).lit, dusk);
     for (let y = top + size * 1.5; y + size < base - size; y += size * 3) {
         for (const x of [left + width * 0.28, left + width * 0.58]) {
             polygon(
@@ -99,11 +106,15 @@ function tower(
 function windowSkyline(ctx: RenderCtx, pane: Pane, dusk: number) {
     const building = underOfficeTint(windowView(dusk).building, dusk);
     const far = underOfficeTint(windowView(dusk).buildingFar, dusk);
-    for (const t of BACK_ROW) tower(ctx, pane, t, far, 0);
-    for (const t of FRONT_ROW) tower(ctx, pane, t, building, dusk);
+    for (const t of BACK_ROW) {
+        tower(ctx, pane, t, far, 0);
+    }
+    for (const t of FRONT_ROW) {
+        tower(ctx, pane, t, building, dusk);
+    }
 }
 
-export function drawClock(ctx: RenderCtx, frame: OpeningFrame) {
+export function drawClock(ctx: RenderCtx, frame: OpeningFrame): void {
     const { cx, cy, R } = clockLayout(ctx, frame);
     const dusk = frame.dusk;
     const squash = frame.clockPop * 0.07;
@@ -116,8 +127,8 @@ export function drawClock(ctx: RenderCtx, frame: OpeningFrame) {
         );
     const shape = (points: Vector[], angle = 0) =>
         points.map(([x, y]) => {
-            const c = Math.cos(angle),
-                s = Math.sin(angle);
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
             return at(x * c - y * s, x * s + y * c);
         });
 
@@ -152,12 +163,12 @@ export function drawClock(ctx: RenderCtx, frame: OpeningFrame) {
             ],
         ),
     );
-    const wx = cx - R * 2.75,
-        wy = cy - R * 0.95,
-        ww = R * 1.15,
-        wh = R * 1.7;
-    const view = windowView(dusk),
-        tinted = (color: string) => underOfficeTint(color, dusk);
+    const wx = cx - R * 2.75;
+    const wy = cy - R * 0.95;
+    const ww = R * 1.15;
+    const wh = R * 1.7;
+    const view = windowView(dusk);
+    const tinted = (color: string) => underOfficeTint(color, dusk);
     polygon(
         ctx,
         [

@@ -1,6 +1,6 @@
 import type { RenderCtx } from '../../context';
 
-export function monitorDraw(ctx: RenderCtx) {
+export function monitorDraw(ctx: RenderCtx): void {
     const F = ctx.F;
     const TAU = ctx.TAU;
     for (const monitor of ctx.monitors) {

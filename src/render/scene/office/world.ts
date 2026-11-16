@@ -1,7 +1,17 @@
+import { cleaningDraw, person } from './cleaning';
+import { monitorDraw } from './monitor';
+import { roofFor, roofShape } from './skyline';
+import { urgentCopierDraw, urgentPapersDraw } from './urgent-copier';
+import { windowView } from './window-view';
+import { LEVEL } from '../../../game/level';
+import { URGENT_VOLLEY_ID } from '../../../game/stages/office/copier/decide';
+import { geyserPhase } from '../../../game/stages/office/geyser/decide';
 import { translate } from '../../../i18n';
-import type { DeepReadonly, Person } from '../../../game/types';
-import type { RenderCtx } from '../../context';
+import { EFFECT_STYLE } from '../../art';
 import { SIGN_FONT } from '../../fonts';
+import { player, debugCollisions } from '../player';
+import { ceilingCctvs } from '../shared/ceiling-cctv';
+import { officeControlHints } from '../shared/control-hints';
 import {
     plant,
     desk,
@@ -11,19 +21,11 @@ import {
     checkpointFlag,
     chairPictogram,
 } from '../shared/decor';
-import { cleaningDraw, person } from './cleaning';
-import { monitorDraw } from './monitor';
-import { player, debugCollisions } from '../player';
-import { EFFECT_STYLE } from '../../art';
+
+import type { WindowView } from './window-view';
+import type { DeepReadonly, Person } from '../../../game/types';
+import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-import { LEVEL } from '../../../game/level';
-import { geyserPhase } from '../../../game/stages/office/geyser/decide';
-import { URGENT_VOLLEY_ID } from '../../../game/stages/office/copier/decide';
-import { urgentCopierDraw, urgentPapersDraw } from './urgent-copier';
-import { ceilingCctvs } from '../shared/ceiling-cctv';
-import { windowView, type WindowView } from './window-view';
-import { roofFor, roofShape } from './skyline';
-import { officeControlHints } from '../shared/control-hints';
 
 const EXIT = { left: LEVEL.goal - 45, right: LEVEL.goal + 81 };
 
@@ -62,10 +64,10 @@ function cityRow(
     const span = (range: [number, number]) =>
         range[0] + rand() * (range[1] - range[0]);
     for (let at = left - rand() * 14; at < left + PANE.width;) {
-        const width = span(row.width),
-            top = PANE.bottom - span(row.height) * (PANE.bottom - PANE.top);
-        const from = Math.max(at, left),
-            to = Math.min(at + width, left + PANE.width);
+        const width = span(row.width);
+        const top = PANE.bottom - span(row.height) * (PANE.bottom - PANE.top);
+        const from = Math.max(at, left);
+        const to = Math.min(at + width, left + PANE.width);
         if (to - from > 4) {
             ctx.rect(from, top, to - from, PANE.bottom - top, row.body);
             const roof = roofFor(Math.floor(rand() * 1000));
@@ -206,7 +208,9 @@ function drawOfficeBackground(ctx: RenderCtx) {
         }
     }
     for (let x = 110; x < GOAL; x += 420) {
-        if (x < left - 200 || x > right) continue;
+        if (x < left - 200 || x > right) {
+            continue;
+        }
         desk(ctx, x);
         const plantX = x + (x === 110 ? 295 : 205);
         const potX =
@@ -294,7 +298,9 @@ function drawOfficePapers(ctx: RenderCtx) {
     const C = ctx.C;
     const papers = ctx.papers;
     for (const z of papers) {
-        if (z.volley >= URGENT_VOLLEY_ID) continue;
+        if (z.volley >= URGENT_VOLLEY_ID) {
+            continue;
+        }
         ctx.withTransform({ ox: z.x, oy: z.y, rotation: z.a }, () => {
             ctx.rect(-10, -6, 20, 12, C.paper);
             ctx.rod(-6, -2, 6, -2, 1, '#9a9e9d');
@@ -310,7 +316,9 @@ function drawOfficeGeysers(ctx: RenderCtx) {
     const left = ctx.cam - 100;
     const right = ctx.cam + ctx.VW + 100;
     for (const g of LEVEL.geysers) {
-        if (g.x < left - 80 || g.x > right + 80) continue;
+        if (g.x < left - 80 || g.x > right + 80) {
+            continue;
+        }
         const phase = geyserPhase(g, t);
         ctx.rect(g.x - 32, F - 2, 64, 6, '#3a414c');
         for (let i = 0; i < 5; i++) {
@@ -476,7 +484,7 @@ function drawOfficeOverlays(ctx: RenderCtx) {
     }
 }
 
-export function drawWorld(ctx: RenderCtx) {
+export function drawWorld(ctx: RenderCtx): void {
     ctx.commands = [];
     ctx.ox = ctx.oy = ctx.rotation = 0;
     drawOfficeBackground(ctx);

@@ -142,13 +142,15 @@ export function head(
     hairstyle: HairStyle = 'parted',
     glasses = false,
     skin = '#ddbd9d',
-) {
+): void {
     const shape = (points: Vector[], color: string) =>
         ctx.polygon(
             points.map(([px, py]) => [x + facing * px, y + py]),
             color,
         );
-    if (hairstyle === 'bun') ctx.ellipse(x - facing * 13, y + 6, 8, 9, hair);
+    if (hairstyle === 'bun') {
+        ctx.ellipse(x - facing * 13, y + 6, 8, 9, hair);
+    }
     if (hairstyle === 'bob') {
         shape(
             [
@@ -310,7 +312,7 @@ export function worker(
     role: WorkerRole,
     facing = 1,
     palm?: Vector,
-) {
+): void {
     const facilitator = role === 'facilitator';
     const vest = role === 'vest';
     const fabric = facilitator ? '#715c75' : vest ? '#877b70' : '#5b6b83';
@@ -500,7 +502,7 @@ export function typingWorker(
     x: number,
     y: number,
     look: OfficeAppearance,
-) {
+): void {
     const { shirt, sleeve, skin } = look;
     const tap = Math.sin(ctx.t * 16 + x * 0.07) * 1.4;
     ctx.rect(x - 21, y - 39, 11, 37, '#556673');
