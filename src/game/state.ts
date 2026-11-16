@@ -1,4 +1,4 @@
-import type { FocusState } from './systems/focus/decide';
+import { createFocusState, type FocusState } from './systems/focus/decide';
 import type { Impact } from './systems/impact/decide';
 import type { OrbitState } from './stages/orbit/state';
 import type { SkyState } from './stages/sky/data';
@@ -125,12 +125,7 @@ export function createAttempt(
         history: [],
         impact: null,
 
-        focus: {
-            value: 100,
-            recoveryClock: 0,
-            processedEvents: [],
-            notice: null,
-        },
+        focus: createFocusState(),
         lossReason: null,
         focusLossTime: 0,
 
