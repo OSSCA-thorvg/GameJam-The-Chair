@@ -1,8 +1,9 @@
+import { lazyPreviewScene } from './preview-scene';
 import { createGame, type Game, type GameState } from './game/game';
 import type { Input } from './game/types';
 import { LEVEL, FIXED_STEP } from './game/level';
 import { STAGE_FIVE } from './game/stages/orbit/data';
-import { orbitStep, satelliteLightOn } from './game/stages/orbit/course/decide';
+import { orbitKeys } from './preview-orbit-driver';
 import { STAGE_FOUR } from './game/stages/sky/data';
 import { revealGlideStart, SKY_DEPARTURE, SKY_TURN } from './render/scene/sky-camera';
 import { ATTENDANCE } from './render/scene/attendance-bubble';
@@ -771,33 +772,6 @@ function moveToward(p: { x: number; vx: number }, x: number): Input[] {
     return error > 12 ? ['right'] : error < -12 ? ['left'] : [];
 }
 
-const PLAN = { seconds: 1.2, step: .1 };
-const TURNS: Input[][] = [['left'], [], ['right']];
-const CLIMBS: Input[][] = [['forward'], [], ['back']];
-
-/**
- * Steering for the stage five previews: try every way across and up for a moment with the real flight rules and take
- * the one that stays out of the beams and gets furthest on, spraying all the way.
- */
-export function orbitKeys(state: ReturnType<ReturnType<typeof createGame>['getSnapshot']>): Input[] {
-    const orbit = state.orbit, p = state.player;
-    if (!orbit) return [];
-    let best = -Infinity, keys: Input[] = [];
-    for (const turn of TURNS) for (const climb of CLIMBS) {
-        const held = [...turn, ...climb];
-        let o = orbit, q = p, lit = 0;
-        for (let t = 0; t < PLAN.seconds; t += PLAN.step) {
-            ({ orbit: o, p: q } = orbitStep(o, q, held, PLAN.step));
-            // Nearer moments count more: those are the ones still certain.
-            if (satelliteLightOn(o, q, o.z)) lit += 1.5 - t;
-        }
-        // Keeping on the way it already moves breaks ties, so it commits to one way out instead of dithering.
-        const along = (turn[0] === 'left' ? -p.vx : turn[0] === 'right' ? p.vx : 0) + (climb[0] === 'forward' ? p.vy : climb[0] === 'back' ? -p.vy : 0);
-        const score = (o.z - orbit.z) * .05 - lit * 40 - (Math.abs(q.x) + Math.abs(q.y)) * .01 + along * .02;
-        if (score > best) { best = score; keys = turn.concat(climb); }
-    }
-    return keys;
-}
 
 function orbitRoute(): PreviewScene {
     const game = createGame();
@@ -1044,70 +1018,70 @@ function titleScreen(): PreviewScene {
 }
 
 export const previewScenes: readonly PreviewScene[] = [
-    {
+    lazyPreviewScene('startup-splash', 'Intro · ThorVG splash', () => ({
         id: 'startup-splash', label: 'Intro · ThorVG splash', duration: SPLASH_DURATION,
         focusX: 400,
         markers: [{ at: 0, label: 'Opening' }, { at: 3.5, label: 'Middle' }, { at: 6.9, label: 'End' }],
         sample: () => ({ state: createGame().getSnapshot(), effects: createEffects().snapshot() }),
-    },
-    titleScreen(),
-    opening(),
-    sceneTalk(),
-    bucketPour(),
-    cleanerRecovery(),
-    monitorLight(),
-    copierVolley(),
-    headImpact(),
-    focusLoss(),
-    focusTension(),
-    focusHitVignette(),
-    rooftopEntrance(),
-    personalBelongings(),
-    extinguisherSpray(),
-    ductSneeze(),
-    ductSneeze(true),
-    shaftHazards('rooftop-shaft-low', 'Rooftop · Shaft duct gust & side vent', { x: 1420, y: 78 }, 0,
-        [{ at: 1.6, label: 'Vent hiss' }, { at: 2.4, label: 'Vent blast' }, { at: 3.45, label: 'Duct inhale' }, { at: 4.05, label: 'Duct gust' }]),
-    shaftHazards('rooftop-shaft-high', 'Rooftop · Shaft vent & ceiling downdraft', { x: 1400, y: -262 }, 1.2,
-        [{ at: .3, label: 'Downdraft' }, { at: 1.5, label: 'Wall vent hiss' }, { at: 2.25, label: 'Wall vent blast' }, { at: 2.65, label: 'Ceiling hiss' }, { at: 3.4, label: 'Downdraft' }]),
-    orientationRun('orientation-cable', 'Building · Orientation: hop the cables', 3570, 0, true, 420,
-        [{ at: 0, label: 'Rule one' }, { at: 1.4, label: 'Chairs hop first' }, { at: 2, label: 'Rookie hops' }, { at: 3.6, label: 'Again' }]),
-    orientationRun('orientation-sleeper', 'Building · Orientation: overtime sleepers', 4890, 3, true, 480,
-        [{ at: 0, label: 'Shh' }, { at: 2.2, label: 'Hop the sleeping bag' }, { at: 3.7, label: 'Another one' }]),
-    orientationRun('orientation-rhythm', 'Building · Orientation: back to back after the flag', 6150, 6, true, 540,
-        [{ at: 1.2, label: 'Two cables' }, { at: 3.6, label: 'Sleeper, cable' }, { at: 5.5, label: 'Three cables' }]),
-    orientationRun('orientation-finale', 'Building · Orientation: sleeper pair and the last mix', 7900, 6, true, 360,
-        [{ at: .8, label: 'Two sleepers' }, { at: 3, label: 'Cable, sleeper, cable' }]),
-    orientationRun('orientation-trip', 'Building · Orientation: rookie trips', 3570, 0, false, 480,
-        [{ at: 2, label: 'Trip on the cable' }, { at: 2.2, label: 'Rookie down!' }, { at: 3.7, label: 'Chairs wait' }]),
-    expressRun('express-ramp', 'Building · Express: jump from the ramp', true,
-        [{ at: 1.5, label: 'Ramp shout' }, { at: 2.6, label: 'Jump at the lip' }]),
-    expressRun('express-ramp-miss', 'Building · Express: miss the ramp jump', false,
-        [{ at: 1.5, label: 'Ramp shout' }, { at: 2.8, label: 'Missed jump' }]),
-    urgentCopier(1, 'urgent-copier-low', 'Office · Urgent reports: skimming sheets'),
-    urgentCopier(2, 'urgent-copier-lob', 'Office · Urgent reports: lobbed sheets'),
-    urgentCopier(3, 'urgent-copier-fan', 'Office · Urgent reports: both at once'),
-    urgentCopier(4, 'urgent-copier-bundle', 'Office · Urgent reports: stapled bundle'),
-    rooftopTakeoff(),
-    cloudEntry(),
-    skyGustCycle(),
-    skyOfficeGear(),
-    skyOfficeFacade(),
-    skyWindFeedback(),
-    skyParrots(),
-    skyRobotParrot(),
-    skySignDepth(),
-    skyPromotionCake(),
-    skyEnding(),
-    skyToOrbit(),
-    orbitRoute(),
-    orbitSatelliteLightScene(),
-    orbitSatelliteLightLitScene(),
-    orbitEndingScene(),
-    orbitEndingScene(true),
-    meetingVisit(),
-    meetingVisit(2),
-    meetingVisit(3),
-    chairDispatch(),
-    officeTyping(),
+    })),
+    lazyPreviewScene('title-screen', 'Intro · Title screen: dash for the exit', titleScreen),
+    lazyPreviewScene('opening', 'Intro · Opening: overtime until 9 pm', opening),
+    lazyPreviewScene('scene-talk', 'Office · Stage title, rider reaction and colleague remark', sceneTalk),
+    lazyPreviewScene('bucket-pour', 'Bucket · Water pour', bucketPour),
+    lazyPreviewScene('cleaner-recovery', 'Cleaner · Bucket recovery', cleanerRecovery),
+    lazyPreviewScene('monitor-light', 'Monitor · Light beam', monitorLight),
+    lazyPreviewScene('copier-volley', 'Copier · Paper volley', copierVolley),
+    lazyPreviewScene('head-impact', 'Chair · Head impact replay', headImpact),
+    lazyPreviewScene('focus-loss', 'Chair · Focus loss', focusLoss),
+    lazyPreviewScene('focus-tension', 'Chair · Focus tension', focusTension),
+    lazyPreviewScene('focus-hit-vignette', 'Chair · Focus hit vignette', focusHitVignette),
+    lazyPreviewScene('rooftop-entrance', 'Rooftop · Entrance & slipping portrait', rooftopEntrance),
+    lazyPreviewScene('personal-belongings', 'Rooftop · Plant bow & badge farewell', personalBelongings),
+    lazyPreviewScene('extinguisher-spray', 'Chair · Extinguisher recoil', extinguisherSpray),
+    lazyPreviewScene('duct-sneeze', 'Rooftop · First timed sneeze & overtime junk', ductSneeze),
+    lazyPreviewScene('duct-gust', 'Rooftop · Timed duct gust', () => ductSneeze(true)),
+    lazyPreviewScene('rooftop-shaft-low', 'Rooftop · Shaft duct gust & side vent', () => shaftHazards('rooftop-shaft-low', 'Rooftop · Shaft duct gust & side vent', { x: 1420, y: 78 }, 0,
+        [{ at: 1.6, label: 'Vent hiss' }, { at: 2.4, label: 'Vent blast' }, { at: 3.45, label: 'Duct inhale' }, { at: 4.05, label: 'Duct gust' }])),
+    lazyPreviewScene('rooftop-shaft-high', 'Rooftop · Shaft vent & ceiling downdraft', () => shaftHazards('rooftop-shaft-high', 'Rooftop · Shaft vent & ceiling downdraft', { x: 1400, y: -262 }, 1.2,
+        [{ at: .3, label: 'Downdraft' }, { at: 1.5, label: 'Wall vent hiss' }, { at: 2.25, label: 'Wall vent blast' }, { at: 2.65, label: 'Ceiling hiss' }, { at: 3.4, label: 'Downdraft' }])),
+    lazyPreviewScene('orientation-cable', 'Building · Orientation: hop the cables', () => orientationRun('orientation-cable', 'Building · Orientation: hop the cables', 3570, 0, true, 420,
+        [{ at: 0, label: 'Rule one' }, { at: 1.4, label: 'Chairs hop first' }, { at: 2, label: 'Rookie hops' }, { at: 3.6, label: 'Again' }])),
+    lazyPreviewScene('orientation-sleeper', 'Building · Orientation: overtime sleepers', () => orientationRun('orientation-sleeper', 'Building · Orientation: overtime sleepers', 4890, 3, true, 480,
+        [{ at: 0, label: 'Shh' }, { at: 2.2, label: 'Hop the sleeping bag' }, { at: 3.7, label: 'Another one' }])),
+    lazyPreviewScene('orientation-rhythm', 'Building · Orientation: back to back after the flag', () => orientationRun('orientation-rhythm', 'Building · Orientation: back to back after the flag', 6150, 6, true, 540,
+        [{ at: 1.2, label: 'Two cables' }, { at: 3.6, label: 'Sleeper, cable' }, { at: 5.5, label: 'Three cables' }])),
+    lazyPreviewScene('orientation-finale', 'Building · Orientation: sleeper pair and the last mix', () => orientationRun('orientation-finale', 'Building · Orientation: sleeper pair and the last mix', 7900, 6, true, 360,
+        [{ at: .8, label: 'Two sleepers' }, { at: 3, label: 'Cable, sleeper, cable' }])),
+    lazyPreviewScene('orientation-trip', 'Building · Orientation: rookie trips', () => orientationRun('orientation-trip', 'Building · Orientation: rookie trips', 3570, 0, false, 480,
+        [{ at: 2, label: 'Trip on the cable' }, { at: 2.2, label: 'Rookie down!' }, { at: 3.7, label: 'Chairs wait' }])),
+    lazyPreviewScene('express-ramp', 'Building · Express: jump from the ramp', () => expressRun('express-ramp', 'Building · Express: jump from the ramp', true,
+        [{ at: 1.5, label: 'Ramp shout' }, { at: 2.6, label: 'Jump at the lip' }])),
+    lazyPreviewScene('express-ramp-miss', 'Building · Express: miss the ramp jump', () => expressRun('express-ramp-miss', 'Building · Express: miss the ramp jump', false,
+        [{ at: 1.5, label: 'Ramp shout' }, { at: 2.8, label: 'Missed jump' }])),
+    lazyPreviewScene('urgent-copier-low', 'Office · Urgent reports: skimming sheets', () => urgentCopier(1, 'urgent-copier-low', 'Office · Urgent reports: skimming sheets')),
+    lazyPreviewScene('urgent-copier-lob', 'Office · Urgent reports: lobbed sheets', () => urgentCopier(2, 'urgent-copier-lob', 'Office · Urgent reports: lobbed sheets')),
+    lazyPreviewScene('urgent-copier-fan', 'Office · Urgent reports: both at once', () => urgentCopier(3, 'urgent-copier-fan', 'Office · Urgent reports: both at once')),
+    lazyPreviewScene('urgent-copier-bundle', 'Office · Urgent reports: stapled bundle', () => urgentCopier(4, 'urgent-copier-bundle', 'Office · Urgent reports: stapled bundle')),
+    lazyPreviewScene('rooftop-takeoff', 'Rooftop · Sales graph ride & bread cloud ascent', rooftopTakeoff),
+    lazyPreviewScene('cloud-entry', 'Sky · Stage 4 bread clouds', cloudEntry),
+    lazyPreviewScene('sky-gust', 'Sky · Headwind gust, paper bundles, parrots, rocking desks', skyGustCycle),
+    lazyPreviewScene('sky-gear', 'Sky · Floating monitor, keyboard, mouse and tower PC', skyOfficeGear),
+    lazyPreviewScene('sky-facade', 'Sky · Floating office facade and its workers', skyOfficeFacade),
+    lazyPreviewScene('sky-wind-feedback', 'Sky · Open-air wind response (spray held)', skyWindFeedback),
+    lazyPreviewScene('sky-parrots', 'Sky · Parrot colours (one bird per pass)', skyParrots),
+    lazyPreviewScene('sky-robot-parrot', 'Sky · Robot parrots (liquid metal, black chrome) and gear knock', skyRobotParrot),
+    lazyPreviewScene('sky-sign-depth', 'Sky · Chair and parrot pass in front of the billboard copy', skySignDepth),
+    lazyPreviewScene('sky-promotion-cake', 'Sky · Promotion shortcake on the final desk', skyPromotionCake),
+    lazyPreviewScene('sky-ending', 'Sky · Slow turn among cameras, glide into stage 5 at cruise speed', skyEnding),
+    lazyPreviewScene('sky-to-orbit', 'Sky → Orbit · Hand-off, steering fade-in, flying on by itself', skyToOrbit),
+    lazyPreviewScene('orbit-route', 'Orbit · 5-1 to 5-3 and the ending', orbitRoute),
+    lazyPreviewScene('orbit-satellite-light', 'Orbit · 5-1: the first beam, announced then dodged', orbitSatelliteLightScene),
+    lazyPreviewScene('orbit-satellite-light-lit', 'Orbit · The chair lights up near and inside a satellite light', orbitSatelliteLightLitScene),
+    lazyPreviewScene('orbit-ending', 'Orbit · Ending: network lost on screen, hands stop, the chair looks out, THE END', orbitEndingScene),
+    lazyPreviewScene('orbit-ending-aside', 'Orbit · Ending after parking off to one side', () => orbitEndingScene(true)),
+    lazyPreviewScene('building-meeting', 'Building · The chairs cannot clock out', meetingVisit),
+    lazyPreviewScene('building-meeting-2', 'Building · The chairs cannot clock out (visit 2)', () => meetingVisit(2)),
+    lazyPreviewScene('building-meeting-3', 'Building · The chairs cannot clock out (visit 3)', () => meetingVisit(3)),
+    lazyPreviewScene('building-dispatch', 'Building · Chairs leave after the first flag', chairDispatch),
+    lazyPreviewScene('office-typing', 'Office · Window typing', officeTyping),
 ];

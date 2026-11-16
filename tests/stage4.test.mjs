@@ -1,3 +1,4 @@
+import { runUntil } from './support/until.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { driveStageFour, STAGE_FOUR_ROUTE } from './support/stage4-route.mjs';
@@ -99,8 +100,11 @@ test('paper bundles ride the gusts and birds knock the chair backwards and cost 
     const calm = skyHazards(w.period + w.calm - .1).filter(h => h.kind === 'paper');
     for (const [i, paper] of calm.entries()) assert.ok(paper.y > gust[i].y + 150 || paper.x > gust[i].x + 300, `${paper.id} sits out the calm`);
     for (const kind of ['paper', 'bird']) {
-        let time = 0, hazard;
-        while (!(hazard = skyHazards(time).find(h => h.kind === kind && !h.robot && h.x > 3900 && h.x < 4400))) time += .05;
+        let time = 0;
+        const matches = h => h.kind === kind && !h.robot && h.x > 3900 && h.x < 4400;
+        runUntil(() => skyHazards(time).some(matches), () => { time += .05; }, { maxSteps: 120 * 120, message: 'No matching sky hazard appeared' });
+        const hazard = skyHazards(time).find(matches);
+        assert.ok(hazard, `missing ${kind} hazard`);
         const r = skyStep(course({ time, p: { x: hazard.x, y: hazard.y + 20, vx: 100, vy: 0, a: 0, w: 0 } }), 1 / 120);
         assert.equal(r.hit?.kind, kind);
         assert.ok(r.p.vx < -100, `${kind} knocks the chair back`);
@@ -136,8 +140,11 @@ test('chrome robot parrots join the bird lanes and clang the chair away like off
     const robots = new Set(birds.filter(h => h.robot).map(h => h.robot));
     assert.deepEqual([...robots].sort(), ['black', 'liquid']);
     assert.ok(birds.some(h => !h.robot), 'real parrots still fly');
-    let time = 0, robot;
-    while (!(robot = skyHazards(time).find(h => h.robot && h.x > 3900 && h.x < 4400))) time += .05;
+    let time = 0;
+    const matches = h => h.robot && h.x > 3900 && h.x < 4400;
+    runUntil(() => skyHazards(time).some(matches), () => { time += .05; }, { maxSteps: 120 * 120, message: 'No robot hazard appeared' });
+    const robot = skyHazards(time).find(matches);
+    assert.ok(robot, 'missing robot hazard');
     const r = skyStep(course({ time, p: { x: robot.x, y: robot.y + 20, vx: 100, vy: 0, a: 0, w: 0 } }), 1 / 120);
     assert.equal(r.hit?.kind, 'gear');
     assert.equal(r.sky.knockKind, 'gear');
@@ -165,7 +172,7 @@ test('hazards never blink out on screen: they leave the view before their path r
 test('a bird or paper hit costs focus once per pass and running out of focus ends the attempt', () => {
     const game = createGame(); game.startStage(4);
     const state = JSON.parse(game.serialize());
-    const time = (() => { let t = 30; while (!skyHazards(t).find(h => h.kind === 'bird' && h.x > 4000 && h.x < 4400)) t += .05; return t; })();
+    const time = (() => { let t = 30; runUntil(() => skyHazards(t).some(h => h.kind === 'bird' && h.x > 4000 && h.x < 4400), () => { t += .05; }, { maxSteps: 120 * 120, message: 'No bird crossed the target area' }); return t; })();
     const bird = skyHazards(time).find(h => h.kind === 'bird' && h.x > 4000 && h.x < 4400);
     const place = (s, t, focus) => {
         const target = skyHazards(t).find(h => h.id === bird.id);

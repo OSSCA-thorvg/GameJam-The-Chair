@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { bundled } from './support/load.mjs';
 
+const { lazyPreviewScene } = await bundled({ entryPoints: ['src/preview-scene.ts'] });
 const { previewScenes } = await bundled({ entryPoints: ['src/preview-scenes.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
 
 test('cleaner preview seeks backward to the same pose and splash', () => {
@@ -114,4 +115,37 @@ test('the sky ending preview seeks through side view, the orbit and back view', 
     const ending = scene.sample(scene.duration);
     scene.sample(0);
     assert.deepEqual(scene.sample(scene.duration), ending);
+});
+
+
+test('preview menu metadata stays lazy and sampling reuses the recorded scene', () => {
+    let recordings = 0;
+    const frames = new Map();
+    const scene = lazyPreviewScene('example', 'Example', () => {
+        recordings++;
+        return {
+            id: 'example', label: 'Example', duration: 2, focusX: 42,
+            markers: [{ at: 1, label: 'Middle' }], follow: true, title: true,
+            opening: time => ({ time }), talk: (time, locale) => ({ time, locale }),
+            sample: time => {
+                if (!frames.has(time)) frames.set(time, { time });
+                return frames.get(time);
+            },
+        };
+    });
+    assert.equal(scene.id, 'example');
+    assert.equal(scene.label, 'Example');
+    assert.equal(recordings, 0, 'listing a scene does not record it');
+    const frame = scene.sample(1);
+    assert.equal(recordings, 1);
+    assert.equal(scene.duration, 2);
+    assert.equal(scene.focusX, 42);
+    assert.deepEqual(scene.markers, [{ at: 1, label: 'Middle' }]);
+    assert.equal(scene.follow, true);
+    assert.equal(scene.title, true);
+    assert.deepEqual(scene.opening(.5), { time: .5 });
+    assert.deepEqual(scene.talk(.5, 'ko'), { time: .5, locale: 'ko' });
+    scene.sample(0);
+    assert.equal(scene.sample(1), frame, 'seeking back uses the same recording');
+    assert.equal(recordings, 1);
 });

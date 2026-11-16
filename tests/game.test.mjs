@@ -67,15 +67,17 @@ test('snapshots and event payloads do not expose live gameplay objects', () => {
 
 test('HUD can be removed or replaced without affecting simulation', () => {
     const hud = createHud({ querySelector: () => null });
-    const feedback = createFeedback(), effects = createEffects(), game = createGame();
-    game.reset();
+    const feedback = createFeedback(), effects = createEffects();
+    const game = createGame({ seed: 17 }), reference = createGame({ seed: 17 });
+    game.reset(); reference.reset();
     for (let i = 0; i < 120; i++) {
         game.step(1 / 120);
         const state = game.getSnapshot();
         for (const event of game.drainEvents()) { effects.receive(event); feedback.receive(event, state); }
-        hud.draw(state, feedback.snapshot(), effects.snapshot(), { cam:0, scale:1, vertical:0, width:800 }, 'canvas2d');
+        hud.draw(state, feedback.snapshot(), effects.snapshot());
+        reference.step(1 / 120);
     }
-    assert.equal(game.getSnapshot().mode, 'play');
+    assert.equal(game.serialize(), reference.serialize());
 });
 
 test('fixed-step simulation is independent of render frequency', () => {

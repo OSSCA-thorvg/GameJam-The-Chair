@@ -10,7 +10,11 @@
 | `stage4-route.mjs` | Sky route driver. Tests replay the launches in `tests/replays/stage4-route.json`; after an intended stage four gameplay change, re-plan them with `npm run route:update` |
 | `realtime-replay.mjs` | Real-time replay check shared by `replay.test.mjs` and `replay-stage3.test.mjs` |
 | `golden.mjs` | Gameplay fingerprint scenarios. Update them with `npm run golden:update` |
+| `input.mjs` | Browser globals, keyboard events, and pointer buttons for input tests; restores globals with `t.after()` |
+| `until.mjs` | `runUntil(done, step, { maxSteps, message })` bounds simulated transitions and fails with a diagnostic when the target is not reached |
 | `determinism.mjs` | Shared same-input and save-and-resume determinism checks |
 
 - `npm test`: runs the complete test suite.
 - `npm run test:fast`: skips gameplay fingerprints, determinism suites, and real-time replay tests.
+
+Preview scenes expose menu metadata without recording frames. Reading a scene’s frame data records only that scene and caches it for later seeks. Tests that need orbit steering import `src/preview-orbit-driver.ts` directly.

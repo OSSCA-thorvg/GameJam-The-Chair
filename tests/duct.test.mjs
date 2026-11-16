@@ -1,3 +1,4 @@
+import { runUntil } from './support/until.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { bundled } from './support/load.mjs';
@@ -41,10 +42,10 @@ test('the first sneeze ejects the overtime junk once; later gusts keep their per
     tick(s, .05);
     assert.equal(s.p.vx, -D.firstKnockback);
     let quiet = 0;
-    while (s.rooftop.duct.kind !== 'done') tick(s, 1 / 120);
+    runUntil(() => s.rooftop.duct.kind === 'done', () => { tick(s, 1 / 120); }, { maxSteps: 120 * 120, message: 'First sneeze did not settle' });
     const settled = props(s); assert.equal(settled.length, 22);
     s.p = { x: 1600, y: 226, vx: 0, vy: 0, a: 0, w: 0 };
-    while (s.rooftop.duct.kind === 'done') { tick(s, 1 / 120); quiet += 1 / 120; }
+    runUntil(() => s.rooftop.duct.kind !== 'done', () => { tick(s, 1 / 120); quiet += 1 / 120; }, { maxSteps: 120 * 120, message: 'Next duct gust did not start' });
     assert.ok(Math.abs(quiet - D.gustPeriod) < .02, `the gust comes after its period (${quiet.toFixed(3)} s)`);
     assert.deepEqual(s.rooftop.duct.bursts.map(burst => burst.kind), ['gust']);
     tick(s, D.gustInhaleDuration + D.gustTwitchDuration);

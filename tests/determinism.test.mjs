@@ -20,7 +20,7 @@ test('game state round-trips through JSON at any stage', () => {
         const game = runWith(5, scenario.start, sampleCommands(240, { spray: scenario.spray }), 240);
         const saved = game.serialize();
         const copy = begin(6);
-        copy.restore(JSON.parse(JSON.stringify(saved)));
+        copy.restore(saved);
         assert.equal(copy.serialize(), saved, scenario.name);
         assert.deepEqual(copy.getSnapshot(), game.getSnapshot(), scenario.name);
     }

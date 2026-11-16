@@ -1,3 +1,4 @@
+import { runUntil } from './support/until.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { driveStageThree } from './support/stage3-route.mjs';
@@ -161,7 +162,7 @@ test('a steam blast costs focus once per blast', async () => {
     const { STAGE_THREE, ventPhase } = await bundled({ stdin: { contents: `export { STAGE_THREE, ventPhase } from './src/game/stages/rooftop/data';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
     const vent = STAGE_THREE.vents[0];
     let blowAt = 0;
-    while (ventPhase(vent, blowAt + dt).kind !== 'blow') blowAt += dt;
+    runUntil(() => ventPhase(vent, blowAt + dt).kind === 'blow', () => { blowAt += dt; }, { maxSteps: 120 * 120, message: 'Vent never entered its blow phase' });
     const game = createGame(); game.startStage(3);
     const state = JSON.parse(game.serialize());
     Object.assign(state, { focus: 100, mode: 'play', time: blowAt, hasExtinguisher: true, ground: false });

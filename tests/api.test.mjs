@@ -17,13 +17,15 @@ test('createGame keeps its public API', () => {
 });
 
 test('game configuration is frozen and versioned', async () => {
-    const { build } = await import('esbuild');
     const { GAME_CONFIG, CONFIG_VERSION, STAGES } = await bundled({ stdin: { contents: `export { GAME_CONFIG, CONFIG_VERSION, STAGES } from './src/game/stages/index';`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'node', format: 'esm' });
     assert.match(CONFIG_VERSION, /^[0-9a-f]{8}$/);
-    assert.throws(() => { GAME_CONFIG.stageTwo.checkpoints[1].x = 0; });
+    const checkpoint = GAME_CONFIG.stages[2].checkpoints[1];
+    const before = checkpoint.x;
+    assert.throws(() => { checkpoint.x = before + 1; }, TypeError);
+    assert.equal(checkpoint.x, before);
     assert.throws(() => { GAME_CONFIG.rules.paperPenalty = 0; });
     assert.throws(() => { STAGES[3].terrain.push([]); });
-    for (const stage of [1, 2, 3, 4]) assert.equal(STAGES[stage].id, stage);
+    for (const [id, stage] of Object.entries(STAGES)) assert.equal(stage.id, Number(id));
 });
 
 test('status() reads the values UI code needs without copying the state', () => {
