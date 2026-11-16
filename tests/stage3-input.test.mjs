@@ -6,11 +6,12 @@ const { createGame, bindInput } = await bundled({ stdin: { contents: `export { c
 
 test('Space holds spray in stage three, releases on keyup/blur, and touch controls release', async () => {
     const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];
+    /** @type {any[]} */
     const saved = names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
-    const window = new EventTarget(), document = new EventTarget();
+    const window = /** @type {any} */ (new EventTarget()), document = /** @type {any} */ (new EventTarget());
     class Element {}
-    const spray = new EventTarget(); spray.setPointerCapture = () => {};
-    const leanLeft = new EventTarget(), leanRight = new EventTarget();
+    const spray = /** @type {any} */ (new EventTarget()); spray.setPointerCapture = () => {};
+    const leanLeft = /** @type {any} */ (new EventTarget()), leanRight = /** @type {any} */ (new EventTarget());
     leanLeft.dataset = { lean: 'left' };
     leanRight.dataset = { lean: 'right' };
     Object.assign(globalThis, { window, document, Element, HTMLElement: Element, MutationObserver: class { observe() {} disconnect() {} } });

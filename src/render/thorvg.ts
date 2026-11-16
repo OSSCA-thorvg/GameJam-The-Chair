@@ -1,5 +1,5 @@
 import { init } from '@thorvg/webcanvas';
-import wasmUrl from '../../node_modules/@thorvg/webcanvas/dist/thorvg.wasm?url';
+import wasmUrl from '@thorvg-wasm?url';
 import signFontUrl from '../assets/fonts/BlackHanSans-sign.ttf?url';
 import labelFontUrl from '../assets/fonts/DoHyeon-label.ttf?url';
 import speechFontUrl from '../assets/fonts/Jua-speech.ttf?url';
@@ -67,6 +67,9 @@ export function loadThorvg() {
     engine ??= init({ renderer: thorvgRenderer(), locateFile: () => wasmUrl }).then(async TVG => {
         await Promise.all(FONTS.map(([name, url]) => loadFont(TVG, name, url)));
         return TVG;
+    }).catch(error => {
+        engine = null;
+        throw error;
     });
     return engine;
 }

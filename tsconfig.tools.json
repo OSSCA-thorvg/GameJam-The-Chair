@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "strict": false, "types": ["node", "vite/client"]
+  },
+  "include": [
+    "scripts/**/*.mjs",
+    "tests/**/*.mjs"
+  ]
+}

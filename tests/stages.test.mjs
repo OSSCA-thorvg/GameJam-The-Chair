@@ -182,7 +182,7 @@ test('head impact can be retried from the saved flag', () => {
         game.drainEvents();
     }
     assert.equal(game.getSnapshot().mode, 'impact');
-    game.advance(3);
+    for (let i = 0; i < 12; i++) game.advance(.25);
     assert.equal(game.getSnapshot().mode, 'dead');
     game.reset();
     assert.equal(game.getSnapshot().player.x, 1300);
@@ -242,7 +242,7 @@ test('office typing bubbles fade, repeat nearby and reactivate on a return visit
 
 test('stationary and forward jumps can land safely in both starter practice areas', () => {
     for (const stage of [1, 2]) {
-        for (const input of [[], ['right']]) {
+        for (const input of /** @type {const} */ ([[], ['right']])) {
             const game = createGame();
             game.startStage(stage);
             for (let i = 0; i < 12; i++) game.step(dt);
@@ -312,7 +312,7 @@ test('the office flag restores focus when first reached after a distraction', ()
 });
 
 test('airborne balance input corrects tilt while holding the opposite movement input', () => {
-    for (const [input, sign] of [[['right', 'q'], -1], [['left', 'e'], 1]]) {
+    for (const [input, sign] of /** @type {const} */ ([[['right', 'q'], -1], [['left', 'e'], 1]])) {
         const game = createGame();
         game.startStage(2);
         drive(game, state => state.checkpoint === 1);

@@ -255,9 +255,9 @@ function setup(
 
     async function initRenderer() {
         try {
-            TVG = await loadThorvg();
+            TVG = await loadThorvg().catch(() => loadThorvg());
             if (!root.isConnected) return;
-            tvg = new TVG.Canvas('#chair-office-one-tvg', { width: ctx.W, height: ctx.H });
+            tvg = new TVG.Canvas(cn, { width: ctx.W, height: ctx.H });
             ctx.textWidth = thorvgTextWidth(TVG);
             renderer = 'thorvg';
             cn.hidden = false;
@@ -270,6 +270,14 @@ function setup(
 
     return {
         draw,
+        resetView() {
+            lastTime = Infinity;
+            lastStage = 0;
+            ctx.soaks = 0;
+            lastWaterLife = 0;
+            closeUpFrom = null;
+            closeUpAge = -1;
+        },
         ready,
         info: () => ({ renderer, renderError, commands: ctx.commands.length }),
         /** Start (or with null, stop) filling render counters each frame. */

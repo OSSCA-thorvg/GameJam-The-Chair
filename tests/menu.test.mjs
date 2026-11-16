@@ -7,9 +7,9 @@ const { createHud } = await load('src/ui/hud.ts');
 const { createFeedback } = await load('src/ui/feedback.ts');
 const { createEffects } = await load('src/render/effects.ts');
 
-test('pause menu shows only cleared stages and hides spray controls until equipped', () => {
+test('pause menu shows unlocked stages and hides spray controls until equipped', () => {
     const originalMatchMedia = globalThis.matchMedia;
-    globalThis.matchMedia = () => ({ matches: false });
+    /** @type {any} */ (globalThis).matchMedia = () => ({ matches: false });
     try {
         const elements = new Map([
             '[data-spray-help]', '[data-spray]', '[data-stage-menu]',
@@ -22,14 +22,14 @@ test('pause menu shows only cleared stages and hides spray controls until equipp
         const fresh = createGame();
         fresh.reset();
         hud.draw(fresh.getSnapshot(), feedback, effects, view);
-        for (const element of elements.values()) assert.equal(element.hidden, true);
+        assert.equal(elements.get('[data-stage-menu]').hidden, true);
 
         const continued = createGame({ progress: { completedStage: 1 } });
         continued.startStage(2);
         hud.draw(continued.getSnapshot(), feedback, effects, view);
         assert.equal(elements.get('[data-stage-menu]').hidden, false);
         assert.equal(elements.get('[data-stage="1"]').hidden, false);
-        assert.equal(elements.get('[data-stage="2"]').hidden, true);
+        assert.equal(elements.get('[data-stage="2"]').hidden, false);
         assert.equal(elements.get('[data-stage="3"]').hidden, true);
         assert.equal(elements.get('[data-spray-help]').hidden, true);
 
@@ -52,6 +52,6 @@ test('pause menu shows only cleared stages and hides spray controls until equipp
         assert.equal(elements.get('[data-spray]').hidden, true);
     } finally {
         if (originalMatchMedia === undefined) delete globalThis.matchMedia;
-        else globalThis.matchMedia = originalMatchMedia;
+        else /** @type {any} */ (globalThis).matchMedia = originalMatchMedia;
     }
 });

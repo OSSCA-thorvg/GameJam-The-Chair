@@ -6,10 +6,11 @@ const { createGame, bindInput } = await bundled({ stdin: { contents: `export { c
 
 test('stage 4 ending completes automatically and gameplay buttons do not change its depth', async () => {
     const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];
+    /** @type {any[]} */
     const saved = names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
-    const window = new EventTarget(), document = new EventTarget();
+    const window = /** @type {any} */ (new EventTarget()), document = /** @type {any} */ (new EventTarget());
     class Element {}
-    const jumpButton = new EventTarget(), backButton = new EventTarget();
+    const jumpButton = /** @type {any} */ (new EventTarget()), backButton = /** @type {any} */ (new EventTarget());
     jumpButton.setPointerCapture = backButton.setPointerCapture = () => {};
     Object.assign(globalThis, { window, document, Element, HTMLElement: Element, MutationObserver: class { observe() {} disconnect() {} } });
     const game = createGame(); game.startStage(4);

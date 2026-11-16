@@ -1,5 +1,5 @@
 import type { RenderCtx } from '../context';
-import type { Curve, DrawCommand, LayerSpec, Vector } from '../types';
+import type { Curve, DrawCommand, Vector } from '../types';
 import { WATER_GRAVITY, bucketMouth, pourLaunch } from '../bucket';
 
 type Path = { start: Vector; curves: Curve[] };

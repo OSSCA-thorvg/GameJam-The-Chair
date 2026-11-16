@@ -23,6 +23,7 @@ const ulps = (a, b) => {
 
 test('results are pinned bit for bit, so any engine replays the same physics', () => {
     // Computed once; a change here changes every replay and golden trace.
+    /** @type {[string, number[], string][]} */
     const pinned = [
         ['sin', [0.1], '3fb98eaecb8bcb2c'],
         ['sin', [-2.5], 'bfe326af0dcfcab0'],

@@ -32,6 +32,7 @@ export function runWith(seed, start, commands, ticks) {
 
 // A rough route: hold right, hop regularly, balance, and restart once after a failure.
 export function sampleCommands(ticks, { restartAt = Math.floor(ticks * .6), spray = false } = {}) {
+    /** @type {[number, string, ...string[]][]} */
     const commands = [[0, 'setInput', 'right']];
     for (let tick = 30; tick < ticks; tick += 75) {
         commands.push([tick, 'jump']);

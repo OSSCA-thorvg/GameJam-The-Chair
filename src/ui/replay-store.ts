@@ -1,7 +1,7 @@
 // Browser-side storage for the replay data: the error log survives reloads, and the latest data bundle is
 // kept so the replay tool (/replay.html) can open it from the same browser. Plus download/copy helpers.
 import { CONFIG_VERSION } from '../game/stages/index';
-import { REPLAY_FORMAT, type Recorder, type ReplayData, type ReplayError, type ReplayErrorEntry, type ReplayFile } from '../game/replay';
+import { REPLAY_FORMAT, parseReplayError, parseReplay, type Recorder, type ReplayData, type ReplayError, type ReplayErrorEntry, type ReplayFile } from '../game/replay';
 
 const ERRORS_KEY = 'the-chair-error-log';
 export const BROWSER_DATA_KEY = 'the-chair-replay-data';
@@ -12,10 +12,23 @@ function store(key: string, value: unknown) {
 
 // Errors keep the replay of the attempt that failed. A crash may stop the game loop, so they are stored at once.
 export function createErrorLog(max: number) {
+    max = Number.isFinite(max) ? Math.max(0, Math.floor(max)) : 0;
     let entries: ReplayErrorEntry[] = [];
     try {
         const saved = JSON.parse(localStorage.getItem(ERRORS_KEY) || '[]');
-        if (Array.isArray(saved)) entries = saved;
+        if (Array.isArray(saved)) {
+            for (const entry of saved) {
+                try {
+                    const error = parseReplayError(entry);
+                    if (!error || typeof entry.time !== 'string' || !Number.isFinite(Date.parse(entry.time))) continue;
+                    if (entry.stage !== null && (!Number.isInteger(entry.stage) || entry.stage < 1 || entry.stage > 5)) continue;
+                    const replay = entry.replay === null ? null : parseReplay(JSON.stringify(entry.replay));
+                    entries.push({ ...error, time: entry.time, stage: entry.stage, replay });
+                } catch {}
+            }
+            entries = entries.slice(-Math.max(0, max));
+            if (max <= 0) entries = [];
+        }
     } catch {}
     function persist() {
         // Drop replays from the oldest entries first if storage is full.

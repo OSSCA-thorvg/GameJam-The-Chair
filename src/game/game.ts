@@ -27,7 +27,7 @@ export type GameOptions = {
     // Called after every fixed step with the new state (read-only) and the events it produced.
     onStep?: (state: Readonly<CoreState>, events: readonly GameEvent[]) => void;
     // Called when a step or command throws. The game keeps its previous state and rethrows.
-    onError?: (error: GameError) => void;
+    onError?: (error: GameError, cause: unknown) => void;
 };
 
 /** The few values UI code needs to decide what a key or button does. See Game.status(). */
@@ -63,7 +63,7 @@ export function createGame(options: GameOptions = {}) {
         try {
             result = applyCommand(s, command);
         } catch (error) {
-            options.onError?.({ tick: s.tick, at: 'command', command, ...describe(error) });
+            options.onError?.({ tick: s.tick, at: 'command', command, ...describe(error) }, error);
             throw error;
         }
         s = result.state;
@@ -81,7 +81,7 @@ export function createGame(options: GameOptions = {}) {
         try {
             result = stepGame(s);
         } catch (error) {
-            options.onError?.({ tick: s.tick, at: 'step', ...describe(error) });
+            options.onError?.({ tick: s.tick, at: 'step', ...describe(error) }, error);
             throw error;
         }
         s = result.state;
@@ -116,9 +116,10 @@ export function createGame(options: GameOptions = {}) {
             acc = 0;
             return { ticks: 0, dropped };
         }
-        acc += dt;
+        const discarded = Math.max(0, dt - 0.25);
+        acc += Math.min(dt, 0.25);
         let ticks = 0;
-        let dropped = 0;
+        let dropped = discarded;
         while (acc >= FIXED_STEP) {
             const mode = s.mode;
             tick();
@@ -126,7 +127,7 @@ export function createGame(options: GameOptions = {}) {
             acc -= FIXED_STEP;
             // A new mode starts counting from the next frame.
             if (s.mode !== mode) {
-                dropped = acc;
+                dropped += acc;
                 acc = 0;
                 break;
             }

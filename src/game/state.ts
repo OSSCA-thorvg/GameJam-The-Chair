@@ -1,4 +1,3 @@
-import { LEVEL, RULES } from './level';
 import type { FocusNotice } from './systems/focus/decide';
 import type { Impact } from './systems/impact/decide';
 import type { OrbitState } from './stages/orbit/state';
@@ -10,7 +9,7 @@ import { STAGES, stageSpawn } from './stages/index';
 import { createStageStates, prepareStageAttempt } from './stages/attempt';
 import { clonePlain } from './data';
 import { randomUint32, seedRng, type Rng } from './rng';
-import type { GameEvent, Input, LossReason, Mode, Paper, Person, Player, Snapshot, StageId } from './types';
+import type { GameEvent, Input, LossReason, Mode, Person, Player, Snapshot, StageId } from './types';
 import { assertGameState } from './validation';
 
 

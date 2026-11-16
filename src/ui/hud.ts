@@ -1,3 +1,4 @@
+import { isStageUnlocked } from '../game/progression';
 import { translate, type Locale, type Message } from '../i18n';
 import type { GameState } from '../game/game';
 import type { Mode } from '../game/types';
@@ -67,7 +68,7 @@ export function createHud(root: HTMLElement, getLocale: () => Locale = () => 'en
         hidden('[data-spray]', !state.hasExtinguisher || state.stage === 5);
         hidden('[data-stage-menu]', state.completedStage === 0);
         for (const stage of [1, 2, 3, 4, 5]) {
-            hidden(`[data-stage="${stage}"]`, stage >= 4 ? state.completedStage < stage - 1 : stage > state.completedStage);
+            hidden(`[data-stage="${stage}"]`, !isStageUnlocked(stage, state.completedStage));
         }
         const panel = feedback.panel;
         // The game-over panel waits until the end-of-run close-up has eased back to the usual framing.

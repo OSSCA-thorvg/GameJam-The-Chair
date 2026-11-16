@@ -49,7 +49,7 @@ function aboard() {
 }
 
 test('a wedged rider rolls within its gap with left and right but never through a chair', () => {
-    for (const [key, side] of [['left', -1], ['right', 1]]) {
+    for (const [key, side] of /** @type {const} */ ([['left', -1], ['right', 1]])) {
         const game = aboard();
         const offset = () => game.getSnapshot().player.x - game.getSnapshot().furniture[0].x;
         const before = offset();
@@ -66,7 +66,7 @@ test('a wedged rider rolls within its gap with left and right but never through 
 });
 
 test('a hop with left or right clears the neighbouring chair', () => {
-    for (const [key, side] of [['left', -1], ['right', 1]]) {
+    for (const [key, side] of /** @type {const} */ ([['left', -1], ['right', 1]])) {
         const game = aboard();
         game.setInput(key);
         game.jump();

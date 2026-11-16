@@ -1,3 +1,4 @@
+import { isStageUnlocked } from '../game/progression';
 import type { Game } from '../game/game';
 import { bindControls } from './controls';
 // Menu buttons, dialog focus and pause syncing. Gameplay keys and touch controls live in ./controls.
@@ -53,7 +54,7 @@ export function bindInput(root: HTMLElement, game: Game, { blocked = () => false
     });
     for (const stage of [1, 2, 3, 4, 5] as const) {
         button(`[data-stage="${stage}"]`, () => {
-            if (stage <= game.status().completedStage || (stage >= 4 && game.status().completedStage >= stage - 1)) game.startStage(stage);
+            if (isStageUnlocked(stage, game.status().completedStage)) game.startStage(stage);
         });
     }
     button('[data-reset]', game.restart);

@@ -51,7 +51,7 @@ function retryFrom(y) {
     return best;
 }
 
-export function driveStageThree(game, stop = state => state.stage === 4 || state.mode !== 'play', observe = () => {}) {
+export function driveStageThree(game, stop = state => state.stage === 4 || state.mode !== 'play', observe = (state, phase) => {}) {
     let phase = 0;
     let sub = 'go';
     for (let i = 0; i < 120 * 150; i++) {
