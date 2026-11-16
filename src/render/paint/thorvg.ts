@@ -1,6 +1,20 @@
-import type { Canvas, LinearGradient, RadialGradient, Scene, Shape, Text, ThorVGNamespace } from '@thorvg/webcanvas';
+import type {
+    Canvas,
+    LinearGradient,
+    RadialGradient,
+    Scene,
+    Shape,
+    Text,
+    ThorVGNamespace,
+} from '@thorvg/webcanvas';
 import type { RenderCtx } from '../context';
-import type { Blend, PathCommand, Gradient, LayerSpec, TextSpec } from '../types';
+import type {
+    Blend,
+    PathCommand,
+    Gradient,
+    LayerSpec,
+    TextSpec,
+} from '../types';
 import type { FontName } from '../fonts';
 import { effectScaleForArea, type RenderStats } from '../perf';
 import { canvasBox, type Item } from './commands';
@@ -30,12 +44,20 @@ export type PaintPool = {
 };
 
 export function createPaintPool(): PaintPool {
-    return { top: [], texts: [], layers: new Map(), styled: new Map(), signature: '' };
+    return {
+        top: [],
+        texts: [],
+        layers: new Map(),
+        styled: new Map(),
+        signature: '',
+    };
 }
 
 function staleSlot(slot: LayerSlot, spec: LayerSpec) {
     if (slot.clip && !spec.clip) return true;
-    if (slot.mask && (!spec.mask || slot.maskInvert !== !!spec.maskInvert)) return true;
+    if (slot.mask && (!spec.mask || slot.maskInvert !== !!spec.maskInvert)) {
+        return true;
+    }
     return false;
 }
 
@@ -46,7 +68,10 @@ export function thorvgTextWidth(TVG: ThorVGNamespace) {
         const key = `${font}\n${content}`;
         let width = cache.get(key);
         if (width === undefined) {
-            probe.font(font).fontSize(100 * PX_TO_PT).text(content);
+            probe
+                .font(font)
+                .fontSize(100 * PX_TO_PT)
+                .text(content);
             width = content ? probe.bounds().width / 100 : 0;
             cache.set(key, width);
         }
@@ -54,21 +79,35 @@ export function thorvgTextWidth(TVG: ThorVGNamespace) {
     };
 }
 
-export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, pool: PaintPool, items: Item[], stats?: RenderStats) {
+export function paintThorvg(
+    ctx: RenderCtx,
+    TVG: ThorVGNamespace,
+    tvg: Canvas,
+    pool: PaintPool,
+    items: Item[],
+    stats?: RenderStats,
+) {
     const syncStart = stats ? performance.now() : 0;
     const blendOf = (blend: Blend | undefined) => {
         switch (blend) {
-            case 'multiply': return TVG.BlendMethod.Multiply;
-            case 'screen': return TVG.BlendMethod.Screen;
-            case 'add': return TVG.BlendMethod.Add;
-            case 'overlay': return TVG.BlendMethod.Overlay;
-            default: return TVG.BlendMethod.Normal;
+            case 'multiply':
+                return TVG.BlendMethod.Multiply;
+            case 'screen':
+                return TVG.BlendMethod.Screen;
+            case 'add':
+                return TVG.BlendMethod.Add;
+            case 'overlay':
+                return TVG.BlendMethod.Overlay;
+            case 'normal':
+            case undefined:
+                return TVG.BlendMethod.Normal;
         }
     };
     const fillOf = (g: Gradient): LinearGradient | RadialGradient => {
-        const fill = g.radius === undefined
-            ? new TVG.LinearGradient(...g.from, ...g.to)
-            : new TVG.RadialGradient(...g.from, g.radius);
+        const fill =
+            g.radius === undefined
+                ? new TVG.LinearGradient(...g.from, ...g.to)
+                : new TVG.RadialGradient(...g.from, g.radius);
         fill.setStops(...g.stops);
         return fill;
     };
@@ -93,11 +132,17 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
         let style = pool.styled.get(s) ?? 0;
         if (cmd.stroke) {
             const k = cmd.stroke;
-            const gradient = typeof k.color === 'string' ? null : fillOf(k.color);
+            const gradient =
+                typeof k.color === 'string' ? null : fillOf(k.color);
             s.stroke({
                 width: k.width,
-                ...(gradient ? { gradient } : { color: ctx.rgba(k.color as string) }),
-                cap: k.cap === 'round' ? TVG.StrokeCap.Round : TVG.StrokeCap.Butt,
+                ...(gradient
+                    ? { gradient }
+                    : { color: ctx.rgba(k.color as string) }),
+                cap:
+                    k.cap === 'round'
+                        ? TVG.StrokeCap.Round
+                        : TVG.StrokeCap.Butt,
                 join: TVG.StrokeJoin.Round,
                 dash: k.dash ?? [],
                 dashOffset: k.dashOffset ?? 0,
@@ -138,17 +183,39 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
             slot.front.text(spec.content);
             slot.content = spec.content;
         }
-        const c = Math.cos(spec.rotation), s = Math.sin(spec.rotation);
-        const matrix = { e11: c, e12: -s, e13: spec.x, e21: s, e22: c, e23: spec.y, e31: 0, e32: 0, e33: 1 };
-        // ThorVG 1.1.3 Text sizes are points (96/72 px each); TextSpec sizes are CSS px like Canvas2D.
+        const c = Math.cos(spec.rotation),
+            s = Math.sin(spec.rotation);
+        const matrix = {
+            e11: c,
+            e12: -s,
+            e13: spec.x,
+            e21: s,
+            e22: c,
+            e23: spec.y,
+            e31: 0,
+            e32: 0,
+            e33: 1,
+        };
+        // ThorVG 1.1.3 Text sizes are points (96/72 px each); TextSpec sizes
+        // are CSS px like Canvas2D.
         const size = spec.size * PX_TO_PT;
         const [r, g, b, a] = ctx.rgba(spec.fill);
         const fade = spec.opacity ?? 1;
-        slot.front.fontSize(size).fill(r, g, b).opacity(Math.round(a * fade)).transform(matrix).visible(true);
+        slot.front
+            .fontSize(size)
+            .fill(r, g, b)
+            .opacity(Math.round(a * fade))
+            .transform(matrix)
+            .visible(true);
         if (spec.outline) {
             const [or, og, ob, oa] = ctx.rgba(spec.outline.color);
-            slot.back.fontSize(size).fill(or, og, ob).outline(spec.outline.width, or, og, ob)
-                .opacity(Math.round(oa * fade)).transform(matrix).visible(true);
+            slot.back
+                .fontSize(size)
+                .fill(or, og, ob)
+                .outline(spec.outline.width, or, og, ob)
+                .opacity(Math.round(oa * fade))
+                .transform(matrix)
+                .visible(true);
         } else {
             slot.back.visible(false);
         }
@@ -167,12 +234,13 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
         signature += '+';
     }
     while (pool.texts.length < textCount) {
-        const make = () => new TVG.Text().align(.5, .5);
+        const make = () => new TVG.Text().align(0.5, 0.5);
         pool.texts.push({ back: make(), front: make(), font: '', content: '' });
         signature += '+';
     }
     signature += `${pool.top.length}/${pool.texts.length}`;
-    // ThorVG cannot detach clips or masks; replace the scene to avoid GL smearing.
+    // ThorVG cannot detach clips or masks; replace the scene to avoid GL
+    // smearing.
     for (const item of items) {
         if (!('layer' in item)) continue;
         const slot = pool.layers.get(item.key);
@@ -181,7 +249,8 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
             pool.signature = '';
         }
     }
-    // Empty the canvas before adding children: ThorVG 1.1.3 crashes if such a scene is then removed.
+    // Empty the canvas before adding children: ThorVG 1.1.3 crashes if such a
+    // scene is then removed.
     const reorder = signature !== pool.signature;
     if (reorder) {
         pool.signature = '';
@@ -190,7 +259,7 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
 
     let topIndex = 0;
     let textIndex = 0;
-    const order: (Shape | Scene | Text)[] = [];
+    const order: Array<Shape | Scene | Text> = [];
     for (const item of items) {
         if ('cmd' in item) {
             const s = pool.top[topIndex++];
@@ -207,13 +276,25 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
         }
         let slot = pool.layers.get(item.key);
         if (!slot) {
-            slot = { scene: new TVG.Scene(), shapes: [], clip: null, mask: null, maskInvert: false, retainedGeometry: null };
+            slot = {
+                scene: new TVG.Scene(),
+                shapes: [],
+                clip: null,
+                mask: null,
+                maskInvert: false,
+                retainedGeometry: null,
+            };
             pool.layers.set(item.key, slot);
         }
         const { scene, shapes } = slot;
         const spec = item.layer;
-        const blurred = !!spec.blur || (!!spec.motionBlur && spec.motionBlur.distance > .5);
-        const extent = stats || spec.effectBudget ? [Infinity, Infinity, -Infinity, -Infinity] : undefined;
+        const blurred =
+            !!spec.blur ||
+            (!!spec.motionBlur && spec.motionBlur.distance > 0.5);
+        const extent =
+            stats || spec.effectBudget
+                ? [Infinity, Infinity, -Infinity, -Infinity]
+                : undefined;
         if (spec.retained && extent) {
             const bounds = spec.retained.bounds;
             extent[0] = Math.max(0, bounds.left);
@@ -221,12 +302,16 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
             extent[2] = Math.min(ctx.W, bounds.right);
             extent[3] = Math.min(ctx.H, bounds.bottom);
         }
-        const retainedReady = !!spec.retained && slot.retainedGeometry === spec.retained.geometry;
+        const retainedReady =
+            !!spec.retained && slot.retainedGeometry === spec.retained.geometry;
         let i = 0;
         let anchor: [number, number] | null = null;
         for (const cmd of item.cmds) {
             const box: [number, number] | null = spec.retained
-                ? [Math.max(0, spec.retained.bounds.left), Math.max(0, spec.retained.bounds.top)]
+                ? [
+                      Math.max(0, spec.retained.bounds.left),
+                      Math.max(0, spec.retained.bounds.top),
+                  ]
                 : canvasBox(cmd, ctx.W, ctx.H, extent);
             if (!box) continue;
             anchor ??= box;
@@ -243,12 +328,20 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
             scene.transform(spec.retained.transform);
             slot.retainedGeometry = spec.retained.geometry;
         }
-        // Re-adding shapes leaks ThorVG references; park unused shapes inside the drawn area.
+        // Re-adding shapes leaks ThorVG references; park unused shapes inside
+        // the drawn area.
         const [px, py] = anchor ?? [0, 0];
-        const area = extent && extent[2] > extent[0] && extent[3] > extent[1]
-            ? (extent[2] - extent[0]) * (extent[3] - extent[1]) : 0;
+        const area =
+            extent && extent[2] > extent[0] && extent[3] > extent[1]
+                ? (extent[2] - extent[0]) * (extent[3] - extent[1])
+                : 0;
         const effectScale = spec.effectBudget
-            ? effectScaleForArea(area, spec.effectBudget.area, spec.effectBudget.minScale) : 1;
+            ? effectScaleForArea(
+                  area,
+                  spec.effectBudget.area,
+                  spec.effectBudget.minScale,
+              )
+            : 1;
         if (stats) {
             stats.layers++;
             stats.layerShapes += shapes.length;
@@ -259,31 +352,56 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
                 stats.gaussianBlurs++;
                 stats.blurAmount += spec.blur * effectScale;
             }
-            if (spec.motionBlur && spec.motionBlur.distance > .5) {
+            if (spec.motionBlur && spec.motionBlur.distance > 0.5) {
                 stats.motionBlurs++;
                 stats.blurAmount += spec.motionBlur.distance * effectScale;
             }
             if (blurred) stats.blurArea += area;
             const effects: string[] = [];
-            if (spec.opacity !== undefined && spec.opacity < 1) effects.push(`α${spec.opacity.toFixed(2)}`);
+            if (spec.opacity !== undefined && spec.opacity < 1) {
+                effects.push(`α${spec.opacity.toFixed(2)}`);
+            }
             if (spec.blend && spec.blend !== 'normal') effects.push(spec.blend);
             if (spec.blur) effects.push(`blur${spec.blur}`);
-            if (spec.motionBlur && spec.motionBlur.distance > .5) effects.push('motion');
-            if (effectScale < 1) effects.push(`budget${Math.round(effectScale * 100)}%`);
+            if (spec.motionBlur && spec.motionBlur.distance > 0.5) {
+                effects.push('motion');
+            }
+            if (effectScale < 1) {
+                effects.push(`budget${Math.round(effectScale * 100)}%`);
+            }
             if (spec.clip) effects.push('clip');
             if (spec.mask) effects.push(spec.maskInvert ? 'invmask' : 'mask');
             stats.layerList.push({ key: spec.key, shapes: i, area, effects });
         }
-        for (; i < shapes.length; i++) apply(shapes[i], { kind: 'path', points: [[px, py], [px + 1, py], [px + 1, py + 1], [px, py + 1]], fill: '#00000001' });
+        for (; i < shapes.length; i++) {
+            apply(shapes[i], {
+                kind: 'path',
+                points: [
+                    [px, py],
+                    [px + 1, py],
+                    [px + 1, py + 1],
+                    [px, py + 1],
+                ],
+                fill: '#00000001',
+            });
+        }
 
         scene.resetEffects();
         const quality = Math.max(20, Math.round(45 * effectScale));
-        if (spec.blur) scene.gaussianBlur(spec.blur * effectScale, 0, 0, quality);
-        if (spec.motionBlur && spec.motionBlur.distance > .5) {
-            scene.motionBlur(spec.motionBlur.distance * effectScale, spec.motionBlur.angle, quality);
+        if (spec.blur) {
+            scene.gaussianBlur(spec.blur * effectScale, 0, 0, quality);
+        }
+        if (spec.motionBlur && spec.motionBlur.distance > 0.5) {
+            scene.motionBlur(
+                spec.motionBlur.distance * effectScale,
+                spec.motionBlur.angle,
+                quality,
+            );
         }
         scene.blend(blendOf(spec.blend));
-        scene.opacity(Math.round(Math.max(0, Math.min(1, spec.opacity ?? 1)) * 255));
+        scene.opacity(
+            Math.round(Math.max(0, Math.min(1, spec.opacity ?? 1)) * 255),
+        );
         if (spec.clip) {
             if (!slot.clip) {
                 slot.clip = new TVG.Shape();
@@ -296,13 +414,19 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
             if (!slot.mask) {
                 slot.mask = new TVG.Shape();
                 slot.maskInvert = !!spec.maskInvert;
-                scene.mask(slot.mask, slot.maskInvert ? TVG.MaskMethod.InvAlpha : TVG.MaskMethod.Alpha);
+                scene.mask(
+                    slot.mask,
+                    slot.maskInvert
+                        ? TVG.MaskMethod.InvAlpha
+                        : TVG.MaskMethod.Alpha,
+                );
             }
             const fill = spec.mask.fill;
             tracePath(slot.mask, spec.mask);
             if (fill === null) slot.mask.fill(255, 255, 255, 255);
-            else if (typeof fill === 'string') slot.mask.fill(...ctx.rgba(fill));
-            else {
+            else if (typeof fill === 'string') {
+                slot.mask.fill(...ctx.rgba(fill));
+            } else {
                 const g = fillOf(fill);
                 slot.mask.fill(g);
                 g.dispose();
@@ -320,8 +444,11 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
     if (reorder) {
         for (const paint of order) tvg.add(paint);
         for (let i = topIndex; i < pool.top.length; i++) tvg.add(pool.top[i]);
-        for (let i = textIndex; i < pool.texts.length; i++) tvg.add(pool.texts[i].back).add(pool.texts[i].front);
-        // Commit the signature only after success so a failed rebuild is retried.
+        for (let i = textIndex; i < pool.texts.length; i++) {
+            tvg.add(pool.texts[i].back).add(pool.texts[i].front);
+        }
+        // Commit the signature only after success so a failed rebuild is
+        // retried.
         pool.signature = signature;
     }
     if (stats) {
@@ -337,4 +464,3 @@ export function paintThorvg(ctx: RenderCtx, TVG: ThorVGNamespace, tvg: Canvas, p
     }
     tvg.update().render();
 }
-

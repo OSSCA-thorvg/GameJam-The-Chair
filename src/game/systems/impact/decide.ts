@@ -2,14 +2,28 @@ import type { Player, Point, Snapshot } from '../../types';
 
 export type Impact = { frames: Snapshot[]; elapsed: number; point: Point };
 
-const REWIND_SPEED = .25;
-const HOLD_AFTER = .35;
+const REWIND_SPEED = 0.25;
+const HOLD_AFTER = 0.35;
 
-export function impactReplay(history: readonly Readonly<Snapshot>[], p: Readonly<Player>, point: Readonly<Point>): Impact {
-    return { frames: history.slice(-42).map(frame => ({ p: { ...frame.p } })).concat({ p: { ...p } }), elapsed: 0, point: { ...point } };
+export function impactReplay(
+    history: ReadonlyArray<Readonly<Snapshot>>,
+    p: Readonly<Player>,
+    point: Readonly<Point>,
+): Impact {
+    return {
+        frames: history
+            .slice(-42)
+            .map((frame) => ({ p: { ...frame.p } }))
+            .concat({ p: { ...p } }),
+        elapsed: 0,
+        point: { ...point },
+    };
 }
 
-export function impactStep(impact: Readonly<Impact>, dt: number): { impact: Impact; pose: Player | null; done: boolean } {
+export function impactStep(
+    impact: Readonly<Impact>,
+    dt: number,
+): { impact: Impact; pose: Player | null; done: boolean } {
     const elapsed = impact.elapsed + dt;
     const frames = impact.frames;
     const n = frames.length - 1;
@@ -21,7 +35,13 @@ export function impactStep(impact: Readonly<Impact>, dt: number): { impact: Impa
     let pose: Player | null = null;
     if (a && b) {
         pose = { ...a.p };
-        for (const k of ['x', 'y', 'vx', 'vy', 'a', 'w'] as const) pose[k] = a.p[k] + (b.p[k] - a.p[k]) * f;
+        for (const k of ['x', 'y', 'vx', 'vy', 'a', 'w'] as const) {
+            pose[k] = a.p[k] + (b.p[k] - a.p[k]) * f;
+        }
     }
-    return { impact: { ...impact, elapsed }, pose, done: elapsed > n / 120 / REWIND_SPEED + HOLD_AFTER };
+    return {
+        impact: { ...impact, elapsed },
+        pose,
+        done: elapsed > n / 120 / REWIND_SPEED + HOLD_AFTER,
+    };
 }

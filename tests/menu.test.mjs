@@ -11,11 +11,28 @@ test('pause menu shows unlocked stages and hides spray controls until equipped',
     const originalMatchMedia = globalThis.matchMedia;
     /** @type {any} */ (globalThis).matchMedia = () => ({ matches: false });
     try {
-        const elements = new Map([
-            '[data-spray-help]', '[data-spray]', '[data-stage-menu]', '[data-play-hud]', '.drive-controls',
-            '[data-stage="1"]', '[data-stage="2"]', '[data-stage="3"]'
-        ].map(selector => [selector, { hidden: false, classList: { toggle() {} }, toggleAttribute() {} }]));
-        const hud = createHud({ querySelector: selector => elements.get(selector) ?? null });
+        const elements = new Map(
+            [
+                '[data-spray-help]',
+                '[data-spray]',
+                '[data-stage-menu]',
+                '[data-play-hud]',
+                '.drive-controls',
+                '[data-stage="1"]',
+                '[data-stage="2"]',
+                '[data-stage="3"]',
+            ].map((selector) => [
+                selector,
+                {
+                    hidden: false,
+                    classList: { toggle() {} },
+                    toggleAttribute() {},
+                },
+            ]),
+        );
+        const hud = createHud({
+            querySelector: (selector) => elements.get(selector) ?? null,
+        });
         const effects = createEffects().snapshot();
         const feedback = createFeedback().snapshot();
         const fresh = createGame();
@@ -42,10 +59,20 @@ test('pause menu shows unlocked stages and hides spray controls until equipped',
         continued.startStage(3);
         hud.draw(continued.getSnapshot(), feedback, effects);
         assert.equal(elements.get('[data-spray-help]').hidden, true);
-        for (let i = 0; i < 1440 && !continued.getSnapshot().hasExtinguisher; i++) {
+        for (
+            let i = 0;
+            i < 1440 && !continued.getSnapshot().hasExtinguisher;
+            i++
+        ) {
             const state = continued.getSnapshot();
             continued.setInput('right');
-            if (state.ground && ((state.player.x > 205 && state.player.x < 330) || (state.player.x > 370 && state.player.x < 450))) continued.jump();
+            if (
+                state.ground &&
+                ((state.player.x > 205 && state.player.x < 330) ||
+                    (state.player.x > 370 && state.player.x < 450))
+            ) {
+                continued.jump();
+            }
             continued.step(1 / 120);
         }
         assert.equal(continued.getSnapshot().hasExtinguisher, true);

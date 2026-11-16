@@ -19,24 +19,49 @@ test('a long frame discards excess time instead of catching up', () => {
 test('each previous clear unlocks exactly the next stage', () => {
     for (let completed = 0; completed <= 5; completed++) {
         for (let stage = 1; stage <= 5; stage++) {
-            assert.equal(isStageUnlocked(stage, completed), stage <= completed + 1);
+            assert.equal(
+                isStageUnlocked(stage, completed),
+                stage <= completed + 1,
+            );
         }
     }
 });
 
 test('stored errors are validated and bounded before being exposed', () => {
-    const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
-    const valid = { tick: 2, at: 'step', message: 'failure', time: new Date().toISOString(), stage: 1, replay: null };
-    Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
-        getItem: () => JSON.stringify([valid, null, {}, { ...valid, tick: 'bad' }, valid, valid]),
-        setItem() {},
-    } });
+    const previous = Object.getOwnPropertyDescriptor(
+        globalThis,
+        'localStorage',
+    );
+    const valid = {
+        tick: 2,
+        at: 'step',
+        message: 'failure',
+        time: new Date().toISOString(),
+        stage: 1,
+        replay: null,
+    };
+    Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        value: {
+            getItem: () =>
+                JSON.stringify([
+                    valid,
+                    null,
+                    {},
+                    { ...valid, tick: 'bad' },
+                    valid,
+                    valid,
+                ]),
+            setItem() {},
+        },
+    });
     try {
         assert.equal(createErrorLog(2).entries.length, 2);
         assert.equal(createErrorLog(0).entries.length, 0);
         assert.equal(createErrorLog(10).entries.length, 3);
     } finally {
-        if (previous) Object.defineProperty(globalThis, 'localStorage', previous);
-        else delete globalThis.localStorage;
+        if (previous) {
+            Object.defineProperty(globalThis, 'localStorage', previous);
+        } else delete globalThis.localStorage;
     }
 });

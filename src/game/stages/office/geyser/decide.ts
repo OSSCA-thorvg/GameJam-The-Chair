@@ -4,16 +4,29 @@ import type { FocusHit } from '../../../systems/focus/decide';
 import { nextRandom } from '../../../rng';
 
 export type GeyserPhase = 'rest' | 'warning' | 'burst';
-export function geyserPhase(geyser: { period: number; offset: number }, t: number): { kind: GeyserPhase; age: number; remaining: number } {
-    const p = ((t + geyser.offset) % geyser.period + geyser.period) % geyser.period;
+export function geyserPhase(
+    geyser: { period: number; offset: number },
+    t: number,
+): { kind: GeyserPhase; age: number; remaining: number } {
+    const p =
+        (((t + geyser.offset) % geyser.period) + geyser.period) % geyser.period;
     if (p < 2.3) return { kind: 'rest', age: p, remaining: 2.3 - p };
     if (p < 3.1) return { kind: 'warning', age: p - 2.3, remaining: 3.1 - p };
     return { kind: 'burst', age: p - 3.1, remaining: geyser.period - p };
 }
 
-export type GeyserHit = { push: number; spin: number; rng: number; focus: FocusHit };
+export type GeyserHit = {
+    push: number;
+    spin: number;
+    rng: number;
+    focus: FocusHit;
+};
 
-export function geyserHits(p: Readonly<Point>, time: number, rng: number): GeyserHit[] {
+export function geyserHits(
+    p: Readonly<Point>,
+    time: number,
+    rng: number,
+): GeyserHit[] {
     const hits: GeyserHit[] = [];
     for (let i = 0; i < LEVEL.geysers.length; i++) {
         const g = LEVEL.geysers[i];
@@ -24,9 +37,13 @@ export function geyserHits(p: Readonly<Point>, time: number, rng: number): Geyse
         rng = draw.state;
         hits.push({
             push: (Math.sign(p.x - g.x) || 1) * 90,
-            spin: (draw.value - .5) * 6,
+            spin: (draw.value - 0.5) * 6,
             rng,
-            focus: { kind: 'paper', id: 1000 + i * 100 + Math.floor(time / g.period), damage: FOCUS_DAMAGE.paper },
+            focus: {
+                kind: 'paper',
+                id: 1000 + i * 100 + Math.floor(time / g.period),
+                damage: FOCUS_DAMAGE.paper,
+            },
         });
     }
     return hits;

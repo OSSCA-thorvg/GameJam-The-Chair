@@ -3,15 +3,29 @@ import type { GameEvent } from '../../../types';
 import { orbitStep } from './decide';
 import { STAGE_FIVE } from '../data';
 import { FOCUS_DAMAGE } from '../../../level';
-import { applyFocusHit, applyFocusRecovery } from '../../../systems/focus/apply';
+import {
+    applyFocusHit,
+    applyFocusRecovery,
+} from '../../../systems/focus/apply';
 
 export function applyOrbit(s: CoreState, out: GameEvent[], dt: number) {
     const result = orbitStep(s.orbit, s.p, s.keys, dt);
     s.orbit = result.orbit;
     setPlayer(s, result.p);
     s.actualSpeed = s.orbit.speed;
-    s.extinguisher.burst = result.spraying ? .24 : Math.max(0, s.extinguisher.burst - dt);
-    if (result.satelliteLit && !applyFocusHit(s, out, { kind: 'satelliteLight', id: Math.floor(s.orbit.age), damage: FOCUS_DAMAGE.satelliteLight })) return;
+    s.extinguisher.burst = result.spraying
+        ? 0.24
+        : Math.max(0, s.extinguisher.burst - dt);
+    if (
+        result.satelliteLit &&
+        !applyFocusHit(s, out, {
+            kind: 'satelliteLight',
+            id: Math.floor(s.orbit.age),
+            damage: FOCUS_DAMAGE.satelliteLight,
+        })
+    ) {
+        return;
+    }
     // Takeover skips shared focus recovery; apply it here.
     if (s.orbit.phase !== 'parked') applyFocusRecovery(s, dt);
     if (result.flag > s.checkpoint) {

@@ -1,6 +1,8 @@
 import { load } from './load.mjs';
 
-const { STAGE_THREE, ventPhase } = await load('src/game/stages/rooftop/data.ts');
+const { STAGE_THREE, ventPhase } = await load(
+    'src/game/stages/rooftop/data.ts',
+);
 const LIMIT = STAGE_THREE.airSprayLimit;
 
 function quietFor(vent, time) {
@@ -8,11 +10,20 @@ function quietFor(vent, time) {
     if (phase.kind !== 'idle') return 0;
     return vent.period - vent.warn - vent.blow - phase.age;
 }
-const ventQuiet = (index, seconds) => state => quietFor(STAGE_THREE.vents[index], state.time) >= seconds;
-const ductJustGusted = state => state.ductReaction.kind === 'done' && state.ductReaction.rest < .4;
-const ductQuietFor = seconds => state => state.ductReaction.kind === 'done' && state.ductReaction.rest < STAGE_THREE.duct.gustPeriod - seconds;
+const ventQuiet = (index, seconds) => (state) =>
+    quietFor(STAGE_THREE.vents[index], state.time) >= seconds;
+const ductJustGusted = (state) =>
+    state.ductReaction.kind === 'done' && state.ductReaction.rest < 0.4;
+const ductQuietFor = (seconds) => (state) =>
+    state.ductReaction.kind === 'done' &&
+    state.ductReaction.rest < STAGE_THREE.duct.gustPeriod - seconds;
 
-const FLOOR = 368, R1 = 248, L1 = 78, R2 = -92, L2 = -262, UPPER = -172;
+const FLOOR = 368,
+    R1 = 248,
+    L1 = 78,
+    R2 = -92,
+    L2 = -262,
+    UPPER = -172;
 
 const ROUTE = [
     { how: 'start' },
@@ -21,43 +32,98 @@ const ROUTE = [
     { how: 'roll', x: 1120 },
     { how: 'roll', x: 1370 },
     { how: 'wait', x: 1370 },
-    { how: 'hop', level: FLOOR, takeoff: 1460, to: [1600, R1], apex: 200, ready: ductQuietFor(2) },
-    { how: 'hop', level: R1, takeoff: 1655, to: [1330, L1], apex: 50, ready: ductQuietFor(1.3) },
-    { how: 'hop', level: L1, takeoff: 1372, to: [1690, R2], apex: -120, ups: 1, ready: ventQuiet(0, 1.4) },
-    { how: 'hop', level: R2, takeoff: 1660, to: [1330, L2], apex: -290, ready: ventQuiet(1, 1.4) },
-    { how: 'leap', level: L2, start: 1262, takeoff: 1505, to: [1880, UPPER], apex: -420, ready: state => ventQuiet(2, 1.45)(state) && ventQuiet(1, 1.2)(state) },
+    {
+        how: 'hop',
+        level: FLOOR,
+        takeoff: 1460,
+        to: [1600, R1],
+        apex: 200,
+        ready: ductQuietFor(2),
+    },
+    {
+        how: 'hop',
+        level: R1,
+        takeoff: 1655,
+        to: [1330, L1],
+        apex: 50,
+        ready: ductQuietFor(1.3),
+    },
+    {
+        how: 'hop',
+        level: L1,
+        takeoff: 1372,
+        to: [1690, R2],
+        apex: -120,
+        ups: 1,
+        ready: ventQuiet(0, 1.4),
+    },
+    {
+        how: 'hop',
+        level: R2,
+        takeoff: 1660,
+        to: [1330, L2],
+        apex: -290,
+        ready: ventQuiet(1, 1.4),
+    },
+    {
+        how: 'leap',
+        level: L2,
+        start: 1262,
+        takeoff: 1505,
+        to: [1880, UPPER],
+        apex: -420,
+        ready: (state) => ventQuiet(2, 1.45)(state) && ventQuiet(1, 1.2)(state),
+    },
     { how: 'board' },
 ];
 export const ROUTE_STEPS = ROUTE.length;
 
 function retryFrom(y) {
     let best = -1;
-    for (let i = 0; i < ROUTE.length; i++) if (ROUTE[i].level !== undefined && Math.abs(ROUTE[i].level - y) < 20) { best = i; break; }
+    for (let i = 0; i < ROUTE.length; i++) {
+        if (ROUTE[i].level !== undefined && Math.abs(ROUTE[i].level - y) < 20) {
+            best = i;
+            break;
+        }
+    }
     return best;
 }
 
-export function driveStageThree(game, stop = state => state.stage === 4 || state.mode !== 'play', observe = (state, phase) => {}) {
+export function driveStageThree(
+    game,
+    stop = (state) => state.stage === 4 || state.mode !== 'play',
+    observe = (state, phase) => {},
+) {
     let phase = 0;
     let sub = 'go';
     for (let i = 0; i < 120 * 150; i++) {
-        const state = game.getSnapshot(), p = state.player;
+        const state = game.getSnapshot(),
+            p = state.player;
         observe(state, phase);
         if (stop(state)) return state;
         const step = ROUTE[phase];
-        const toward = x => {
-            const error = x - p.x - p.vx * .32;
+        const toward = (x) => {
+            const error = x - p.x - p.vx * 0.32;
             return error > 12 ? ['right'] : error < -12 ? ['left'] : [];
         };
         if (step.how === 'start') {
             game.setInput('right');
-            if (p.x > 210 && state.ground) { game.jump(); phase++; }
+            if (p.x > 210 && state.ground) {
+                game.jump();
+                phase++;
+            }
         } else if (step.how === 'pickup') {
             game.setInput('right');
-            if (state.ground && ((p.x > 205 && p.x < 330) || (p.x > 370 && p.x < 450))) game.jump();
+            if (
+                state.ground &&
+                ((p.x > 205 && p.x < 330) || (p.x > 370 && p.x < 450))
+            ) {
+                game.jump();
+            }
             if (state.hasExtinguisher) phase++;
         } else if (step.how === 'rise') {
             const keys = toward(step.x);
-            if (p.y + p.vy * .2 > step.y) keys.push('spray');
+            if (p.y + p.vy * 0.2 > step.y) keys.push('spray');
             game.setInput(...keys);
             if (Math.abs(p.x - step.x) < 40 && p.y < step.y + 15) phase++;
         } else if (step.how === 'roll') {
@@ -65,47 +131,82 @@ export function driveStageThree(game, stop = state => state.stage === 4 || state
             if (Math.abs(p.x - step.x) < 40 && state.ground) phase++;
         } else if (step.how === 'wait') {
             game.setInput(...(state.ground ? toward(step.x) : []));
-            if (ductJustGusted(state) && state.ground) { phase++; sub = 'go'; }
+            if (ductJustGusted(state) && state.ground) {
+                phase++;
+                sub = 'go';
+            }
         } else if (step.how === 'hop' || step.how === 'leap') {
             const [tx, ty] = step.to;
-            const onLevel = y => state.ground && Math.abs(p.y - y) < 20;
-            if (state.ground && (sub === 'air' || (sub === 'settle' && !onLevel(ty)))) sub = 'go';
-            if (onLevel(ty) && Math.abs(p.x - tx) < (step.how === 'leap' ? 60 : 150)) {
+            const onLevel = (y) => state.ground && Math.abs(p.y - y) < 20;
+            if (
+                state.ground &&
+                (sub === 'air' || (sub === 'settle' && !onLevel(ty)))
+            ) {
+                sub = 'go';
+            }
+            if (
+                onLevel(ty) &&
+                Math.abs(p.x - tx) < (step.how === 'leap' ? 60 : 150)
+            ) {
                 sub = 'settle';
                 game.setInput(...toward(tx));
-                if (Math.abs(p.vx) < 60) { phase++; sub = 'go'; }
+                if (Math.abs(p.vx) < 60) {
+                    phase++;
+                    sub = 'go';
+                }
             } else if (onLevel(ty)) {
                 game.setInput(...toward(tx));
             } else if (state.ground && !onLevel(step.level)) {
                 const retry = retryFrom(p.y);
-                if (retry >= 0) { phase = retry; sub = 'go'; }
+                if (retry >= 0) {
+                    phase = retry;
+                    sub = 'go';
+                }
                 game.setInput();
             } else if (state.ground && sub !== 'air') {
-                const runUp = step.how === 'leap' && sub === 'go' ? step.start : step.takeoff;
+                const runUp =
+                    step.how === 'leap' && sub === 'go'
+                        ? step.start
+                        : step.takeoff;
                 if (sub === 'go') {
                     game.setInput(...toward(runUp));
-                    if (Math.abs(p.x - runUp) < 20 && Math.abs(p.vx) < 40) sub = 'ready';
+                    if (Math.abs(p.x - runUp) < 20 && Math.abs(p.vx) < 40) {
+                        sub = 'ready';
+                    }
                 } else if (sub === 'ready') {
                     game.setInput(...toward(runUp));
-                    if (step.ready(state)) sub = step.how === 'leap' ? 'run' : 'launch';
+                    if (step.ready(state)) {
+                        sub = step.how === 'leap' ? 'run' : 'launch';
+                    }
                 } else if (sub === 'run') {
                     game.setInput('right');
                     if (p.x >= step.takeoff) sub = 'launch';
                 }
-                if (sub === 'launch') { game.setInput(...(step.how === 'leap' ? ['right', 'spray'] : ['spray'])); sub = 'air'; }
+                if (sub === 'launch') {
+                    game.setInput(
+                        ...(step.how === 'leap'
+                            ? ['right', 'spray']
+                            : ['spray']),
+                    );
+                    sub = 'air';
+                }
             } else if (sub === 'settle') {
                 game.setInput(...(p.vy < 120 ? toward(tx) : []));
             } else {
                 sub = state.ground ? sub : 'air';
                 const keys = [];
-                const high = p.y + p.vy * .25 <= step.apex;
+                const high = p.y + p.vy * 0.25 <= step.apex;
                 const left = LIMIT - state.airSprays;
                 if (step.how === 'leap' && p.x > 1810) {
                     keys.push(...toward(tx));
                 } else if (step.how === 'leap') {
                     keys.push('right');
                     if (!high && left > 0) keys.push('spray');
-                } else if (!high && left > 1 && state.airSprays < (step.ups ?? 2)) {
+                } else if (
+                    !high &&
+                    left > 1 &&
+                    state.airSprays < (step.ups ?? 2)
+                ) {
                     keys.push('spray');
                 } else if (left > 0 && Math.abs(tx - p.x) > 90 && p.vy > -160) {
                     keys.push(tx > p.x ? 'right' : 'left', 'spray');
@@ -122,5 +223,7 @@ export function driveStageThree(game, stop = state => state.stage === 4 || state
         game.drainEvents();
     }
     const step = ROUTE[phase];
-    throw new Error(`Stage-three route timed out at phase ${phase} (${step.how}${step.to ? ` to ${step.to}` : step.x ? ` ${step.x}` : ''}, ${sub})`);
+    throw new Error(
+        `Stage-three route timed out at phase ${phase} (${step.how}${step.to ? ` to ${step.to}` : step.x ? ` ${step.x}` : ''}, ${sub})`,
+    );
 }

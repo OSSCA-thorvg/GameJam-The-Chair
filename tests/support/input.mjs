@@ -1,6 +1,18 @@
 export function installInputEnvironment(t) {
-    const names = ['window', 'document', 'Element', 'HTMLElement', 'MutationObserver'];
-    const saved = names.map(name => /** @type {const} */ ([name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+    const names = [
+        'window',
+        'document',
+        'Element',
+        'HTMLElement',
+        'MutationObserver',
+    ];
+    const saved = names.map(
+        (name) =>
+            /** @type {const} */ ([
+                name,
+                Object.getOwnPropertyDescriptor(globalThis, name),
+            ]),
+    );
     t.after(() => {
         for (const [name, descriptor] of saved) {
             if (descriptor) Object.defineProperty(globalThis, name, descriptor);
@@ -10,8 +22,14 @@ export function installInputEnvironment(t) {
     const window = new EventTarget();
     class Element {}
     Object.assign(globalThis, {
-        window, document: new EventTarget(), Element, HTMLElement: Element,
-        MutationObserver: class { observe() {} disconnect() {} },
+        window,
+        document: new EventTarget(),
+        Element,
+        HTMLElement: Element,
+        MutationObserver: class {
+            observe() {}
+            disconnect() {}
+        },
     });
     return {
         window,
@@ -25,5 +43,8 @@ export function installInputEnvironment(t) {
 }
 
 export function inputButton(dataset = {}) {
-    return Object.assign(new EventTarget(), { dataset, setPointerCapture() {} });
+    return Object.assign(new EventTarget(), {
+        dataset,
+        setPointerCapture() {},
+    });
 }

@@ -2,19 +2,51 @@ import { FOCUS_DAMAGE, LEVEL, RULES } from '../../../level';
 import type { Point } from '../../../types';
 import type { FocusHit } from '../../../systems/focus/decide';
 
-export type Cleaning = { x: number; a: number; b: number; spilled: boolean; age: number; followup: boolean; splashDir: number };
+export type Cleaning = {
+    x: number;
+    a: number;
+    b: number;
+    spilled: boolean;
+    age: number;
+    followup: boolean;
+    splashDir: number;
+};
 export type Bucket = { age: number; armed: boolean; spills: number };
-export type CleaningResult = { cleaning: Cleaning; bucket: Bucket; splash: boolean; followup: boolean; soak: FocusHit | null };
+export type CleaningResult = {
+    cleaning: Cleaning;
+    bucket: Bucket;
+    splash: boolean;
+    followup: boolean;
+    soak: FocusHit | null;
+};
 
-export function waterExposure(bucketAge: number, p: Readonly<Point>, cleaningX: number = LEVEL.cleaning.x) {
-    return bucketAge < RULES.waterExposure && Math.abs(p.x - cleaningX) < 210 && p.y > LEVEL.floor - 150;
+export function waterExposure(
+    bucketAge: number,
+    p: Readonly<Point>,
+    cleaningX: number = LEVEL.cleaning.x,
+) {
+    return (
+        bucketAge < RULES.waterExposure &&
+        Math.abs(p.x - cleaningX) < 210 &&
+        p.y > LEVEL.floor - 150
+    );
 }
 
-export function cleaningStep(input: { p: Readonly<Point>; cleaning: Readonly<Cleaning>; bucket: Readonly<Bucket>; soakedOnSpill: number }, dt: number): CleaningResult {
+export function cleaningStep(
+    input: {
+        p: Readonly<Point>;
+        cleaning: Readonly<Cleaning>;
+        bucket: Readonly<Bucket>;
+        soakedOnSpill: number;
+    },
+    dt: number,
+): CleaningResult {
     const { p } = input;
     const cleaning = { ...input.cleaning };
     const bucket = { ...input.bucket };
-    let splash = false, followup = false, soak: FocusHit | null = null;
+    let splash = false,
+        followup = false,
+        soak: FocusHit | null = null;
     const nearBucket = Math.abs(p.x - cleaning.x) < 150;
     const upright = bucket.age >= RULES.bucketReset;
     if (upright && !nearBucket) bucket.armed = true;
@@ -33,14 +65,32 @@ export function cleaningStep(input: { p: Readonly<Point>; cleaning: Readonly<Cle
             cleaning.followup = true;
             followup = true;
         }
-        if (input.soakedOnSpill !== bucket.spills && waterExposure(bucket.age, p, cleaning.x)) {
-            soak = { kind: 'water', id: bucket.spills, damage: FOCUS_DAMAGE.water };
+        if (
+            input.soakedOnSpill !== bucket.spills &&
+            waterExposure(bucket.age, p, cleaning.x)
+        ) {
+            soak = {
+                kind: 'water',
+                id: bucket.spills,
+                damage: FOCUS_DAMAGE.water,
+            };
         }
     }
     return { cleaning, bucket, splash, followup, soak };
 }
 
-export function slipping(p: Readonly<Point>, cleaning: Readonly<Cleaning>, grounded: boolean) {
-    return grounded && cleaning.spilled && p.x > cleaning.a
-        && p.x < cleaning.a + Math.min(1, cleaning.age / .8) * (cleaning.b - cleaning.a) && p.y > LEVEL.floor - 55;
+export function slipping(
+    p: Readonly<Point>,
+    cleaning: Readonly<Cleaning>,
+    grounded: boolean,
+) {
+    return (
+        grounded &&
+        cleaning.spilled &&
+        p.x > cleaning.a &&
+        p.x <
+            cleaning.a +
+                Math.min(1, cleaning.age / 0.8) * (cleaning.b - cleaning.a) &&
+        p.y > LEVEL.floor - 55
+    );
 }

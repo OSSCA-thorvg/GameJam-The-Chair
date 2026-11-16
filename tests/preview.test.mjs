@@ -2,13 +2,23 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { bundled } from './support/load.mjs';
 
-const { cachePreviewRegistration } = await bundled({ entryPoints: ['src/preview/registration.ts'] });
-const { previewScenes } = await bundled({ entryPoints: ['src/preview-scenes.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
+const { cachePreviewRegistration } = await bundled({
+    entryPoints: ['src/preview/registration.ts'],
+});
+const { previewScenes } = await bundled({
+    entryPoints: ['src/preview-scenes.ts'],
+    bundle: true,
+    write: false,
+    platform: 'node',
+    format: 'esm',
+});
 
 test('cleaner preview seeks backward to the same pose and splash', () => {
-    const scene = previewScenes.find(scene => scene.id === 'cleaner-recovery')?.create();
+    const scene = previewScenes
+        .find((scene) => scene.id === 'cleaner-recovery')
+        ?.create();
     assert.ok(scene);
-    assert.ok(scene.markers.some(marker => marker.at === 2.4));
+    assert.ok(scene.markers.some((marker) => marker.at === 2.4));
 
     const first = scene.sample(2.4);
     const splash = scene.sample(0.4);
@@ -21,13 +31,18 @@ test('cleaner preview seeks backward to the same pose and splash', () => {
     assert.ok(splash.effects.waterDrops.length > 0);
     assert.equal(end.effects.waterDrops.length, 0);
     assert.equal(scene.sample(-1).state.bucketAge, 0);
-    assert.equal(scene.sample(scene.duration + 1).state.bucketAge, scene.duration);
+    assert.equal(
+        scene.sample(scene.duration + 1).state.bucketAge,
+        scene.duration,
+    );
 });
 
 test('monitor preview shows the warning, beam, and cooldown phases', () => {
-    const scene = previewScenes.find(scene => scene.id === 'monitor-light')?.create();
+    const scene = previewScenes
+        .find((scene) => scene.id === 'monitor-light')
+        ?.create();
     assert.ok(scene);
-    const warning = scene.sample(.4).state.monitors[0];
+    const warning = scene.sample(0.4).state.monitors[0];
     const beam = scene.sample(1.2).state.monitors[0];
     const cooldown = scene.sample(2.4).state.monitors[0];
     assert.equal(warning.warning, true);
@@ -36,7 +51,9 @@ test('monitor preview shows the warning, beam, and cooldown phases', () => {
 });
 
 test('copier preview plays the real three-shot volley and seeks deterministically', () => {
-    const scene = previewScenes.find(scene => scene.id === 'copier-volley')?.create();
+    const scene = previewScenes
+        .find((scene) => scene.id === 'copier-volley')
+        ?.create();
     assert.ok(scene);
     assert.equal(scene.sample(0).state.papers.length, 0);
     const fired = scene.sample(1.15);
@@ -47,10 +64,12 @@ test('copier preview plays the real three-shot volley and seeks deterministicall
 });
 
 test('impact preview replays a collision through its game-over frame', () => {
-    const scene = previewScenes.find(scene => scene.id === 'head-impact')?.create();
+    const scene = previewScenes
+        .find((scene) => scene.id === 'head-impact')
+        ?.create();
     assert.ok(scene);
     const start = scene.sample(0).state;
-    const rewind = scene.sample(.8).state;
+    const rewind = scene.sample(0.8).state;
     assert.equal(start.mode, 'impact');
     assert.notEqual(rewind.player.a, start.player.a);
     assert.equal(scene.sample(scene.duration).state.mode, 'dead');
@@ -58,33 +77,43 @@ test('impact preview replays a collision through its game-over frame', () => {
 });
 
 test('extinguisher preview keeps the spray plume and recoil in sync', () => {
-    const scene = previewScenes.find(scene => scene.id === 'extinguisher-spray')?.create();
+    const scene = previewScenes
+        .find((scene) => scene.id === 'extinguisher-spray')
+        ?.create();
     assert.ok(scene);
     const start = scene.sample(0).state;
-    const recoil = scene.sample(.16).state;
+    const recoil = scene.sample(0.16).state;
     assert.ok(start.spray.burst > 0);
     assert.ok(start.spray.dir.x < 0);
     assert.ok(recoil.player.x > start.player.x);
     assert.ok(recoil.player.y < start.player.y);
-    assert.equal(scene.sample(.5).state.spray.burst, 0);
+    assert.equal(scene.sample(0.5).state.spray.burst, 0);
 });
 
 test('office preview keeps one staff mix through the typing motion', () => {
-    const scene = previewScenes.find(scene => scene.id === 'office-typing')?.create();
+    const scene = previewScenes
+        .find((scene) => scene.id === 'office-typing')
+        ?.create();
     assert.ok(scene);
     const start = scene.sample(0).state;
-    const typing = scene.sample(.25).state;
+    const typing = scene.sample(0.25).state;
     assert.equal(start.stage, 2);
     assert.equal(typing.corridor.appearanceSeed, start.corridor.appearanceSeed);
-    assert.equal(typing.time, .25);
+    assert.equal(typing.time, 0.25);
 });
 
 test('duct preview seeks between powder intake, twitch and sneeze', () => {
-    const scene = previewScenes.find(scene => scene.id === 'duct-sneeze')?.create();
+    const scene = previewScenes
+        .find((scene) => scene.id === 'duct-sneeze')
+        ?.create();
     assert.ok(scene);
     assert.equal(scene.markers.length, 4);
-    assert.equal(scene.sample(.05).state.spray.burst, 0, 'the duct sneezes on its own timer, not at a spray');
-    assert.ok(scene.sample(1.1).state.ductReaction.age > .2);
+    assert.equal(
+        scene.sample(0.05).state.spray.burst,
+        0,
+        'the duct sneezes on its own timer, not at a spray',
+    );
+    assert.ok(scene.sample(1.1).state.ductReaction.age > 0.2);
     assert.equal(scene.sample(1.1).state.hasExtinguisher, true);
     const sneeze = scene.sample(1.1);
     scene.sample(2.1);
@@ -92,46 +121,81 @@ test('duct preview seeks between powder intake, twitch and sneeze', () => {
 });
 
 test('merged preview registry keeps water, focus loss and rooftop scenes without the removed fan', () => {
-    const ids = previewScenes.map(scene => scene.id);
+    const ids = previewScenes.map((scene) => scene.id);
     assert.equal(new Set(ids).size, ids.length);
-    for (const id of ['bucket-pour', 'focus-loss', 'rooftop-entrance', 'duct-sneeze', 'duct-gust', 'cloud-entry', 'sky-gear']) {
+    for (const id of [
+        'bucket-pour',
+        'focus-loss',
+        'rooftop-entrance',
+        'duct-sneeze',
+        'duct-gust',
+        'cloud-entry',
+        'sky-gear',
+    ]) {
         assert.ok(ids.includes(id), `missing preview: ${id}`);
     }
     assert.equal(ids.includes('fan-ride'), false);
-    assert.equal(previewScenes.find(scene => scene.id === 'focus-loss')?.create().sample(1.7).state.mode, 'dead');
-    const airborne = previewScenes.find(scene => scene.id === 'cloud-entry')?.create().sample(1).state;
+    assert.equal(
+        previewScenes
+            .find((scene) => scene.id === 'focus-loss')
+            ?.create()
+            .sample(1.7).state.mode,
+        'dead',
+    );
+    const airborne = previewScenes
+        .find((scene) => scene.id === 'cloud-entry')
+        ?.create()
+        .sample(1).state;
     assert.equal(airborne.stage, 4);
-    assert.ok(airborne.spray.burst > .2);
+    assert.ok(airborne.spray.burst > 0.2);
 });
 
 test('the sky ending preview seeks through side view, the orbit and back view', () => {
-    const scene = previewScenes.find(scene => scene.id === 'sky-ending')?.create();
+    const scene = previewScenes
+        .find((scene) => scene.id === 'sky-ending')
+        ?.create();
     assert.ok(scene);
-    const depthStart = scene.markers.find(marker => marker.label.startsWith('Rear view')).at;
+    const depthStart = scene.markers.find((marker) =>
+        marker.label.startsWith('Rear view'),
+    ).at;
     assert.equal(scene.sample(1.5).state.sky.phase, 'reveal');
-    assert.equal(scene.sample(depthStart + .5).state.sky.phase, 'depth');
-    assert.ok(Math.abs(scene.sample(scene.duration).state.sky.age - (scene.duration - depthStart)) < 1e-9);
+    assert.equal(scene.sample(depthStart + 0.5).state.sky.phase, 'depth');
+    assert.ok(
+        Math.abs(
+            scene.sample(scene.duration).state.sky.age -
+                (scene.duration - depthStart),
+        ) < 1e-9,
+    );
     const ending = scene.sample(scene.duration);
     scene.sample(0);
     assert.deepEqual(scene.sample(scene.duration), ending);
 });
 
-
 test('preview menu metadata stays lazy and sampling reuses the recorded scene', () => {
     let recordings = 0;
     const frames = new Map();
-    const registration = cachePreviewRegistration({ id: 'example', label: 'Example', create() {
-        recordings++;
-        return {
-            id: 'example', label: 'Example', duration: 2, focusX: 42,
-            markers: [{ at: 1, label: 'Middle' }], follow: true, title: true,
-            opening: time => ({ time }), talk: (time, locale) => ({ time, locale }),
-            sample: time => {
-                if (!frames.has(time)) frames.set(time, { time });
-                return frames.get(time);
-            },
-        };
-    } });
+    const registration = cachePreviewRegistration({
+        id: 'example',
+        label: 'Example',
+        create() {
+            recordings++;
+            return {
+                id: 'example',
+                label: 'Example',
+                duration: 2,
+                focusX: 42,
+                markers: [{ at: 1, label: 'Middle' }],
+                follow: true,
+                title: true,
+                opening: (time) => ({ time }),
+                talk: (time, locale) => ({ time, locale }),
+                sample: (time) => {
+                    if (!frames.has(time)) frames.set(time, { time });
+                    return frames.get(time);
+                },
+            };
+        },
+    });
     assert.equal(registration.id, 'example');
     assert.equal(registration.label, 'Example');
     assert.equal(recordings, 0, 'listing a scene does not record it');
@@ -143,10 +207,18 @@ test('preview menu metadata stays lazy and sampling reuses the recorded scene', 
     assert.deepEqual(scene.markers, [{ at: 1, label: 'Middle' }]);
     assert.equal(scene.follow, true);
     assert.equal(scene.title, true);
-    assert.deepEqual(scene.opening(.5), { time: .5 });
-    assert.deepEqual(scene.talk(.5, 'ko'), { time: .5, locale: 'ko' });
+    assert.deepEqual(scene.opening(0.5), { time: 0.5 });
+    assert.deepEqual(scene.talk(0.5, 'ko'), { time: 0.5, locale: 'ko' });
     scene.sample(0);
-    assert.equal(scene.sample(1), frame, 'seeking back uses the same recording');
-    assert.equal(registration.create(), scene, 'selecting again reuses the scene');
+    assert.equal(
+        scene.sample(1),
+        frame,
+        'seeking back uses the same recording',
+    );
+    assert.equal(
+        registration.create(),
+        scene,
+        'selecting again reuses the scene',
+    );
     assert.equal(recordings, 1);
 });

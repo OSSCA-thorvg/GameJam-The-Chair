@@ -10,7 +10,10 @@ function mix(x: number) {
 
 export function seedRng(seed: number): Rng {
     const base = seed >>> 0;
-    return { physics: mix(base ^ 0x9e3779b9), cosmetic: mix(base ^ 0x85ebca6b) };
+    return {
+        physics: mix(base ^ 0x9e3779b9),
+        cosmetic: mix(base ^ 0x85ebca6b),
+    };
 }
 
 export function nextRandom(state: number): { value: number; state: number } {

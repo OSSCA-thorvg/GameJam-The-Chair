@@ -1,11 +1,21 @@
-import { browserLocale, isMessage, LOCALE_STORAGE_KEY, translate, type Locale } from './i18n';
+import {
+    browserLocale,
+    isMessage,
+    LOCALE_STORAGE_KEY,
+    translate,
+    type Locale,
+} from './i18n';
 import { createGame } from './game/game';
 import { createEffects } from './render/effects';
 import { createRenderer } from './render/renderer';
 import { createFeedback } from './ui/feedback';
 import { createHud } from './ui/hud';
 import { bindInput } from './ui/input';
-import { createRecorder, REPLAY_DEFAULTS, type ReplayFile } from './game/replay';
+import {
+    createRecorder,
+    REPLAY_DEFAULTS,
+    type ReplayFile,
+} from './game/replay';
 import { createErrorLog, replayData, saveBrowserData } from './ui/replay-store';
 import { bindReplayMenu } from './ui/replay-menu';
 import { createReplayPlayer } from './ui/replay-player';
@@ -31,30 +41,53 @@ function applyLocale() {
     document.title = `The Chair · ${translate('intro.desc', locale)}`;
     for (const element of root.querySelectorAll<HTMLElement>('[data-i18n]')) {
         const message = element.dataset.i18n;
-        if (message !== undefined && isMessage(message)) element.textContent = translate(message, locale);
+        if (message !== undefined && isMessage(message)) {
+            element.textContent = translate(message, locale);
+        }
     }
-    for (const element of root.querySelectorAll<HTMLElement>('[data-i18n-aria]')) {
+    for (const element of root.querySelectorAll<HTMLElement>(
+        '[data-i18n-aria]',
+    )) {
         const message = element.dataset.i18nAria;
-        if (message !== undefined && isMessage(message)) element.setAttribute('aria-label', translate(message, locale));
+        if (message !== undefined && isMessage(message)) {
+            element.setAttribute('aria-label', translate(message, locale));
+        }
     }
-    for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) {
-        button.setAttribute('aria-pressed', String(button.dataset.locale === locale));
+    for (const button of root.querySelectorAll<HTMLButtonElement>(
+        '[data-locale]',
+    )) {
+        button.setAttribute(
+            'aria-pressed',
+            String(button.dataset.locale === locale),
+        );
     }
 }
 applyLocale();
 const launchParams = new URLSearchParams(location.search);
 const requestedStage = Number(launchParams.get('stage'));
-const directStage: StageId | null = [1, 2, 3, 4, 5].includes(requestedStage) ? requestedStage as StageId : null;
+const directStage: StageId | null = [1, 2, 3, 4, 5].includes(requestedStage)
+    ? (requestedStage as StageId)
+    : null;
 let startupSplashVisible = directStage === null;
 if (startupSplashVisible) {
-    showStartupSplash(root, () => locale, () => { startupSplashVisible = false; });
+    showStartupSplash(
+        root,
+        () => locale,
+        () => {
+            startupSplashVisible = false;
+        },
+    );
 }
-for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) {
+for (const button of root.querySelectorAll<HTMLButtonElement>(
+    '[data-locale]',
+)) {
     button.addEventListener('click', () => {
         const selected = button.dataset.locale;
         if (selected !== 'en' && selected !== 'ko') return;
         locale = selected;
-        try { localStorage.setItem(LOCALE_STORAGE_KEY, locale); } catch {}
+        try {
+            localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+        } catch {}
         const url = new URL(location.href);
         if (url.searchParams.has('lang') || url.searchParams.has('locale')) {
             url.searchParams.delete('locale');
@@ -67,16 +100,22 @@ for (const button of root.querySelectorAll<HTMLButtonElement>('[data-locale]')) 
 let savedDeaths = 0;
 let savedCompletedStage: 0 | StageId = 0;
 try {
-    const saved = JSON.parse(localStorage.getItem('the-chair-office-v1') || 'null');
-    if (saved?.completedStage === 1 || saved?.completedStage === 2 || saved?.completedStage === 3 || saved?.completedStage === 4 || saved?.completedStage === 5) {
+    const saved = JSON.parse(
+        localStorage.getItem('the-chair-office-v1') || 'null',
+    );
+    if (
+        saved?.completedStage === 1 ||
+        saved?.completedStage === 2 ||
+        saved?.completedStage === 3 ||
+        saved?.completedStage === 4 ||
+        saved?.completedStage === 5
+    ) {
         savedCompletedStage = saved.completedStage;
     }
     if (Number.isFinite(saved?.deaths)) {
         savedDeaths = Math.max(0, saved.deaths);
     }
-}
-catch {
-}
+} catch {}
 const seed = crypto.getRandomValues(new Uint32Array(1))[0];
 const replaySettings = REPLAY_DEFAULTS;
 const recorder = createRecorder(() => replaySettings, seed);
@@ -87,7 +126,8 @@ const reportedErrors = new Set<unknown>();
 let simulationFailed = false;
 const failurePanel = document.createElement('div');
 failurePanel.setAttribute('role', 'alert');
-failurePanel.style.cssText = 'position:fixed;inset:30% 15%;z-index:9999;background:#211c29;color:white;padding:2rem;text-align:center;border:2px solid #e9bc79';
+failurePanel.style.cssText =
+    'position:fixed;inset:30% 15%;z-index:9999;background:#211c29;color:white;padding:2rem;text-align:center;border:2px solid #e9bc79';
 failurePanel.hidden = true;
 const failureMessage = document.createElement('p');
 const reloadButton = document.createElement('button');
@@ -96,7 +136,10 @@ failurePanel.append(failureMessage, reloadButton);
 root.append(failurePanel);
 function showFailure() {
     simulationFailed = true;
-    failureMessage.textContent = locale === 'ko' ? '의자가 잠시 고장 났습니다. 다시 시작해 주세요.' : 'The chair broke down. Please restart.';
+    failureMessage.textContent =
+        locale === 'ko'
+            ? '의자가 잠시 고장 났습니다. 다시 시작해 주세요.'
+            : 'The chair broke down. Please restart.';
     reloadButton.textContent = locale === 'ko' ? '다시 시작' : 'Restart';
     failurePanel.hidden = false;
     reloadButton.focus();
@@ -112,7 +155,12 @@ const game = createGame({
     onCommand: recorder.onCommand,
     onStep(state) {
         recorder.onStep(state);
-        effects.observe({ stage: state.stage, deaths: state.deaths, time: state.time, player: state.p });
+        effects.observe({
+            stage: state.stage,
+            deaths: state.deaths,
+            time: state.time,
+            player: state.p,
+        });
     },
     onError(error, cause) {
         reportedErrors.add(cause);
@@ -123,24 +171,44 @@ const game = createGame({
     },
 });
 if (directStage !== null) game.startStage(directStage);
-document.addEventListener('visibilitychange', () => { if (document.hidden) keepBrowserData(); });
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) keepBrowserData();
+});
 window.addEventListener('pagehide', keepBrowserData);
-const describeError = (value: unknown) => value instanceof Error ? { message: value.message, stack: value.stack } : { message: String(value) };
+const describeError = (value: unknown) =>
+    value instanceof Error
+        ? { message: value.message, stack: value.stack }
+        : { message: String(value) };
 function logWindowError(value: unknown) {
     if (reportedErrors.has(value)) return;
-    errorLog.add({ tick: -1, at: 'window', ...describeError(value) }, lastStage, recorder.latest(0));
+    errorLog.add(
+        { tick: -1, at: 'window', ...describeError(value) },
+        lastStage,
+        recorder.latest(0),
+    );
     keepBrowserData();
 }
-window.addEventListener('error', event => logWindowError(event.error ?? event.message));
-window.addEventListener('unhandledrejection', event => logWindowError(event.reason));
+window.addEventListener('error', (event) =>
+    logWindowError(event.error ?? event.message),
+);
+window.addEventListener('unhandledrejection', (event) =>
+    logWindowError(event.reason),
+);
 const feedback = createFeedback(() => locale);
-const player = createReplayPlayer(root, () => locale, () => replaySettings, () => unbind.sync());
+const player = createReplayPlayer(
+    root,
+    () => locale,
+    () => replaySettings,
+    () => unbind.sync(),
+);
 const opening = createOpening(root, () => locale);
 const hintedInput = { left: 'left', right: 'right', spray: 'spray' } as const;
 const hintedGame: typeof game = {
     ...game,
     press(input) {
-        if (input in hintedInput) effects.pressKey(hintedInput[input as keyof typeof hintedInput]);
+        if (input in hintedInput) {
+            effects.pressKey(hintedInput[input as keyof typeof hintedInput]);
+        }
         game.press(input);
     },
     jump() {
@@ -166,13 +234,12 @@ const hud = createHud(root, () => locale);
 let renderer: ReturnType<typeof createRenderer> | null = null;
 try {
     renderer = createRenderer(root, () => locale);
-}
-catch (error) {
+} catch (error) {
     console.error('Renderer unavailable', error);
 }
 const perf = createPerfOverlay(root, () => locale, {
-    profile: stats => renderer?.profile(stats),
-    layerOverrides: overrides => renderer?.layerOverrides(overrides),
+    profile: (stats) => renderer?.profile(stats),
+    layerOverrides: (overrides) => renderer?.layerOverrides(overrides),
     surface: () => renderer?.surface() ?? null,
 });
 let hudMs = 0;
@@ -187,14 +254,21 @@ function draw() {
     const replay = player.active ? player.view() : null;
     const state = replay ?? live;
     const events = replay ? player.drainEvents() : liveEvents;
-    if (live.deaths !== savedDeaths || live.completedStage !== savedCompletedStage) {
+    if (
+        live.deaths !== savedDeaths ||
+        live.completedStage !== savedCompletedStage
+    ) {
         savedDeaths = live.deaths;
         savedCompletedStage = live.completedStage;
         try {
-            localStorage.setItem('the-chair-office-v1', JSON.stringify({ deaths: savedDeaths, completedStage: savedCompletedStage }));
-        }
-        catch {
-        }
+            localStorage.setItem(
+                'the-chair-office-v1',
+                JSON.stringify({
+                    deaths: savedDeaths,
+                    completedStage: savedCompletedStage,
+                }),
+            );
+        } catch {}
     }
     try {
         if (!replay) {
@@ -207,13 +281,18 @@ function draw() {
         const visual = replay ? player.effects() : effects.snapshot();
         const cutscene = replay ? null : opening.frame();
         const cues = replay ? player.feedback() : feedback.snapshot();
-        if (cutscene) renderer?.draw(openingState(state, cutscene), visual, undefined, cutscene);
-        else renderer?.draw(state, visual, undefined, undefined, cues);
+        if (cutscene) {
+            renderer?.draw(
+                openingState(state, cutscene),
+                visual,
+                undefined,
+                cutscene,
+            );
+        } else renderer?.draw(state, visual, undefined, undefined, cues);
         const hudStart = perf.enabled ? performance.now() : 0;
         hud.draw(state, cues, visual, !!cutscene);
         if (perf.enabled) hudMs = performance.now() - hudStart;
-    }
-    catch (error) {
+    } catch (error) {
         if (!presentationErrorReported) {
             console.error('Presentation failed', error);
             presentationErrorReported = true;
@@ -256,25 +335,59 @@ function frame(ms: number) {
     const simMs = profiling ? performance.now() - simStart : 0;
     hudMs = 0;
     draw();
-    if (profiling) perf.record({ frameMs: dt * 1000, simMs, ticks: advanced.ticks, droppedMs: advanced.dropped * 1000, hudMs });
+    if (profiling) {
+        perf.record({
+            frameMs: dt * 1000,
+            simMs,
+            ticks: advanced.ticks,
+            droppedMs: advanced.dropped * 1000,
+            hudMs,
+        });
+    }
 }
 const officeStageOne = {
     skipOpening: () => opening.skip(),
-    interact: game.interact, leaveMeeting: game.leaveMeeting, reset: game.reset, startStage: game.startStage, step: game.step, jump: game.jump, pause: game.pause, draw,
-    advanceImpact: game.advanceImpact, advanceFocusLoss: game.advanceFocusLoss,
+    interact: game.interact,
+    leaveMeeting: game.leaveMeeting,
+    reset: game.reset,
+    startStage: game.startStage,
+    step: game.step,
+    jump: game.jump,
+    pause: game.pause,
+    draw,
+    advanceImpact: game.advanceImpact,
+    advanceFocusLoss: game.advanceFocusLoss,
     setInput: (...v: Input[]) => game.setInput(...v),
     perf: { toggle: perf.toggle, snapshot: perf.snapshot, layers: perf.layers },
-    state: () => ({ ...game.getSnapshot(), ...effects.snapshot(), ...renderer?.info(), reaction: feedback.snapshot().reaction }),
+    state: () => ({
+        ...game.getSnapshot(),
+        ...effects.snapshot(),
+        ...renderer?.info(),
+        reaction: feedback.snapshot().reaction,
+    }),
     replay: {
         latest: () => recorder.latest(),
         watch: watchReplay,
         close: () => player.close(),
-        status: () => ({ active: player.active, tick: player.tick, view: player.view(), timeline: player.timeline && { start: player.timeline.startTick, end: player.timeline.endTick, markers: player.timeline.markers, divergedAt: player.timeline.divergedAt, error: player.timeline.error } }),
+        status: () => ({
+            active: player.active,
+            tick: player.tick,
+            view: player.view(),
+            timeline: player.timeline && {
+                start: player.timeline.startTick,
+                end: player.timeline.endTick,
+                markers: player.timeline.markers,
+                divergedAt: player.timeline.divergedAt,
+                error: player.timeline.error,
+            },
+        }),
         data: () => replayData(recorder, errorLog),
     },
 };
-(window as Window & {
-    officeStageOne?: typeof officeStageOne;
-}).officeStageOne = officeStageOne;
+(
+    window as Window & {
+        officeStageOne?: typeof officeStageOne;
+    }
+).officeStageOne = officeStageOne;
 if (!startupSplashVisible) draw();
 requestAnimationFrame(frame);

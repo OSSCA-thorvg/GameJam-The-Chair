@@ -3,14 +3,28 @@ import type { GameEvent, Input } from '../../../types';
 import { STAGES } from '../../index';
 import { skyStep } from './decide';
 import { FOCUS_DAMAGE } from '../../../level';
-import { applyFocusHit, applyFocusRecovery } from '../../../systems/focus/apply';
+import {
+    applyFocusHit,
+    applyFocusRecovery,
+} from '../../../systems/focus/apply';
 export function applySky(s: CoreState, out: GameEvent[], dt: number) {
-    const held = (input: Input) => s.keys.includes(input) ? 1 : 0;
-    const r = skyStep({
-        sky: s.sky, p: s.p, ground: s.ground, coyote: s.coyote, jumpQ: s.jumpQ, checkpoint: s.checkpoint, time: s.time,
-        direction: held('right') - held('left'),
-        length: STAGES[s.stage].length, sprayBurst: s.extinguisher.burst, sprayDir: s.extinguisher.direction,
-    }, dt);
+    const held = (input: Input) => (s.keys.includes(input) ? 1 : 0);
+    const r = skyStep(
+        {
+            sky: s.sky,
+            p: s.p,
+            ground: s.ground,
+            coyote: s.coyote,
+            jumpQ: s.jumpQ,
+            checkpoint: s.checkpoint,
+            time: s.time,
+            direction: held('right') - held('left'),
+            length: STAGES[s.stage].length,
+            sprayBurst: s.extinguisher.burst,
+            sprayDir: s.extinguisher.direction,
+        },
+        dt,
+    );
     s.sky = r.sky;
     setPlayer(s, r.p);
     s.ground = r.ground;
@@ -27,8 +41,21 @@ export function applySky(s: CoreState, out: GameEvent[], dt: number) {
     }
     if (r.hit) {
         if (r.hit.kind === 'paper') out.push({ type: 'cue', id: 'paper-hit' });
-        const damage = r.hit.kind === 'paper' ? FOCUS_DAMAGE.skyPaper : r.hit.kind === 'gear' ? FOCUS_DAMAGE.gear : FOCUS_DAMAGE.bird;
-        if (!applyFocusHit(s, out, { kind: r.hit.kind, id: r.hit.focusId, damage })) return;
+        const damage =
+            r.hit.kind === 'paper'
+                ? FOCUS_DAMAGE.skyPaper
+                : r.hit.kind === 'gear'
+                  ? FOCUS_DAMAGE.gear
+                  : FOCUS_DAMAGE.bird;
+        if (
+            !applyFocusHit(s, out, {
+                kind: r.hit.kind,
+                id: r.hit.focusId,
+                damage,
+            })
+        ) {
+            return;
+        }
     }
     // Takeover skips shared focus recovery; apply it here.
     if (s.sky.phase === 'course') applyFocusRecovery(s, dt);

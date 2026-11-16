@@ -7,12 +7,25 @@ export const STAGE_FOUR = deepFreeze({
     arrivalY: -1820,
     reveal: { settle: 2.65, turn: 8.4, hold: 2.7 },
     spawn: { x: 2380, y: -1820 },
-    checkpoints: [{ x: 2380, y: -1820 }, { x: 3790, y: -2078 }],
+    checkpoints: [
+        { x: 2380, y: -1820 },
+        { x: 3790, y: -2078 },
+    ],
     fallY: -1480,
     airSprayLimit: 3,
-    wind: { base: 55, gust: 205, period: 7.5, calm: 3, warn: 1.5, rise: .35, blow: 2.2, fall: .45, ground: .55 },
-    rock: { tilt: .2, sway: 26, slide: 520, speed: 1.55 },
-    knock: { cooldown: .7, reach: 34 },
+    wind: {
+        base: 55,
+        gust: 205,
+        period: 7.5,
+        calm: 3,
+        warn: 1.5,
+        rise: 0.35,
+        blow: 2.2,
+        fall: 0.45,
+        ground: 0.55,
+    },
+    rock: { tilt: 0.2, sway: 26, slide: 520, speed: 1.55 },
+    knock: { cooldown: 0.7, reach: 34 },
 });
 
 export type SkyHazardKind = 'paper' | 'bird' | 'gear';
@@ -34,13 +47,27 @@ export type SkyState = {
 };
 export function createSky(): SkyState {
     return {
-        phase: 'arrival', age: 0, lift: 0, drawer: 0, deskTilt: 0, signTilt: -1.28, standing: null, depth: 0, depthTravel: 0,
-        airSprays: 0, knock: 0, knockKind: null,
+        phase: 'arrival',
+        age: 0,
+        lift: 0,
+        drawer: 0,
+        deskTilt: 0,
+        signTilt: -1.28,
+        standing: null,
+        depth: 0,
+        depthTravel: 0,
+        airSprays: 0,
+        knock: 0,
+        knockKind: null,
     };
 }
 export type SkyPlatform = {
-    id: string; kind: 'roof' | 'sill' | 'sign' | 'desk' | 'small-desk' | 'finish';
-    x: number; y: number; width: number; angle: number;
+    id: string;
+    kind: 'roof' | 'sill' | 'sign' | 'desk' | 'small-desk' | 'finish';
+    x: number;
+    y: number;
+    width: number;
+    angle: number;
 };
 
 function cycle(time: number, period: number) {
@@ -51,11 +78,23 @@ export function skyGust(time: number) {
     const w = STAGE_FOUR.wind;
     const t = cycle(time, w.period);
     const start = w.calm + w.warn;
-    const warn = t < w.calm ? 0 : t < start ? (t - w.calm) / w.warn : t < start + w.blow ? 1 : Math.max(0, 1 - (t - start - w.blow) / w.fall);
+    const warn =
+        t < w.calm
+            ? 0
+            : t < start
+              ? (t - w.calm) / w.warn
+              : t < start + w.blow
+                ? 1
+                : Math.max(0, 1 - (t - start - w.blow) / w.fall);
     let strength = 0;
     if (t >= start && t < start + w.blow + w.fall) {
         const u = t - start;
-        const ramp = u < w.rise ? u / w.rise : u < w.blow ? 1 : 1 - (u - w.blow) / w.fall;
+        const ramp =
+            u < w.rise
+                ? u / w.rise
+                : u < w.blow
+                  ? 1
+                  : 1 - (u - w.blow) / w.fall;
         strength = ramp * ramp * (3 - 2 * ramp);
     }
     return { warn, strength };
@@ -69,48 +108,142 @@ export function skyWind(time: number) {
     return skyGust(time).strength;
 }
 
-const desks: Record<string, number> = { rest: 1, 'drawer-desk': 2, 'little-desk': 3, 'upper-rest': 4 };
+const desks: Record<string, number> = {
+    rest: 1,
+    'drawer-desk': 2,
+    'little-desk': 3,
+    'upper-rest': 4,
+};
 function rock(id: string, time: number) {
     const phase = desks[id] ?? 0;
     const r = STAGE_FOUR.rock;
     return {
         tilt: Det.sin(time * r.speed + phase * 1.9) * r.tilt,
-        sway: Det.sin(time * r.speed * .6 + phase * 2.3) * r.sway,
+        sway: Det.sin(time * r.speed * 0.6 + phase * 2.3) * r.sway,
     };
 }
 
-export function skyPlatforms(sky: Readonly<SkyState>, time: number): SkyPlatform[] {
-    const bob = (phase: number) => Det.sin(time * .72 + phase) * 9;
-    const desk = (id: string, x: number, y: number, width: number, extra = 0) => {
+export function skyPlatforms(
+    sky: Readonly<SkyState>,
+    time: number,
+): SkyPlatform[] {
+    const bob = (phase: number) => Det.sin(time * 0.72 + phase) * 9;
+    const desk = (
+        id: string,
+        x: number,
+        y: number,
+        width: number,
+        extra = 0,
+    ) => {
         const r = rock(id, time);
-        return { id, kind: 'desk' as const, x: x + r.sway, y, width, angle: r.tilt + extra };
+        return {
+            id,
+            kind: 'desk' as const,
+            x: x + r.sway,
+            y,
+            width,
+            angle: r.tilt + extra,
+        };
     };
     const little = rock('little-desk', time);
     return [
-        { id: 'arrival-roof', kind: 'roof', x: 2670, y: -1720, width: 390, angle: 0 },
-        { id: 'window-one', kind: 'sill', x: 3040, y: -1810 - sky.lift * 80, width: 180, angle: 0 },
-        { id: 'window-two', kind: 'sill', x: 3240, y: -1930 - sky.lift * 80, width: 180, angle: 0 },
-        { id: 'wind-sign', kind: 'sign', x: 3480, y: -2050, width: 270, angle: sky.signTilt },
-        { id: 'wind-recovery', kind: 'sill', x: 3410, y: -1900, width: 460, angle: 0 },
+        {
+            id: 'arrival-roof',
+            kind: 'roof',
+            x: 2670,
+            y: -1720,
+            width: 390,
+            angle: 0,
+        },
+        {
+            id: 'window-one',
+            kind: 'sill',
+            x: 3040,
+            y: -1810 - sky.lift * 80,
+            width: 180,
+            angle: 0,
+        },
+        {
+            id: 'window-two',
+            kind: 'sill',
+            x: 3240,
+            y: -1930 - sky.lift * 80,
+            width: 180,
+            angle: 0,
+        },
+        {
+            id: 'wind-sign',
+            kind: 'sign',
+            x: 3480,
+            y: -2050,
+            width: 270,
+            angle: sky.signTilt,
+        },
+        {
+            id: 'wind-recovery',
+            kind: 'sill',
+            x: 3410,
+            y: -1900,
+            width: 460,
+            angle: 0,
+        },
         desk('rest', 3740, -2050 + bob(1), 210),
         desk('drawer-desk', 4070, -2150 + bob(2), 270, sky.deskTilt),
-        ...(sky.drawer > .75 ? [{ id: 'little-desk', kind: 'small-desk' as const, x: 4350 + sky.drawer * 60 + little.sway, y: -2230 + bob(3), width: 170, angle: -.04 + little.tilt }] : []),
+        ...(sky.drawer > 0.75
+            ? [
+                  {
+                      id: 'little-desk',
+                      kind: 'small-desk' as const,
+                      x: 4350 + sky.drawer * 60 + little.sway,
+                      y: -2230 + bob(3),
+                      width: 170,
+                      angle: -0.04 + little.tilt,
+                  },
+              ]
+            : []),
         desk('upper-rest', 4470, -2230 + bob(4), 220),
-        { id: 'last-sign', kind: 'sign', x: 4770, y: -2310 + bob(5), width: 230, angle: -.1 },
-        { id: 'finish', kind: 'finish', x: 5170, y: -2310 + bob(6), width: 470, angle: 0 },
+        {
+            id: 'last-sign',
+            kind: 'sign',
+            x: 4770,
+            y: -2310 + bob(5),
+            width: 230,
+            angle: -0.1,
+        },
+        {
+            id: 'finish',
+            kind: 'finish',
+            x: 5170,
+            y: -2310 + bob(6),
+            width: 470,
+            angle: 0,
+        },
     ];
 }
 export function skySurface(platform: Readonly<SkyPlatform>, x: number) {
-    return platform.y + (x - platform.x - platform.width / 2) * Det.tan(platform.angle);
+    return (
+        platform.y +
+        (x - platform.x - platform.width / 2) * Det.tan(platform.angle)
+    );
 }
 
-export type SkyHazard = { id: string; kind: SkyHazardKind; x: number; y: number; r: number; spin: number; focusId: number; item?: SkyGearItem; robot?: SkyRobot };
+export type SkyHazard = {
+    id: string;
+    kind: SkyHazardKind;
+    x: number;
+    y: number;
+    r: number;
+    spin: number;
+    focusId: number;
+    item?: SkyGearItem;
+    robot?: SkyRobot;
+};
 
 const PAPER_LANES = deepFreeze([
     { from: 3640, to: 2820, y: -1905, lag: 0, speed: 360 },
-    { from: 3960, to: 3150, y: -2105, lag: .55, speed: 330 },
-    { from: 4520, to: 3700, y: -2150, lag: .2, speed: 370 },
-    { from: 5250, to: 4420, y: -2345, lag: .8, speed: 340 },
+    { from: 3960, to: 3150, y: -2105, lag: 0.55, speed: 330 },
+    { from: 4520, to: 3700, y: -2150, lag: 0.2, speed: 370 },
+    { from: 5250, to: 4420, y: -2345, lag: 0.8, speed: 340 },
 ]);
 const PAPER_PATH = { lead: 1.5, drop: 170 };
 const BIRD_LANES = deepFreeze([
@@ -120,13 +253,76 @@ const BIRD_LANES = deepFreeze([
 ]);
 const BIRD_PATH = { swoop: 1.4, reach: 260, height: 950, climb: 240 };
 const GEAR = deepFreeze([
-    { item: 'keyboard', x: 3230, y: -2150, r: 14, ax: 18, ay: 48, period: 4.6, phase: 0 },
-    { item: 'mouse', x: 2900, y: -1835, r: 9, ax: 30, ay: 40, period: 3.8, phase: 1.7 },
-    { item: 'monitor', x: 3200, y: -2290, r: 17, ax: 40, ay: 30, period: 5.2, phase: 3.1 },
-    { item: 'tower', x: 4010, y: -2240, r: 18, ax: 16, ay: 52, period: 5.6, phase: .6 },
-    { item: 'keyboard', x: 4400, y: -2450, r: 14, ax: 46, ay: 30, period: 4.9, phase: 2.4 },
-    { item: 'monitor', x: 4730, y: -2480, r: 17, ax: 18, ay: 40, period: 5, phase: 4.2 },
-    { item: 'mouse', x: 5090, y: -2475, r: 9, ax: 22, ay: 52, period: 4.2, phase: 5.3 },
+    {
+        item: 'keyboard',
+        x: 3230,
+        y: -2150,
+        r: 14,
+        ax: 18,
+        ay: 48,
+        period: 4.6,
+        phase: 0,
+    },
+    {
+        item: 'mouse',
+        x: 2900,
+        y: -1835,
+        r: 9,
+        ax: 30,
+        ay: 40,
+        period: 3.8,
+        phase: 1.7,
+    },
+    {
+        item: 'monitor',
+        x: 3200,
+        y: -2290,
+        r: 17,
+        ax: 40,
+        ay: 30,
+        period: 5.2,
+        phase: 3.1,
+    },
+    {
+        item: 'tower',
+        x: 4010,
+        y: -2240,
+        r: 18,
+        ax: 16,
+        ay: 52,
+        period: 5.6,
+        phase: 0.6,
+    },
+    {
+        item: 'keyboard',
+        x: 4400,
+        y: -2450,
+        r: 14,
+        ax: 46,
+        ay: 30,
+        period: 4.9,
+        phase: 2.4,
+    },
+    {
+        item: 'monitor',
+        x: 4730,
+        y: -2480,
+        r: 17,
+        ax: 18,
+        ay: 40,
+        period: 5,
+        phase: 4.2,
+    },
+    {
+        item: 'mouse',
+        x: 5090,
+        y: -2475,
+        r: 9,
+        ax: 22,
+        ay: 52,
+        period: 4.2,
+        phase: 5.3,
+    },
 ] as const);
 
 export function skyBirdRobot(focusId: number): SkyRobot | null {
@@ -145,9 +341,16 @@ export function skyHazards(time: number): SkyHazard[] {
         const glide = PAPER_PATH.lead + (lane.from - lane.to) / lane.speed;
         const falling = Math.max(0, age - glide);
         out.push({
-            id: `paper-${i}`, kind: 'paper', r: 24, spin: age * 7 + i, focusId: i * 100000 + Math.floor(shifted / w.period),
+            id: `paper-${i}`,
+            kind: 'paper',
+            r: 24,
+            spin: age * 7 + i,
+            focusId: i * 100000 + Math.floor(shifted / w.period),
             x: lane.from + PAPER_PATH.lead * lane.speed - age * lane.speed,
-            y: lane.y + Det.sin(age * 5 + i) * 18 + PAPER_PATH.drop * falling * falling,
+            y:
+                lane.y +
+                Det.sin(age * 5 + i) * 18 +
+                PAPER_PATH.drop * falling * falling,
         });
     });
     BIRD_LANES.forEach((lane, i) => {
@@ -155,7 +358,8 @@ export function skyHazards(time: number): SkyHazard[] {
         const age = cycle(shifted, lane.period);
         const glide = (lane.from - lane.to) / lane.speed;
         const { swoop, reach, height, climb } = BIRD_PATH;
-        let x: number, y = lane.y + Det.sin(age * 2.4 + i) * 26;
+        let x: number,
+            y = lane.y + Det.sin(age * 2.4 + i) * 26;
         if (age < swoop) {
             const k = 1 - age / swoop;
             x = lane.from + reach * k;
@@ -168,13 +372,29 @@ export function skyHazards(time: number): SkyHazard[] {
         }
         const focusId = i * 100000 + Math.floor(shifted / lane.period);
         const robot = skyBirdRobot(focusId);
-        out.push({ id: `bird-${i}`, kind: 'bird', x, y, r: 22, spin: age * 11, focusId, ...(robot ? { robot } : {}) });
+        out.push({
+            id: `bird-${i}`,
+            kind: 'bird',
+            x,
+            y,
+            r: 22,
+            spin: age * 11,
+            focusId,
+            ...(robot ? { robot } : {}),
+        });
     });
     GEAR.forEach((gear, i) => {
         const turn = (time / gear.period + gear.phase) * Math.PI * 2;
         out.push({
-            id: `gear-${i}`, kind: 'gear', item: gear.item, r: gear.r, spin: Det.sin(turn * .5) * .6 + time * (gear.item === 'mouse' ? .9 : .25),
-            x: gear.x + Det.sin(turn * .5) * gear.ax, y: gear.y + Det.sin(turn) * gear.ay,
+            id: `gear-${i}`,
+            kind: 'gear',
+            item: gear.item,
+            r: gear.r,
+            spin:
+                Det.sin(turn * 0.5) * 0.6 +
+                time * (gear.item === 'mouse' ? 0.9 : 0.25),
+            x: gear.x + Det.sin(turn * 0.5) * gear.ax,
+            y: gear.y + Det.sin(turn) * gear.ay,
             focusId: i * 100000 + Math.floor(time / gear.period),
         });
     });

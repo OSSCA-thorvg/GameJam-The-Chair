@@ -3,7 +3,20 @@ import type { Player } from '../../../types';
 
 export function fallsIntoBin(p: Readonly<Player>, binCooldown: number) {
     const bin = LEVEL.bin;
-    return binCooldown === 0 && p.x > bin.a + 25 && p.x < bin.b - 25 && p.y + 28 >= bin.rim && p.vy >= 0;
+    return (
+        binCooldown === 0 &&
+        p.x > bin.a + 25 &&
+        p.x < bin.b - 25 &&
+        p.y + 28 >= bin.rim &&
+        p.vy >= 0
+    );
 }
 
-export const BIN_REST: Readonly<Player> = Object.freeze({ x: LEVEL.bin.x, y: LEVEL.floor + 66, vx: 0, vy: 0, a: .1, w: 0 });
+export const BIN_REST: Readonly<Player> = Object.freeze({
+    x: LEVEL.bin.x,
+    y: LEVEL.floor + 66,
+    vx: 0,
+    vy: 0,
+    a: 0.1,
+    w: 0,
+});

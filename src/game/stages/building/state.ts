@@ -5,6 +5,12 @@ export type BuildingState = {
     corridor: Corridor;
 };
 
-export function createBuildingState(checkpoint: number, appearanceSeed: number): BuildingState {
-    return { furniture: [], corridor: createCorridor(checkpoint, appearanceSeed) };
+export function createBuildingState(
+    checkpoint: number,
+    appearanceSeed: number,
+): BuildingState {
+    return {
+        furniture: [],
+        corridor: createCorridor(checkpoint, appearanceSeed),
+    };
 }

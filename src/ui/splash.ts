@@ -19,7 +19,10 @@ export function createSplashPlayer(element: HTMLCanvasElement) {
             const picture = nextAnimation.picture;
             if (!picture) throw new Error('Splash picture is unavailable.');
             picture.size(WIDTH, HEIGHT);
-            const nextCanvas = new TVG.Canvas(element, { width: WIDTH, height: HEIGHT });
+            const nextCanvas = new TVG.Canvas(element, {
+                width: WIDTH,
+                height: HEIGHT,
+            });
             nextCanvas.add(picture);
             if (disposed) {
                 nextCanvas.destroy();
@@ -37,7 +40,9 @@ export function createSplashPlayer(element: HTMLCanvasElement) {
 
     function draw(seconds: number) {
         if (!animation || !canvas) return;
-        animation.seek(Math.max(0, Math.min(SPLASH_DURATION - 1 / 30, seconds)));
+        animation.seek(
+            Math.max(0, Math.min(SPLASH_DURATION - 1 / 30, seconds)),
+        );
         canvas.update().render();
     }
 
@@ -54,14 +59,23 @@ export function createSplashPlayer(element: HTMLCanvasElement) {
     };
 }
 
-export function showStartupSplash(root: HTMLElement, getLocale: () => 'en' | 'ko', onFinish: () => void) {
+export function showStartupSplash(
+    root: HTMLElement,
+    getLocale: () => 'en' | 'ko',
+    onFinish: () => void,
+) {
     const scene = root.querySelector<HTMLElement>('.scene');
     if (!scene) throw new Error('Game scene is unavailable.');
     const screen = document.createElement('div');
     screen.className = 'startup-splash';
     screen.setAttribute('role', 'button');
     screen.setAttribute('tabindex', '0');
-    screen.setAttribute('aria-label', getLocale() === 'ko' ? 'ThorVG 시작 화면 건너뛰기' : 'Skip ThorVG splash');
+    screen.setAttribute(
+        'aria-label',
+        getLocale() === 'ko'
+            ? 'ThorVG 시작 화면 건너뛰기'
+            : 'Skip ThorVG splash',
+    );
     const canvas = document.createElement('canvas');
     canvas.setAttribute('aria-hidden', 'true');
     screen.append(canvas);
@@ -80,8 +94,12 @@ export function showStartupSplash(root: HTMLElement, getLocale: () => 'en' | 'ko
         onFinish();
     };
     screen.addEventListener('click', finish);
-    screen.addEventListener('keydown', event => {
-        if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+    screen.addEventListener('keydown', (event) => {
+        if (
+            event.key === 'Escape' ||
+            event.key === 'Enter' ||
+            event.key === ' '
+        ) {
             event.preventDefault();
             event.stopPropagation();
             finish();
@@ -100,11 +118,13 @@ export function showStartupSplash(root: HTMLElement, getLocale: () => 'en' | 'ko
         player.draw(elapsed);
         frameId = requestAnimationFrame(tick);
     }
-    void player.ready.then(() => {
-        if (!closed) frameId = requestAnimationFrame(tick);
-    }).catch(error => {
-        console.error('Splash unavailable', error);
-        finish();
-    });
+    void player.ready
+        .then(() => {
+            if (!closed) frameId = requestAnimationFrame(tick);
+        })
+        .catch((error) => {
+            console.error('Splash unavailable', error);
+            finish();
+        });
     return finish;
 }

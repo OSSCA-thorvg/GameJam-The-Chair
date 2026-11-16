@@ -25,19 +25,37 @@ function isArray(value: unknown): value is unknown[] {
 }
 
 function isInput(value: unknown): value is Input {
-    return value === 'left' || value === 'right' || value === 'q' || value === 'e'
-        || value === 'spray' || value === 'forward' || value === 'back' || value === 'brake';
+    return (
+        value === 'left' ||
+        value === 'right' ||
+        value === 'q' ||
+        value === 'e' ||
+        value === 'spray' ||
+        value === 'forward' ||
+        value === 'back' ||
+        value === 'brake'
+    );
 }
 
 function isStageId(value: unknown): value is StageId {
-    return value === 1 || value === 2 || value === 3 || value === 4 || value === 5;
+    return (
+        value === 1 || value === 2 || value === 3 || value === 4 || value === 5
+    );
 }
 
 export function parseCommand(value: unknown): Command {
-    if (!isRecord(value) || typeof value.type !== 'string') throw new Error('bad command');
+    if (!isRecord(value) || typeof value.type !== 'string') {
+        throw new Error('bad command');
+    }
     switch (value.type) {
         case 'keys': {
-            if (!isArray(value.keys) || value.keys.length > 8 || !value.keys.every(isInput)) throw new Error('bad command keys');
+            if (
+                !isArray(value.keys) ||
+                value.keys.length > 8 ||
+                !value.keys.every(isInput)
+            ) {
+                throw new Error('bad command keys');
+            }
             return { type: 'keys', keys: [...new Set(value.keys)] };
         }
         case 'startStage':
@@ -58,18 +76,34 @@ export function parseCommand(value: unknown): Command {
 
 export function runCommand(s: CoreState, command: Command, out: GameEvent[]) {
     switch (command.type) {
-        case 'keys': s.keys = [...command.keys]; return;
-        case 'jump': jump(s); return;
-        case 'spray': spray(s, out); return;
-        case 'interact': if (s.mode === 'play') stageHooks(s.stage).interact?.(s); return;
-        case 'leaveMeeting': stageHooks(s.stage).leave?.(s); return;
-        case 'pause': pause(s); return;
-        case 'reset': resetAttempt(s, out); return;
+        case 'keys':
+            s.keys = [...command.keys];
+            return;
+        case 'jump':
+            jump(s);
+            return;
+        case 'spray':
+            spray(s, out);
+            return;
+        case 'interact':
+            if (s.mode === 'play') stageHooks(s.stage).interact?.(s);
+            return;
+        case 'leaveMeeting':
+            stageHooks(s.stage).leave?.(s);
+            return;
+        case 'pause':
+            pause(s);
+            return;
+        case 'reset':
+            resetAttempt(s, out);
+            return;
         case 'restart':
             if (s.mode === 'play') s.deaths++;
             resetAttempt(s, out);
             return;
-        case 'startStage': startStage(s, command.id, out); return;
+        case 'startStage':
+            startStage(s, command.id, out);
+            return;
     }
 }
 
@@ -80,16 +114,24 @@ function jump(s: CoreState) {
 
 export function spray(s: CoreState, out: GameEvent[]) {
     const hooks = stageHooks(s.stage);
-    if (s.mode !== 'play' || !s.extinguisher.owned || hooks.canSpray?.(s) === false || s.extinguisher.cooldown > 0) return;
-    const dx = (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
+    if (
+        s.mode !== 'play' ||
+        !s.extinguisher.owned ||
+        hooks.canSpray?.(s) === false ||
+        s.extinguisher.cooldown > 0
+    ) {
+        return;
+    }
+    const dx =
+        (s.keys.includes('right') ? 1 : 0) - (s.keys.includes('left') ? 1 : 0);
     const len = Det.hypot(dx, 1);
     s.extinguisher.direction = { x: -dx / len, y: 1 / len };
     s.p.vx += dx * 150;
     s.p.vy = Math.max(-500, Math.min(0, s.p.vy) - (dx ? 430 : 470));
     s.ground = false;
     s.coyote = 0;
-    s.extinguisher.cooldown = .24;
-    s.extinguisher.burst = .24;
+    s.extinguisher.cooldown = 0.24;
+    s.extinguisher.burst = 0.24;
     out.push({ type: 'cue', id: 'spray' });
     hooks.onSpray?.(s, dx);
 }

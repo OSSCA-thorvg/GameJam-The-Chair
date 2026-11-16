@@ -13,7 +13,11 @@ export type Drive = {
     expressJump: boolean;
 };
 
-export function drivePlayer(player: Readonly<Player>, d: Drive, dt: number): Player {
+export function drivePlayer(
+    player: Readonly<Player>,
+    d: Drive,
+    dt: number,
+): Player {
     const { lean, upright, drive, drag, spinDrag, limits } = PHYSICS;
     const p = { ...player };
     const was = d.grounded;
@@ -29,9 +33,23 @@ export function drivePlayer(player: Readonly<Player>, d: Drive, dt: number): Pla
         p.vx += d.dir * drive.air * dt;
     }
     p.vy += PHYSICS.gravity * dt;
-    p.vx *= Det.exp(-(d.convoyJump ? 0 : was ? (d.slip ? drag.slip : drag.ground) : drag.air) * dt);
-    p.w *= Det.exp(-(was ? (d.slip ? spinDrag.slip : spinDrag.ground) : spinDrag.air) * dt);
-    const horizontalLimit = d.expressJump ? limits.expressVx : d.convoyJump ? limits.convoyVx : limits.vx;
+    p.vx *= Det.exp(
+        -(d.convoyJump
+            ? 0
+            : was
+              ? d.slip
+                  ? drag.slip
+                  : drag.ground
+              : drag.air) * dt,
+    );
+    p.w *= Det.exp(
+        -(was ? (d.slip ? spinDrag.slip : spinDrag.ground) : spinDrag.air) * dt,
+    );
+    const horizontalLimit = d.expressJump
+        ? limits.expressVx
+        : d.convoyJump
+          ? limits.convoyVx
+          : limits.vx;
     p.vx = clamp(p.vx, -horizontalLimit, horizontalLimit);
     p.vy = clamp(p.vy, -limits.rise, limits.fall);
     p.w = clamp(p.w, -limits.spin, limits.spin);
@@ -43,8 +61,19 @@ export function drivePlayer(player: Readonly<Player>, d: Drive, dt: number): Pla
 
 export type Collision = { p: Player; ground: boolean; headHit: Point | null };
 
-export function collide(player: Readonly<Player>, solids: readonly DeepReadonly<Point[]>[]): Collision {
-    const { iterations, push, bounce, inertia, wheelGround, headDown, headDepth } = PHYSICS.contact;
+export function collide(
+    player: Readonly<Player>,
+    solids: ReadonlyArray<DeepReadonly<Point[]>>,
+): Collision {
+    const {
+        iterations,
+        push,
+        bounce,
+        inertia,
+        wheelGround,
+        headDown,
+        headDepth,
+    } = PHYSICS.contact;
     const p = { ...player };
     const parts = LEVEL.playerContacts;
     let ground = false;
@@ -55,7 +84,9 @@ export function collide(player: Readonly<Player>, solids: readonly DeepReadonly<
     const hy = p.y + head.y * c;
     for (const ob of solids) {
         const hit = contact(hx, hy, head.r, ob);
-        if (hit && hit.ny < headDown && hit.depth > headDepth) return { p, ground, headHit: { x: hx, y: hy } };
+        if (hit && hit.ny < headDown && hit.depth > headDepth) {
+            return { p, ground, headHit: { x: hx, y: hy } };
+        }
     }
     for (let iter = 0; iter < iterations; iter++) {
         for (const part of parts) {
@@ -66,16 +97,19 @@ export function collide(player: Readonly<Player>, solids: readonly DeepReadonly<
             for (const ob of solids) {
                 const hit = contact(p.x + rx, p.y + ry, part.r, ob);
                 if (!hit) continue;
-                if (part.head && hit.ny < headDown && hit.depth > headDepth) return { p, ground, headHit: { x: p.x + rx, y: p.y + ry } };
+                if (part.head && hit.ny < headDown && hit.depth > headDepth) {
+                    return { p, ground, headHit: { x: p.x + rx, y: p.y + ry } };
+                }
                 p.x += hit.nx * hit.depth * push;
                 p.y += hit.ny * hit.depth * push;
-                const vn = (p.vx - p.w * ry) * hit.nx + (p.vy + p.w * rx) * hit.ny;
+                const vn =
+                    (p.vx - p.w * ry) * hit.nx + (p.vy + p.w * rx) * hit.ny;
                 const cr = rx * hit.ny - ry * hit.nx;
                 if (vn < 0) {
-                    const impulse = -bounce * vn / (1 + cr * cr / inertia);
+                    const impulse = (-bounce * vn) / (1 + (cr * cr) / inertia);
                     p.vx += hit.nx * impulse;
                     p.vy += hit.ny * impulse;
-                    p.w += cr * impulse / inertia;
+                    p.w += (cr * impulse) / inertia;
                 }
                 if (part.wheel && hit.ny < wheelGround) ground = true;
             }

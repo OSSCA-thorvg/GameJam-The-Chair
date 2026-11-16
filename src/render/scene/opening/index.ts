@@ -2,15 +2,31 @@ import type { RenderCtx } from '../../context';
 import { drawWorld } from '../world';
 import { drawBubbles } from './bubble';
 import { drawClock } from './clock';
-import { drawChairMood, drawOfficeLight, drawRageFlash, drawSunbeams } from './mood';
+import {
+    drawChairMood,
+    drawOfficeLight,
+    drawRageFlash,
+    drawSunbeams,
+} from './mood';
 import { OPENING_BEATS, type OpeningFrame } from './timeline';
 
-export { openingFrame, openingState, openingFocusY, OPENING_BEATS, OPENING_DURATION, type OpeningFrame } from './timeline';
+export {
+    openingFrame,
+    openingState,
+    openingFocusY,
+    OPENING_BEATS,
+    OPENING_DURATION,
+    type OpeningFrame,
+} from './timeline';
 
 export function drawOpening(ctx: RenderCtx, frame: OpeningFrame) {
     ctx.commands = [];
     if (frame.shot === 'office') {
-        ctx.chairPose = { backrest: frame.chair.backrest, riderPop: frame.chair.riderPop, shiver: frame.chair.shiver };
+        ctx.chairPose = {
+            backrest: frame.chair.backrest,
+            riderPop: frame.chair.riderPop,
+            shiver: frame.chair.shiver,
+        };
         ctx.cutscene = true;
         ctx.windowDusk = frame.dusk;
         drawWorld(ctx);

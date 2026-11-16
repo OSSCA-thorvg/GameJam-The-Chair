@@ -1,6 +1,9 @@
 import { translate, type Locale } from '../i18n';
-import { OPENING_DURATION, openingFrame, type OpeningFrame } from '../render/scene/opening/timeline';
-
+import {
+    OPENING_DURATION,
+    openingFrame,
+    type OpeningFrame,
+} from '../render/scene/opening/timeline';
 
 export function createOpening(root: HTMLElement, getLocale: () => Locale) {
     let time: number | null = null;
@@ -29,7 +32,10 @@ export function createOpening(root: HTMLElement, getLocale: () => Locale) {
         screen.className = 'opening-skip';
         screen.setAttribute('role', 'button');
         screen.setAttribute('tabindex', '0');
-        screen.setAttribute('aria-label', translate('opening.skip', getLocale()));
+        screen.setAttribute(
+            'aria-label',
+            translate('opening.skip', getLocale()),
+        );
         const hint = document.createElement('span');
         hint.setAttribute('aria-hidden', 'true');
         hint.textContent = '▶▶';
@@ -39,12 +45,21 @@ export function createOpening(root: HTMLElement, getLocale: () => Locale) {
         screen.focus();
     }
 
-    window.addEventListener('keydown', event => {
-        if (time === null || !['Escape', 'Enter', ' '].includes(event.key)) return;
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        finish();
-    }, { capture: true, signal: controller.signal });
+    window.addEventListener(
+        'keydown',
+        (event) => {
+            if (
+                time === null ||
+                !['Escape', 'Enter', ' '].includes(event.key)
+            ) {
+                return;
+            }
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            finish();
+        },
+        { capture: true, signal: controller.signal },
+    );
 
     return {
         start,

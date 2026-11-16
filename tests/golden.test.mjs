@@ -12,5 +12,6 @@ const EXPECTED = {
 };
 
 for (const [name, run] of Object.entries(GOLDEN_SCENARIOS)) {
-    test(`gameplay fingerprint is unchanged: ${name}`, () => assert.equal(run(), EXPECTED[name]));
+    test(`gameplay fingerprint is unchanged: ${name}`, () =>
+        assert.equal(run(), EXPECTED[name]));
 }

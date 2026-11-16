@@ -1,72 +1,178 @@
 import type { Player } from '../../../types';
-import { GRAPH_LENGTH, STAGE_THREE, ductTimings, graphCatch, graphPointAt, inVentBlast, ventPhase, type DuctBurst } from '../data';
+import {
+    GRAPH_LENGTH,
+    STAGE_THREE,
+    ductTimings,
+    graphCatch,
+    graphPointAt,
+    inVentBlast,
+    ventPhase,
+    type DuctBurst,
+} from '../data';
 import { STAGE_FOUR } from '../../sky/data';
 import * as Det from '../../../math';
 
-export type RooftopEntrance = { kind: 'opening'; age: number } | { kind: 'ready' };
-export type FirstFlight = { kind: 'course' } | { kind: 'ride'; dist: number; speed: number; age: number } | { kind: 'flight'; age: number };
-export type DuctReaction = { kind: 'idle'; rest: number } | { kind: 'reacting'; age: number; shots: number; bursts: DuctBurst[] } | { kind: 'done'; shots: number; rest: number };
+export type RooftopEntrance =
+    { kind: 'opening'; age: number } | { kind: 'ready' };
+export type FirstFlight =
+    | { kind: 'course' }
+    | { kind: 'ride'; dist: number; speed: number; age: number }
+    | { kind: 'flight'; age: number };
+export type DuctReaction =
+    | { kind: 'idle'; rest: number }
+    | { kind: 'reacting'; age: number; shots: number; bursts: DuctBurst[] }
+    | { kind: 'done'; shots: number; rest: number };
 
 const cloneReaction = (reaction: Readonly<DuctReaction>): DuctReaction =>
-    reaction.kind === 'reacting' ? { ...reaction, bursts: reaction.bursts.map(burst => ({ ...burst })) } : { ...reaction };
+    reaction.kind === 'reacting'
+        ? {
+              ...reaction,
+              bursts: reaction.bursts.map((burst) => ({ ...burst })),
+          }
+        : { ...reaction };
 
-export function entranceStep(entrance: { kind: 'opening'; age: number }, dt: number): { entrance: RooftopEntrance; pose: Player; done: boolean } {
+export function entranceStep(
+    entrance: { kind: 'opening'; age: number },
+    dt: number,
+): { entrance: RooftopEntrance; pose: Player; done: boolean } {
     const e = STAGE_THREE.entrance;
     const age = Math.min(e.duration, entrance.age + dt);
-    const progress = Math.max(0, Math.min(1, (age - e.emergeAt) / (e.emergeEnd - e.emergeAt)));
+    const progress = Math.max(
+        0,
+        Math.min(1, (age - e.emergeAt) / (e.emergeEnd - e.emergeAt)),
+    );
     const ease = progress * progress * (3 - 2 * progress);
     const done = age >= e.duration;
     const pose = {
         x: e.fromX + (e.toX - e.fromX) * ease,
         y: STAGE_THREE.checkpoints[0].y,
-        vx: done ? 0 : (e.toX - e.fromX) * 6 * progress * (1 - progress) / (e.emergeEnd - e.emergeAt),
-        vy: 0, a: 0, w: 0,
+        vx: done
+            ? 0
+            : ((e.toX - e.fromX) * 6 * progress * (1 - progress)) /
+              (e.emergeEnd - e.emergeAt),
+        vy: 0,
+        a: 0,
+        w: 0,
     };
-    return { entrance: done ? { kind: 'ready' } : { kind: 'opening', age }, pose, done };
+    return {
+        entrance: done ? { kind: 'ready' } : { kind: 'opening', age },
+        pose,
+        done,
+    };
 }
 
 const DUCT_STEAM_ID = 1_000_000;
 
-export type RooftopInput = { p: Readonly<Player>; ground: boolean; hasExtinguisher: boolean; firstFlight: Readonly<FirstFlight>; ductReaction: Readonly<DuctReaction>; time: number };
-export type RooftopResult = { p: Player; ground: boolean; firstFlight: FirstFlight; ductReaction: DuctReaction; pickup: boolean; steamHits: number[] };
+export type RooftopInput = {
+    p: Readonly<Player>;
+    ground: boolean;
+    hasExtinguisher: boolean;
+    firstFlight: Readonly<FirstFlight>;
+    ductReaction: Readonly<DuctReaction>;
+    time: number;
+};
+export type RooftopResult = {
+    p: Player;
+    ground: boolean;
+    firstFlight: FirstFlight;
+    ductReaction: DuctReaction;
+    pickup: boolean;
+    steamHits: number[];
+};
 
 export function rooftopStep(input: RooftopInput, dt: number): RooftopResult {
     const duct = ductReactionStep(input.ductReaction, input.p, dt);
     const p = duct.p;
     const steamHits: number[] = [];
-    if (duct.knocked && duct.reaction.kind !== 'idle') steamHits.push(DUCT_STEAM_ID + duct.reaction.shots);
+    if (duct.knocked && duct.reaction.kind !== 'idle') {
+        steamHits.push(DUCT_STEAM_ID + duct.reaction.shots);
+    }
     for (const [index, vent] of STAGE_THREE.vents.entries()) {
-        if (ventPhase(vent, input.time).kind !== 'blow' || !inVentBlast(vent, p)) continue;
-        steamHits.push(index * 100000 + Math.floor((input.time - vent.offset) / vent.period));
+        if (
+            ventPhase(vent, input.time).kind !== 'blow' ||
+            !inVentBlast(vent, p)
+        ) {
+            continue;
+        }
+        steamHits.push(
+            index * 100000 +
+                Math.floor((input.time - vent.offset) / vent.period),
+        );
         if (vent.axis === 'x') p.vx += vent.dir * vent.force * dt;
         else p.vy += vent.dir * vent.force * dt;
     }
     const ground = duct.knocked ? false : input.ground;
-    const pickup = !input.hasExtinguisher && Math.abs(p.x - STAGE_THREE.pickup.x) < 55 && Math.abs(p.y - STAGE_THREE.pickup.y) < 75;
+    const pickup =
+        !input.hasExtinguisher &&
+        Math.abs(p.x - STAGE_THREE.pickup.x) < 55 &&
+        Math.abs(p.y - STAGE_THREE.pickup.y) < 75;
     if (p.y < STAGE_THREE.ceiling) {
         p.y = STAGE_THREE.ceiling;
         p.vy = Math.max(0, p.vy);
     }
     let firstFlight: FirstFlight = { ...input.firstFlight };
-    const caught = firstFlight.kind === 'course' && input.hasExtinguisher && (p.vx > 20 || p.vy >= 0) ? graphCatch(p) : null;
-    if (caught !== null) firstFlight = { kind: 'ride', dist: caught, speed: Math.max(STAGE_THREE.graph.startSpeed, Math.abs(p.vx)), age: 0 };
-    return { p, ground, firstFlight, ductReaction: duct.reaction, pickup, steamHits };
+    const caught =
+        firstFlight.kind === 'course' &&
+        input.hasExtinguisher &&
+        (p.vx > 20 || p.vy >= 0)
+            ? graphCatch(p)
+            : null;
+    if (caught !== null) {
+        firstFlight = {
+            kind: 'ride',
+            dist: caught,
+            speed: Math.max(STAGE_THREE.graph.startSpeed, Math.abs(p.vx)),
+            age: 0,
+        };
+    }
+    return {
+        p,
+        ground,
+        firstFlight,
+        ductReaction: duct.reaction,
+        pickup,
+        steamHits,
+    };
 }
 
-export function graphRideStep(ride: Readonly<Extract<FirstFlight, { kind: 'ride' }>>, p: Readonly<Player>, dt: number): { flight: FirstFlight; p: Player } {
+export function graphRideStep(
+    ride: Readonly<Extract<FirstFlight, { kind: 'ride' }>>,
+    p: Readonly<Player>,
+    dt: number,
+): { flight: FirstFlight; p: Player } {
     const g = STAGE_THREE.graph;
     const speed = Math.min(g.topSpeed, ride.speed + g.accel * dt);
     const dist = ride.dist + speed * dt;
     const at = graphPointAt(dist);
-    const target = Math.max(-g.maxTilt, Math.min(g.maxTilt, Det.atan2(at.ty, at.tx)));
+    const target = Math.max(
+        -g.maxTilt,
+        Math.min(g.maxTilt, Det.atan2(at.ty, at.tx)),
+    );
     const a = p.a + (target - p.a) * (1 - Det.exp(-10 * dt));
-    const next = { ...p, x: at.x + Det.sin(a) * 28, y: at.y - Det.cos(a) * 28, vx: at.tx * speed, vy: at.ty * speed, a, w: 0 };
-    if (dist < GRAPH_LENGTH) return { flight: { kind: 'ride', dist, speed, age: ride.age + dt }, p: next };
+    const next = {
+        ...p,
+        x: at.x + Det.sin(a) * 28,
+        y: at.y - Det.cos(a) * 28,
+        vx: at.tx * speed,
+        vy: at.ty * speed,
+        a,
+        w: 0,
+    };
+    if (dist < GRAPH_LENGTH) {
+        return {
+            flight: { kind: 'ride', dist, speed, age: ride.age + dt },
+            p: next,
+        };
+    }
     next.vy = Math.min(next.vy, -320);
     return { flight: { kind: 'flight', age: 0 }, p: next };
 }
 
-export function flightStep(flight: { kind: 'flight'; age: number }, p: Readonly<Player>, dt: number): { flight: FirstFlight; p: Player; arrived: boolean } {
+export function flightStep(
+    flight: { kind: 'flight'; age: number },
+    p: Readonly<Player>,
+    dt: number,
+): { flight: FirstFlight; p: Player; arrived: boolean } {
     const next = { ...p };
     next.vx *= Det.exp(-3 * dt);
     next.x += next.vx * dt;
@@ -75,22 +181,46 @@ export function flightStep(flight: { kind: 'flight'; age: number }, p: Readonly<
     next.vy += (targetSpeed - next.vy) * (1 - Det.exp(-2.5 * dt));
     next.y += next.vy * dt;
     next.a += (0 - next.a) * dt * 5;
-    return { flight: { kind: 'flight', age: flight.age + dt }, p: next, arrived: next.y <= STAGE_FOUR.arrivalY };
+    return {
+        flight: { kind: 'flight', age: flight.age + dt },
+        p: next,
+        arrived: next.y <= STAGE_FOUR.arrivalY,
+    };
 }
 
-function ductReactionStep(input: Readonly<DuctReaction>, player: Readonly<Player>, dt: number): { reaction: DuctReaction; p: Player; knocked: boolean } {
+function ductReactionStep(
+    input: Readonly<DuctReaction>,
+    player: Readonly<Player>,
+    dt: number,
+): { reaction: DuctReaction; p: Player; knocked: boolean } {
     const p = { ...player };
     const duct = STAGE_THREE.duct;
     let reaction = cloneReaction(input);
     if (reaction.kind === 'idle') {
         reaction.rest += dt;
-        if (reaction.rest < duct.firstSneezeAt) return { reaction, p, knocked: false };
-        reaction = { kind: 'reacting', age: reaction.rest - duct.firstSneezeAt, shots: 1, bursts: [{ kind: 'first', age: reaction.rest - duct.firstSneezeAt }] };
+        if (reaction.rest < duct.firstSneezeAt) {
+            return { reaction, p, knocked: false };
+        }
+        reaction = {
+            kind: 'reacting',
+            age: reaction.rest - duct.firstSneezeAt,
+            shots: 1,
+            bursts: [
+                { kind: 'first', age: reaction.rest - duct.firstSneezeAt },
+            ],
+        };
     } else if (reaction.kind === 'done') {
         reaction.rest += dt;
-        if (reaction.rest < duct.gustPeriod) return { reaction, p, knocked: false };
+        if (reaction.rest < duct.gustPeriod) {
+            return { reaction, p, knocked: false };
+        }
         // Age 10 keeps debris from the first sneeze settled.
-        reaction = { kind: 'reacting', age: 10, shots: reaction.shots + 1, bursts: [{ kind: 'gust', age: reaction.rest - duct.gustPeriod }] };
+        reaction = {
+            kind: 'reacting',
+            age: 10,
+            shots: reaction.shots + 1,
+            bursts: [{ kind: 'gust', age: reaction.rest - duct.gustPeriod }],
+        };
     }
     if (reaction.kind !== 'reacting') return { reaction, p, knocked: false };
     let knocked = false;
@@ -100,19 +230,33 @@ function ductReactionStep(input: Readonly<DuctReaction>, player: Readonly<Player
         const windAt = timing.inhale + timing.twitch;
         const before = burst.age;
         burst.age += dt;
-        if (before < windAt && burst.age >= windAt
-            && p.x >= duct.x - 260 && p.x <= duct.x + 30 && Math.abs(p.y - duct.y) < 180) {
-            const speed = burst.kind === 'first' ? duct.firstKnockback : duct.gustKnockback;
-            p.vx = Math.max(-315, Math.min(-speed, p.vx - speed * .5));
+        if (
+            before < windAt &&
+            burst.age >= windAt &&
+            p.x >= duct.x - 260 &&
+            p.x <= duct.x + 30 &&
+            Math.abs(p.y - duct.y) < 180
+        ) {
+            const speed =
+                burst.kind === 'first'
+                    ? duct.firstKnockback
+                    : duct.gustKnockback;
+            p.vx = Math.max(-315, Math.min(-speed, p.vx - speed * 0.5));
             p.vy -= 70;
-            p.w -= .3;
+            p.w -= 0.3;
             knocked = true;
         }
     }
-    reaction.bursts = reaction.bursts.filter(burst => {
+    reaction.bursts = reaction.bursts.filter((burst) => {
         const timing = ductTimings(burst.kind);
         return burst.age < timing.inhale + timing.twitch + timing.sneeze;
     });
-    if (!reaction.bursts.length) return { reaction: { kind: 'done', shots: reaction.shots, rest: 0 }, p, knocked };
+    if (!reaction.bursts.length) {
+        return {
+            reaction: { kind: 'done', shots: reaction.shots, rest: 0 },
+            p,
+            knocked,
+        };
+    }
     return { reaction, p, knocked };
 }

@@ -2,49 +2,119 @@ import type { Input, Player } from '../../../types';
 import * as Det from '../../../math';
 import { STAGE_FIVE as C, type OrbitState } from '../data';
 
-type Beam = typeof C.satelliteLight.beams[number];
+type Beam = (typeof C.satelliteLight.beams)[number];
 type Aim = { x: number; y: number };
 
-export function orbitStep(orbit: Readonly<OrbitState>, player: Readonly<Player>, keys: readonly Input[], dt: number) {
+export function orbitStep(
+    orbit: Readonly<OrbitState>,
+    player: Readonly<Player>,
+    keys: readonly Input[],
+    dt: number,
+) {
     const next = { ...orbit, age: orbit.age + dt };
     const p = { ...player };
-    const held = (key: Input) => keys.includes(key) ? 1 : 0;
+    const held = (key: Input) => (keys.includes(key) ? 1 : 0);
     if (next.phase === 'parked') {
         next.settled += dt;
-        return { orbit: next, p, checkpoint: false, flag: 0, satelliteLit: false, spraying: false };
+        return {
+            orbit: next,
+            p,
+            checkpoint: false,
+            flag: 0,
+            satelliteLit: false,
+            spraying: false,
+        };
     }
     if (next.freeze > 0) {
         next.freeze = Math.max(0, next.freeze - dt);
-        return { orbit: next, p, checkpoint: false, flag: 0, satelliteLit: false, spraying: true };
+        return {
+            orbit: next,
+            p,
+            checkpoint: false,
+            flag: 0,
+            satelliteLit: false,
+            spraying: true,
+        };
     }
-    if (next.phase === 'entry' && next.age >= C.entryTime) next.phase = C.rings.length ? 'rings' : 'door';
+    if (next.phase === 'entry' && next.age >= C.entryTime) {
+        next.phase = C.rings.length ? 'rings' : 'door';
+    }
     const controlled = next.phase !== 'entry';
     const auto = autopilot(next);
-    const steer = auto ? 0 : controlled ? 1 : Math.min(1, next.age / C.entryTime);
-    p.vx = steerAxis(p.vx, p.x, (held('right') - held('left')) * steer, -C.bounds.x, C.bounds.x, dt);
-    p.vy = steerAxis(p.vy, p.y, (held('forward') - held('back')) * steer, -C.bounds.y, C.bounds.y, dt);
+    const steer = auto
+        ? 0
+        : controlled
+          ? 1
+          : Math.min(1, next.age / C.entryTime);
+    p.vx = steerAxis(
+        p.vx,
+        p.x,
+        (held('right') - held('left')) * steer,
+        -C.bounds.x,
+        C.bounds.x,
+        dt,
+    );
+    p.vy = steerAxis(
+        p.vy,
+        p.y,
+        (held('forward') - held('back')) * steer,
+        -C.bounds.y,
+        C.bounds.y,
+        dt,
+    );
     p.a += (-p.vx * C.bankSlide - p.a) * Math.min(1, dt * C.bankResponse);
     const top = gearAt(next.z).maxSpeed;
-    const landing = auto ? Math.max(C.autopilot.landing, Math.min(C.cruise, (C.checkpoint.z - next.z) * C.autopilot.brake)) : 0;
-    if (auto) next.speed += (landing - next.speed) * (1 - Det.exp(-C.autopilot.response * dt));
-    else if (controlled) next.speed = next.speed < top ? Math.min(top, next.speed + C.thrust * dt) : next.speed;
+    const landing = auto
+        ? Math.max(
+              C.autopilot.landing,
+              Math.min(C.cruise, (C.checkpoint.z - next.z) * C.autopilot.brake),
+          )
+        : 0;
+    if (auto) {
+        next.speed +=
+            (landing - next.speed) * (1 - Det.exp(-C.autopilot.response * dt));
+    } else if (controlled) {
+        next.speed =
+            next.speed < top
+                ? Math.min(top, next.speed + C.thrust * dt)
+                : next.speed;
+    }
     next.aims = aimAt(next, p, dt);
     const beam = controlled ? satelliteLightOn(next, p, next.z) : null;
     if (beam) satelliteLightShove(next, p, beam, dt);
     const satelliteLit = beam !== null;
-    p.x = Math.max(-C.bounds.x - C.steer.overshoot, Math.min(C.bounds.x + C.steer.overshoot, p.x + p.vx * dt));
-    p.y = Math.max(-C.bounds.y - C.steer.overshoot, Math.min(C.bounds.y + C.steer.overshoot, p.y + p.vy * dt));
+    p.x = Math.max(
+        -C.bounds.x - C.steer.overshoot,
+        Math.min(C.bounds.x + C.steer.overshoot, p.x + p.vx * dt),
+    );
+    p.y = Math.max(
+        -C.bounds.y - C.steer.overshoot,
+        Math.min(C.bounds.y + C.steer.overshoot, p.y + p.vy * dt),
+    );
     next.z += next.speed * dt;
-    if (controlled && !beam && satelliteLightOn(next, p, next.z)) next.freeze = C.satelliteLight.freeze;
+    if (controlled && !beam && satelliteLightOn(next, p, next.z)) {
+        next.freeze = C.satelliteLight.freeze;
+    }
     advanceRings(next, p);
     const checkpoint = arriveAtDoor(next, p);
-    const flag = controlled ? C.restarts.findIndex(z => orbit.z < z && next.z >= z) + 1 : 0;
-    return { orbit: next, p, checkpoint, flag, satelliteLit, spraying: !auto || next.speed < landing - 1 };
+    const flag = controlled
+        ? C.restarts.findIndex((z) => orbit.z < z && next.z >= z) + 1
+        : 0;
+    return {
+        orbit: next,
+        p,
+        checkpoint,
+        flag,
+        satelliteLit,
+        spraying: !auto || next.speed < landing - 1,
+    };
 }
 
 export function gearAt(z: number) {
     let index = 0;
-    for (let i = 0; i < C.gears.length; i++) if (z >= C.gears[i].from) index = i;
+    for (let i = 0; i < C.gears.length; i++) {
+        if (z >= C.gears[i].from) index = i;
+    }
     return { index, ...C.gears[index] };
 }
 
@@ -52,7 +122,14 @@ export function autopilot(orbit: Readonly<Pick<OrbitState, 'phase' | 'z'>>) {
     return orbit.phase === 'door' && orbit.z >= C.autopilot.from;
 }
 
-function steerAxis(v: number, at: number, input: number, low: number, high: number, dt: number) {
+function steerAxis(
+    v: number,
+    at: number,
+    input: number,
+    low: number,
+    high: number,
+    dt: number,
+) {
     const over = at > high ? at - high : at < low ? at - low : 0;
     const target = input * C.steer.speed - over * C.steer.edge;
     const rate = input !== 0 || over !== 0 ? C.steer.response : C.steer.release;
@@ -60,19 +137,33 @@ function steerAxis(v: number, at: number, input: number, low: number, high: numb
 }
 
 export function satelliteLightArrival(beam: Beam, z: number, speed: number) {
-    return (beam.from - z) / Math.max(C.cruise * .4, speed);
+    return (beam.from - z) / Math.max(C.cruise * 0.4, speed);
 }
 
-function aimAt(orbit: Readonly<OrbitState>, p: Readonly<Pick<Player, 'x' | 'y' | 'vx' | 'vy'>>, dt: number): Aim[] {
+function aimAt(
+    orbit: Readonly<OrbitState>,
+    p: Readonly<Pick<Player, 'x' | 'y' | 'vx' | 'vy'>>,
+    dt: number,
+): Aim[] {
     const { warn } = C.satelliteLight;
     return C.satelliteLight.beams.map((beam, i) => {
-        const { lock, track } = gearAt(beam.from), chase = 1 - Det.exp(-track * dt);
+        const { lock, track } = gearAt(beam.from),
+            chase = 1 - Det.exp(-track * dt);
         const aim = orbit.aims[i] ?? { x: p.x, y: p.y };
         const arrival = satelliteLightArrival(beam, orbit.z, orbit.speed);
-        const lead = beam.lead ?? 0, edge = (v: number, b: number) => Math.max(-b, Math.min(b, v));
-        const target = { x: edge(p.x + p.vx * lead, C.bounds.x), y: edge(p.y + p.vy * lead, C.bounds.y) };
+        const lead = beam.lead ?? 0,
+            edge = (v: number, b: number) => Math.max(-b, Math.min(b, v));
+        const target = {
+            x: edge(p.x + p.vx * lead, C.bounds.x),
+            y: edge(p.y + p.vy * lead, C.bounds.y),
+        };
         if (arrival > warn) return target;
-        if (arrival > lock) return { x: aim.x + (target.x - aim.x) * chase, y: aim.y + (target.y - aim.y) * chase };
+        if (arrival > lock) {
+            return {
+                x: aim.x + (target.x - aim.x) * chase,
+                y: aim.y + (target.y - aim.y) * chase,
+            };
+        }
         return aim;
     });
 }
@@ -85,14 +176,24 @@ function overlap(aim: Aim, beam: Beam, p: Readonly<Pick<Player, 'x' | 'y'>>) {
     const r = C.satelliteLight.chairRadius;
     if (beam.shape === 'circle') {
         const depth = beam.half.x + r - Det.hypot(p.x - aim.x, p.y - aim.y);
-        return Math.abs(p.x - aim.x) >= Math.abs(p.y - aim.y) ? { x: depth, y: Infinity } : { x: Infinity, y: depth };
+        return Math.abs(p.x - aim.x) >= Math.abs(p.y - aim.y)
+            ? { x: depth, y: Infinity }
+            : { x: Infinity, y: depth };
     }
-    return { x: beam.half.x + r - Math.abs(p.x - aim.x), y: beam.half.y + r - Math.abs(p.y - aim.y) };
+    return {
+        x: beam.half.x + r - Math.abs(p.x - aim.x),
+        y: beam.half.y + r - Math.abs(p.y - aim.y),
+    };
 }
 
-export function satelliteLightOn(orbit: Readonly<Pick<OrbitState, 'aims'>>, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number): Beam | null {
+export function satelliteLightOn(
+    orbit: Readonly<Pick<OrbitState, 'aims'>>,
+    p: Readonly<Pick<Player, 'x' | 'y'>>,
+    z: number,
+): Beam | null {
     for (let i = 0; i < C.satelliteLight.beams.length; i++) {
-        const beam = C.satelliteLight.beams[i], aim = orbit.aims[i];
+        const beam = C.satelliteLight.beams[i],
+            aim = orbit.aims[i];
         if (!aim || z < beam.from || z > beam.to) continue;
         const inside = overlap(aim, beam, p);
         if (inside.x > 0 && inside.y > 0) return beam;
@@ -100,14 +201,24 @@ export function satelliteLightOn(orbit: Readonly<Pick<OrbitState, 'aims'>>, p: R
     return null;
 }
 
-export function inSatelliteLight(orbit: Readonly<Pick<OrbitState, 'aims'>>, p: Readonly<Pick<Player, 'x' | 'y'>>, z: number) {
+export function inSatelliteLight(
+    orbit: Readonly<Pick<OrbitState, 'aims'>>,
+    p: Readonly<Pick<Player, 'x' | 'y'>>,
+    z: number,
+) {
     return satelliteLightOn(orbit, p, z) !== null;
 }
 
-function satelliteLightShove(next: OrbitState, p: Player, beam: Beam, dt: number) {
+function satelliteLightShove(
+    next: OrbitState,
+    p: Player,
+    beam: Beam,
+    dt: number,
+) {
     const { slowSpeed, slowResponse, shove } = C.satelliteLight;
     next.speed += (slowSpeed - next.speed) * Math.min(1, slowResponse * dt);
-    const aim = next.aims[C.satelliteLight.beams.indexOf(beam)], inside = overlap(aim, beam, p);
+    const aim = next.aims[C.satelliteLight.beams.indexOf(beam)],
+        inside = overlap(aim, beam, p);
     if (inside.x < inside.y) p.vx += (p.x >= aim.x ? 1 : -1) * shove * dt;
     else p.vy += (p.y >= aim.y ? 1 : -1) * shove * dt;
 }

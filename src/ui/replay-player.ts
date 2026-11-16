@@ -1,17 +1,31 @@
 import { FIXED_STEP } from '../game/level';
 import { viewState } from '../game/game';
-import { buildTimeline, seekTimeline, type ReplayCursor, type ReplayFile, type ReplaySettings, type Timeline } from '../game/replay';
+import {
+    buildTimeline,
+    seekTimeline,
+    type ReplayCursor,
+    type ReplayFile,
+    type ReplaySettings,
+    type Timeline,
+} from '../game/replay';
 import type { GameEvent } from '../game/types';
 import { translate, type Locale, type Message } from '../i18n';
 import { createEffects } from '../render/effects';
 import { createFeedback } from './feedback';
 import { buildPersonalBoxTrack, personalBoxAt } from './personal-box-replay';
 
-const SPEEDS = [.25, .5, 1, 2, 4];
+const SPEEDS = [0.25, 0.5, 1, 2, 4];
 const HOLD_SECONDS = 1;
 
-export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, getSettings: () => ReplaySettings, onClose: () => void, { closable = true } = {}) {
-    const q = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector);
+export function createReplayPlayer(
+    root: HTMLElement,
+    getLocale: () => Locale,
+    getSettings: () => ReplaySettings,
+    onClose: () => void,
+    { closable = true } = {},
+) {
+    const q = <T extends HTMLElement>(selector: string) =>
+        root.querySelector<T>(selector);
     const bar = q<HTMLElement>('[data-replay-bar]');
     const playButton = q<HTMLButtonElement>('[data-replay-play]');
     const seekInput = q<HTMLInputElement>('[data-replay-seek]');
@@ -38,7 +52,13 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
     function receive(events: readonly GameEvent[]) {
         if (!cursor) return;
         const state = cursor.state;
-        effects.observe({ stage: state.stage, deaths: state.deaths, time: state.time, player: state.p, mode: state.mode });
+        effects.observe({
+            stage: state.stage,
+            deaths: state.deaths,
+            time: state.time,
+            player: state.p,
+            mode: state.mode,
+        });
         if (!events.length) return;
         const view = viewState(cursor.state);
         for (const event of events) {
@@ -48,7 +68,8 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
         pending.push(...events);
     }
 
-    // Playback errors are reported by the timeline; keep them out of the page frame loop.
+    // Playback errors are reported by the timeline; keep them out of the page
+    // frame loop.
     function stepOnce(manual = false): boolean {
         try {
             return advanceCursor(manual);
@@ -61,7 +82,11 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
         if (!cursor) return false;
         while (cursor.pending() === 'command') {
             const mode = cursor.state.mode;
-            if (!manual && (mode === 'dead' || mode === 'won') && heldTick !== cursor.state.tick) {
+            if (
+                !manual &&
+                (mode === 'dead' || mode === 'won') &&
+                heldTick !== cursor.state.tick
+            ) {
                 heldTick = cursor.state.tick;
                 hold = HOLD_SECONDS;
                 return true;
@@ -76,17 +101,24 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
 
     function seek(tick: number) {
         if (!timeline) return;
-        const target = Math.max(timeline.startTick, Math.min(timeline.endTick, Math.round(tick)));
+        const target = Math.max(
+            timeline.startTick,
+            Math.min(timeline.endTick, Math.round(tick)),
+        );
         const warmup = Math.round(getSettings().warmupSeconds / FIXED_STEP);
         cursor = seekTimeline(timeline, target - warmup);
         effects = createEffects();
-        effects.restorePersonalBox(personalBoxAt(personalBoxTrack, cursor.state.tick));
+        effects.restorePersonalBox(
+            personalBoxAt(personalBoxTrack, cursor.state.tick),
+        );
         feedback = createFeedback(getLocale);
         pending = [];
         hold = 0;
         heldTick = -1;
         acc = 0;
-        while (cursor.state.tick < target && cursor.pending() !== 'end') receive(cursor.next() ?? []);
+        while (cursor.state.tick < target && cursor.pending() !== 'end') {
+            receive(cursor.next() ?? []);
+        }
         pending = [];
         sync();
     }
@@ -95,21 +127,35 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
         if (!timeline || !cursor) return;
         const tick = cursor.state.tick;
         if (seekInput) seekInput.value = String(tick);
-        if (timeLabel) timeLabel.textContent = `${((tick - timeline.startTick) * FIXED_STEP).toFixed(2)} / ${((timeline.endTick - timeline.startTick) * FIXED_STEP).toFixed(2)} s`;
+        if (timeLabel) {
+            timeLabel.textContent = `${((tick - timeline.startTick) * FIXED_STEP).toFixed(2)} / ${((timeline.endTick - timeline.startTick) * FIXED_STEP).toFixed(2)} s`;
+        }
         if (playButton) {
             playButton.textContent = playing ? '❚❚' : '▶';
-            playButton.setAttribute('aria-label', t(playing ? 'replay.pause' : 'replay.play'));
+            playButton.setAttribute(
+                'aria-label',
+                t(playing ? 'replay.pause' : 'replay.play'),
+            );
         }
         loopButton?.setAttribute('aria-pressed', String(loop));
     }
 
     function notes() {
         if (!timeline) return '';
-        const seconds = (tick: number) => ((tick - timeline!.startTick) * FIXED_STEP).toFixed(2) + 's';
+        const seconds = (tick: number) =>
+            ((tick - timeline!.startTick) * FIXED_STEP).toFixed(2) + 's';
         const parts: string[] = [];
         if (timeline.versionMismatch) parts.push(t('replay.otherVersion'));
-        if (timeline.divergedAt !== null) parts.push(`${t('replay.diverged')} ${seconds(timeline.divergedAt)}`);
-        if (timeline.error) parts.push(`${t('replay.errorAt')} ${seconds(timeline.error.tick)}: ${timeline.error.message}`);
+        if (timeline.divergedAt !== null) {
+            parts.push(
+                `${t('replay.diverged')} ${seconds(timeline.divergedAt)}`,
+            );
+        }
+        if (timeline.error) {
+            parts.push(
+                `${t('replay.errorAt')} ${seconds(timeline.error.tick)}: ${timeline.error.message}`,
+            );
+        }
         if (timeline.file.truncated) parts.push(t('replay.truncated'));
         return parts.join(' · ');
     }
@@ -135,43 +181,102 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
 
     const controller = new AbortController();
     const options = { signal: controller.signal };
-    playButton?.addEventListener('click', () => {
-        if (!playing && cursor && timeline && cursor.state.tick >= timeline.endTick) seek(timeline.startTick);
-        setPlaying(!playing);
-    }, options);
-    q('[data-replay-prev]')?.addEventListener('click', () => { setPlaying(false); if (cursor) seek(cursor.state.tick - 1); }, options);
-    q('[data-replay-next]')?.addEventListener('click', () => { setPlaying(false); stepOnce(true); sync(); }, options);
+    playButton?.addEventListener(
+        'click',
+        () => {
+            if (
+                !playing &&
+                cursor &&
+                timeline &&
+                cursor.state.tick >= timeline.endTick
+            ) {
+                seek(timeline.startTick);
+            }
+            setPlaying(!playing);
+        },
+        options,
+    );
+    q('[data-replay-prev]')?.addEventListener(
+        'click',
+        () => {
+            setPlaying(false);
+            if (cursor) seek(cursor.state.tick - 1);
+        },
+        options,
+    );
+    q('[data-replay-next]')?.addEventListener(
+        'click',
+        () => {
+            setPlaying(false);
+            stepOnce(true);
+            sync();
+        },
+        options,
+    );
     q('[data-replay-exit]')?.addEventListener('click', () => close(), options);
-    loopButton?.addEventListener('click', () => { loop = !loop; sync(); }, options);
-    seekInput?.addEventListener('input', () => seek(Number(seekInput.value)), options);
-    speedSelect?.addEventListener('change', () => { speed = Number(speedSelect.value) || 1; }, options);
-    window.addEventListener('keydown', e => {
-        if (!timeline || e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
-        const handled: Record<string, () => void> = {
-            ' ': () => playButton?.click(),
-            ArrowLeft: () => q<HTMLButtonElement>('[data-replay-prev]')?.click(),
-            ArrowRight: () => q<HTMLButtonElement>('[data-replay-next]')?.click(),
-            ...(closable ? { Escape: () => close() } : {}),
-        };
-        const action = handled[e.key];
-        if (!action) return;
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        action();
-    }, { ...options, capture: true });
+    loopButton?.addEventListener(
+        'click',
+        () => {
+            loop = !loop;
+            sync();
+        },
+        options,
+    );
+    seekInput?.addEventListener(
+        'input',
+        () => seek(Number(seekInput.value)),
+        options,
+    );
+    speedSelect?.addEventListener(
+        'change',
+        () => {
+            speed = Number(speedSelect.value) || 1;
+        },
+        options,
+    );
+    window.addEventListener(
+        'keydown',
+        (e) => {
+            if (
+                !timeline ||
+                e.target instanceof HTMLInputElement ||
+                e.target instanceof HTMLSelectElement
+            ) {
+                return;
+            }
+            const handled: Record<string, () => void> = {
+                ' ': () => playButton?.click(),
+                ArrowLeft: () =>
+                    q<HTMLButtonElement>('[data-replay-prev]')?.click(),
+                ArrowRight: () =>
+                    q<HTMLButtonElement>('[data-replay-next]')?.click(),
+                ...(closable ? { Escape: () => close() } : {}),
+            };
+            const action = handled[e.key];
+            if (!action) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            action();
+        },
+        { ...options, capture: true },
+    );
 
     function open(file: ReplayFile) {
         timeline = buildTimeline(file, getSettings().keyframeInterval);
         personalBoxTrack = buildPersonalBoxTrack(timeline);
         speed = getSettings().playbackSpeed;
         if (speedSelect) {
-            speedSelect.replaceChildren(...[...new Set([...SPEEDS, speed])].sort((a, b) => a - b).map(value => {
-                const option = document.createElement('option');
-                option.value = String(value);
-                option.textContent = `${value}×`;
-                option.selected = value === speed;
-                return option;
-            }));
+            speedSelect.replaceChildren(
+                ...[...new Set([...SPEEDS, speed])]
+                    .sort((a, b) => a - b)
+                    .map((value) => {
+                        const option = document.createElement('option');
+                        option.value = String(value);
+                        option.textContent = `${value}×`;
+                        option.selected = value === speed;
+                        return option;
+                    }),
+            );
         }
         if (seekInput) {
             seekInput.min = String(timeline.startTick);
@@ -201,17 +306,29 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
     return {
         open,
         close,
-        get active() { return !!timeline; },
-        get timeline() { return timeline; },
-        get tick() { return cursor?.state.tick ?? 0; },
-        get state() { return cursor?.state ?? null; },
-        get playing() { return playing; },
-        seek(tick: number) { seek(tick); },
+        get active() {
+            return !!timeline;
+        },
+        get timeline() {
+            return timeline;
+        },
+        get tick() {
+            return cursor?.state.tick ?? 0;
+        },
+        get state() {
+            return cursor?.state ?? null;
+        },
+        get playing() {
+            return playing;
+        },
+        seek(tick: number) {
+            seek(tick);
+        },
         setPlaying,
         advance(dt: number) {
             if (!timeline || !playing || !Number.isFinite(dt) || dt < 0) return;
-            effects.advance(Math.min(dt, .25) * speed);
-            acc += Math.min(dt, .25) * speed;
+            effects.advance(Math.min(dt, 0.25) * speed);
+            acc += Math.min(dt, 0.25) * speed;
             while (acc >= FIXED_STEP) {
                 acc -= FIXED_STEP;
                 if (hold > 0) {
@@ -220,16 +337,25 @@ export function createReplayPlayer(root: HTMLElement, getLocale: () => Locale, g
                 }
                 if (!stepOnce()) {
                     if (loop) seek(timeline.startTick);
-                    else { playing = false; break; }
+                    else {
+                        playing = false;
+                        break;
+                    }
                 }
             }
             sync();
         },
-        view() { return cursor ? viewState(cursor.state) : null; },
-        drainEvents() { return pending.splice(0); },
+        view() {
+            return cursor ? viewState(cursor.state) : null;
+        },
+        drainEvents() {
+            return pending.splice(0);
+        },
         effects: () => effects.snapshot(),
         feedback: () => feedback.snapshot(),
-        destroy() { controller.abort(); },
+        destroy() {
+            controller.abort();
+        },
     };
 }
 

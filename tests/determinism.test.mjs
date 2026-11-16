@@ -11,12 +11,22 @@ const scenarios = [
 ];
 
 for (const scenario of scenarios) {
-    determinismTests(scenario.name, scenario.start, sampleCommands(scenario.ticks, { spray: scenario.spray }), scenario.ticks);
+    determinismTests(
+        scenario.name,
+        scenario.start,
+        sampleCommands(scenario.ticks, { spray: scenario.spray }),
+        scenario.ticks,
+    );
 }
 
 test('game state round-trips through JSON at any stage', () => {
     for (const scenario of scenarios) {
-        const game = runWith(5, scenario.start, sampleCommands(240, { spray: scenario.spray }), 240);
+        const game = runWith(
+            5,
+            scenario.start,
+            sampleCommands(240, { spray: scenario.spray }),
+            240,
+        );
         const saved = game.serialize();
         const copy = begin(6);
         copy.restore(saved);

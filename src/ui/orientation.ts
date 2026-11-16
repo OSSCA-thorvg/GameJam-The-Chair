@@ -1,8 +1,14 @@
+type OrientationLock = ScreenOrientation & {
+    lock?: (orientation: 'landscape') => Promise<void>;
+};
 
-type OrientationLock = ScreenOrientation & { lock?: (orientation: 'landscape') => Promise<void> };
-
-export function bindOrientation(root: HTMLElement, game: { status(): { mode: string }; pause(): void }) {
-    const portrait = matchMedia('(pointer: coarse) and (orientation: portrait)');
+export function bindOrientation(
+    root: HTMLElement,
+    game: { status(): { mode: string }; pause(): void },
+) {
+    const portrait = matchMedia(
+        '(pointer: coarse) and (orientation: portrait)',
+    );
     const onChange = () => {
         if (portrait.matches && game.status().mode === 'play') game.pause();
     };
@@ -10,7 +16,12 @@ export function bindOrientation(root: HTMLElement, game: { status(): { mode: str
 
     const onStart = (event: Event) => {
         if (!matchMedia('(pointer: coarse)').matches) return;
-        if (!(event.target instanceof Element) || !event.target.closest('[data-start],[data-resume]')) return;
+        if (
+            !(event.target instanceof Element) ||
+            !event.target.closest('[data-start],[data-resume]')
+        ) {
+            return;
+        }
         void goLandscape();
     };
     root.addEventListener('click', onStart);
@@ -22,8 +33,13 @@ export function bindOrientation(root: HTMLElement, game: { status(): { mode: str
 
 async function goLandscape() {
     try {
-        if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
-        await (screen.orientation as OrientationLock | undefined)?.lock?.('landscape');
-    } catch {
-    }
+        if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen?.({
+                navigationUI: 'hide',
+            });
+        }
+        await (screen.orientation as OrientationLock | undefined)?.lock?.(
+            'landscape',
+        );
+    } catch {}
 }

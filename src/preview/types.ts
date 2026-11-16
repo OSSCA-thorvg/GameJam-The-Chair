@@ -10,7 +10,7 @@ export type PreviewScene = {
     duration: number;
     focusX: number;
     follow?: boolean;
-    markers: readonly { at: number; label: string }[];
+    markers: ReadonlyArray<{ at: number; label: string }>;
     sample(time: number): { state: GameSnapshot; effects: EffectsState };
     opening?(time: number): OpeningFrame;
     talk?(time: number, locale: Locale): SceneTalk;

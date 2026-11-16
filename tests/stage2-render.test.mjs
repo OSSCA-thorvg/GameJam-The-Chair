@@ -4,39 +4,84 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { bundled } from './support/load.mjs';
 import { orientationHop } from './support/harness.mjs';
 
-const { createGame, createRenderCtx, drawBuilding } = await bundled({ stdin: {
-    contents: `export { createGame } from './src/game/game';
+const { createGame, createRenderCtx, drawBuilding } = await bundled({
+    stdin: {
+        contents: `export { createGame } from './src/game/game';
         export { createRenderCtx } from './tests/support/render-context';
         export { drawBuilding } from './src/render/scene/building';`,
-    resolveDir: process.cwd(),
-}, bundle: true, write: false, platform: 'node', format: 'esm' });
-const escape = s => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
+        resolveDir: process.cwd(),
+    },
+    bundle: true,
+    write: false,
+    platform: 'node',
+    format: 'esm',
+});
+const escape = (s) =>
+    s
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('"', '&quot;');
 function render(state, locale, width) {
     const ctx = createRenderCtx({});
-    Object.assign(ctx, { state, player: state.player, mode: state.mode, locale, t: state.time,
-        cam: Math.max(0, Math.min(state.player.x - width * .35, state.level.length - width)),
-        VW: width, W: width, H: 510, LEN: state.level.length, GOAL: state.level.goal,
-        solids: state.solids, soaked: state.soaked, dirty: state.dirty,
+    Object.assign(ctx, {
+        state,
+        player: state.player,
+        mode: state.mode,
+        locale,
+        t: state.time,
+        cam: Math.max(
+            0,
+            Math.min(state.player.x - width * 0.35, state.level.length - width),
+        ),
+        VW: width,
+        W: width,
+        H: 510,
+        LEN: state.level.length,
+        GOAL: state.level.goal,
+        solids: state.solids,
+        soaked: state.soaked,
+        dirty: state.dirty,
     });
     drawBuilding(ctx);
     assert.ok(ctx.commands.length > 100);
-    const labels = ctx.commands.filter(c => c.text).map(({ text }) => ({ text: text.content, x: text.x, y: text.y, font: `${text.size}px ${text.font}`, color: text.fill }));
-    let defs = '', shapes = '';
+    const labels = ctx.commands
+        .filter((c) => c.text)
+        .map(({ text }) => ({
+            text: text.content,
+            x: text.x,
+            y: text.y,
+            font: `${text.size}px ${text.font}`,
+            color: text.fill,
+        }));
+    let defs = '',
+        shapes = '';
     ctx.commands.forEach((c, i) => {
         if (c.text) return;
-        for (const point of c.points) for (const n of point) assert.ok(Number.isFinite(n));
-        for (const curve of c.curves ?? []) for (const n of curve) assert.ok(Number.isFinite(n));
-        const d = `M${c.points[0].join(',')} ${c.points.slice(1).map(v => `L${v.join(',')}`).join(' ')} ${(c.curves ?? []).map(v => `C${v.join(',')}`).join(' ')}`;
+        for (const point of c.points) {
+            for (const n of point) assert.ok(Number.isFinite(n));
+        }
+        for (const curve of c.curves ?? []) {
+            for (const n of curve) assert.ok(Number.isFinite(n));
+        }
+        const d = `M${c.points[0].join(',')} ${c.points
+            .slice(1)
+            .map((v) => `L${v.join(',')}`)
+            .join(
+                ' ',
+            )} ${(c.curves ?? []).map((v) => `C${v.join(',')}`).join(' ')}`;
         if (c.fill == null) {
             assert.ok(c.stroke && Number.isFinite(c.stroke.width));
-            const stroke = typeof c.stroke.color === 'string' ? c.stroke.color : '#888';
+            const stroke =
+                typeof c.stroke.color === 'string' ? c.stroke.color : '#888';
             shapes += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${c.stroke.width}"/>`;
             return;
         }
         let fill = c.fill;
         if (typeof fill !== 'string') {
-            assert.ok(fill.stops.every(([, color]) => color.every(Number.isFinite)));
-            defs += `<linearGradient id="g${i}" gradientUnits="userSpaceOnUse" x1="${fill.from[0]}" y1="${fill.from[1]}" x2="${fill.to[0]}" y2="${fill.to[1]}">${fill.stops.map(([at, [r,g,b,a]]) => `<stop offset="${at}" stop-color="rgb(${r},${g},${b})" stop-opacity="${a/255}"/>`).join('')}</linearGradient>`;
+            assert.ok(
+                fill.stops.every(([, color]) => color.every(Number.isFinite)),
+            );
+            defs += `<linearGradient id="g${i}" gradientUnits="userSpaceOnUse" x1="${fill.from[0]}" y1="${fill.from[1]}" x2="${fill.to[0]}" y2="${fill.to[1]}">${fill.stops.map(([at, [r, g, b, a]]) => `<stop offset="${at}" stop-color="rgb(${r},${g},${b})" stop-opacity="${a / 255}"/>`).join('')}</linearGradient>`;
             fill = `url(#g${i})`;
         }
         shapes += `<path d="${d} Z" fill="${fill}"/>`;
@@ -45,83 +90,197 @@ function render(state, locale, width) {
         assert.ok(Number.isFinite(label.x) && Number.isFinite(label.y));
         shapes += `<text x="${label.x}" y="${label.y}" text-anchor="middle" dominant-baseline="middle" style="font:${label.font};fill:${label.color}">${escape(label.text)}</text>`;
     }
-    return { labels, svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="510" data-player-x="${state.player.x}" data-time="${state.time}" data-cam="${ctx.cam}"><defs>${defs}</defs>${shapes}</svg>` };
+    return {
+        labels,
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="510" data-player-x="${state.player.x}" data-time="${state.time}" data-cam="${ctx.cam}"><defs>${defs}</defs>${shapes}</svg>`,
+    };
 }
 
 test('window workers keep their appearance while typing and vary with the stage seed', () => {
     const game = createGame();
     game.startStage(2);
     const base = game.getSnapshot();
-    const first = { ...base, corridor: { ...base.corridor, appearanceSeed: 314159 } };
-    const second = { ...base, corridor: { ...base.corridor, appearanceSeed: 271828 } };
+    const first = {
+        ...base,
+        corridor: { ...base.corridor, appearanceSeed: 314159 },
+    };
+    const second = {
+        ...base,
+        corridor: { ...base.corridor, appearanceSeed: 271828 },
+    };
     assert.equal(render(first, 'en', 1000).svg, render(first, 'en', 1000).svg);
-    assert.notEqual(render(first, 'en', 1000).svg, render(second, 'en', 1000).svg);
+    assert.notEqual(
+        render(first, 'en', 1000).svg,
+        render(second, 'en', 1000).svg,
+    );
 });
 
 test('corridor and meeting render finite vector paths in both languages and narrow views', async () => {
-    const game = createGame(); game.startStage(2);
-    assert.ok(!render(game.getSnapshot(), 'en', 1000).labels.some(({ text }) => text === '↓ Enter'));
-    const frames = new Map(); let visited = false;
+    const game = createGame();
+    game.startStage(2);
+    assert.ok(
+        !render(game.getSnapshot(), 'en', 1000).labels.some(
+            ({ text }) => text === '↓ Enter',
+        ),
+    );
+    const frames = new Map();
+    let visited = false;
     for (let i = 0; i < 7200; i++) {
         const state = game.getSnapshot();
-        if (state.canEnterMeeting && !frames.has('entrance')) frames.set('entrance', state);
-        if (state.canEnterMeeting && !visited) { game.interact(); visited = true; }
-        if (state.corridor.dispatchAge > 1.8 && state.corridor.dispatchAge < 2.1 && !frames.has('chairs')) frames.set('chairs', state);
-        if (state.corridor.room.kind === 'meeting' && state.corridor.room.age > 3.7 && !frames.has('meeting')) frames.set('meeting', state);
-        if (state.corridor.pace === 'express' && state.corridor.chat.kind === 'rush' && !frames.has('rush')) frames.set('rush', state);
-        if (state.player.x > 5200 && state.player.x < 5300 && !frames.has('sleeper')) frames.set('sleeper', state);
+        if (state.canEnterMeeting && !frames.has('entrance')) {
+            frames.set('entrance', state);
+        }
+        if (state.canEnterMeeting && !visited) {
+            game.interact();
+            visited = true;
+        }
+        if (
+            state.corridor.dispatchAge > 1.8 &&
+            state.corridor.dispatchAge < 2.1 &&
+            !frames.has('chairs')
+        ) {
+            frames.set('chairs', state);
+        }
+        if (
+            state.corridor.room.kind === 'meeting' &&
+            state.corridor.room.age > 3.7 &&
+            !frames.has('meeting')
+        ) {
+            frames.set('meeting', state);
+        }
+        if (
+            state.corridor.pace === 'express' &&
+            state.corridor.chat.kind === 'rush' &&
+            !frames.has('rush')
+        ) {
+            frames.set('rush', state);
+        }
+        if (
+            state.player.x > 5200 &&
+            state.player.x < 5300 &&
+            !frames.has('sleeper')
+        ) {
+            frames.set('sleeper', state);
+        }
         if (frames.size === 5) break;
         assert.equal(state.mode, 'play');
         const waitingForMeeting = !visited && state.player.x > 510;
         const correction = -state.player.a * 12 - state.player.w * 4;
-        game.setInput(...(waitingForMeeting ? (state.player.vx > 10 ? ['left'] : state.player.vx < -10 ? ['right'] : []) : state.corridor.convoy === 'free' ? ['right'] : []), ...(correction < -.4 ? ['q'] : correction > .4 ? ['e'] : []));
+        game.setInput(
+            ...(waitingForMeeting
+                ? state.player.vx > 10
+                    ? ['left']
+                    : state.player.vx < -10
+                      ? ['right']
+                      : []
+                : state.corridor.convoy === 'free'
+                  ? ['right']
+                  : []),
+            ...(correction < -0.4 ? ['q'] : correction > 0.4 ? ['e'] : []),
+        );
         if (orientationHop(state)) game.jump();
-        game.step(1/120); game.drainEvents();
+        game.step(1 / 120);
+        game.drainEvents();
     }
-    assert.deepEqual(new Set(frames.keys()), new Set(['entrance', 'chairs', 'meeting', 'sleeper', 'rush']));
-    for (const [name, state] of frames) for (const locale of ['en', 'ko']) for (const width of [540, 1000]) {
-        const frame = render(state, locale, width);
-        if (name === 'entrance') assert.ok(frame.labels.some(({ text }) => text === (locale === 'en' ? '↓ Enter' : '↓ 들어가기')));
-        if (locale === 'en') for (const { text } of frame.labels) assert.doesNotMatch(text, /[가-힣]/);
-        for (const { text } of frame.labels) assert.doesNotMatch(text, /^(Exit|Lift shaft|Mechanical room)/);
-        if (process.env.STAGE2_PREVIEW_DIR) {
-            await mkdir(process.env.STAGE2_PREVIEW_DIR, { recursive: true });
-            await writeFile(`${process.env.STAGE2_PREVIEW_DIR}/${name}-${locale}-${width}.svg`, frame.svg);
+    assert.deepEqual(
+        new Set(frames.keys()),
+        new Set(['entrance', 'chairs', 'meeting', 'sleeper', 'rush']),
+    );
+    for (const [name, state] of frames) {
+        for (const locale of ['en', 'ko']) {
+            for (const width of [540, 1000]) {
+                const frame = render(state, locale, width);
+                if (name === 'entrance') {
+                    assert.ok(
+                        frame.labels.some(
+                            ({ text }) =>
+                                text ===
+                                (locale === 'en' ? '↓ Enter' : '↓ 들어가기'),
+                        ),
+                    );
+                }
+                if (locale === 'en') {
+                    for (const { text } of frame.labels) {
+                        assert.doesNotMatch(text, /[가-힣]/);
+                    }
+                }
+                for (const { text } of frame.labels) {
+                    assert.doesNotMatch(
+                        text,
+                        /^(Exit|Lift shaft|Mechanical room)/,
+                    );
+                }
+                if (process.env.STAGE2_PREVIEW_DIR) {
+                    await mkdir(process.env.STAGE2_PREVIEW_DIR, {
+                        recursive: true,
+                    });
+                    await writeFile(
+                        `${process.env.STAGE2_PREVIEW_DIR}/${name}-${locale}-${width}.svg`,
+                        frame.svg,
+                    );
+                }
+            }
         }
     }
 });
-
 
 test('the two meeting doors have distinct titles and chair complaints come from below the seats', () => {
     const game = createGame();
     game.startStage(2);
     const base = game.getSnapshot();
-    const hall = render(base, 'ko', 1000).labels.map(label => label.text);
+    const hall = render(base, 'ko', 1000).labels.map((label) => label.text);
     assert.ok(hall.includes('퇴근 시각 협의회'));
     assert.ok(hall.includes('회의 종료 심의회'));
-    for (const [age, complaint] of [[1.8, '엉덩이님, 저 퇴근 좀요.'], [2.8, '한 번만 일어나 봐. 나 튄다.'], [3.9, '나사 하나 풀고 병가 낼까...']]) {
-        const state = { ...base, mode: 'play', time: age,
+    for (const [age, complaint] of [
+        [1.8, '엉덩이님, 저 퇴근 좀요.'],
+        [2.8, '한 번만 일어나 봐. 나 튄다.'],
+        [3.9, '나사 하나 풀고 병가 낼까...'],
+    ]) {
+        const state = {
+            ...base,
+            mode: 'play',
+            time: age,
             player: { ...base.player, x: 520 },
-            corridor: { ...base.corridor, room: { kind: 'meeting', age, returnX: 620 } },
+            corridor: {
+                ...base.corridor,
+                room: { kind: 'meeting', age, returnX: 620 },
+            },
         };
         const labels = render(state, 'ko', 1000).labels;
-        const speech = labels.find(label => label.text === complaint);
-        assert.ok(speech && speech.y > 420, 'chair voices stay below the castors, away from human faces');
-        assert.ok(!labels.some(label => label.text === '야근 의자'), 'chair speech has no added name');
+        const speech = labels.find((label) => label.text === complaint);
+        assert.ok(
+            speech && speech.y > 420,
+            'chair voices stay below the castors, away from human faces',
+        );
+        assert.ok(
+            !labels.some((label) => label.text === '야근 의자'),
+            'chair speech has no added name',
+        );
     }
 });
-
 
 test('the loan-return line sits just above the purple facilitator', () => {
     const game = createGame();
     game.startStage(2);
     const base = game.getSnapshot();
     const age = 5;
-    const state = { ...base, mode: 'play', time: age, player: { ...base.player, x: 560 },
-        corridor: { ...base.corridor, room: { kind: 'meeting', age, returnX: 620 } },
+    const state = {
+        ...base,
+        mode: 'play',
+        time: age,
+        player: { ...base.player, x: 560 },
+        corridor: {
+            ...base.corridor,
+            room: { kind: 'meeting', age, returnX: 620 },
+        },
     };
     const labels = render(state, 'ko', 1000).labels;
-    const speech = labels.find(label => label.text === '빌린 의자는 먼저 돌려보내죠.');
+    const speech = labels.find(
+        (label) => label.text === '빌린 의자는 먼저 돌려보내죠.',
+    );
     assert.ok(speech);
-    assert.ok(speech.y > 245 && speech.y < 300, 'the bubble is next to the facilitator head, below the board');
+    assert.ok(
+        speech.y > 245 && speech.y < 300,
+        'the bubble is next to the facilitator head, below the board',
+    );
 });

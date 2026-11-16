@@ -10,7 +10,8 @@ import { sky, skyConfig } from './sky/definition';
 
 export type { Checkpoint, StageDefinition, StageHooks } from './types';
 
-export const STAGES: DeepReadonly<Record<StageId, StageDefinition>> = deepFreeze({ 1: office, 2: building, 3: rooftop, 4: sky, 5: orbit });
+export const STAGES: DeepReadonly<Record<StageId, StageDefinition>> =
+    deepFreeze({ 1: office, 2: building, 3: rooftop, 4: sky, 5: orbit });
 
 const F = LEVEL.floor;
 const pile = LEVEL.practicePaper;

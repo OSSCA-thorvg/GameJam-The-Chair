@@ -18,17 +18,35 @@ export function applyRooftopEntrance(s: CoreState, dt: number) {
 }
 
 export function applyRooftop(s: CoreState, out: GameEvent[], dt: number) {
-    const r = rooftopStep({ p: s.p, ground: s.ground, hasExtinguisher: s.extinguisher.owned, firstFlight: s.rooftop.flight, ductReaction: s.rooftop.duct, time: s.time }, dt);
+    const r = rooftopStep(
+        {
+            p: s.p,
+            ground: s.ground,
+            hasExtinguisher: s.extinguisher.owned,
+            firstFlight: s.rooftop.flight,
+            ductReaction: s.rooftop.duct,
+            time: s.time,
+        },
+        dt,
+    );
     setPlayer(s, r.p);
     s.ground = r.ground;
     s.rooftop.duct = r.ductReaction;
     for (const id of r.steamHits) {
-        if (!applyFocusHit(s, out, { kind: 'steam', id, damage: FOCUS_DAMAGE.steam })) return;
+        if (
+            !applyFocusHit(s, out, {
+                kind: 'steam',
+                id,
+                damage: FOCUS_DAMAGE.steam,
+            })
+        ) {
+            return;
+        }
     }
     if (s.rooftop.flight.kind === 'course' && r.firstFlight.kind === 'ride') {
         s.keys = [];
         s.jumpQ = 0;
-        s.extinguisher.burst = .24;
+        s.extinguisher.burst = 0.24;
         s.extinguisher.direction = { x: -1, y: 0 };
         s.ground = false;
         out.push({ type: 'cue', id: 'checkpoint' });
@@ -42,7 +60,10 @@ export function applyRooftop(s: CoreState, out: GameEvent[], dt: number) {
     }
 }
 
-export function applyFlight(s: CoreState, dt: number): false | 'flight' | 'arrived' {
+export function applyFlight(
+    s: CoreState,
+    dt: number,
+): false | 'flight' | 'arrived' {
     const flight = s.rooftop.flight;
     if (flight.kind === 'course') return false;
     if (flight.kind === 'ride') {
@@ -50,14 +71,17 @@ export function applyFlight(s: CoreState, dt: number): false | 'flight' | 'arriv
         s.rooftop.flight = r.flight;
         setPlayer(s, r.p);
         s.ground = false;
-        s.extinguisher.burst = .24;
-        s.extinguisher.direction = { x: -r.p.vx / Math.max(1, Det.hypot(r.p.vx, r.p.vy)), y: -r.p.vy / Math.max(1, Det.hypot(r.p.vx, r.p.vy)) };
+        s.extinguisher.burst = 0.24;
+        s.extinguisher.direction = {
+            x: -r.p.vx / Math.max(1, Det.hypot(r.p.vx, r.p.vy)),
+            y: -r.p.vy / Math.max(1, Det.hypot(r.p.vx, r.p.vy)),
+        };
         return 'flight';
     }
     const r = flightStep(flight, s.p, dt);
     s.rooftop.flight = r.flight;
     setPlayer(s, r.p);
-    s.extinguisher.burst = .24;
+    s.extinguisher.burst = 0.24;
     s.extinguisher.direction = { x: 0, y: 1 };
     return r.arrived ? 'arrived' : 'flight';
 }

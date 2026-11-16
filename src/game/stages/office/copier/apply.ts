@@ -2,37 +2,64 @@ import { RULES } from '../../../level';
 import type { CoreState } from '../../../state';
 import type { GameEvent, Paper } from '../../../types';
 import { applyFocusHit } from '../../../systems/focus/apply';
-import { paperShot, trimPapers, urgentShot, type CopierResult, type PaperHit, type UrgentResult } from './decide';
-export function applyCopier(s: CoreState, out: GameEvent[], result: CopierResult) {
+import {
+    paperShot,
+    trimPapers,
+    urgentShot,
+    type CopierResult,
+    type PaperHit,
+    type UrgentResult,
+} from './decide';
+export function applyCopier(
+    s: CoreState,
+    out: GameEvent[],
+    result: CopierResult,
+) {
     s.office.copier = result.copier;
     if (!result.fire) return;
     s.office.papers.push(...paperShot(s.office.copier));
     s.office.copier.bursts++;
     out.push({ type: 'volley' });
-    if (s.office.copier.bursts === 1) out.push({ type: 'cue', id: 'first-volley' });
+    if (s.office.copier.bursts === 1) {
+        out.push({ type: 'cue', id: 'first-volley' });
+    }
 }
 
-export function applyUrgentCopier(s: CoreState, out: GameEvent[], result: UrgentResult) {
+export function applyUrgentCopier(
+    s: CoreState,
+    out: GameEvent[],
+    result: UrgentResult,
+) {
     s.office.urgent = result.copier;
-    if (result.started && result.copier.volley === 1) out.push({ type: 'cue', id: 'urgent-volley' });
+    if (result.started && result.copier.volley === 1) {
+        out.push({ type: 'cue', id: 'urgent-volley' });
+    }
     if (!result.fire) return;
     s.office.papers.push(...urgentShot(s.office.urgent));
 }
 
-export function applyPapers(s: CoreState, out: GameEvent[], result: { papers: Paper[]; hits: readonly PaperHit[] }, dt: number) {
+export function applyPapers(
+    s: CoreState,
+    out: GameEvent[],
+    result: { papers: Paper[]; hits: readonly PaperHit[] },
+    dt: number,
+) {
     for (const hit of result.hits) {
         s.office.paperHits++;
         if (!applyFocusHit(s, out, hit.focus)) {
-            s.office.papers = [...result.papers.slice(0, hit.index + 1), ...s.office.papers.slice(hit.index + 1)];
+            s.office.papers = [
+                ...result.papers.slice(0, hit.index + 1),
+                ...s.office.papers.slice(hit.index + 1),
+            ];
             return false;
         }
         if (hit.heavy) {
-            s.p.vx = s.p.vx * .3 + hit.vx * .55;
+            s.p.vx = s.p.vx * 0.3 + hit.vx * 0.55;
             s.p.vy = Math.min(s.p.vy, -90);
-            s.p.w += hit.vx * .002;
+            s.p.w += hit.vx * 0.002;
         } else {
-            s.p.vx *= .88;
-            s.p.w += hit.vx * .0009;
+            s.p.vx *= 0.88;
+            s.p.w += hit.vx * 0.0009;
         }
         s.office.paperPenaltyRemaining = RULES.paperPenalty;
         out.push({ type: 'cue', id: hit.heavy ? 'bundle-hit' : 'paper-hit' });

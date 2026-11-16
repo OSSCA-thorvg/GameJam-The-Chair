@@ -1,4 +1,5 @@
-// GPU queries complete asynchronously; CPU render timing only measures command submission.
+// GPU queries complete asynchronously; CPU render timing only measures command
+// submission.
 
 const TIME_ELAPSED_EXT = 0x88bf;
 const GPU_DISJOINT_EXT = 0x8fbb;
@@ -11,9 +12,18 @@ export type GpuTimer = {
     dispose(): void;
 };
 
-export type TimerGl = Pick<WebGL2RenderingContext,
-    'createQuery' | 'deleteQuery' | 'beginQuery' | 'endQuery' | 'getQueryParameter' | 'getParameter' | 'getExtension'
-    | 'QUERY_RESULT' | 'QUERY_RESULT_AVAILABLE'>;
+export type TimerGl = Pick<
+    WebGL2RenderingContext,
+    | 'createQuery'
+    | 'deleteQuery'
+    | 'beginQuery'
+    | 'endQuery'
+    | 'getQueryParameter'
+    | 'getParameter'
+    | 'getExtension'
+    | 'QUERY_RESULT'
+    | 'QUERY_RESULT_AVAILABLE'
+>;
 
 export function createGpuTimer(gl: TimerGl | null): GpuTimer | null {
     if (!gl || !gl.getExtension('EXT_disjoint_timer_query_webgl2')) return null;
@@ -47,16 +57,27 @@ export function createGpuTimer(gl: TimerGl | null): GpuTimer | null {
                 for (const query of pending.splice(0)) recycle(query);
                 return out;
             }
-            while (pending.length && gl.getQueryParameter(pending[0], gl.QUERY_RESULT_AVAILABLE)) {
+            while (
+                pending.length &&
+                gl.getQueryParameter(pending[0], gl.QUERY_RESULT_AVAILABLE)
+            ) {
                 const query = pending.shift()!;
-                out.push(Number(gl.getQueryParameter(query, gl.QUERY_RESULT)) / 1e6);
+                out.push(
+                    Number(gl.getQueryParameter(query, gl.QUERY_RESULT)) / 1e6,
+                );
                 recycle(query);
             }
             return out;
         },
         dispose() {
             if (active) gl.endQuery(TIME_ELAPSED_EXT);
-            for (const query of [...pending, ...spare, ...(active ? [active] : [])]) gl.deleteQuery(query);
+            for (const query of [
+                ...pending,
+                ...spare,
+                ...(active ? [active] : []),
+            ]) {
+                gl.deleteQuery(query);
+            }
             pending.length = spare.length = 0;
             active = null;
         },

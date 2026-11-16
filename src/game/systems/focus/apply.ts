@@ -1,12 +1,22 @@
 import type { CoreState } from '../../state';
 import { stageHooks } from '../../stages/hooks';
 import type { GameEvent } from '../../types';
-import { focusAfterHit, focusLossStep, focusRecovery, type FocusHit } from './decide';
+import {
+    focusAfterHit,
+    focusLossStep,
+    focusRecovery,
+    type FocusHit,
+} from './decide';
 export function applyFocusHit(s: CoreState, out: GameEvent[], hit: FocusHit) {
     if (s.mode !== 'play') return false;
     const r = focusAfterHit(s.focus, hit);
     if (!r) return true;
-    s.focus = { value: r.value, recoveryClock: r.recoveryClock, processedEvents: r.processedEvents, notice: r.notice };
+    s.focus = {
+        value: r.value,
+        recoveryClock: r.recoveryClock,
+        processedEvents: r.processedEvents,
+        notice: r.notice,
+    };
     if (r.lost) applyFocusFailure(s, out);
     return s.mode === 'play';
 }

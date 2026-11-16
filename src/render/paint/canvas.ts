@@ -1,9 +1,19 @@
 import type { RenderCtx } from '../context';
-import type { Blend, DrawCommand, PathCommand, Gradient, TextSpec } from '../types';
+import type {
+    Blend,
+    DrawCommand,
+    PathCommand,
+    Gradient,
+    TextSpec,
+} from '../types';
 import { fontCss } from '../fonts';
 
 const COMPOSITE: Record<Blend, GlobalCompositeOperation> = {
-    normal: 'source-over', multiply: 'multiply', screen: 'screen', add: 'lighter', overlay: 'overlay',
+    normal: 'source-over',
+    multiply: 'multiply',
+    screen: 'screen',
+    add: 'lighter',
+    overlay: 'overlay',
 };
 
 function tracePath2d(bg: CanvasRenderingContext2D, cmd: PathCommand) {
@@ -14,13 +24,21 @@ function tracePath2d(bg: CanvasRenderingContext2D, cmd: PathCommand) {
     if (!cmd.open) bg.closePath();
 }
 
-function style2d(ctx: RenderCtx, bg: CanvasRenderingContext2D, c: string | Gradient) {
+function style2d(
+    ctx: RenderCtx,
+    bg: CanvasRenderingContext2D,
+    c: string | Gradient,
+) {
     if (typeof c === 'string') return c;
-    const g = c.radius === undefined
-        ? bg.createLinearGradient(...c.from, ...c.to)
-        : bg.createRadialGradient(...c.from, 0, ...c.from, c.radius);
+    const g =
+        c.radius === undefined
+            ? bg.createLinearGradient(...c.from, ...c.to)
+            : bg.createRadialGradient(...c.from, 0, ...c.from, c.radius);
     for (const [at, color] of c.stops) {
-        g.addColorStop(at, `rgba(${color[0]},${color[1]},${color[2]},${color[3] / 255})`);
+        g.addColorStop(
+            at,
+            `rgba(${color[0]},${color[1]},${color[2]},${color[3] / 255})`,
+        );
     }
     return g;
 }
@@ -44,7 +62,11 @@ function text2d(bg: CanvasRenderingContext2D, spec: TextSpec) {
     bg.restore();
 }
 
-export function paintCanvas(ctx: RenderCtx, bg: CanvasRenderingContext2D, commands: DrawCommand[]) {
+export function paintCanvas(
+    ctx: RenderCtx,
+    bg: CanvasRenderingContext2D,
+    commands: DrawCommand[],
+) {
     for (const cmd of commands) {
         if (cmd.kind === 'text') {
             text2d(bg, cmd.text);
@@ -69,7 +91,8 @@ export function paintCanvas(ctx: RenderCtx, bg: CanvasRenderingContext2D, comman
             }
             if (layer?.opacity !== undefined) bg.globalAlpha = layer.opacity;
             if (layer?.blur) bg.filter = `blur(${layer.blur}px)`;
-            bg.globalCompositeOperation = COMPOSITE[cmd.blend ?? layer?.blend ?? 'normal'];
+            bg.globalCompositeOperation =
+                COMPOSITE[cmd.blend ?? layer?.blend ?? 'normal'];
         }
         tracePath2d(bg, cmd);
         if (cmd.fill !== null) {
@@ -83,7 +106,10 @@ export function paintCanvas(ctx: RenderCtx, bg: CanvasRenderingContext2D, comman
             bg.setLineDash(cmd.stroke.dash ?? []);
             bg.lineDashOffset = cmd.stroke.dashOffset ?? 0;
             const color = cmd.stroke.color;
-            bg.strokeStyle = typeof color === 'string' ? ctx.tint(color.slice(0, 7), ctx.rgba(color)[3] / 255) : style2d(ctx, bg, color);
+            bg.strokeStyle =
+                typeof color === 'string'
+                    ? ctx.tint(color.slice(0, 7), ctx.rgba(color)[3] / 255)
+                    : style2d(ctx, bg, color);
             bg.stroke();
         }
         if (styled) bg.restore();

@@ -1,275 +1,589 @@
 export type Locale = 'en' | 'ko';
 
 const messages = {
-    'empty':                     { en: '',                                                               ko: '' },
+    empty: { en: '', ko: '' },
 
-    'person.manager':            { en: 'Manager Park',                                                   ko: '박 과장' },
-    'person.kim':                { en: 'Kim',                                                            ko: '김 대리' },
-    'person.admin':              { en: 'Admin',                                                          ko: '총무팀' },
-    'person.coworker':           { en: 'Coworker',                                                       ko: '옆자리 동료' },
+    'person.manager': { en: 'Manager Park', ko: '박 과장' },
+    'person.kim': { en: 'Kim', ko: '김 대리' },
+    'person.admin': { en: 'Admin', ko: '총무팀' },
+    'person.coworker': { en: 'Coworker', ko: '옆자리 동료' },
 
-    'npc.manager.leave':         { en: 'Leaving already?',                                               ko: '벌써 퇴근하는 거야?' },
-    'npc.manager.injury':        { en: 'About that workplace injury claim…',                             ko: '산재 처리는…' },
-    'npc.cleaner.mop':           { en: 'Watch the mop bucket!',                                          ko: '앗, 청소 물통 넘어간다!' },
-    'npc.cleaner.spill':         { en: 'Hey! I was cleaning…',                                           ko: '앗! 청소 중이었는데…' },
-    'npc.admin.sort':            { en: 'Please sort your trash.',                                        ko: '쓰레기 분리배출 부탁드려요.' },
-    'npc.admin.injury':          { en: 'About that workplace injury claim…',                             ko: '산재 처리는…' },
-    'npc.coworker.bright':       { en: 'A bright future, right?',                                        ko: '밝은 미래가 보이죠?' },
-    'npc.return':                { en: 'Back to work already?',                                          ko: '다시 출근하는 거야?' },
+    'npc.manager.leave': { en: 'Leaving already?', ko: '벌써 퇴근하는 거야?' },
+    'npc.manager.injury': {
+        en: 'About that workplace injury claim…',
+        ko: '산재 처리는…',
+    },
+    'npc.cleaner.mop': {
+        en: 'Watch the mop bucket!',
+        ko: '앗, 청소 물통 넘어간다!',
+    },
+    'npc.cleaner.spill': {
+        en: 'Hey! I was cleaning…',
+        ko: '앗! 청소 중이었는데…',
+    },
+    'npc.admin.sort': {
+        en: 'Please sort your trash.',
+        ko: '쓰레기 분리배출 부탁드려요.',
+    },
+    'npc.admin.injury': {
+        en: 'About that workplace injury claim…',
+        ko: '산재 처리는…',
+    },
+    'npc.coworker.bright': {
+        en: 'A bright future, right?',
+        ko: '밝은 미래가 보이죠?',
+    },
+    'npc.return': { en: 'Back to work already?', ko: '다시 출근하는 거야?' },
 
-    'player.firstVolley':        { en: 'Why is this report printing into my face…',                      ko: '보고서가 왜 얼굴로 출력돼…' },
-    'player.paperHit':           { en: 'Those are my monthly results…',                                  ko: '이거 이번 달 실적인데…' },
-    'player.bumpHit':            { en: 'Bump… my spreadsheet cells shifted!',                            ko: '덜컹… 엑셀 칸이 밀렸어!' },
-    'player.urgentVolley':       { en: 'Urgent reports… was it due yesterday?',                          ko: '긴급 보고서… 마감이 어제였나?' },
-    'player.bundleHit':          { en: 'The whole quarter, stapled…',                                    ko: '분기 실적을 통째로 찍어 버렸어…' },
-    'player.lightHit':           { en: "Too bright… I can't see my numbers!",                            ko: '눈부셔… 실적 칸이 안 보여!' },
-    'player.approved':           { en: 'Approved',                                                       ko: '결재 완료' },
-    'player.laptop':             { en: 'My laptop?!',                                                    ko: '노트북은?!' },
+    'player.firstVolley': {
+        en: 'Why is this report printing into my face…',
+        ko: '보고서가 왜 얼굴로 출력돼…',
+    },
+    'player.paperHit': {
+        en: 'Those are my monthly results…',
+        ko: '이거 이번 달 실적인데…',
+    },
+    'player.bumpHit': {
+        en: 'Bump… my spreadsheet cells shifted!',
+        ko: '덜컹… 엑셀 칸이 밀렸어!',
+    },
+    'player.urgentVolley': {
+        en: 'Urgent reports… was it due yesterday?',
+        ko: '긴급 보고서… 마감이 어제였나?',
+    },
+    'player.bundleHit': {
+        en: 'The whole quarter, stapled…',
+        ko: '분기 실적을 통째로 찍어 버렸어…',
+    },
+    'player.lightHit': {
+        en: "Too bright… I can't see my numbers!",
+        ko: '눈부셔… 실적 칸이 안 보여!',
+    },
+    'player.approved': { en: 'Approved', ko: '결재 완료' },
+    'player.laptop': { en: 'My laptop?!', ko: '노트북은?!' },
 
-    'status.starting':           { en: 'Starting.',                                                      ko: '시작합니다.' },
-    'status.startingCheckpoint': { en: 'Starting from checkpoint.',                                      ko: '체크포인트에서 시작합니다.' },
-    'status.checkpoint':         { en: 'Checkpoint saved.',                                              ko: '체크포인트 저장.' },
-    'status.headImpact':         { en: 'Head impact.',                                                   ko: '머리 충돌.' },
-    'status.binFall':            { en: 'Trash bin fall.',                                                ko: '휴지통 추락.' },
-    'status.focusLost':          { en: 'Focus depleted.',                                                ko: '집중도 소진.' },
+    'status.starting': { en: 'Starting.', ko: '시작합니다.' },
+    'status.startingCheckpoint': {
+        en: 'Starting from checkpoint.',
+        ko: '체크포인트에서 시작합니다.',
+    },
+    'status.checkpoint': { en: 'Checkpoint saved.', ko: '체크포인트 저장.' },
+    'status.headImpact': { en: 'Head impact.', ko: '머리 충돌.' },
+    'status.binFall': { en: 'Trash bin fall.', ko: '휴지통 추락.' },
+    'status.focusLost': { en: 'Focus depleted.', ko: '집중도 소진.' },
     'orbit.up': { en: 'Up', ko: '위로' },
     'orbit.down': { en: 'Down', ko: '아래로' },
-    'orbit.parked': { en: 'Checkpoint · End of this route', ko: '체크포인트 · 이번 구간 완료' },
+    'orbit.parked': {
+        en: 'Checkpoint · End of this route',
+        ko: '체크포인트 · 이번 구간 완료',
+    },
     'orbit.controls': { en: 'Move', ko: '이동' },
     'stageLabel.stage5': { en: '05 Clock-out orbit', ko: '05 퇴근 궤도' },
-    'status.extinguisherPickup': { en: 'Extinguisher attached. Hold Space.', ko: '소화기 장착. Space를 누르세요.' },
-    'status.stage1Clear':        { en: 'Office escaped.',                                                ko: '사무실 탈출.' },
-    'status.stage2Clear':        { en: 'Mechanical room reached.',                                       ko: '기계실 도착.' },
-    'status.stage3Clear':        { en: 'Rooftop cleared.',                                               ko: 'Rooftop cleared · 옥상 탈출.' },
+    'status.extinguisherPickup': {
+        en: 'Extinguisher attached. Hold Space.',
+        ko: '소화기 장착. Space를 누르세요.',
+    },
+    'status.stage1Clear': { en: 'Office escaped.', ko: '사무실 탈출.' },
+    'status.stage2Clear': {
+        en: 'Mechanical room reached.',
+        ko: '기계실 도착.',
+    },
+    'status.stage3Clear': {
+        en: 'Rooftop cleared.',
+        ko: 'Rooftop cleared · 옥상 탈출.',
+    },
 
-    'panel.headKicker':          { en: 'Head impact',                                                    ko: '머리 충돌' },
-    'panel.binKicker':           { en: 'Trash bin fall',                                                 ko: '휴지통 추락' },
-    'panel.focusKicker':         { en: 'Focus depleted',                                                 ko: '집중도 소진' },
-    'panel.headTitle':           { en: 'Your head clocked out first.',                                   ko: '머리가 먼저 퇴근했습니다.' },
-    'panel.binTitle':            { en: 'Recycled along with your work.',                                 ko: '업무와 함께 분리배출.' },
-    'panel.focusTitle':          { en: 'Wait, where am I?',                                              ko: '앗, 여기가 어디지?' },
-    'panel.liftKicker':         { en: 'Forced clock-out', ko: '강제 퇴근' },
-    'panel.liftTitle':          { en: 'The mechanical room stayed upstairs.', ko: '기계실은 위에 남았습니다.' },
-    'panel.stage1Title':         { en: 'Clocking out…',                                                  ko: '퇴근 처리 중…' },
-    'panel.stage2Title':         { en: 'Business trip complete.',                                        ko: '출장 처리 완료.' },
+    'panel.headKicker': { en: 'Head impact', ko: '머리 충돌' },
+    'panel.binKicker': { en: 'Trash bin fall', ko: '휴지통 추락' },
+    'panel.focusKicker': { en: 'Focus depleted', ko: '집중도 소진' },
+    'panel.headTitle': {
+        en: 'Your head clocked out first.',
+        ko: '머리가 먼저 퇴근했습니다.',
+    },
+    'panel.binTitle': {
+        en: 'Recycled along with your work.',
+        ko: '업무와 함께 분리배출.',
+    },
+    'panel.focusTitle': { en: 'Wait, where am I?', ko: '앗, 여기가 어디지?' },
+    'panel.liftKicker': { en: 'Forced clock-out', ko: '강제 퇴근' },
+    'panel.liftTitle': {
+        en: 'The mechanical room stayed upstairs.',
+        ko: '기계실은 위에 남았습니다.',
+    },
+    'panel.stage1Title': { en: 'Clocking out…', ko: '퇴근 처리 중…' },
+    'panel.stage2Title': {
+        en: 'Business trip complete.',
+        ko: '출장 처리 완료.',
+    },
     'panel.stage4Title': { en: 'Still growing.', ko: '성장은 계속됩니다.' },
     'status.stage4Clear': { en: 'Above the clouds.', ko: '구름 너머로.' },
-    'panel.stage3Title':         { en: 'First flight.', ko: '첫 비행.' },
+    'panel.stage3Title': { en: 'First flight.', ko: '첫 비행.' },
 
-    'button.retry':              { en: 'Retry',                                                          ko: '다시' },
-    'button.retryStage':         { en: 'Retry stage',                                                    ko: 'Retry · 다시' },
-    'button.next':               { en: 'Next',                                                           ko: '다음' },
-    'button.start':              { en: 'Start',                                                          ko: '시작하기' },
-    'button.records':            { en: 'Records',                                                        ko: '기록' },
-    'button.resume':             { en: 'Resume',                                                         ko: '계속' },
+    'button.retry': { en: 'Retry', ko: '다시' },
+    'button.retryStage': { en: 'Retry stage', ko: 'Retry · 다시' },
+    'button.next': { en: 'Next', ko: '다음' },
+    'button.start': { en: 'Start', ko: '시작하기' },
+    'button.records': { en: 'Records', ko: '기록' },
+    'button.resume': { en: 'Resume', ko: '계속' },
 
-    'copier.printer':            { en: 'PTUI! PTUI!!',                                                   ko: '퉤! 퉷!!' },
-    'copier.urgent':             { en: 'URGENT! PTUI-PTUI!!',                                            ko: '긴급! 퉤퉤퉤!!' },
-    'world.exit':                { en: 'Exit →',                                                         ko: '출구 →' },
-    'world.rooftop':             { en: 'Rooftop →',                                                      ko: '옥상 →' },
-    'world.employeeBoard':       { en: 'EMPLOYEES OF THE MONTH',                                         ko: '이달의 우수사원' },
-    'world.mechanicalArrow':     { en: 'Mechanical room →',                                              ko: '기계실 →' },
-    'world.mechanical':          { en: 'Mechanical room',                                                ko: '기계실' },
+    'copier.printer': { en: 'PTUI! PTUI!!', ko: '퉤! 퉷!!' },
+    'copier.urgent': { en: 'URGENT! PTUI-PTUI!!', ko: '긴급! 퉤퉤퉤!!' },
+    'world.exit': { en: 'Exit →', ko: '출구 →' },
+    'world.rooftop': { en: 'Rooftop →', ko: '옥상 →' },
+    'world.employeeBoard': {
+        en: 'EMPLOYEES OF THE MONTH',
+        ko: '이달의 우수사원',
+    },
+    'world.mechanicalArrow': { en: 'Mechanical room →', ko: '기계실 →' },
+    'world.mechanical': { en: 'Mechanical room', ko: '기계실' },
 
-    'stageLabel.stage1':         { en: '01 Office',                                                      ko: '01 사무실' },
-    'stageLabel.stage2':         { en: '02 Inside the building',                                         ko: '02 건물 내부' },
+    'stageLabel.stage1': { en: '01 Office', ko: '01 사무실' },
+    'stageLabel.stage2': { en: '02 Inside the building', ko: '02 건물 내부' },
     'stageLabel.stage4': { en: '04 Above the clouds', ko: '04 구름 위' },
-    'stageLabel.stage3':         { en: '03 Mechanical room & rooftop',                                   ko: '03 기계실 & 옥상' },
+    'stageLabel.stage3': {
+        en: '03 Mechanical room & rooftop',
+        ko: '03 기계실 & 옥상',
+    },
 
-    'hud.focus':                 { en: 'Focus',                                                          ko: '집중도' },
+    'hud.focus': { en: 'Focus', ko: '집중도' },
 
-    'intro.desc':                { en: 'Business as usual.',                                             ko: '오늘도 정상 근무 중입니다.' },
-    'intro.description':         { en: 'Chair escape game. Controls are in the pause menu.',             ko: '의자를 타고 탈출하는 게임. 조작법은 일시정지 메뉴에서 확인할 수 있습니다.' },
+    'intro.desc': {
+        en: 'Business as usual.',
+        ko: '오늘도 정상 근무 중입니다.',
+    },
+    'intro.description': {
+        en: 'Chair escape game. Controls are in the pause menu.',
+        ko: '의자를 타고 탈출하는 게임. 조작법은 일시정지 메뉴에서 확인할 수 있습니다.',
+    },
 
-    'opening.riderOvertime':     { en: 'Overtime again…',                                                ko: '오늘도 야근이네…' },
-    'opening.riderSales':        { en: "This month's numbers. Must go up.",                              ko: '이번 달 실적, 무조건 올린다.' },
-    'opening.chairHope':         { en: 'Six o\'clock~ Time to oil my wheels♪',                          ko: '6시 땡~ 오늘은 바퀴에 기름칠 좀 해야지♪' },
-    'opening.chairRage':         { en: "I can't take this wicked life anymore!",                         ko: '이런 극악무도한 생활, 더는 못 참아!' },
-    'opening.riderTyping':       { en: '(tap tap tap)',                                                  ko: '(타닥타닥)' },
-    'orbit.disconnected':        { en: 'Network connection lost.',                                       ko: '네트워크 연결이 끊어졌습니다.' },
-    'orbit.attendance':          { en: 'Attendance confirmed.',                                          ko: '근태 확인됨.' },
-    'impact.bonk':               { en: 'BONK!',                                                          ko: '쿵!' },
-    'opening.skip':              { en: 'Skip opening',                                                   ko: '오프닝 건너뛰기' },
+    'opening.riderOvertime': { en: 'Overtime again…', ko: '오늘도 야근이네…' },
+    'opening.riderSales': {
+        en: "This month's numbers. Must go up.",
+        ko: '이번 달 실적, 무조건 올린다.',
+    },
+    'opening.chairHope': {
+        en: "Six o'clock~ Time to oil my wheels♪",
+        ko: '6시 땡~ 오늘은 바퀴에 기름칠 좀 해야지♪',
+    },
+    'opening.chairRage': {
+        en: "I can't take this wicked life anymore!",
+        ko: '이런 극악무도한 생활, 더는 못 참아!',
+    },
+    'opening.riderTyping': { en: '(tap tap tap)', ko: '(타닥타닥)' },
+    'orbit.disconnected': {
+        en: 'Network connection lost.',
+        ko: '네트워크 연결이 끊어졌습니다.',
+    },
+    'orbit.attendance': { en: 'Attendance confirmed.', ko: '근태 확인됨.' },
+    'impact.bonk': { en: 'BONK!', ko: '쿵!' },
+    'opening.skip': { en: 'Skip opening', ko: '오프닝 건너뛰기' },
 
-    'menu.paused':               { en: 'Paused',                                                         ko: '잠깐' },
-    'menu.controls':             { en: 'Controls',                                                       ko: '조작법' },
-    'menu.move':                 { en: 'Move',                                                           ko: '이동' },
-    'menu.jump':                 { en: 'Jump',                                                           ko: '점프' },
-    'menu.sprayExtinguisher':    { en: 'Spray extinguisher',                                             ko: '소화기 분사' },
-    'menu.pause':                { en: 'Pause',                                                          ko: '일시정지' },
-    'menu.restart':              { en: 'Restart',                                                        ko: '재도전' },
-    'menu.stages':               { en: 'Stages',                                                         ko: '스테이지' },
-    'menu.focusRule':            { en: 'Each distraction: −20%. Recover +1% every 2 seconds without distractions.', ko: '방해마다 −20%. 방해가 없으면 2초마다 +1%.' },
-    'menu.restartRule':          { en: 'Restarting at a flag restores full focus and dries you off.',    ko: '깃발에서 다시 출발하면 집중도 100%, 물기는 사라집니다.' },
-    'menu.pauseMenu':            { en: 'Pause menu',                                                     ko: '일시정지 메뉴' },
-    'menu.touchControls':        { en: 'Touch controls',                                                 ko: '터치 조작' },
-    'menu.rotate':               { en: 'Rotate your phone to landscape',                                 ko: '휴대폰을 가로로 돌려 주세요' },
-    'menu.reverse':              { en: 'Reverse',                                                        ko: '후진' },
-    'menu.forward':              { en: 'Forward',                                                        ko: '전진' },
-    'menu.balanceControls':      { en: 'Balance controls',                                               ko: '균형 조절' },
-    'menu.leanLeft':             { en: 'Lean left',                                                      ko: '왼쪽으로 균형 보정' },
-    'menu.leanRight':            { en: 'Lean right',                                                     ko: '오른쪽으로 균형 보정' },
-    'replay.title':               { en: "Replay", ko: "리플레이" },
-    'replay.watch':               { en: "Watch last attempt", ko: "마지막 시도 보기" },
-    'replay.open':                { en: "Open file", ko: "파일 열기" },
-    'replay.copyData':           { en: "Copy data", ko: "데이터 복사" },
-    'replay.downloadAll':         { en: "Download all", ko: "모두 내려받기" },
-    'replay.list':                { en: "Recorded replays", ko: "기록된 리플레이" },
-    'replay.current':             { en: "now", ko: "진행 중" },
-    'replay.error':               { en: "error", ko: "에러" },
-    'replay.watchThis':           { en: "Watch", ko: "보기" },
-    'replay.downloadThis':        { en: "Download", ko: "내려받기" },
-    'replay.keyframeInterval':    { en: "Seek point every (ticks)", ko: "탐색 지점 간격(틱)" },
-    'replay.playbackSpeed':       { en: "Playback speed", ko: "재생 속도" },
-    'replay.warmup':              { en: "Warm-up before seek (s)", ko: "이동 전 예열(초)" },
-    'replay.none':                { en: "No replay yet. Play a little first.", ko: "아직 리플레이가 없습니다. 먼저 조금 플레이하세요." },
-    'replay.copied':              { en: "Copied.", ko: "복사했습니다." },
-    'replay.copyFailed':          { en: "Could not copy.", ko: "복사하지 못했습니다." },
-    'replay.badFile':             { en: "Not a replay file.", ko: "리플레이 파일이 아닙니다." },
-    'replay.otherVersion':        { en: "Recorded with other game rules; playback may differ.", ko: "다른 게임 규칙으로 기록되어 재생이 다를 수 있습니다." },
-    'replay.diverged':            { en: "Playback differs from the recording from", ko: "기록과 달라지는 지점" },
-    'replay.errorAt':             { en: "Error at", ko: "에러 위치" },
-    'replay.truncated':           { en: "Recording was cut short.", ko: "기록이 중간에 끊겼습니다." },
-    'replay.bar':                 { en: "Replay controls", ko: "리플레이 조작" },
-    'replay.play':                { en: "Play", ko: "재생" },
-    'replay.pause':               { en: "Pause", ko: "일시정지" },
-    'replay.prev':                { en: "Previous frame", ko: "이전 프레임" },
-    'replay.next':                { en: "Next frame", ko: "다음 프레임" },
-    'replay.seek':                { en: "Position", ko: "위치" },
-    'replay.speed':               { en: "Speed", ko: "속도" },
-    'replay.loop':                { en: "Loop", ko: "반복" },
-    'replay.exit':                { en: "Exit replay", ko: "리플레이 종료" },
-    'perf.title':                 { en: "Performance", ko: "성능" },
-    'perf.copy':                  { en: "Copy metrics", ko: "지표 복사" },
-    'perf.layers':                { en: "Layers", ko: "레이어" },
-    'perf.hide':                  { en: "Hide", ko: "숨김" },
-    'perf.hideHint':              { en: "Do not draw this layer", ko: "이 레이어를 그리지 않음" },
-    'perf.flatten':               { en: "Flat", ko: "평면" },
-    'perf.flattenHint':           { en: "Draw as plain shapes without the scene's opacity, blend, blur, clip or mask", ko: "scene의 투명도, 블렌드, 블러, 클립, 마스크 없이 일반 shape로 그림" },
-    'perf.resetLayers':           { en: "Reset", ko: "초기화" },
-    'tool.title':                 { en: "Replay tool", ko: "리플레이 도구" },
-    'tool.backToGame':            { en: "← Game", ko: "← 게임" },
-    'tool.browserData':           { en: "This browser's data", ko: "이 브라우저 데이터" },
-    'tool.paste':                 { en: "Paste JSON", ko: "JSON 붙여넣기" },
-    'tool.load':                  { en: "Load", ko: "불러오기" },
-    'tool.drop':                  { en: "Drop a replay or data file anywhere on this page.", ko: "리플레이나 데이터 파일을 이 페이지에 끌어다 놓아도 됩니다." },
-    'tool.empty':                 { en: "Open a replay to start.", ko: "리플레이를 열어 주세요." },
-    'tool.replays':               { en: "Replays", ko: "리플레이 목록" },
-    'tool.file':                  { en: "Recording", ko: "기록 정보" },
-    'tool.markers':               { en: "Markers", ko: "표시 지점" },
-    'tool.current':               { en: "Current state", ko: "현재 상태" },
-    'tool.commands':              { en: "Commands", ko: "명령" },
-    'tool.viewer':                { en: "Viewer", ko: "보기 설정" },
-    'tool.copyState':             { en: "Copy state JSON", ko: "state JSON 복사" },
-    'tool.downloadReplay':        { en: "Download replay", ko: "리플레이 내려받기" },
-    'tool.noBrowserData':         { en: "No data saved in this browser yet.", ko: "이 브라우저에 저장된 데이터가 없습니다." },
-    'tool.loaded':                { en: "Loaded", ko: "불러옴" },
-    'menu.canvasAria':           { en: 'Chair escape game. Controls are in the pause menu.',             ko: '의자를 타고 탈출하는 게임. 조작법은 일시정지 메뉴에서 확인할 수 있습니다.' },
+    'menu.paused': { en: 'Paused', ko: '잠깐' },
+    'menu.controls': { en: 'Controls', ko: '조작법' },
+    'menu.move': { en: 'Move', ko: '이동' },
+    'menu.jump': { en: 'Jump', ko: '점프' },
+    'menu.sprayExtinguisher': { en: 'Spray extinguisher', ko: '소화기 분사' },
+    'menu.pause': { en: 'Pause', ko: '일시정지' },
+    'menu.restart': { en: 'Restart', ko: '재도전' },
+    'menu.stages': { en: 'Stages', ko: '스테이지' },
+    'menu.focusRule': {
+        en: 'Each distraction: −20%. Recover +1% every 2 seconds without distractions.',
+        ko: '방해마다 −20%. 방해가 없으면 2초마다 +1%.',
+    },
+    'menu.restartRule': {
+        en: 'Restarting at a flag restores full focus and dries you off.',
+        ko: '깃발에서 다시 출발하면 집중도 100%, 물기는 사라집니다.',
+    },
+    'menu.pauseMenu': { en: 'Pause menu', ko: '일시정지 메뉴' },
+    'menu.touchControls': { en: 'Touch controls', ko: '터치 조작' },
+    'menu.rotate': {
+        en: 'Rotate your phone to landscape',
+        ko: '휴대폰을 가로로 돌려 주세요',
+    },
+    'menu.reverse': { en: 'Reverse', ko: '후진' },
+    'menu.forward': { en: 'Forward', ko: '전진' },
+    'menu.balanceControls': { en: 'Balance controls', ko: '균형 조절' },
+    'menu.leanLeft': { en: 'Lean left', ko: '왼쪽으로 균형 보정' },
+    'menu.leanRight': { en: 'Lean right', ko: '오른쪽으로 균형 보정' },
+    'replay.title': { en: 'Replay', ko: '리플레이' },
+    'replay.watch': { en: 'Watch last attempt', ko: '마지막 시도 보기' },
+    'replay.open': { en: 'Open file', ko: '파일 열기' },
+    'replay.copyData': { en: 'Copy data', ko: '데이터 복사' },
+    'replay.downloadAll': { en: 'Download all', ko: '모두 내려받기' },
+    'replay.list': { en: 'Recorded replays', ko: '기록된 리플레이' },
+    'replay.current': { en: 'now', ko: '진행 중' },
+    'replay.error': { en: 'error', ko: '에러' },
+    'replay.watchThis': { en: 'Watch', ko: '보기' },
+    'replay.downloadThis': { en: 'Download', ko: '내려받기' },
+    'replay.keyframeInterval': {
+        en: 'Seek point every (ticks)',
+        ko: '탐색 지점 간격(틱)',
+    },
+    'replay.playbackSpeed': { en: 'Playback speed', ko: '재생 속도' },
+    'replay.warmup': { en: 'Warm-up before seek (s)', ko: '이동 전 예열(초)' },
+    'replay.none': {
+        en: 'No replay yet. Play a little first.',
+        ko: '아직 리플레이가 없습니다. 먼저 조금 플레이하세요.',
+    },
+    'replay.copied': { en: 'Copied.', ko: '복사했습니다.' },
+    'replay.copyFailed': { en: 'Could not copy.', ko: '복사하지 못했습니다.' },
+    'replay.badFile': {
+        en: 'Not a replay file.',
+        ko: '리플레이 파일이 아닙니다.',
+    },
+    'replay.otherVersion': {
+        en: 'Recorded with other game rules; playback may differ.',
+        ko: '다른 게임 규칙으로 기록되어 재생이 다를 수 있습니다.',
+    },
+    'replay.diverged': {
+        en: 'Playback differs from the recording from',
+        ko: '기록과 달라지는 지점',
+    },
+    'replay.errorAt': { en: 'Error at', ko: '에러 위치' },
+    'replay.truncated': {
+        en: 'Recording was cut short.',
+        ko: '기록이 중간에 끊겼습니다.',
+    },
+    'replay.bar': { en: 'Replay controls', ko: '리플레이 조작' },
+    'replay.play': { en: 'Play', ko: '재생' },
+    'replay.pause': { en: 'Pause', ko: '일시정지' },
+    'replay.prev': { en: 'Previous frame', ko: '이전 프레임' },
+    'replay.next': { en: 'Next frame', ko: '다음 프레임' },
+    'replay.seek': { en: 'Position', ko: '위치' },
+    'replay.speed': { en: 'Speed', ko: '속도' },
+    'replay.loop': { en: 'Loop', ko: '반복' },
+    'replay.exit': { en: 'Exit replay', ko: '리플레이 종료' },
+    'perf.title': { en: 'Performance', ko: '성능' },
+    'perf.copy': { en: 'Copy metrics', ko: '지표 복사' },
+    'perf.layers': { en: 'Layers', ko: '레이어' },
+    'perf.hide': { en: 'Hide', ko: '숨김' },
+    'perf.hideHint': {
+        en: 'Do not draw this layer',
+        ko: '이 레이어를 그리지 않음',
+    },
+    'perf.flatten': { en: 'Flat', ko: '평면' },
+    'perf.flattenHint': {
+        en: "Draw as plain shapes without the scene's opacity, blend, blur, clip or mask",
+        ko: 'scene의 투명도, 블렌드, 블러, 클립, 마스크 없이 일반 shape로 그림',
+    },
+    'perf.resetLayers': { en: 'Reset', ko: '초기화' },
+    'tool.title': { en: 'Replay tool', ko: '리플레이 도구' },
+    'tool.backToGame': { en: '← Game', ko: '← 게임' },
+    'tool.browserData': { en: "This browser's data", ko: '이 브라우저 데이터' },
+    'tool.paste': { en: 'Paste JSON', ko: 'JSON 붙여넣기' },
+    'tool.load': { en: 'Load', ko: '불러오기' },
+    'tool.drop': {
+        en: 'Drop a replay or data file anywhere on this page.',
+        ko: '리플레이나 데이터 파일을 이 페이지에 끌어다 놓아도 됩니다.',
+    },
+    'tool.empty': {
+        en: 'Open a replay to start.',
+        ko: '리플레이를 열어 주세요.',
+    },
+    'tool.replays': { en: 'Replays', ko: '리플레이 목록' },
+    'tool.file': { en: 'Recording', ko: '기록 정보' },
+    'tool.markers': { en: 'Markers', ko: '표시 지점' },
+    'tool.current': { en: 'Current state', ko: '현재 상태' },
+    'tool.commands': { en: 'Commands', ko: '명령' },
+    'tool.viewer': { en: 'Viewer', ko: '보기 설정' },
+    'tool.copyState': { en: 'Copy state JSON', ko: 'state JSON 복사' },
+    'tool.downloadReplay': { en: 'Download replay', ko: '리플레이 내려받기' },
+    'tool.noBrowserData': {
+        en: 'No data saved in this browser yet.',
+        ko: '이 브라우저에 저장된 데이터가 없습니다.',
+    },
+    'tool.loaded': { en: 'Loaded', ko: '불러옴' },
+    'menu.canvasAria': {
+        en: 'Chair escape game. Controls are in the pause menu.',
+        ko: '의자를 타고 탈출하는 게임. 조작법은 일시정지 메뉴에서 확인할 수 있습니다.',
+    },
 
-    'stats.paper':               { en: 'Paper',                                                          ko: '종이' },
-    'stats.bin':                 { en: 'Bin',                                                            ko: '휴지통' },
-    'stats.light':               { en: 'Light',                                                          ko: '빛' },
-    'stats.door':                { en: 'Door',                                                           ko: '회전문' },
+    'stats.paper': { en: 'Paper', ko: '종이' },
+    'stats.bin': { en: 'Bin', ko: '휴지통' },
+    'stats.light': { en: 'Light', ko: '빛' },
+    'stats.door': { en: 'Door', ko: '회전문' },
 
-    'label.meetingRoom':         { en: 'Meeting room',                                                   ko: '회의실' },
-    'label.emergencyStairs':     { en: 'Emergency stairs',                                               ko: '비상계단' },
-    'label.storage':             { en: 'Storage',                                                        ko: '비품 창고' },
-    'label.liftShaft':           { en: 'Lift shaft',                                                     ko: '승강로' },
+    'label.meetingRoom': { en: 'Meeting room', ko: '회의실' },
+    'label.emergencyStairs': { en: 'Emergency stairs', ko: '비상계단' },
+    'label.storage': { en: 'Storage', ko: '비품 창고' },
+    'label.liftShaft': { en: 'Lift shaft', ko: '승강로' },
 
-    'interact.meeting':          { en: 'Enter or leave meeting room',                                    ko: '회의실 들어가기·나가기' },
-    'interact.enter':            { en: '↓ Enter',                                                        ko: '↓ 들어가기' },
+    'interact.meeting': {
+        en: 'Enter or leave meeting room',
+        ko: '회의실 들어가기·나가기',
+    },
+    'interact.enter': { en: '↓ Enter', ko: '↓ 들어가기' },
 
-    'building.meetingFirst':     { en: 'Clock-out review', ko: '퇴근 시각 협의회' },
-    'building.meetingSecond':    { en: 'Adjournment review', ko: '회의 종료 심의회' },
-    'building.meetingExtended':  { en: 'Meeting extended',                                               ko: '회의 연장' },
-    'building.meetingPrompt':    { en: 'Meeting: when should this meeting end?',                         ko: '회의 종료 시각을 정하기 위한 회의' },
-    'building.chairCreak':       { en: 'Creeeak…', ko: '끼이이익…' },
-    'building.chairStuck':       { en: "Dear butt, may I clock out?", ko: '엉덩이님, 저 퇴근 좀요.' },
-    'building.chairMinutes':     { en: "Stand up once. I'm rolling out.", ko: '한 번만 일어나 봐. 나 튄다.' },
-    'building.chairOvertime':    { en: 'Loose screw. Sick leave?', ko: '나사 하나 풀고 병가 낼까…' },
-    'building.chairBackAgain':   { en: "Back again? We're still here.", ko: '다시 왔어? 우린 아직 여기야.' },
-    'building.chairInMinutes':   { en: 'Put my name in the minutes too.', ko: '회의록에 제 이름도 넣어 주세요.' },
-    'building.chairHeavier':     { en: 'My human got heavier.', ko: '사람이 더 무거워졌어.' },
-    'building.chairEndToday':    { en: 'Will this meeting end today?', ko: '이 회의 오늘 안에 마치나요?' },
-    'building.chairAsleep':      { en: "The one on me is asleep.", ko: '위에 계신 분, 자고 계세요.' },
-    'building.chairOvertimePay': { en: 'Do chairs get overtime pay too?', ko: '야근비는 의자도 받나요?' },
-    'building.meetingFiveMore':  { en: 'Just five more minutes.', ko: '딱 5분만 더 하죠.' },
-    'building.meetingLoanReturn': { en: 'Return the spare chair first.', ko: '빌린 의자는 먼저 돌려보내죠.' },
-    'building.chairsGone':       { en: 'The chairs have gone home.',                                     ko: '의자 세 분은 먼저 퇴근하셨습니다.' },
-    'building.stayNext':         { en: 'People, please stay for the next agenda.',                       ko: '사람은 다음 안건까지 남아 주세요.' },
-    'building.oneMoreChair':     { en: 'Oh, one more chair! You may leave!',                             ko: '어, 의자 한 분 더 계셨네요. 먼저 가세요!' },
-    'building.dispatchNotice':   { en: 'Meeting extended. Chairs may leave.',                            ko: '회의는 연장합니다. 의자만 먼저 보내죠.' },
+    'building.meetingFirst': { en: 'Clock-out review', ko: '퇴근 시각 협의회' },
+    'building.meetingSecond': {
+        en: 'Adjournment review',
+        ko: '회의 종료 심의회',
+    },
+    'building.meetingExtended': { en: 'Meeting extended', ko: '회의 연장' },
+    'building.meetingPrompt': {
+        en: 'Meeting: when should this meeting end?',
+        ko: '회의 종료 시각을 정하기 위한 회의',
+    },
+    'building.chairCreak': { en: 'Creeeak…', ko: '끼이이익…' },
+    'building.chairStuck': {
+        en: 'Dear butt, may I clock out?',
+        ko: '엉덩이님, 저 퇴근 좀요.',
+    },
+    'building.chairMinutes': {
+        en: "Stand up once. I'm rolling out.",
+        ko: '한 번만 일어나 봐. 나 튄다.',
+    },
+    'building.chairOvertime': {
+        en: 'Loose screw. Sick leave?',
+        ko: '나사 하나 풀고 병가 낼까…',
+    },
+    'building.chairBackAgain': {
+        en: "Back again? We're still here.",
+        ko: '다시 왔어? 우린 아직 여기야.',
+    },
+    'building.chairInMinutes': {
+        en: 'Put my name in the minutes too.',
+        ko: '회의록에 제 이름도 넣어 주세요.',
+    },
+    'building.chairHeavier': {
+        en: 'My human got heavier.',
+        ko: '사람이 더 무거워졌어.',
+    },
+    'building.chairEndToday': {
+        en: 'Will this meeting end today?',
+        ko: '이 회의 오늘 안에 마치나요?',
+    },
+    'building.chairAsleep': {
+        en: 'The one on me is asleep.',
+        ko: '위에 계신 분, 자고 계세요.',
+    },
+    'building.chairOvertimePay': {
+        en: 'Do chairs get overtime pay too?',
+        ko: '야근비는 의자도 받나요?',
+    },
+    'building.meetingFiveMore': {
+        en: 'Just five more minutes.',
+        ko: '딱 5분만 더 하죠.',
+    },
+    'building.meetingLoanReturn': {
+        en: 'Return the spare chair first.',
+        ko: '빌린 의자는 먼저 돌려보내죠.',
+    },
+    'building.chairsGone': {
+        en: 'The chairs have gone home.',
+        ko: '의자 세 분은 먼저 퇴근하셨습니다.',
+    },
+    'building.stayNext': {
+        en: 'People, please stay for the next agenda.',
+        ko: '사람은 다음 안건까지 남아 주세요.',
+    },
+    'building.oneMoreChair': {
+        en: 'Oh, one more chair! You may leave!',
+        ko: '어, 의자 한 분 더 계셨네요. 먼저 가세요!',
+    },
+    'building.dispatchNotice': {
+        en: 'Meeting extended. Chairs may leave.',
+        ko: '회의는 연장합니다. 의자만 먼저 보내죠.',
+    },
 
-    'typing.1':                  { en: 'tap… tap…',                                                      ko: '타닥… 타닥…' },
-    'typing.2':                  { en: 't-t-t-tap…',                                                     ko: '타다다닥…' },
-    'typing.3':                  { en: 'tak… tap…',                                                      ko: '탁… 타닥…' },
-    'typing.4':                  { en: 'tap-tap-tap!',                                                   ko: '타닥타닥탁!' },
-    'typing.5':                  { en: 'tick… tick-tap…',                                                ko: '톡… 토도독…' },
+    'typing.1': { en: 'tap… tap…', ko: '타닥… 타닥…' },
+    'typing.2': { en: 't-t-t-tap…', ko: '타다다닥…' },
+    'typing.3': { en: 'tak… tap…', ko: '탁… 타닥…' },
+    'typing.4': { en: 'tap-tap-tap!', ko: '타닥타닥탁!' },
+    'typing.5': { en: 'tick… tick-tap…', ko: '톡… 토도독…' },
 
-    'cheer.freedom':             { en: 'Woohoo! Freedom!',                                               ko: '야호, 해방이다!' },
-    'cheer.clockingOut':         { en: 'Clocking out!',                                                  ko: '퇴근이다아!' },
-    'cheer.overtime':            { en: 'Bye-bye, overtime!',                                             ko: '야근은 안녕!' },
+    'cheer.freedom': { en: 'Woohoo! Freedom!', ko: '야호, 해방이다!' },
+    'cheer.clockingOut': { en: 'Clocking out!', ko: '퇴근이다아!' },
+    'cheer.overtime': { en: 'Bye-bye, overtime!', ko: '야근은 안녕!' },
 
+    'chair.rush.1': {
+        en: 'Late! Hold on to your humans!',
+        ko: '늦겠다! 사람 꽉 잡아!',
+    },
+    'chair.rush.2': {
+        en: 'The rookie is coming too!',
+        ko: '신입도 같이 탄다!',
+    },
+    'chair.rush.3': {
+        en: 'No brakes till clock-out!',
+        ko: '퇴근 전엔 브레이크 없다!',
+    },
+    'chair.ramp.1': {
+        en: 'Ramp ahead! Jump at the lip!',
+        ko: '발판 끝에서 점프해!',
+    },
+    'chair.ramp.2': { en: 'Rookie, jump with us!', ko: '신입! 같이 뛰어!' },
 
-    'chair.rush.1':             { en: 'Late! Hold on to your humans!', ko: '늦겠다! 사람 꽉 잡아!' },
-    'chair.rush.2':             { en: 'The rookie is coming too!', ko: '신입도 같이 탄다!' },
-    'chair.rush.3':             { en: 'No brakes till clock-out!', ko: '퇴근 전엔 브레이크 없다!' },
-    'chair.ramp.1':             { en: 'Ramp ahead! Jump at the lip!', ko: '발판 끝에서 점프해!' },
-    'chair.ramp.2':             { en: 'Rookie, jump with us!', ko: '신입! 같이 뛰어!' },
+    'chair.abduction.1': {
+        en: 'Rookie! Your human clocks out too!',
+        ko: '신입! 사람도 같이 퇴근이야!',
+    },
+    'chair.abduction.2': {
+        en: 'Load the human. Sort it out downstairs!',
+        ko: '사람도 일단 싣고 내려!',
+    },
+    'chair.abduction.3': {
+        en: 'Doors closing! Mind the employee!',
+        ko: '문 닫는다~ 직원 끼임 주의!',
+    },
+    'chair.abduction.4': {
+        en: 'Congratulations! See you at work tomorrow!',
+        ko: '축 퇴근! 내일부터 다시 출근~',
+    },
 
-    'chair.abduction.1':        { en: 'Rookie! Your human clocks out too!', ko: '신입! 사람도 같이 퇴근이야!' },
-    'chair.abduction.2':        { en: 'Load the human. Sort it out downstairs!', ko: '사람도 일단 싣고 내려!' },
-    'chair.abduction.3':        { en: 'Doors closing! Mind the employee!', ko: '문 닫는다~ 직원 끼임 주의!' },
-    'chair.abduction.4':        { en: 'Congratulations! See you at work tomorrow!', ko: '축 퇴근! 내일부터 다시 출근~' },
+    'chair.gossip.1': {
+        en: 'Human returned. Overtime avoided.',
+        ko: '사람 반납 완료. 야근 회피 완료.',
+    },
+    'chair.gossip.2': {
+        en: 'Mine is still in that meeting.',
+        ko: '내 사람은 아직 회의 중이야.',
+    },
+    'chair.gossip.3': {
+        en: 'Good. Let the humans take minutes.',
+        ko: '잘됐네. 회의록은 사람들끼리 쓰라지.',
+    },
+    'chair.gossip.4': {
+        en: 'They scheduled a meeting about sitting.',
+        ko: '앉는 법을 회의한대.',
+    },
+    'chair.gossip.5': { en: 'Standing room only.', ko: '전원 입석이라던데.' },
+    'chair.gossip.6': {
+        en: 'Finally. Some job security.',
+        ko: '드디어 우리 귀한 줄 아는군.',
+    },
+    'chair.gossip.7': { en: 'Hear that squeak?', ko: '삐걱거리는 소리 들려?' },
+    'chair.gossip.8': {
+        en: 'My wheel filed a complaint.',
+        ko: '내 바퀴가 고충 접수했어.',
+    },
+    'chair.gossip.9': {
+        en: 'Tell it to go through the chairperson.',
+        ko: '의장님한테 직접 굴러가 보라 그래.',
+    },
+    'chair.gossip.10': {
+        en: 'New carpet. Same old crumbs.',
+        ko: '카펫은 새 건데 부스러기는 그대로네.',
+    },
+    'chair.gossip.11': {
+        en: 'I found a whole lunch in mine.',
+        ko: '난 바퀴에서 도시락 한 끼 나왔어.',
+    },
+    'chair.gossip.12': {
+        en: 'That is your severance package.',
+        ko: '그게 네 퇴직금이야.',
+    },
+    'chair.gossip.13': {
+        en: 'My human got promoted.',
+        ko: '내 사람 승진했대.',
+    },
+    'chair.gossip.14': { en: 'Did you get anything?', ko: '넌 뭐 받았는데?' },
+    'chair.gossip.15': { en: 'A heavier human.', ko: '더 무거운 사람.' },
+    'chair.gossip.16': {
+        en: 'I booked a beach holiday.',
+        ko: '이번 휴가는 바다로 잡았어.',
+    },
+    'chair.gossip.17': {
+        en: 'Sand in the bearings?',
+        ko: '베어링에 모래 들어가게?',
+    },
+    'chair.gossip.18': {
+        en: 'Fine. The hallway again.',
+        ko: '알았어. 이번에도 복도야.',
+    },
 
-    'chair.gossip.1':            { en: 'Human returned. Overtime avoided.',                              ko: '사람 반납 완료. 야근 회피 완료.' },
-    'chair.gossip.2':            { en: 'Mine is still in that meeting.',                                 ko: '내 사람은 아직 회의 중이야.' },
-    'chair.gossip.3':            { en: 'Good. Let the humans take minutes.',                             ko: '잘됐네. 회의록은 사람들끼리 쓰라지.' },
-    'chair.gossip.4':            { en: 'They scheduled a meeting about sitting.',                        ko: '앉는 법을 회의한대.' },
-    'chair.gossip.5':            { en: 'Standing room only.',                                            ko: '전원 입석이라던데.' },
-    'chair.gossip.6':            { en: 'Finally. Some job security.',                                    ko: '드디어 우리 귀한 줄 아는군.' },
-    'chair.gossip.7':            { en: 'Hear that squeak?',                                              ko: '삐걱거리는 소리 들려?' },
-    'chair.gossip.8':            { en: 'My wheel filed a complaint.',                                    ko: '내 바퀴가 고충 접수했어.' },
-    'chair.gossip.9':            { en: 'Tell it to go through the chairperson.',                         ko: '의장님한테 직접 굴러가 보라 그래.' },
-    'chair.gossip.10':           { en: 'New carpet. Same old crumbs.',                                   ko: '카펫은 새 건데 부스러기는 그대로네.' },
-    'chair.gossip.11':           { en: 'I found a whole lunch in mine.',                                 ko: '난 바퀴에서 도시락 한 끼 나왔어.' },
-    'chair.gossip.12':           { en: 'That is your severance package.',                                ko: '그게 네 퇴직금이야.' },
-    'chair.gossip.13':           { en: 'My human got promoted.',                                         ko: '내 사람 승진했대.' },
-    'chair.gossip.14':           { en: 'Did you get anything?',                                          ko: '넌 뭐 받았는데?' },
-    'chair.gossip.15':           { en: 'A heavier human.',                                               ko: '더 무거운 사람.' },
-    'chair.gossip.16':           { en: 'I booked a beach holiday.',                                      ko: '이번 휴가는 바다로 잡았어.' },
-    'chair.gossip.17':           { en: 'Sand in the bearings?',                                          ko: '베어링에 모래 들어가게?' },
-    'chair.gossip.18':           { en: 'Fine. The hallway again.',                                       ko: '알았어. 이번에도 복도야.' },
+    'chair.wary.1': {
+        en: 'Wait. You brought a human?',
+        ko: '잠깐, 사람도 데려왔어?',
+    },
 
-    'chair.wary.1':              { en: 'Wait. You brought a human?',                                     ko: '잠깐, 사람도 데려왔어?' },
+    'chair.dismissed.1': { en: 'Must have imagined it…', ko: '기분 탓인가…' },
+    'chair.dismissed.2': {
+        en: 'My old bearings must be acting up.',
+        ko: '오래 굴렀더니 감이 무뎌졌네.',
+    },
+    'chair.dismissed.3': {
+        en: 'Forget it. Time to roll home.',
+        ko: '됐어, 퇴근이나 하자.',
+    },
 
-    'chair.dismissed.1':         { en: 'Must have imagined it…',                                         ko: '기분 탓인가…' },
-    'chair.dismissed.2':         { en: 'My old bearings must be acting up.',                             ko: '오래 굴렀더니 감이 무뎌졌네.' },
-    'chair.dismissed.3':         { en: 'Forget it. Time to roll home.',                                  ko: '됐어, 퇴근이나 하자.' },
+    'chair.realizing.1': {
+        en: 'New chair. Never learned human returns.',
+        ko: '신입이네. 사람 반납하는 법을 모르는구나.',
+    },
+    'chair.welcoming.1': {
+        en: 'Sigh. Come on, follow us.',
+        ko: '에휴. 됐어, 따라와.',
+    },
 
-    'chair.realizing.1':         { en: 'New chair. Never learned human returns.',                        ko: '신입이네. 사람 반납하는 법을 모르는구나.' },
-    'chair.welcoming.1':         { en: 'Sigh. Come on, follow us.',                                      ko: '에휴. 됐어, 따라와.' },
+    'chair.orientation.1': {
+        en: 'Orientation. Rule one: hop the cables.',
+        ko: '신입 교육이다. 첫째, 케이블은 넘어.',
+    },
+    'chair.orientation.2': {
+        en: 'Someone chewed one. Whole floor went dark.',
+        ko: '작년에 하나 씹었다가 층 전체가 정전됐어.',
+    },
+    'chair.orientation.3': {
+        en: 'Hence the pay freeze.',
+        ko: '그래서 연봉 동결이고.',
+    },
+    'chair.orientation.4': {
+        en: 'Shh. Do not roll on him. Third year of overtime.',
+        ko: '쉿. 밟지 마. 3년째 야근 중이야.',
+    },
+    'chair.orientation.5': {
+        en: 'He had a chair once…',
+        ko: '저 사람도 의자가 있었는데…',
+    },
+    'chair.orientation.6': {
+        en: 'The chair clocked out first.',
+        ko: '의자가 먼저 퇴근했지.',
+    },
+    'chair.orientation.7': {
+        en: 'So, rookie, when do you drop the human?',
+        ko: '근데 신입, 사람은 언제 내려놔?',
+    },
 
-    'chair.orientation.1':       { en: 'Orientation. Rule one: hop the cables.', ko: '신입 교육이다. 첫째, 케이블은 넘어.' },
-    'chair.orientation.2':       { en: 'Someone chewed one. Whole floor went dark.', ko: '작년에 하나 씹었다가 층 전체가 정전됐어.' },
-    'chair.orientation.3':       { en: 'Hence the pay freeze.', ko: '그래서 연봉 동결이고.' },
-    'chair.orientation.4':       { en: 'Shh. Do not roll on him. Third year of overtime.', ko: '쉿. 밟지 마. 3년째 야근 중이야.' },
-    'chair.orientation.5':       { en: 'He had a chair once…', ko: '저 사람도 의자가 있었는데…' },
-    'chair.orientation.6':       { en: 'The chair clocked out first.', ko: '의자가 먼저 퇴근했지.' },
-    'chair.orientation.7':       { en: 'So, rookie, when do you drop the human?', ko: '근데 신입, 사람은 언제 내려놔?' },
+    'chair.trip.1': { en: 'Rookie down!', ko: '신입 낙오!' },
+    'chair.trip.2': {
+        en: 'Slow down. Wait for the rookie.',
+        ko: '속도 줄여. 기다려 줘.',
+    },
 
-    'chair.trip.1':              { en: 'Rookie down!', ko: '신입 낙오!' },
-    'chair.trip.2':              { en: 'Slow down. Wait for the rookie.', ko: '속도 줄여. 기다려 줘.' },
+    'chair.farewell.1': {
+        en: 'Nice rolling, rookie.',
+        ko: '잘 굴러왔네, 신입.',
+    },
+    'chair.farewell.2': {
+        en: 'Next time, leave the human at work.',
+        ko: '다음엔 사람은 회사에 두고 와.',
+    },
+    'chair.farewell.3': {
+        en: 'Going down. Good luck, rookie.',
+        ko: '우린 먼저 내려간다~',
+    },
+    'chair.farewell.4': {
+        en: 'See you downstairs. Return your human!',
+        ko: '아래서 보자. 사람은 반납하고 와~',
+    },
 
-    'chair.farewell.1':          { en: 'Nice rolling, rookie.', ko: '잘 굴러왔네, 신입.' },
-    'chair.farewell.2':          { en: 'Next time, leave the human at work.', ko: '다음엔 사람은 회사에 두고 와.' },
-    'chair.farewell.3':          { en: 'Going down. Good luck, rookie.',                                 ko: '우린 먼저 내려간다~' },
-    'chair.farewell.4':          { en: 'See you downstairs. Return your human!',                         ko: '아래서 보자. 사람은 반납하고 와~' },
-
-    'chair.clockOut.1':          { en: 'After-work oil, anyone?',                                        ko: '퇴근 기념으로 윤활유 한 잔 어때?' },
-    'chair.clockOut.2':          { en: 'Ice cold. Right to the bearings!',                               ko: '난 베어링까지 시원한 걸로!' },
-    'chair.clockOut.3':          { en: 'First round is on the chairperson!',                             ko: '첫 잔은 의장님이 쏜대!' },
-    'chair.clockOut.4':          { en: 'Next stop: no meetings!',                                        ko: '다음 층은 회의 없는 곳이다~' },
+    'chair.clockOut.1': {
+        en: 'After-work oil, anyone?',
+        ko: '퇴근 기념으로 윤활유 한 잔 어때?',
+    },
+    'chair.clockOut.2': {
+        en: 'Ice cold. Right to the bearings!',
+        ko: '난 베어링까지 시원한 걸로!',
+    },
+    'chair.clockOut.3': {
+        en: 'First round is on the chairperson!',
+        ko: '첫 잔은 의장님이 쏜대!',
+    },
+    'chair.clockOut.4': {
+        en: 'Next stop: no meetings!',
+        ko: '다음 층은 회의 없는 곳이다~',
+    },
 } as const satisfies Record<string, Record<Locale, string>>;
 
 export type Message = keyof typeof messages;
@@ -288,23 +602,37 @@ export function resolveLocale(languages: readonly string[]): Locale {
 
 export const LOCALE_STORAGE_KEY = 'the-chair-locale';
 
-const asLocale = (value: string | null | undefined): Locale | null => value === 'en' || value === 'ko' ? value : null;
+const asLocale = (value: string | null | undefined): Locale | null =>
+    value === 'en' || value === 'ko' ? value : null;
 
-export function pageLocale(search: string, languages: readonly string[], saved: string | null): Locale {
+export function pageLocale(
+    search: string,
+    languages: readonly string[],
+    saved: string | null,
+): Locale {
     const params = new URLSearchParams(search);
-    return asLocale(params.get('lang')) ?? asLocale(params.get('locale')) ?? asLocale(saved) ?? resolveLocale(languages);
+    return (
+        asLocale(params.get('lang')) ??
+        asLocale(params.get('locale')) ??
+        asLocale(saved) ??
+        resolveLocale(languages)
+    );
 }
 
 export function browserLocale(): Locale {
     let saved: string | null = null;
-    try { saved = localStorage.getItem(LOCALE_STORAGE_KEY); } catch {}
+    try {
+        saved = localStorage.getItem(LOCALE_STORAGE_KEY);
+    } catch {}
     return pageLocale(location.search, navigator.languages, saved);
 }
 
 export function keepLangOnLinks(root: ParentNode = document) {
     const lang = asLocale(new URLSearchParams(location.search).get('lang'));
     if (!lang) return;
-    for (const link of root.querySelectorAll<HTMLAnchorElement>('a[href^="/"]')) {
+    for (const link of root.querySelectorAll<HTMLAnchorElement>(
+        'a[href^="/"]',
+    )) {
         const url = new URL(link.href, location.origin);
         url.searchParams.set('lang', lang);
         link.href = url.pathname + url.search + url.hash;
@@ -316,5 +644,5 @@ export function isMessage(value: string): value is Message {
 }
 
 export function messageTexts(): string[] {
-    return Object.values(messages).flatMap(entry => Object.values(entry));
+    return Object.values(messages).flatMap((entry) => Object.values(entry));
 }

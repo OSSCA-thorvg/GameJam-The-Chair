@@ -1,37 +1,30 @@
-export type Vector = [
-    number,
-    number
-];
-export type Curve = [
-    number,
-    number,
-    number,
-    number,
-    number,
-    number
-];
-export type Color = [
-    number,
-    number,
-    number,
-    number
-];
+export type Vector = [number, number];
+export type Curve = [number, number, number, number, number, number];
+export type Color = [number, number, number, number];
 export type Gradient = {
     from: Vector;
     to: Vector;
-    stops: [
-        number,
-        Color
-    ][];
+    stops: Array<[number, Color]>;
     // Radial when set: from is the centre; radius is in screen px.
     radius?: number;
 };
 export type Blend = 'normal' | 'multiply' | 'screen' | 'add' | 'overlay';
-export type Bounds = { left: number; top: number; right: number; bottom: number };
+export type Bounds = {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+};
 export type Transform = {
-    e11: number; e12: number; e13: number;
-    e21: number; e22: number; e23: number;
-    e31: 0; e32: 0; e33: 1;
+    e11: number;
+    e12: number;
+    e13: number;
+    e21: number;
+    e22: number;
+    e23: number;
+    e31: 0;
+    e32: 0;
+    e33: 1;
 };
 export type Stroke = {
     width: number;
@@ -51,7 +44,8 @@ export type LayerSpec = {
     clip?: PathCommand;
     mask?: PathCommand;
     maskInvert?: boolean;
-    // Retained geometry belongs to one canvas; only its Scene transform changes.
+    // Retained geometry belongs to one canvas; only its Scene transform
+    // changes.
     retained?: { geometry: string; transform: Transform; bounds: Bounds };
     effectBudget?: { area: number; minScale?: number };
 };

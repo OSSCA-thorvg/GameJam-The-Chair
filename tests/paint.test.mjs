@@ -2,46 +2,129 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './support/load.mjs';
 
-const { paint, createPaintPool, createRenderCtx, createRenderStats, resetRenderStats, createLayerOverrides } = await loadSource(`
+const {
+    paint,
+    createPaintPool,
+    createRenderCtx,
+    createRenderStats,
+    resetRenderStats,
+    createLayerOverrides,
+} = await loadSource(`
     export { paint, createPaintPool } from './src/render/paint';
     export { createRenderStats, resetRenderStats, createLayerOverrides } from './src/render/perf';
     export { createRenderCtx } from './tests/support/render-context';
 `);
 
-// ThorVG 1.1.3 throws when removing an on-canvas scene with children added since its last update.
+// ThorVG 1.1.3 throws when removing an on-canvas scene with children added
+// since its last update.
 function fakeThorvg() {
     const log = [];
-    const chain = function () { return this; };
+    const chain = function () {
+        return this;
+    };
     class Paint {
-        constructor() { this.onCanvas = false; this.stale = false; }
+        constructor() {
+            this.onCanvas = false;
+            this.stale = false;
+        }
     }
     class Shape extends Paint {}
-    for (const name of ['moveTo', 'lineTo', 'cubicTo', 'close', 'fill', 'stroke', 'trimPath', 'blend', 'visible', 'appendRect', 'opacity']) Shape.prototype[name] = chain;
-    Shape.prototype.reset = function () { log.push('shape-reset'); return this; };
+    for (const name of [
+        'moveTo',
+        'lineTo',
+        'cubicTo',
+        'close',
+        'fill',
+        'stroke',
+        'trimPath',
+        'blend',
+        'visible',
+        'appendRect',
+        'opacity',
+    ]) {
+        Shape.prototype[name] = chain;
+    }
+    Shape.prototype.reset = function () {
+        log.push('shape-reset');
+        return this;
+    };
     class Scene extends Paint {
-        constructor() { super(); this.children = []; this.rendered = false; }
+        constructor() {
+            super();
+            this.children = [];
+            this.rendered = false;
+        }
         add(child) {
             this.children.push(child);
             if (this.onCanvas && this.rendered) this.stale = true;
             return this;
         }
     }
-    for (const name of ['resetEffects', 'gaussianBlur', 'motionBlur', 'blend', 'opacity', 'clip', 'mask', 'visible', 'transform']) Scene.prototype[name] = chain;
-    Scene.prototype.mask = function (shape, method) { this.maskShape = shape; this.maskMethod = method; return this; };
-    Scene.prototype.clip = function (shape) { this.clipShape = shape; return this; };
+    for (const name of [
+        'resetEffects',
+        'gaussianBlur',
+        'motionBlur',
+        'blend',
+        'opacity',
+        'clip',
+        'mask',
+        'visible',
+        'transform',
+    ]) {
+        Scene.prototype[name] = chain;
+    }
+    Scene.prototype.mask = function (shape, method) {
+        this.maskShape = shape;
+        this.maskMethod = method;
+        return this;
+    };
+    Scene.prototype.clip = function (shape) {
+        this.clipShape = shape;
+        return this;
+    };
     class Text extends Paint {
-        constructor() { super(); this.calls = {}; }
+        constructor() {
+            super();
+            this.calls = {};
+        }
     }
-    for (const name of ['align', 'font', 'text', 'fontSize', 'fill', 'outline', 'opacity', 'transform', 'visible']) {
-        Text.prototype[name] = function (...args) { this.calls[name] = args; return this; };
+    for (const name of [
+        'align',
+        'font',
+        'text',
+        'fontSize',
+        'fill',
+        'outline',
+        'opacity',
+        'transform',
+        'visible',
+    ]) {
+        Text.prototype[name] = function (...args) {
+            this.calls[name] = args;
+            return this;
+        };
     }
-    class Gradient { setStops() { return this; } dispose() {} }
+    class Gradient {
+        setStops() {
+            return this;
+        }
+        dispose() {}
+    }
     class Canvas {
-        constructor() { this.paints = []; }
-        add(paint) { paint.onCanvas = true; this.paints.push(paint); log.push('add'); return this; }
+        constructor() {
+            this.paints = [];
+        }
+        add(paint) {
+            paint.onCanvas = true;
+            this.paints.push(paint);
+            log.push('add');
+            return this;
+        }
         remove() {
             log.push('remove');
-            if (this.paints.some(paint => paint.stale)) throw new Error('RuntimeError: null function');
+            if (this.paints.some((paint) => paint.stale)) {
+                throw new Error('RuntimeError: null function');
+            }
             for (const paint of this.paints) paint.onCanvas = false;
             this.paints = [];
             return this;
@@ -55,19 +138,38 @@ function fakeThorvg() {
         }
     }
     const TVG = {
-        Shape, Scene, Text, Canvas, LinearGradient: Gradient, RadialGradient: Gradient,
+        Shape,
+        Scene,
+        Text,
+        Canvas,
+        LinearGradient: Gradient,
+        RadialGradient: Gradient,
         BlendMethod: { Normal: 0, Multiply: 1, Screen: 2, Add: 3, Overlay: 4 },
-        StrokeCap: { Butt: 0, Round: 1 }, StrokeJoin: { Round: 1 }, MaskMethod: { Alpha: 1, InvAlpha: 2 },
+        StrokeCap: { Butt: 0, Round: 1 },
+        StrokeJoin: { Round: 1 },
+        MaskMethod: { Alpha: 1, InvAlpha: 2 },
     };
     return { TVG, canvas: new Canvas(), log };
 }
 
-const square = (x, layer) => ({ kind: 'path', points: [[x, 10], [x + 10, 10], [x + 10, 20], [x, 20]], fill: '#336699', ...(layer ? { layer } : {}) });
+const square = (x, layer) => ({
+    kind: 'path',
+    points: [
+        [x, 10],
+        [x + 10, 10],
+        [x + 10, 20],
+        [x, 20],
+    ],
+    fill: '#336699',
+    ...(layer ? { layer } : {}),
+});
 
 function frame(ctx, layerShapes, plainShapes) {
-    const layer = { key: 'water-body', opacity: .9 };
+    const layer = { key: 'water-body', opacity: 0.9 };
     ctx.commands = [
-        ...Array.from({ length: layerShapes }, (_, i) => square(20 + i * 12, layer)),
+        ...Array.from({ length: layerShapes }, (_, i) =>
+            square(20 + i * 12, layer),
+        ),
         ...Array.from({ length: plainShapes }, (_, i) => square(200 + i * 12)),
     ];
 }
@@ -82,7 +184,10 @@ test('a layer that gains children on a reordering frame does not blank the canva
     paint(ctx, TVG, canvas, pool);
     frame(ctx, 12, 5);
     assert.doesNotThrow(() => paint(ctx, TVG, canvas, pool));
-    assert.ok(canvas.paints.length > 0, 'the canvas still holds the scene after the rebuild');
+    assert.ok(
+        canvas.paints.length > 0,
+        'the canvas still holds the scene after the rebuild',
+    );
 });
 
 test('a failed rebuild is retried on the next frame instead of leaving the canvas empty', () => {
@@ -90,9 +195,12 @@ test('a failed rebuild is retried on the next frame instead of leaving the canva
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
-    const plainFirst = plain => {
+    const plainFirst = (plain) => {
         frame(ctx, 2, 0);
-        ctx.commands = [...Array.from({ length: plain }, (_, i) => square(200 + i * 12)), ...ctx.commands];
+        ctx.commands = [
+            ...Array.from({ length: plain }, (_, i) => square(200 + i * 12)),
+            ...ctx.commands,
+        ];
     };
     plainFirst(4);
     paint(ctx, TVG, canvas, pool);
@@ -108,7 +216,10 @@ test('a failed rebuild is retried on the next frame instead of leaving the canva
     assert.throws(() => paint(ctx, TVG, canvas, pool));
     assert.equal(canvas.paints.length, 0);
     paint(ctx, TVG, canvas, pool);
-    assert.ok(canvas.paints.length > 0, 'the next frame rebuilds the emptied canvas');
+    assert.ok(
+        canvas.paints.length > 0,
+        'the next frame rebuilds the emptied canvas',
+    );
 });
 
 test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds without changing the picture', () => {
@@ -117,8 +228,20 @@ test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds w
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
     const stats = createRenderStats();
-    const blurred = { key: 'glow', blur: 4, motionBlur: { distance: 6, angle: 0 }, clip: square(0), mask: square(0) };
-    ctx.commands = [square(20, blurred), square(40, blurred), square(200), square(220), square(1000)];
+    const blurred = {
+        key: 'glow',
+        blur: 4,
+        motionBlur: { distance: 6, angle: 0 },
+        clip: square(0),
+        mask: square(0),
+    };
+    ctx.commands = [
+        square(20, blurred),
+        square(40, blurred),
+        square(200),
+        square(220),
+        square(1000),
+    ];
 
     paint(ctx, TVG, canvas, pool, stats);
     assert.equal(stats.commands, 5);
@@ -135,7 +258,14 @@ test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds w
     assert.equal(stats.masks, 1);
     assert.equal(stats.clips, 1);
     assert.equal(stats.blurArea, 32 * 12);
-    assert.deepEqual(stats.layerList, [{ key: 'glow', shapes: 2, area: 32 * 12, effects: ['blur4', 'motion', 'clip', 'mask'] }]);
+    assert.deepEqual(stats.layerList, [
+        {
+            key: 'glow',
+            shapes: 2,
+            area: 32 * 12,
+            effects: ['blur4', 'motion', 'clip', 'mask'],
+        },
+    ]);
     assert.ok(stats.syncMs >= 0 && stats.renderMs >= 0);
 
     resetRenderStats(stats);
@@ -143,7 +273,12 @@ test('profiling counts pooled ThorVG objects, effects and paint-order rebuilds w
     resetRenderStats(stats);
     paint(ctx, TVG, canvas, pool, stats);
     assert.equal(stats.reorder, false);
-    ctx.commands = [square(20, blurred), square(200), square(220), square(1000)];
+    ctx.commands = [
+        square(20, blurred),
+        square(200),
+        square(220),
+        square(1000),
+    ];
     resetRenderStats(stats);
     paint(ctx, TVG, canvas, pool, stats);
     assert.equal(stats.parkedShapes, 1);
@@ -156,13 +291,22 @@ test('debug layer overrides hide a layer or draw it as plain shapes, and leave o
     const pool = createPaintPool();
     const stats = createRenderStats();
     const overrides = createLayerOverrides();
-    const sun = { key: 'sun', blend: 'screen', opacity: .5 };
+    const sun = { key: 'sun', blend: 'screen', opacity: 0.5 };
     const fog = { key: 'fog', blur: 2 };
-    ctx.commands = [square(20, sun), square(40, fog), square(60, fog), square(200)];
+    ctx.commands = [
+        square(20, sun),
+        square(40, fog),
+        square(60, fog),
+        square(200),
+    ];
     const run = () => {
         resetRenderStats(stats);
         paint(ctx, TVG, canvas, pool, stats, overrides);
-        return { keys: stats.layerList.map(layer => layer.key), top: stats.topShapes, commands: stats.commands };
+        return {
+            keys: stats.layerList.map((layer) => layer.key),
+            top: stats.topShapes,
+            commands: stats.commands,
+        };
     };
 
     assert.deepEqual(run(), { keys: ['sun', 'fog'], top: 1, commands: 4 });
@@ -183,8 +327,9 @@ test('a layer that drops its mask or clip gets a fresh scene instead of a pass-t
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
-    const sceneOf = () => canvas.paints.find(paint => paint instanceof TVG.Scene);
-    const draw = layer => {
+    const sceneOf = () =>
+        canvas.paints.find((paint) => paint instanceof TVG.Scene);
+    const draw = (layer) => {
         ctx.commands = [square(20, layer), square(200)];
         paint(ctx, TVG, canvas, pool);
         paint(ctx, TVG, canvas, pool);
@@ -205,17 +350,31 @@ test('a layer that drops its mask or clip gets a fresh scene instead of a pass-t
     draw({ key: 'glint', blend: 'screen', clip: square(0) });
     assert.equal(sceneOf(), unmasked, 'an unchanged layer keeps its scene');
 
-    draw({ key: 'glint', blend: 'screen', clip: square(0), mask: square(0), maskInvert: true });
+    draw({
+        key: 'glint',
+        blend: 'screen',
+        clip: square(0),
+        mask: square(0),
+        maskInvert: true,
+    });
     assert.equal(sceneOf(), unmasked, 'adding a mask reuses the scene');
     assert.equal(unmasked.maskMethod, TVG.MaskMethod.InvAlpha);
 
     draw({ key: 'glint', blend: 'screen', clip: square(0), mask: square(0) });
     const flipped = sceneOf();
-    assert.notEqual(flipped, unmasked, 'flipping the mask mode replaces the scene');
+    assert.notEqual(
+        flipped,
+        unmasked,
+        'flipping the mask mode replaces the scene',
+    );
     assert.equal(flipped.maskMethod, TVG.MaskMethod.Alpha);
 
     draw({ key: 'glint', blend: 'screen' });
-    assert.equal(sceneOf().clipShape, undefined, 'dropping the clip replaces the scene too');
+    assert.equal(
+        sceneOf().clipShape,
+        undefined,
+        'dropping the clip replaces the scene too',
+    );
 });
 
 test('retained geometry is traced once while its ThorVG Scene transform can change every frame', () => {
@@ -223,23 +382,36 @@ test('retained geometry is traced once while its ThorVG Scene transform can chan
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
-    const retained = tx => ({
+    const retained = (tx) => ({
         key: 'retained:test-wall',
         retained: {
             geometry: 'test-wall',
-            transform: { e11: 1, e12: 0, e13: tx, e21: 0, e22: 1, e23: 0, e31: 0, e32: 0, e33: 1 },
+            transform: {
+                e11: 1,
+                e12: 0,
+                e13: tx,
+                e21: 0,
+                e22: 1,
+                e23: 0,
+                e31: 0,
+                e32: 0,
+                e33: 1,
+            },
             bounds: { left: tx, top: 10, right: tx + 10, bottom: 20 },
         },
     });
 
     ctx.commands = [square(10, retained(0))];
     paint(ctx, TVG, canvas, pool);
-    const firstTraceCount = log.filter(item => item === 'shape-reset').length;
+    const firstTraceCount = log.filter((item) => item === 'shape-reset').length;
 
     ctx.commands = [square(10, retained(80))];
     paint(ctx, TVG, canvas, pool);
-    assert.equal(log.filter(item => item === 'shape-reset').length, firstTraceCount,
-        'moving the retained Scene does not retrace its child path');
+    assert.equal(
+        log.filter((item) => item === 'shape-reset').length,
+        firstTraceCount,
+        'moving the retained Scene does not retrace its child path',
+    );
 });
 
 test('ThorVG Text keeps its place in the command order so later shapes paint over it', () => {
@@ -247,25 +419,62 @@ test('ThorVG Text keeps its place in the command order so later shapes paint ove
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const pool = createPaintPool();
-    const text = { content: '흔들리지', font: 'Black Han Sans', size: 40, x: 100, y: 50, rotation: .1, fill: '#fff0cc',
-        outline: { width: 3, color: '#27344d' } };
-    ctx.commands = [square(10), { kind: 'text', points: [[60, 30], [140, 30], [140, 70], [60, 70]], text }, square(100)];
+    const text = {
+        content: '흔들리지',
+        font: 'Black Han Sans',
+        size: 40,
+        x: 100,
+        y: 50,
+        rotation: 0.1,
+        fill: '#fff0cc',
+        outline: { width: 3, color: '#27344d' },
+    };
+    ctx.commands = [
+        square(10),
+        {
+            kind: 'text',
+            points: [
+                [60, 30],
+                [140, 30],
+                [140, 70],
+                [60, 70],
+            ],
+            text,
+        },
+        square(100),
+    ];
     paint(ctx, TVG, canvas, pool);
 
-    const kinds = canvas.paints.map(paint => paint.constructor.name);
-    assert.deepEqual(kinds, ['Shape', 'Text', 'Text', 'Shape'], 'outline, fill, then the actor drawn after the sign');
+    const kinds = canvas.paints.map((paint) => paint.constructor.name);
+    assert.deepEqual(
+        kinds,
+        ['Shape', 'Text', 'Text', 'Shape'],
+        'outline, fill, then the actor drawn after the sign',
+    );
     const [back, front] = canvas.paints.slice(1, 3);
-    assert.deepEqual(back.calls.outline, [3, 0x27, 0x34, 0x4d], 'the outline sits under the fill');
+    assert.deepEqual(
+        back.calls.outline,
+        [3, 0x27, 0x34, 0x4d],
+        'the outline sits under the fill',
+    );
     assert.equal(front.calls.outline, undefined);
-    assert.deepEqual(front.calls.fontSize, [30], 'CSS px are converted to ThorVG points');
-    assert.deepEqual(front.calls.align, [.5, .5]);
+    assert.deepEqual(
+        front.calls.fontSize,
+        [30],
+        'CSS px are converted to ThorVG points',
+    );
+    assert.deepEqual(front.calls.align, [0.5, 0.5]);
     assert.equal(front.calls.transform[0].e13, 100);
-    assert.ok(Math.abs(front.calls.transform[0].e21 - Math.sin(.1)) < 1e-9);
+    assert.ok(Math.abs(front.calls.transform[0].e21 - Math.sin(0.1)) < 1e-9);
 
     ctx.commands = [square(10), square(100)];
     paint(ctx, TVG, canvas, pool);
     assert.equal(front.calls.visible[0], false);
-    assert.equal(canvas.paints.filter(paint => paint.constructor.name === 'Shape').length, 2);
+    assert.equal(
+        canvas.paints.filter((paint) => paint.constructor.name === 'Shape')
+            .length,
+        2,
+    );
 });
 
 test('a layer that changes nothing is painted as plain shapes, and one faded to nothing is skipped', () => {
@@ -273,12 +482,26 @@ test('a layer that changes nothing is painted as plain shapes, and one faded to 
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const stats = createRenderStats();
-    const plain = { key: 'group-only' }, gone = { key: 'faded', opacity: .001 }, seen = { key: 'fading', opacity: .5 };
-    ctx.commands = [square(20, plain), square(40, plain), square(60, gone), square(80, seen)];
+    const plain = { key: 'group-only' },
+        gone = { key: 'faded', opacity: 0.001 },
+        seen = { key: 'fading', opacity: 0.5 };
+    ctx.commands = [
+        square(20, plain),
+        square(40, plain),
+        square(60, gone),
+        square(80, seen),
+    ];
     paint(ctx, TVG, canvas, createPaintPool(), stats);
-    assert.equal(stats.topShapes, 2, 'the effect-free layer draws its two squares directly');
+    assert.equal(
+        stats.topShapes,
+        2,
+        'the effect-free layer draws its two squares directly',
+    );
     assert.equal(stats.layers, 1, 'only the half-faded layer needs a Scene');
-    assert.deepEqual(stats.layerList.map(layer => layer.key), ['fading']);
+    assert.deepEqual(
+        stats.layerList.map((layer) => layer.key),
+        ['fading'],
+    );
 });
 
 test('back-to-back layers that only screen-blend share one Scene; any other effect or a plain shape between keeps them apart', () => {
@@ -286,9 +509,28 @@ test('back-to-back layers that only screen-blend share one Scene; any other effe
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 400, H: 300 });
     const stats = createRenderStats();
-    const rec = { key: 'rec', blend: 'screen' }, beam = { key: 'beam', blend: 'screen' }, beam2 = { key: 'beam', blend: 'screen' };
-    const faded = { key: 'faded', blend: 'screen', opacity: .5 }, lit = { key: 'lit', blend: 'add' };
-    ctx.commands = [square(20, rec), square(40, beam), square(60, beam2), square(80, faded), square(100, lit), square(120), square(140, rec)];
+    const rec = { key: 'rec', blend: 'screen' },
+        beam = { key: 'beam', blend: 'screen' },
+        beam2 = { key: 'beam', blend: 'screen' };
+    const faded = { key: 'faded', blend: 'screen', opacity: 0.5 },
+        lit = { key: 'lit', blend: 'add' };
+    ctx.commands = [
+        square(20, rec),
+        square(40, beam),
+        square(60, beam2),
+        square(80, faded),
+        square(100, lit),
+        square(120),
+        square(140, rec),
+    ];
     paint(ctx, TVG, canvas, createPaintPool(), stats);
-    assert.deepEqual(stats.layerList.map(layer => [layer.key, layer.shapes]), [['rec', 3], ['faded', 1], ['lit', 1], ['rec', 1]]);
+    assert.deepEqual(
+        stats.layerList.map((layer) => [layer.key, layer.shapes]),
+        [
+            ['rec', 3],
+            ['faded', 1],
+            ['lit', 1],
+            ['rec', 1],
+        ],
+    );
 });

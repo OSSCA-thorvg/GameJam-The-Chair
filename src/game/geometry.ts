@@ -1,13 +1,24 @@
 import type { Point } from './types';
 import * as Det from './math';
 
-export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+export const clamp = (v: number, a: number, b: number) =>
+    Math.max(a, Math.min(b, v));
 
 export function polyRect(x: number, y: number, w: number, h: number): Point[] {
-    return [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
+    return [
+        { x, y },
+        { x: x + w, y },
+        { x: x + w, y: y + h },
+        { x, y: y + h },
+    ];
 }
 
-export function contact(cx: number, cy: number, r: number, poly: readonly Readonly<Point>[]) {
+export function contact(
+    cx: number,
+    cy: number,
+    r: number,
+    poly: ReadonlyArray<Readonly<Point>>,
+) {
     let best = Infinity;
     let nx = 0;
     let ny = 0;
@@ -27,9 +38,13 @@ export function contact(cx: number, cy: number, r: number, poly: readonly Readon
         }
         if (d < best) {
             best = d;
-            nx = d > .00001 ? dx / d : ey / Math.sqrt(den);
-            ny = d > .00001 ? dy / d : -ex / Math.sqrt(den);
+            nx = d > 0.00001 ? dx / d : ey / Math.sqrt(den);
+            ny = d > 0.00001 ? dy / d : -ex / Math.sqrt(den);
         }
     }
-    return inside ? { nx: -nx, ny: -ny, depth: r + best } : best < r ? { nx, ny, depth: r - best } : null;
+    return inside
+        ? { nx: -nx, ny: -ny, depth: r + best }
+        : best < r
+          ? { nx, ny, depth: r - best }
+          : null;
 }

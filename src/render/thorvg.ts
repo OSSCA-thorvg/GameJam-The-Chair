@@ -11,14 +11,21 @@ export type { ThorvgRenderer } from './backend';
 let engine: ReturnType<typeof init> | null = null;
 let chosen: ThorvgRenderer | null = null;
 
-// Chromium may return SwiftShader even with failIfMajorPerformanceCaveat; reject software WebGL.
+// Chromium may return SwiftShader even with failIfMajorPerformanceCaveat;
+// reject software WebGL.
 function hardwareWebGL2() {
     try {
         const probe = document.createElement('canvas');
-        const gl = probe.getContext('webgl2', { failIfMajorPerformanceCaveat: true });
+        const gl = probe.getContext('webgl2', {
+            failIfMajorPerformanceCaveat: true,
+        });
         if (!gl) return false;
         const info = gl.getExtension('WEBGL_debug_renderer_info');
-        const name = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? '');
+        const name = String(
+            gl.getParameter(
+                info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER,
+            ) ?? '',
+        );
         gl.getExtension('WEBGL_lose_context')?.loseContext();
         return !isSoftwareGl(name);
     } catch {
@@ -39,9 +46,17 @@ export function thorvgRenderer(): ThorvgRenderer {
     return chosen;
 }
 
-const FONTS = [[SIGN_FONT, signFontUrl], [LABEL_FONT, labelFontUrl], [SPEECH_FONT, speechFontUrl]] as const;
+const FONTS = [
+    [SIGN_FONT, signFontUrl],
+    [LABEL_FONT, labelFontUrl],
+    [SPEECH_FONT, speechFontUrl],
+] as const;
 
-async function loadFont(TVG: Awaited<ReturnType<typeof init>>, name: string, url: string) {
+async function loadFont(
+    TVG: Awaited<ReturnType<typeof init>>,
+    name: string,
+    url: string,
+) {
     try {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`${name} ${res.status}`);
@@ -55,12 +70,16 @@ async function loadFont(TVG: Awaited<ReturnType<typeof init>>, name: string, url
 }
 
 export function loadThorvg() {
-    engine ??= init({ renderer: thorvgRenderer(), locateFile: () => wasmUrl }).then(async TVG => {
-        await Promise.all(FONTS.map(([name, url]) => loadFont(TVG, name, url)));
-        return TVG;
-    }).catch(error => {
-        engine = null;
-        throw error;
-    });
+    engine ??= init({ renderer: thorvgRenderer(), locateFile: () => wasmUrl })
+        .then(async (TVG) => {
+            await Promise.all(
+                FONTS.map(([name, url]) => loadFont(TVG, name, url)),
+            );
+            return TVG;
+        })
+        .catch((error) => {
+            engine = null;
+            throw error;
+        });
     return engine;
 }
