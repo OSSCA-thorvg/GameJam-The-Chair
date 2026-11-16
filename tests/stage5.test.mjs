@@ -34,14 +34,14 @@ const {
     export { actionForKey } from './src/ui/controls';
     export { createGame, stepGame, viewState } from './src/game/game';
     export { orbitStep, gearAt, satelliteLightOn } from './src/game/stages/orbit/course/decide';
-    export { orbitSatelliteLight, satelliteLightStage, satelliteLightWarmth } from './src/render/scene/orbit-satellite-light';
-    export { createSkyProjection } from './src/render/scene/sky-projection';
+    export { orbitSatelliteLight, satelliteLightStage, satelliteLightWarmth } from './src/render/scene/orbit/satellite-light';
+    export { createSkyProjection } from './src/render/scene/shared/projection';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
     export { parseCommand } from './src/game/commands';
     export { previewScenes } from './src/preview-scenes';
     export { orbitKeys } from './src/preview/autopilot';
     export { drawOrbit } from './src/render/scene/orbit';
-    export { ORBIT_ENDING, orbitEnding } from './src/render/scene/orbit-ending';
+    export { ORBIT_ENDING, orbitEnding } from './src/render/scene/orbit/ending';
     export { createRenderCtx } from './tests/support/render-context';
 `);
 const reach = (t) =>
@@ -990,7 +990,7 @@ test('rushing forward pulls the camera back and streams air round the chair, mor
 
 test('the Earth sits below the chair: its horizon dips under eye level and curves more the higher it climbs', async () => {
     const { orbitEarth, earthAltitude, groundTrack } = await loadSource(
-        `export { orbitEarth, earthAltitude, groundTrack } from './src/render/scene/orbit-earth';`,
+        `export { orbitEarth, earthAltitude, groundTrack } from './src/render/scene/orbit/earth';`,
     );
     const level = { cx: 500, cy: 189, focal: 841, roll: 0, pitch: 0 };
     const horizon = (z) => {

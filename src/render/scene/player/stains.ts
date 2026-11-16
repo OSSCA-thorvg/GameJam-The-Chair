@@ -1,0 +1,266 @@
+import type { RenderCtx } from '../../context';
+
+export const MAX_STAIN_LAYERS = 3;
+
+type Pt = [number, number];
+
+const SHIRT: Pt[] = [
+    [-17, -63],
+    [-6, -64],
+    [5, -60],
+    [9, -25],
+    [-17, -23],
+];
+const THIGH: Pt[] = [
+    [-13, -26],
+    [22, -25],
+    [29, -21],
+    [21, -12],
+    [-13, -16],
+];
+const SHIN: Pt[] = [
+    [22, -24],
+    [29, -21],
+    [34, 11],
+    [26, 13],
+    [21, -12],
+];
+const FACE: Pt[] = [
+    [-4, -82],
+    [13, -84],
+    [14, -79],
+    [17, -75],
+    [13, -74],
+    [11, -66],
+    [2, -66],
+];
+const HAIR: Pt[] = [
+    [-15, -87],
+    [-5, -100],
+    [10, -97],
+    [16, -88],
+    [3, -87],
+    [-10, -77],
+];
+const BACK: Pt[] = [
+    [-40, -69],
+    [-24, -68],
+    [-23, -20],
+    [-37, -20],
+];
+const SEAT: Pt[] = [
+    [-30, -15],
+    [32, -15],
+    [32, -3],
+    [-30, -3],
+];
+
+const MUD = {
+    rim: '#6d6143',
+    body: '#8c7f57',
+    light: '#a99c70',
+    dark: '#4f4a35',
+};
+
+const hash = (n: number) => {
+    const v = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+    return v - Math.floor(v);
+};
+
+function clipTo(poly: Pt[], clip: Pt[]): Pt[] {
+    let out = poly;
+    for (let i = 0; i < clip.length && out.length; i++) {
+        const a = clip[i],
+            b = clip[(i + 1) % clip.length];
+        const side = (p: Pt) =>
+            (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+        const sign = Math.sign(side(clip[(i + 2) % clip.length])) || 1;
+        const input = out;
+        out = [];
+        for (let j = 0; j < input.length; j++) {
+            const p = input[j],
+                q = input[(j + 1) % input.length];
+            const sp = side(p) * sign,
+                sq = side(q) * sign;
+            if (sp >= 0) out.push(p);
+            if (sp >= 0 !== sq >= 0) {
+                const k = sp / (sp - sq);
+                out.push([p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k]);
+            }
+        }
+    }
+    return out;
+}
+
+function splatShape(
+    x: number,
+    y: number,
+    r: number,
+    seed: number,
+    squash = 1,
+): Pt[] {
+    const points: Pt[] = [];
+    const n = 28;
+    const p1 = hash(seed * 7) * 6.3,
+        p2 = hash(seed * 11) * 6.3;
+    const lobes = 3 + Math.floor(hash(seed * 13) * 3);
+    for (let j = 0; j < n; j++) {
+        const a = (j / n) * Math.PI * 2;
+        const bulge =
+            1 +
+            0.2 * Math.sin(a * lobes + p1) +
+            0.08 * Math.sin(a * (lobes + 2) + p2);
+        points.push([
+            x + Math.cos(a) * r * bulge,
+            y + Math.sin(a) * r * bulge * squash,
+        ]);
+    }
+    return points;
+}
+
+function fill(ctx: RenderCtx, poly: Pt[], color: string) {
+    if (poly.length >= 3) ctx.polygon(poly, color);
+}
+
+function splat(
+    ctx: RenderCtx,
+    on: Pt[],
+    x: number,
+    y: number,
+    r: number,
+    seed: number,
+    drip = true,
+) {
+    fill(ctx, clipTo(splatShape(x, y, r, seed), on), MUD.rim);
+    fill(
+        ctx,
+        clipTo(splatShape(x - r * 0.1, y - r * 0.1, r * 0.62, seed + 3), on),
+        MUD.body,
+    );
+    fill(
+        ctx,
+        clipTo(splatShape(x - r * 0.25, y - r * 0.25, r * 0.22, seed + 5), on),
+        MUD.light,
+    );
+    if (drip) {
+        const len = r * (1.4 + hash(seed * 3) * 0.8),
+            w = r * 0.22;
+        fill(
+            ctx,
+            clipTo(
+                [
+                    [x - w, y + r * 0.4],
+                    [x + w, y + r * 0.4],
+                    [x + w * 0.7, y + r * 0.4 + len],
+                    [x - w * 0.7, y + r * 0.4 + len],
+                ],
+                on,
+            ),
+            MUD.rim,
+        );
+        fill(
+            ctx,
+            clipTo(splatShape(x, y + r * 0.4 + len, w * 1.1, seed + 9), on),
+            MUD.rim,
+        );
+    }
+    for (let f = 0; f < 3; f++) {
+        const a = hash(seed * 17 + f) * Math.PI * 2,
+            d = r * (1.7 + hash(seed * 19 + f) * 0.7);
+        fill(
+            ctx,
+            clipTo(
+                splatShape(
+                    x + Math.cos(a) * d,
+                    y + Math.sin(a) * d,
+                    0.8 + hash(seed + f) * 0.5,
+                    seed + f,
+                ),
+                on,
+            ),
+            MUD.rim,
+        );
+    }
+}
+
+export function riderStains(ctx: RenderCtx, soaks: number) {
+    const level = Math.min(soaks, MAX_STAIN_LAYERS);
+    if (level >= 1) {
+        splat(ctx, SHIRT, -6, -46, 5.2, 1);
+        splat(ctx, THIGH, 6, -21, 4.2, 2, false);
+    }
+    if (level >= 2) {
+        splat(ctx, SHIRT, -12, -30, 4, 4);
+        splat(ctx, SHIN, 28, -6, 3.4, 5);
+    }
+    if (level >= 3) {
+        splat(ctx, SHIRT, -11, -57, 4.4, 7);
+        splat(ctx, THIGH, 17, -20, 4.6, 8, false);
+        splat(ctx, SHIN, 30, 5, 2.8, 9, false);
+    }
+}
+
+export function riderFaceStains(ctx: RenderCtx, soaks: number) {
+    const level = Math.min(soaks, MAX_STAIN_LAYERS);
+    if (level >= 2) {
+        splat(ctx, FACE, 6, -73, 2.6, 11);
+        fill(ctx, clipTo(splatShape(12, -79, 1.1, 12), FACE), MUD.rim);
+    }
+    if (level >= 3) {
+        splat(ctx, HAIR, 2, -93, 3.4, 13, false);
+        ctx.polygon(
+            [
+                [-2, -88],
+                [5, -89],
+                [6, -84],
+                [3, -80],
+                [1, -84],
+            ],
+            '#2d323c',
+        );
+        const fall = (ctx.t * 1.3) % 1;
+        ctx.ellipse(3, -79 + fall * 9, 0.9, 1.3, MUD.body);
+    }
+}
+
+export function chairStains(ctx: RenderCtx, soaks: number) {
+    const level = Math.min(soaks, MAX_STAIN_LAYERS);
+    if (level >= 2) splat(ctx, BACK, -31, -48, 4.4, 21);
+    if (level >= 3) {
+        splat(ctx, SEAT, -22, -8, 4, 22, false);
+        for (let i = 0; i < 3; i++) {
+            const fall = (ctx.t * 1.1 + i * 0.37) % 1;
+            ctx.ellipse(
+                -24 + i * 21,
+                -2 + fall * 22,
+                1,
+                1.5,
+                MUD.body +
+                    Math.round(255 * (1 - fall * 0.8))
+                        .toString(16)
+                        .padStart(2, '0'),
+            );
+        }
+    }
+}
+
+export function riderSplash(ctx: RenderCtx, life: number) {
+    const k = Math.max(0, Math.min(1, (1.7 - life) / 0.6));
+    if (k <= 0 || k >= 1) return;
+    for (let i = 0; i < 9; i++) {
+        const a = -Math.PI * (0.15 + 0.7 * hash(i * 7.7)),
+            d = 10 + 34 * k * (0.6 + 0.4 * hash(i * 3.3));
+        const x = -4 + Math.cos(a) * d,
+            y = -30 + Math.sin(a) * d + 30 * k * k;
+        ctx.ellipse(
+            x,
+            y,
+            1.6 * (1 - k * 0.5),
+            2.2 * (1 - k * 0.5),
+            '#7f8f6a' +
+                Math.round(200 * (1 - k))
+                    .toString(16)
+                    .padStart(2, '0'),
+        );
+    }
+}

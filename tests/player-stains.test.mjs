@@ -4,7 +4,7 @@ import { loadSource } from './support/load.mjs';
 
 const { createRenderCtx, riderStains, MAX_STAIN_LAYERS } = await loadSource(`
     export { createRenderCtx } from './tests/support/render-context';
-    export { riderStains, MAX_STAIN_LAYERS } from './src/render/scene/player-stains';
+    export { riderStains, MAX_STAIN_LAYERS } from './src/render/scene/player/stains';
 `);
 
 const stains = (soaks) => {

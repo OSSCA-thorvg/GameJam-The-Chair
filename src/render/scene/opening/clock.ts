@@ -13,8 +13,8 @@ import {
     rotate,
     screenRect,
 } from './shapes';
-import { underOfficeTint, windowView } from '../window-view';
-import { roofShape, type Roof } from '../skyline';
+import { underOfficeTint, windowView } from '../office/window-view';
+import { roofShape, type Roof } from '../office/skyline';
 
 export function clockLayout(ctx: RenderCtx, frame: OpeningFrame) {
     const R = Math.min(ctx.W * 0.5, ctx.H) * 0.3;

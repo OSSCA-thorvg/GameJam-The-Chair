@@ -1,0 +1,198 @@
+import type { RenderCtx } from '../../context';
+import type { SkyProjection } from '../shared/projection';
+import { CLOUD_TONES, puffCloud, seeded } from '../shared/cloud-art';
+
+const CLOUDS = (() => {
+    const random = seeded(817);
+    return Array.from({ length: 10 }, (_, i) => ({
+        x: (i % 2 ? 1 : -1) * (420 + random() * 1700),
+        y: -330 - random() * 100,
+        z: 800 + random() * 9000,
+        radius: 190 + random() * 160,
+        seed: 6100 + i,
+    })).sort((a, b) => b.z - a.z);
+})();
+
+export type BasinAnchor = { x: number; y: number };
+
+export function orbitSky(ctx: RenderCtx) {
+    ctx.commands.push({
+        kind: 'path',
+        points: [
+            [0, 0],
+            [ctx.W, 0],
+            [ctx.W, ctx.H],
+            [0, ctx.H],
+        ],
+        fill: {
+            from: [0, 0],
+            to: [0, ctx.H],
+            stops: [
+                [0, ctx.rgba('#7499b9')],
+                [0.55, ctx.rgba('#a7bdd0')],
+                [1, ctx.rgba('#efd0bc')],
+            ],
+        },
+    });
+}
+
+export type CloudBankOptions = {
+    anchor?: BasinAnchor;
+    only?: ReadonlySet<number>;
+    nearDepth?: number;
+    unwrapped?: boolean;
+    turn?: number;
+    alpha?: number;
+};
+
+const PASS_FADE = 260;
+
+type PlacedCloud = {
+    seed: number;
+    x: number;
+    y: number;
+    size: number;
+    opacity: number;
+};
+
+function placeClouds(
+    ctx: RenderCtx,
+    view: SkyProjection,
+    travel: number,
+    foreground: boolean,
+    options: CloudBankOptions,
+) {
+    const anchor = options.anchor ?? ctx.state.player;
+    const placed: PlacedCloud[] = [];
+    for (const cloud of CLOUDS) {
+        if (options.only && !options.only.has(cloud.seed)) continue;
+        const z = options.unwrapped
+            ? ((cloud.z + 12000) % 10000) - 500 - travel
+            : ((cloud.z - travel + 12000) % 10000) - 500;
+        const across = cloud.x - anchor.x * 0.55,
+            turn = options.turn ?? 0;
+        const ahead = z * Math.cos(turn) + across * Math.sin(turn);
+        if (ahead <= 0 || ahead < 900 !== foreground) continue;
+        const center: [number, number, number] = [
+            ahead,
+            cloud.y - anchor.y * 0.45,
+            across * Math.cos(turn) - z * Math.sin(turn),
+        ];
+        const depth = view.depth(center);
+        if (depth < (options.nearDepth ?? 200)) continue;
+        const [x, y] = view.project(center);
+        const edge = view.project([z, center[1], center[2] + cloud.radius]);
+        const size = Math.abs(edge[0] - x) / 170;
+        if (
+            !options.only &&
+            !foreground &&
+            z < 4500 &&
+            Math.abs(x - ctx.W / 2) < ctx.W * 0.34 + size * 90
+        ) {
+            continue;
+        }
+        if (
+            x < -size * 300 ||
+            x > ctx.W + size * 300 ||
+            y - size * 180 > ctx.H ||
+            y + size * 40 < 0
+        ) {
+            continue;
+        }
+        const reach = ctx.clamp(ahead / PASS_FADE, 0, 1);
+        const opacity =
+            reach *
+            (options.nearDepth === undefined
+                ? 1
+                : ctx.clamp((depth - options.nearDepth) / 600, 0, 1));
+        placed.push({ seed: cloud.seed, x, y, size, opacity });
+    }
+    return placed;
+}
+
+export function basinCloudSeeds(
+    ctx: RenderCtx,
+    view: SkyProjection,
+    travel: number,
+    anchor: BasinAnchor,
+) {
+    return new Set(
+        [false, true].flatMap((foreground) =>
+            placeClouds(ctx, view, travel, foreground, { anchor }).map(
+                (cloud) => cloud.seed,
+            ),
+        ),
+    );
+}
+
+export function orbitCloudBank(
+    ctx: RenderCtx,
+    view: SkyProjection,
+    travel: number,
+    foreground: boolean,
+    options: CloudBankOptions = {},
+) {
+    const placed = placeClouds(ctx, view, travel, foreground, options);
+    const saved = {
+        scale: ctx.scale,
+        cam: ctx.cam,
+        vertical: ctx.vertical,
+        ox: ctx.ox,
+        oy: ctx.oy,
+        rotation: ctx.rotation,
+        localScale: ctx.localScale,
+        mirror: ctx.mirror,
+    };
+    Object.assign(ctx, {
+        scale: 1,
+        cam: 0,
+        vertical: 0,
+        ox: 0,
+        oy: 0,
+        rotation: 0,
+        localScale: 1,
+        mirror: null,
+    });
+    const fade = options.alpha ?? 1;
+    const bread = (
+        x: number,
+        y: number,
+        size: number,
+        seed: number,
+        near: boolean,
+        opacity = 1,
+    ) =>
+        puffCloud(ctx, x, y, size, seed, CLOUD_TONES.bread, {
+            alpha: (near ? 0.95 : 0.72) * opacity * fade,
+            fade: true,
+        });
+    for (const { seed, x, y, size, opacity } of placed) {
+        bread(x, y, size, seed, foreground, opacity);
+    }
+    if (!foreground) {
+        for (const [x, y, seed] of [
+            [0.15, 0.15, 9201],
+            [0.83, 0.1, 9202],
+        ]) {
+            bread(
+                ctx.W * x + Math.sin(travel * 0.0003) * 8,
+                ctx.H * y,
+                ctx.W / 2500,
+                seed,
+                false,
+            );
+        }
+    }
+    if (!foreground) {
+        for (let i = 0; i < 5; i++) {
+            bread(
+                ctx.W * (i / 4),
+                ctx.H * (0.98 + Math.sin(i * 4) * 0.065),
+                (ctx.W / 1000) * (0.8 + (i % 2) * 0.2),
+                700 + i * 2,
+                false,
+            );
+        }
+    }
+    Object.assign(ctx, saved);
+}

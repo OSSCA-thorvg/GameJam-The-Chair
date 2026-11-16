@@ -1,0 +1,82 @@
+import type { RenderCtx } from '../../context';
+import type { Vector } from '../../types';
+import { SPEECH_FONT } from '../../fonts';
+import { PathBuilder, push } from '../opening/shapes';
+
+const MARKS = ['!', '✓', '…'];
+const INK = '#2b2f3a';
+
+export function orbitReaction(
+    ctx: RenderCtx,
+    head: Vector,
+    age: number,
+    lit: boolean,
+) {
+    if (!lit) return;
+    const beat = age - Math.floor(age);
+    const u = Math.min(1, beat / 0.18);
+    const scale = 0.55 + 0.45 * (1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2);
+    const size = ctx.clamp(ctx.H * 0.05, 16, 28);
+    const tip: Vector = [head[0] + size * 0.8, head[1] - size * 0.65];
+    const cx = ctx.clamp(
+        head[0] + size * 2.45,
+        size * 1.35,
+        ctx.W - size * 1.35,
+    );
+    const cy = ctx.clamp(head[1] - size * 1.15, size, ctx.H - size);
+    const rx = size * 1.05,
+        ry = size * 0.83;
+    const at = (x: number, y: number): Vector => [
+        tip[0] + (x - tip[0]) * scale,
+        tip[1] + (y - tip[1]) * scale,
+    ];
+    const path = new PathBuilder(...at(cx, cy - ry))
+        .cubic(
+            ...at(cx + rx * 0.62, cy - ry),
+            ...at(cx + rx, cy - ry * 0.55),
+            ...at(cx + rx, cy),
+        )
+        .cubic(
+            ...at(cx + rx, cy + ry * 0.55),
+            ...at(cx + rx * 0.62, cy + ry),
+            ...at(cx, cy + ry),
+        )
+        .cubic(
+            ...at(cx - rx * 0.38, cy + ry),
+            ...at(cx - rx * 0.72, cy + ry * 0.72),
+            ...at(cx - rx * 0.9, cy + ry * 0.34),
+        )
+        .cubic(
+            ...at(cx - rx * 0.98, cy + ry * 0.42),
+            ...at(tip[0] + size * 0.08, tip[1] - size * 0.04),
+            ...tip,
+        )
+        .cubic(
+            ...at(tip[0] + size * 0.12, tip[1] - size * 0.16),
+            ...at(cx - rx * 1.02, cy + ry * 0.08),
+            ...at(cx - rx, cy),
+        )
+        .cubic(
+            ...at(cx - rx, cy - ry * 0.55),
+            ...at(cx - rx * 0.62, cy - ry),
+            ...at(cx, cy - ry),
+        );
+
+    ctx.beginLayer({
+        key: 'orbit-reaction-shadow',
+        blur: size * 0.28,
+        opacity: 0.35,
+    });
+    push(ctx, path.command('#101b32'));
+    ctx.endLayer();
+    ctx.beginLayer({ key: 'orbit-reaction' });
+    push(ctx, path.command('#ffffff', { width: 2, color: INK, cap: 'round' }));
+    ctx.screenText(
+        MARKS[Math.floor(age) % MARKS.length],
+        ...at(cx, cy + size * 0.04),
+        size * 1.05 * scale,
+        INK,
+        { font: SPEECH_FONT },
+    );
+    ctx.endLayer();
+}

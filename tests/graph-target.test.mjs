@@ -13,8 +13,8 @@ const {
 } = await loadSource(`
     export { createGame } from './src/game/game';
     export { createRenderCtx } from './tests/support/render-context';
-    export { rooftopGraphSign } from './src/render/scene/rooftop-graph';
-    export { graphTargetPose } from './src/render/scene/graph-target';
+    export { rooftopGraphSign } from './src/render/scene/rooftop/graph';
+    export { graphTargetPose } from './src/render/scene/rooftop/graph-target';
     export { GRAPH_CORNERS, STAGE_THREE } from './src/game/stages/rooftop/data';
     export { previewScenes } from './src/preview-scenes';
 `);

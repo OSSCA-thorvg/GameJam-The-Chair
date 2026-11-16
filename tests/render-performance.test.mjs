@@ -15,7 +15,7 @@ const {
     export { createRenderCtx } from './tests/support/render-context';
     export { drawSky } from './src/render/scene/sky';
     export { drawRooftop } from './src/render/scene/rooftop';
-    export { puffCloud, CLOUD_TONES } from './src/render/scene/cloud-art';
+    export { puffCloud, CLOUD_TONES } from './src/render/scene/shared/cloud-art';
     export { effectScaleForArea } from './src/render/perf';
 `);
 

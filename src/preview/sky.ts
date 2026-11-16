@@ -4,8 +4,8 @@ import {
     revealGlideStart,
     SKY_DEPARTURE,
     SKY_TURN,
-} from '../render/scene/sky-camera';
-import { ATTENDANCE } from '../render/scene/attendance-bubble';
+} from '../render/scene/sky/camera';
+import { ATTENDANCE } from '../render/scene/shared/attendance-bubble';
 import { createEffects } from '../render/effects';
 import { type PreviewScene } from './types';
 import { recordedScene, capture, stepGame } from './recording';

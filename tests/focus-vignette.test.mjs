@@ -4,7 +4,7 @@ import { loadSource } from './support/load.mjs';
 
 const { focusVignetteAlpha, focusVignette, createRenderCtx, createGame } =
     await loadSource(`
-    export { focusVignetteAlpha, focusVignette } from './src/render/scene/focus-vignette';
+    export { focusVignetteAlpha, focusVignette } from './src/render/scene/effects/focus-vignette';
     export { createRenderCtx } from './tests/support/render-context';
     export { createGame } from './src/game/game';
 `);

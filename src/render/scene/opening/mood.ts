@@ -1,7 +1,7 @@
 import type { RenderCtx } from '../../context';
 import type { OpeningFrame } from './timeline';
 import { linear, radial, screenRect } from './shapes';
-import { officeTint } from '../window-view';
+import { officeTint } from '../office/window-view';
 
 export function drawSunbeams(ctx: RenderCtx, frame: OpeningFrame) {
     const strength = (1 - frame.dusk) * frame.lighting;

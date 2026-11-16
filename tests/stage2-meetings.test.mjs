@@ -14,8 +14,8 @@ const {
     export { createGame } from './src/game/game';
     export { STAGE_TWO } from './src/game/stages/building/data';
     export { previewScenes } from './src/preview-scenes';
-    export { meetingChairPose } from './src/render/scene/meeting-room';
-    export { entryDoorOpening, dispatchDoorOpening } from './src/render/scene/meeting-doors';
+    export { meetingChairPose } from './src/render/scene/building/meeting-room';
+    export { entryDoorOpening, dispatchDoorOpening } from './src/render/scene/building/meeting-doors';
 `);
 const dt = 1 / 120;
 function travel(game, stop) {

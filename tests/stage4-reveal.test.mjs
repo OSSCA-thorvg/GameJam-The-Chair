@@ -26,13 +26,13 @@ const {
     export { createRenderCtx } from './tests/support/render-context';
     export { drawSky } from './src/render/scene/sky';
     export { drawOrbit } from './src/render/scene/orbit';
-    export { CLOUD_TONES } from './src/render/scene/cloud-art';
-    export { createSkyProjection } from './src/render/scene/sky-projection';
-    export { SKY_DEPARTURE, REVEAL_DURATION, revealChairOrbit } from './src/render/scene/sky-camera';
-    export { endingChair } from './src/render/scene/sky-ending-art';
-    export { endingHair } from './src/render/scene/sky-player-hair';
-    export { endingGlasses } from './src/render/scene/sky-player-glasses';
-    export { skyCoursePlatform } from './src/render/scene/sky-course-art';
+    export { CLOUD_TONES } from './src/render/scene/shared/cloud-art';
+    export { createSkyProjection } from './src/render/scene/shared/projection';
+    export { SKY_DEPARTURE, REVEAL_DURATION, revealChairOrbit } from './src/render/scene/sky/camera';
+    export { endingChair } from './src/render/scene/sky/ending-art';
+    export { endingHair } from './src/render/scene/sky/player-hair';
+    export { endingGlasses } from './src/render/scene/sky/player-glasses';
+    export { skyCoursePlatform } from './src/render/scene/sky/course-art';
 `);
 
 test('the stage four billboard slogan fills its space without covering the portrait', () => {

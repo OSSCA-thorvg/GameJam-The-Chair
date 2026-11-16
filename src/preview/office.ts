@@ -6,7 +6,7 @@ import { createEffects } from '../render/effects';
 import {
     CLEANER_RECOVERY_END,
     CLEANER_RECOVERY_START,
-} from '../render/scene/cleaning';
+} from '../render/scene/office/cleaning';
 import { monitorPhase } from '../game/stages/office/monitor/decide';
 import { type PreviewScene, type PreviewFrame } from './types';
 import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';

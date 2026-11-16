@@ -22,12 +22,12 @@ const {
     export { STAGE_FIVE as FIVE } from './src/game/stages/orbit/data';
     export { createRenderCtx } from './tests/support/render-context';
     export { drawOrbit } from './src/render/scene/orbit';
-    export { cctvLamp, ORBIT_WATCH, orbitWatchers } from './src/render/scene/orbit-watch';
-    export { createSkyProjection } from './src/render/scene/sky-projection';
-    export { revealChairOrbit, revealGlideStart, revealTravel } from './src/render/scene/sky-camera';
+    export { cctvLamp, ORBIT_WATCH, orbitWatchers } from './src/render/scene/orbit/watch';
+    export { createSkyProjection } from './src/render/scene/shared/projection';
+    export { revealChairOrbit, revealGlideStart, revealTravel } from './src/render/scene/sky/camera';
     export { STAGE_FOUR } from './src/game/stages/sky/data';
-    export { attendanceBubble } from './src/render/scene/attendance-bubble';
-    export { orbitReaction } from './src/render/scene/orbit-reaction';
+    export { attendanceBubble } from './src/render/scene/shared/attendance-bubble';
+    export { orbitReaction } from './src/render/scene/orbit/reaction';
 `);
 
 const words = (commands) =>
