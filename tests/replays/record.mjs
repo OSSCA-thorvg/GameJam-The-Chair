@@ -1,4 +1,5 @@
 import { writeFileSync } from 'node:fs';
+
 import { balancePolicy } from '../support/harness.mjs';
 import { bundled } from '../support/load.mjs';
 const R = await bundled({
@@ -16,7 +17,9 @@ const game = R.createGame({ seed: 31, ...recorder });
 game.startStage(1);
 for (let i = 0; i < 120 * 20; i++) {
     const s = game.getSnapshot();
-    if (s.mode !== 'play') break;
+    if (s.mode !== 'play') {
+        break;
+    }
     balancePolicy(s, game);
     game.step();
 }

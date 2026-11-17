@@ -1,9 +1,13 @@
-import type { Attempt } from '../../state';
 import { STAGE_THREE } from './data';
+
+import type { Attempt } from '../../state';
 
 const SHAFT_FLAG = STAGE_THREE.checkpoints.findIndex((mark) => mark.x === 1310);
 
-export function prepareRooftopAttempt(attempt: Attempt, checkpoint: number) {
+export function prepareRooftopAttempt(
+    attempt: Attempt,
+    checkpoint: number,
+): void {
     attempt.extinguisher.owned = checkpoint > 0;
     if (checkpoint === 0) {
         attempt.rooftop.entrance = { kind: 'opening', age: 0 };

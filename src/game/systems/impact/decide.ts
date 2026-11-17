@@ -30,8 +30,8 @@ export function impactStep(
     const u = Math.min(n, elapsed * REWIND_SPEED * 120);
     const i = Math.min(n - 1, Math.floor(u));
     const f = u - i;
-    const a = frames[Math.max(0, i)];
-    const b = frames[Math.max(0, i + 1)];
+    const a = frames.at(Math.max(0, i));
+    const b = frames.at(Math.max(0, i + 1));
     let pose: Player | null = null;
     if (a && b) {
         pose = { ...a.p };

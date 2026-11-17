@@ -1,117 +1,46 @@
-import { translate } from '../../../i18n';
 import { LEVEL } from '../../../game/level';
 import {
     URGENT_VOLLEY_ID,
     urgentPattern,
 } from '../../../game/stages/office/copier/decide';
+import { translate } from '../../../i18n';
+import { SIGN_FONT } from '../../fonts';
+
+import type { UrgentCopier } from '../../../game/stages/office/copier/decide';
 import type { DeepReadonly, Paper } from '../../../game/types';
 import type { RenderCtx } from '../../context';
-import { SIGN_FONT } from '../../fonts';
 import type { Vector } from '../../types';
-
-export function urgentCopierDraw(ctx: RenderCtx) {
+export function urgentCopierDraw(ctx: RenderCtx): void {
     const c = ctx.urgentCopier;
-    const F = ctx.F,
-        t = ctx.t,
-        x = c.x;
-    if (x < ctx.cam - 200 || x > ctx.cam + ctx.VW + 200) return;
+    const F = ctx.F;
+    const t = ctx.t;
+    const x = c.x;
+    if (x < ctx.cam - 200 || x > ctx.cam + ctx.VW + 200) {
+        return;
+    }
     const scanning = c.scan > 0;
     const firing = c.burst > 0 && !scanning;
     const awake = scanning || firing;
-    const pattern = urgentPattern(Math.max(1, c.volley));
-    const progress = scanning ? 1 - c.scan / LEVEL.urgentCopier.scan : 0;
-    const shake = firing ? Math.sin(t * 60) * 1.6 : 0;
-    const bx = x + shake;
-
-    ctx.ellipse(x + 4, F - 4, 86, 6, '#515c6d60');
-    for (const wx of [-58, 58]) ctx.ellipse(bx + wx, F - 7, 7, 7, '#2c333f');
-    ctx.gradientPolygon(
-        [
-            [bx - 74, F - 172],
-            [bx + 74, F - 172],
-            [bx + 74, F - 12],
-            [bx - 74, F - 12],
-        ],
-        ctx.gradientFill(bx - 74, 0, bx + 74, 0, [
-            [0, '#4a5262'],
-            [0.5, '#5d6677'],
-            [1, '#3b4250'],
-        ]),
-    );
-    ctx.rect(bx - 74, F - 172, 148, 5, '#c9a35a');
-    ctx.rect(bx - 74, F - 16, 148, 4, '#c9a35a');
-    ctx.rect(bx + 18, F - 160, 46, 22, '#1f2530');
-    ctx.rect(bx + 22, F - 156, 38, 14, awake ? '#ff6a5c' : '#7fb79a');
-
-    const side = c.dir < 0 ? -1 : 1;
-    const trayX = bx + side * 74;
-    const glow = scanning ? 0.45 + 0.55 * Math.abs(Math.sin(t * 18)) : 0;
-    const lowTray = pattern === 'low' || pattern === 'fan';
-    const highTray = pattern === 'lob' || pattern === 'fan';
-    tray(ctx, trayX, F - 52, side, lowTray ? glow : 0);
-    tray(ctx, trayX, F - 118, side, highTray ? glow : 0);
-    ctx.rect(bx - 48, F - 98, 64, 52, '#3a414e');
-    ctx.rect(
-        bx - 44,
-        F - 94,
-        56,
-        44,
-        pattern === 'bundle' && scanning
-            ? ctx.tint('#ffb347', 0.4 + glow * 0.6)
-            : '#4b5463',
-    );
-    for (const sx of [-30, -6]) ctx.rect(bx + sx, F - 76, 14, 4, '#9aa2ae');
-
+    const { bx, progress } = urgentCopierDrawDetails(c, scanning, firing, t, {
+        x,
+        ctx,
+        F,
+        awake,
+    });
+    for (const sx of [-30, -6]) {
+        ctx.rect(bx + sx, F - 76, 14, 4, '#9aa2ae');
+    }
     const lid = scanning ? Math.min(1, progress * 4) * 0.35 : 0;
     ctx.rect(bx - 70, F - 186, 140, 14, '#d9d7cc');
-    const hingeX = bx + 70;
-    const lidEnd: Vector = [
-        hingeX - Math.cos(lid) * 140,
-        F - 186 - Math.sin(lid) * 140,
-    ];
-    ctx.polygon(
-        [
-            [hingeX, F - 186],
-            lidEnd,
-            [lidEnd[0], lidEnd[1] - 10],
-            [hingeX, F - 196],
-        ],
-        '#ebe8dc',
-    );
-    if (scanning) {
-        const sweep = bx - 66 + progress * 132;
-        ctx.beginLayer({ key: 'urgent-scan', blend: 'add', opacity: 0.9 });
-        ctx.gradientPolygon(
-            [
-                [sweep - 26, F - 186],
-                [sweep + 26, F - 186],
-                [sweep + 26, F - 173],
-                [sweep - 26, F - 173],
-            ],
-            ctx.gradientFill(sweep - 26, 0, sweep + 26, 0, [
-                [0, '#9ff3ff00'],
-                [0.5, '#e9fdffff'],
-                [1, '#9ff3ff00'],
-            ]),
-        );
-        ctx.gradientPolygon(
-            [
-                [sweep - 6, F - 186],
-                [sweep + 6, F - 186],
-                [sweep + 40, F - 260],
-                [sweep - 40, F - 260],
-            ],
-            ctx.gradientFill(0, F - 186, 0, F - 260, [
-                [0, '#bff6ff90'],
-                [1, '#bff6ff00'],
-            ]),
-        );
-        ctx.endLayer();
-    }
-
+    urgentCopierDrawDetails2(bx, lid, F, ctx, {
+        scanning,
+        progress,
+    });
     const lampY = F - 206;
     ctx.rect(bx - 6, lampY + 6, 12, 10, '#2c333f');
-    ctx.ellipse(bx, lampY, 11, 9, awake ? '#ff4b3e' : '#7a3b38');
+    ctx.ellipse(bx, lampY, 11, 9, {
+        c: awake ? '#ff4b3e' : '#7a3b38',
+    });
     if (awake) {
         const angle = t * 9;
         const reach = 150;
@@ -122,18 +51,20 @@ export function urgentCopierDraw(ctx: RenderCtx) {
                 bx + Math.cos(a) * reach,
                 lampY + Math.sin(a) * reach * 0.35,
             ];
-            const nx = -Math.sin(a) * 26,
-                ny = Math.cos(a) * 26 * 0.35;
+            const nx = -Math.sin(a) * 26;
+            const ny = Math.cos(a) * 26 * 0.35;
             ctx.gradientPolygon(
                 [
                     [bx, lampY],
                     [tip[0] + nx, tip[1] + ny],
                     [tip[0] - nx, tip[1] - ny],
                 ],
-                ctx.gradientFill(bx, lampY, tip[0], tip[1], [
-                    [0, '#ff6a5cb0'],
-                    [1, '#ff6a5c00'],
-                ]),
+                ctx.gradientFill(bx, lampY, tip[0], tip[1], {
+                    stops: [
+                        [0, '#ff6a5cb0'],
+                        [1, '#ff6a5c00'],
+                    ],
+                }),
             );
         }
         ctx.endLayer();
@@ -153,7 +84,6 @@ export function urgentCopierDraw(ctx: RenderCtx) {
         );
         ctx.endLayer();
     }
-
     if (scanning && ctx.mode === 'play') {
         speechBurst(
             ctx,
@@ -164,7 +94,135 @@ export function urgentCopierDraw(ctx: RenderCtx) {
         );
     }
 }
-
+function urgentCopierDrawDetails2(
+    bx: number,
+    lid: number,
+    floor: number,
+    ctx: RenderCtx,
+    {
+        scanning,
+        progress,
+    }: {
+        scanning: boolean;
+        progress: number;
+    },
+) {
+    const hingeX = bx + 70;
+    const lidEnd: Vector = [
+        hingeX - Math.cos(lid) * 140,
+        floor - 186 - Math.sin(lid) * 140,
+    ];
+    ctx.polygon(
+        [
+            [hingeX, floor - 186],
+            lidEnd,
+            [lidEnd[0], lidEnd[1] - 10],
+            [hingeX, floor - 196],
+        ],
+        '#ebe8dc',
+    );
+    if (scanning) {
+        const sweep = bx - 66 + progress * 132;
+        ctx.beginLayer({ key: 'urgent-scan', blend: 'add', opacity: 0.9 });
+        ctx.gradientPolygon(
+            [
+                [sweep - 26, floor - 186],
+                [sweep + 26, floor - 186],
+                [sweep + 26, floor - 173],
+                [sweep - 26, floor - 173],
+            ],
+            ctx.gradientFill(sweep - 26, 0, sweep + 26, 0, {
+                stops: [
+                    [0, '#9ff3ff00'],
+                    [0.5, '#e9fdffff'],
+                    [1, '#9ff3ff00'],
+                ],
+            }),
+        );
+        ctx.gradientPolygon(
+            [
+                [sweep - 6, floor - 186],
+                [sweep + 6, floor - 186],
+                [sweep + 40, floor - 260],
+                [sweep - 40, floor - 260],
+            ],
+            ctx.gradientFill(0, floor - 186, 0, floor - 260, {
+                stops: [
+                    [0, '#bff6ff90'],
+                    [1, '#bff6ff00'],
+                ],
+            }),
+        );
+        ctx.endLayer();
+    }
+}
+function urgentCopierDrawDetails(
+    c: UrgentCopier,
+    scanning: boolean,
+    firing: boolean,
+    t: number,
+    {
+        x,
+        ctx,
+        F: floor,
+        awake,
+    }: {
+        x: number;
+        ctx: RenderCtx;
+        F: number;
+        awake: boolean;
+    },
+) {
+    const pattern = urgentPattern(Math.max(1, c.volley));
+    const progress = scanning ? 1 - c.scan / LEVEL.urgentCopier.scan : 0;
+    const shake = firing ? Math.sin(t * 60) * 1.6 : 0;
+    const bx = x + shake;
+    ctx.ellipse(x + 4, floor - 4, 86, 6, {
+        c: '#515c6d60',
+    });
+    for (const wx of [-58, 58]) {
+        ctx.ellipse(bx + wx, floor - 7, 7, 7, {
+            c: '#2c333f',
+        });
+    }
+    ctx.gradientPolygon(
+        [
+            [bx - 74, floor - 172],
+            [bx + 74, floor - 172],
+            [bx + 74, floor - 12],
+            [bx - 74, floor - 12],
+        ],
+        ctx.gradientFill(bx - 74, 0, bx + 74, 0, {
+            stops: [
+                [0, '#4a5262'],
+                [0.5, '#5d6677'],
+                [1, '#3b4250'],
+            ],
+        }),
+    );
+    ctx.rect(bx - 74, floor - 172, 148, 5, '#c9a35a');
+    ctx.rect(bx - 74, floor - 16, 148, 4, '#c9a35a');
+    ctx.rect(bx + 18, floor - 160, 46, 22, '#1f2530');
+    ctx.rect(bx + 22, floor - 156, 38, 14, awake ? '#ff6a5c' : '#7fb79a');
+    const side = c.dir < 0 ? -1 : 1;
+    const trayX = bx + side * 74;
+    const glow = scanning ? 0.45 + 0.55 * Math.abs(Math.sin(t * 18)) : 0;
+    const lowTray = pattern === 'low' || pattern === 'fan';
+    const highTray = pattern === 'lob' || pattern === 'fan';
+    tray(ctx, trayX, floor - 52, side, lowTray ? glow : 0);
+    tray(ctx, trayX, floor - 118, side, highTray ? glow : 0);
+    ctx.rect(bx - 48, floor - 98, 64, 52, '#3a414e');
+    ctx.rect(
+        bx - 44,
+        floor - 94,
+        56,
+        44,
+        pattern === 'bundle' && scanning
+            ? ctx.tint('#ffb347', 0.4 + glow * 0.6)
+            : '#4b5463',
+    );
+    return { bx, progress };
+}
 function tray(
     ctx: RenderCtx,
     x: number,
@@ -211,7 +269,6 @@ function tray(
         ctx.endLayer();
     }
 }
-
 function speechBurst(
     ctx: RenderCtx,
     x: number,
@@ -242,13 +299,15 @@ function speechBurst(
         burst.map(([px, py]) => [x + (px - x) * 0.93, y + (py - y) * 0.86]),
         '#ffd6cf',
     );
-    ctx.label(line, x, y + 6, 18, '#a3221a', SIGN_FONT);
+    ctx.label(line, x, y + 6, 18, {
+        color: '#a3221a',
+        font: SIGN_FONT,
+    });
 }
-
 export function urgentPapersDraw(
     ctx: RenderCtx,
     papers: ReadonlyArray<DeepReadonly<Paper>>,
-) {
+): void {
     const flying = papers.filter(
         (z) => z.volley >= URGENT_VOLLEY_ID && !z.landed && z.kind === 'sheet',
     );
@@ -258,26 +317,34 @@ export function urgentPapersDraw(
             key: 'urgent-sheets',
             motionBlur: { distance: 12, angle: dir },
         });
-        for (const z of flying) sheet(ctx, z);
+        for (const z of flying) {
+            sheet(ctx, z);
+        }
         ctx.endLayer();
     }
     for (const z of papers) {
-        if (z.volley < URGENT_VOLLEY_ID) continue;
-        if (z.kind === 'bundle') bundle(ctx, z);
-        else if (z.landed) sheet(ctx, z);
+        if (z.volley < URGENT_VOLLEY_ID) {
+            continue;
+        }
+        if (z.kind === 'bundle') {
+            bundle(ctx, z);
+        } else if (z.landed) {
+            sheet(ctx, z);
+        }
     }
 }
-
 function sheet(ctx: RenderCtx, z: DeepReadonly<Paper>) {
     ctx.ox = z.x;
     ctx.oy = z.y;
     ctx.rotation = z.a;
     ctx.rect(-10, -6, 20, 12, '#fbf6e8');
     ctx.rect(-10, -6, 20, 3, '#e0503f');
-    ctx.rod(-6, 1, 6, 1, 1, '#9a9e9d');
+    ctx.rod(-6, 1, 6, 1, {
+        w: 1,
+        c: '#9a9e9d',
+    });
     ctx.ox = ctx.oy = ctx.rotation = 0;
 }
-
 function bundle(ctx: RenderCtx, z: DeepReadonly<Paper>) {
     ctx.ox = z.x;
     ctx.oy = z.y;
@@ -286,6 +353,8 @@ function bundle(ctx: RenderCtx, z: DeepReadonly<Paper>) {
         ctx.rect(-22 + i, -14 + i * 3, 44, 18, i === 0 ? '#fbf6e8' : '#ddd6c2');
     }
     ctx.rect(-22, -14, 44, 5, '#e0503f');
-    for (const sx of [-14, 10]) ctx.rect(sx, -12, 6, 2, '#8a93a0');
+    for (const sx of [-14, 10]) {
+        ctx.rect(sx, -12, 6, 2, '#8a93a0');
+    }
     ctx.ox = ctx.oy = ctx.rotation = 0;
 }

@@ -1,6 +1,7 @@
-import { installInputEnvironment, inputButton } from './support/input.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+import { installInputEnvironment, inputButton } from './support/input.mjs';
 import { bundled } from './support/load.mjs';
 
 const { createGame, bindInput } = await bundled({
@@ -59,7 +60,9 @@ test('stage2 uses Down for meeting entry and exit, keeps Up for jumping, and sup
         game.pause();
         key('ArrowDown');
         assert.equal(game.getSnapshot().corridor.room.kind, 'corridor');
-        for (let i = 0; i < 12; i++) game.step(1 / 120);
+        for (let i = 0; i < 12; i++) {
+            game.step(1 / 120);
+        }
         key('ArrowUp');
         game.step(1 / 120);
         assert.equal(game.getSnapshot().corridor.room.kind, 'corridor');
@@ -73,7 +76,9 @@ test('stage2 uses Down for meeting entry and exit, keeps Up for jumping, and sup
             'corridor',
             'airborne entry remains disabled',
         );
-        for (let i = 0; i < 180; i++) game.step(1 / 120);
+        for (let i = 0; i < 180; i++) {
+            game.step(1 / 120);
+        }
         assert.ok(game.getSnapshot().canEnterMeeting);
         downButton.dispatchEvent(
             new Event('pointerdown', { cancelable: true }),

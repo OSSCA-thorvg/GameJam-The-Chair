@@ -1,9 +1,13 @@
-import type { RenderCtx } from '../../context';
-import { createSkyProjection, type Point3 } from '../shared/projection';
 import { departureCake } from './promotion-cake';
+import { createSkyProjection } from '../shared/projection';
 
-export function skyDeparture(ctx: RenderCtx, progress: number) {
-    if (progress >= 1) return;
+import type { RenderCtx } from '../../context';
+import type { Point3 } from '../shared/projection';
+
+export function skyDeparture(ctx: RenderCtx, progress: number): void {
+    if (progress >= 1) {
+        return;
+    }
     const view = createSkyProjection(ctx.W, ctx.H, 0);
     const retreat = progress * progress;
     const away = (p: Point3): Point3 => [

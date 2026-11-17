@@ -1,4 +1,6 @@
-import { createCorridor, type Corridor, type Furniture } from './data';
+import { createCorridor } from './data';
+
+import type { Corridor, Furniture } from './data';
 
 export type BuildingState = {
     furniture: Furniture[];

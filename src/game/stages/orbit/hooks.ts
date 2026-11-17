@@ -1,6 +1,7 @@
-import type { StageHooks } from '../types';
 import { applyOrbit } from './course/apply';
 import { inSatelliteLight } from './course/decide';
+
+import type { StageHooks } from '../types';
 
 export const orbitHooks: StageHooks = {
     takeover(s, out, dt) {

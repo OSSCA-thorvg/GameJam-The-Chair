@@ -7,9 +7,10 @@ import {
     integer,
     choice,
 } from '../../validation/primitives';
+
 import type { OrbitState } from './state';
 
-export function orbit(value: unknown, path: string) {
+export function orbit(value: unknown, path: string): void {
     const data = record(value, path);
     exactFields<OrbitState>(
         data,

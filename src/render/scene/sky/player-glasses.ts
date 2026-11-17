@@ -1,15 +1,14 @@
 import type { Point3, SkyProjection } from '../shared/projection';
-
 const point = ([x, y, z]: Point3, bob: number): Point3 => [x, -y - 35 + bob, z];
-
-const FRONT = 15.2,
-    TOP = -87.6,
-    BOTTOM = -79,
-    INNER = 1.6,
-    OUTER = 10.6;
-
-export function endingGlasses(view: SkyProjection, bob: number) {
-    for (const side of [-1, 1]) lens(view, bob, side);
+const FRONT = 15.2;
+const TOP = -87.6;
+const BOTTOM = -79;
+const INNER = 1.6;
+const OUTER = 10.6;
+export function endingGlasses(view: SkyProjection, bob: number): void {
+    for (const side of [-1, 1]) {
+        lens(view, bob, side);
+    }
     view.rod(
         point([FRONT, -84.6, -INNER], bob),
         point([FRONT, -84.6, INNER], bob),
@@ -17,16 +16,22 @@ export function endingGlasses(view: SkyProjection, bob: number) {
         '#50606a',
     );
 }
-
 function facing(
     view: SkyProjection,
     bob: number,
     x: number,
     top: number,
-    bottom: number,
-    z0: number,
-    z1: number,
-    color: string,
+    {
+        bottom,
+        z0,
+        z1,
+        color,
+    }: {
+        bottom: number;
+        z0: number;
+        z1: number;
+        color: string;
+    },
 ) {
     const [a, b] = z0 < z1 ? [z0, z1] : [z1, z0];
     view.polygon(
@@ -39,31 +44,27 @@ function facing(
         color,
     );
 }
-
 function lens(view: SkyProjection, bob: number, side: number) {
-    const inner = side * INNER,
-        outer = side * OUTER;
-    facing(view, bob, FRONT, TOP, BOTTOM, inner, outer, '#83c8e4');
-    facing(
-        view,
-        bob,
-        FRONT + 0.1,
-        TOP + 0.7,
-        BOTTOM - 0.7,
-        side * (OUTER - 3),
-        side * (OUTER - 1.6),
-        '#bfe6ef',
-    );
-    facing(
-        view,
-        bob,
-        FRONT + 0.15,
-        -84.6,
-        -81.8,
-        side * 5.2,
-        side * 6.8,
-        '#446d82',
-    );
+    const inner = side * INNER;
+    const outer = side * OUTER;
+    facing(view, bob, FRONT, TOP, {
+        bottom: BOTTOM,
+        z0: inner,
+        z1: outer,
+        color: '#83c8e4',
+    });
+    facing(view, bob, FRONT + 0.1, TOP + 0.7, {
+        bottom: BOTTOM - 0.7,
+        z0: side * (OUTER - 3),
+        z1: side * (OUTER - 1.6),
+        color: '#bfe6ef',
+    });
+    facing(view, bob, FRONT + 0.15, -84.6, {
+        bottom: -81.8,
+        z0: side * 5.2,
+        z1: side * 6.8,
+        color: '#446d82',
+    });
     for (const z of [inner, outer]) {
         view.rod(
             point([FRONT, TOP, z], bob),

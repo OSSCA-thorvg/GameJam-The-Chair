@@ -1,7 +1,8 @@
-import type { Point } from './types';
 import * as Det from './math';
 
-export const clamp = (v: number, a: number, b: number) =>
+import type { Point } from './types';
+
+export const clamp = (v: number, a: number, b: number): number =>
     Math.max(a, Math.min(b, v));
 
 export function polyRect(x: number, y: number, w: number, h: number): Point[] {
@@ -18,7 +19,7 @@ export function contact(
     cy: number,
     r: number,
     poly: ReadonlyArray<Readonly<Point>>,
-) {
+): { nx: number; ny: number; depth: number } | null {
     let best = Infinity;
     let nx = 0;
     let ny = 0;

@@ -1,8 +1,8 @@
-import { translate } from '../../../i18n';
-import type { RenderCtx } from '../../context';
 import { STAGE_THREE } from '../../../game/stages/rooftop/data';
+import { translate } from '../../../i18n';
 
-export function employeeBoard(ctx: RenderCtx) {
+import type { RenderCtx } from '../../context';
+export function employeeBoard(ctx: RenderCtx): void {
     ctx.rect(51, 86, 172, 132, '#26334455');
     ctx.rect(47, 82, 172, 132, '#263c53');
     ctx.gradientPolygon(
@@ -12,32 +12,41 @@ export function employeeBoard(ctx: RenderCtx) {
             [215, 210],
             [51, 210],
         ],
-        ctx.gradientFill(51, 86, 215, 210, [
-            [0, '#73899b'],
-            [1, '#455e76'],
-        ]),
+        ctx.gradientFill(51, 86, 215, 210, {
+            stops: [
+                [0, '#73899b'],
+                [1, '#455e76'],
+            ],
+        }),
     );
-    ctx.rod(51, 86, 215, 86, 2, '#a9bac6');
+    ctx.rod(51, 86, 215, 86, {
+        w: 2,
+        c: '#a9bac6',
+    });
     for (const x of [55, 211]) {
-        for (const y of [89, 207]) ctx.ellipse(x, y, 1.5, 1.5, '#bac4cb');
+        for (const y of [89, 207]) {
+            ctx.ellipse(x, y, 1.5, 1.5, {
+                c: '#bac4cb',
+            });
+        }
     }
     ctx.rect(56, 90, 154, 20, '#314b61');
-    ctx.label(
-        translate('world.employeeBoard', ctx.locale),
-        133,
-        104,
-        10,
-        '#fff0c6',
-    );
+    ctx.label(translate('world.employeeBoard', ctx.locale), 133, 104, 10, {
+        color: '#fff0c6',
+    });
     employeePortrait(ctx, 62, 118, false, '#526d86');
     employeePortrait(ctx, 111, 118, false, '#747d60');
     ctx.rect(160, 118, 40, 49, '#b9c9d244');
-    ctx.ellipse(180, 119, 2, 2, '#293f54');
-    ctx.rod(180, 122, 181, 149, 1, '#293f5470');
+    ctx.ellipse(180, 119, 2, 2, {
+        c: '#293f54',
+    });
+    ctx.rod(180, 122, 181, 149, {
+        w: 1,
+        c: '#293f5470',
+    });
     playerPortrait(ctx);
     boardLight(ctx);
 }
-
 function playerPortrait(ctx: RenderCtx) {
     const { ox, oy, rotation } = ctx;
     const entrance = ctx.state.rooftopEntrance;
@@ -55,7 +64,6 @@ function playerPortrait(ctx: RenderCtx) {
     ctx.oy = oy;
     ctx.rotation = rotation;
 }
-
 function portraitSlip(ctx: RenderCtx, age: number) {
     const jolt = Math.sin(age * 100) * Math.max(0, 1 - age / 0.12);
     const fall = ctx.clamp((age - 0.12) / 0.24, 0, 1);
@@ -67,10 +75,15 @@ function portraitSlip(ctx: RenderCtx, age: number) {
     const swing = 12 * Math.sin(turn * Math.PI * 3) * Math.sin(turn * Math.PI);
     return { jolt: jolt * 2, drop, angle: 40 * eased + swing + jolt * 3 };
 }
-
 function boardLight(ctx: RenderCtx) {
-    ctx.rod(111, 53, 111, 65, 3, '#91a3b1');
-    ctx.rod(155, 53, 155, 65, 3, '#91a3b1');
+    ctx.rod(111, 53, 111, 65, {
+        w: 3,
+        c: '#91a3b1',
+    });
+    ctx.rod(155, 53, 155, 65, {
+        w: 3,
+        c: '#91a3b1',
+    });
     ctx.rect(94, 63, 78, 11, '#23394f');
     ctx.rect(96, 63, 74, 2, '#8b9eaf');
     ctx.rect(100, 71, 66, 3, '#fff0c7');
@@ -86,11 +99,13 @@ function boardLight(ctx: RenderCtx) {
             [222, 214],
             [44, 214],
         ],
-        ctx.gradientFill(0, 75, 0, 214, [
-            [0, '#fff0c678'],
-            [0.45, '#ffe4b33b'],
-            [1, '#ffe4b300'],
-        ]),
+        ctx.gradientFill(0, 75, 0, 214, {
+            stops: [
+                [0, '#fff0c678'],
+                [0.45, '#ffe4b33b'],
+                [1, '#ffe4b300'],
+            ],
+        }),
     );
     ctx.endLayer();
     ctx.beginLayer({
@@ -98,12 +113,11 @@ function boardLight(ctx: RenderCtx) {
         blend: 'add',
         blur: 3,
         opacity: 0.5,
-        effectBudget: { area: 24_000, minScale: 0.7 },
+        effectBudget: { area: 24000, minScale: 0.7 },
     });
     ctx.rect(100, 71, 66, 3, '#ffe5af');
     ctx.endLayer();
 }
-
 function employeePortrait(
     ctx: RenderCtx,
     x: number,
@@ -120,10 +134,12 @@ function employeePortrait(
             [x + 37, y + 36],
             [x + 3, y + 36],
         ],
-        ctx.gradientFill(x, y, x, y + 36, [
-            [0, '#a7b8bd'],
-            [1, '#dce0ce'],
-        ]),
+        ctx.gradientFill(x, y, x, y + 36, {
+            stops: [
+                [0, '#a7b8bd'],
+                [1, '#dce0ce'],
+            ],
+        }),
     );
     ctx.polygon(
         [
@@ -134,7 +150,9 @@ function employeePortrait(
         ],
         jin ? ctx.C.shirt : shirt,
     );
-    ctx.ellipse(x + 20, y + 17, 8, 10, ctx.C.skin);
+    ctx.ellipse(x + 20, y + 17, 8, 10, {
+        c: ctx.C.skin,
+    });
     ctx.polygon(
         [
             [x + 12, y + 17],
@@ -147,10 +165,24 @@ function employeePortrait(
         ],
         '#3c424f',
     );
+    employeePortraitDetails(jin, ctx, x, y);
+    ctx.ellipse(x + 19.3, y + 0.3, 0.8, 0.8, {
+        c: '#efb18b',
+    });
+}
+function employeePortraitDetails(
+    jin: boolean,
+    ctx: RenderCtx,
+    x: number,
+    y: number,
+) {
     if (jin) {
         ctx.rect(x + 12, y + 15, 7, 5, '#50606a');
         ctx.rect(x + 21, y + 15, 7, 5, '#50606a');
-        ctx.rod(x + 19, y + 17, x + 21, y + 17, 1, '#50606a');
+        ctx.rod(x + 19, y + 17, x + 21, y + 17, {
+            w: 1,
+            c: '#50606a',
+        });
         ctx.rect(x + 13, y + 16, 5, 2, '#83c8e4');
         ctx.rect(x + 22, y + 16, 5, 2, '#83c8e4');
         ctx.polygon(
@@ -164,9 +196,16 @@ function employeePortrait(
             '#a65e44',
         );
     } else {
-        ctx.ellipse(x + 17, y + 17, 1, 1, '#3c424f');
-        ctx.ellipse(x + 24, y + 17, 1, 1, '#3c424f');
-        ctx.rod(x + 12, y + 42, x + 28, y + 42, 1.5, '#879080');
+        ctx.ellipse(x + 17, y + 17, 1, 1, {
+            c: '#3c424f',
+        });
+        ctx.ellipse(x + 24, y + 17, 1, 1, {
+            c: '#3c424f',
+        });
+        ctx.rod(x + 12, y + 42, x + 28, y + 42, {
+            w: 1.5,
+            c: '#879080',
+        });
         ctx.polygon(
             [
                 [x + 30, y + 29],
@@ -177,9 +216,14 @@ function employeePortrait(
             ],
             '#ba7447',
         );
-        ctx.ellipse(x + 33, y + 29, 5, 5, '#e9bc62');
-        ctx.ellipse(x + 33, y + 29, 2.5, 2.5, '#fff0ba');
+        ctx.ellipse(x + 33, y + 29, 5, 5, {
+            c: '#e9bc62',
+        });
+        ctx.ellipse(x + 33, y + 29, 2.5, 2.5, {
+            c: '#fff0ba',
+        });
     }
-    ctx.ellipse(x + 20, y + 1, 2.5, 2.5, '#af5745');
-    ctx.ellipse(x + 19.3, y + 0.3, 0.8, 0.8, '#efb18b');
+    ctx.ellipse(x + 20, y + 1, 2.5, 2.5, {
+        c: '#af5745',
+    });
 }

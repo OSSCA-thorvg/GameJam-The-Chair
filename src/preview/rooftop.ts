@@ -1,12 +1,13 @@
-import { createGame } from '../game/game';
+import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
+import { parseState, createGame } from '../game/game';
 import {
     ductTimings,
     STAGE_THREE,
     GRAPH_CORNERS,
 } from '../game/stages/rooftop/data';
 import { createEffects } from '../render/effects';
-import { type PreviewScene, type PreviewFrame } from './types';
-import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
+
+import type { PreviewScene, PreviewFrame } from './types';
 
 export function rooftopEntrance(): PreviewScene {
     const game = createGame();
@@ -39,11 +40,11 @@ export function rooftopEntrance(): PreviewScene {
 export function rooftopTakeoff(): PreviewScene {
     const game = createGame();
     game.startStage(3);
-    const saved = JSON.parse(game.serialize());
+    const saved = parseState(game.serialize());
     saved.checkpoint = STAGE_THREE.checkpoints.length - 1;
     game.restore(JSON.stringify(saved));
     game.reset();
-    const parked = JSON.parse(game.serialize());
+    const parked = parseState(game.serialize());
     parked.p = { ...parked.p, x: 2150, y: -172, vx: 0, vy: 0, a: 0, w: 0 };
     parked.ground = true;
     parked.extinguisher.owned = true;
@@ -112,13 +113,13 @@ export function shaftHazards(
 ): PreviewScene {
     const game = createGame();
     game.startStage(3);
-    const saved = JSON.parse(game.serialize());
+    const saved = parseState(game.serialize());
     saved.checkpoint = STAGE_THREE.checkpoints.findIndex(
         (mark) => mark.x === 1310,
     );
     game.restore(JSON.stringify(saved));
     game.reset();
-    const parked = JSON.parse(game.serialize());
+    const parked = parseState(game.serialize());
     parked.p = { ...parked.p, x: at.x, y: at.y, vx: 0, vy: 0, a: 0, w: 0 };
     parked.ground = true;
     parked.time = startTime;

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const { createGame, createRenderCtx, player } = await loadSource(`
@@ -31,8 +32,8 @@ function rider() {
 }
 const extent = (commands) => {
     const points = commands.flatMap((command) => command.points);
-    const xs = points.map(([x]) => x),
-        ys = points.map(([, y]) => y);
+    const xs = points.map(([x]) => x);
+    const ys = points.map(([, y]) => y);
     return {
         width: Math.max(...xs) - Math.min(...xs),
         height: Math.max(...ys) - Math.min(...ys),

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { bundled } from './support/load.mjs';
 
 const { cachePreviewRegistration } = await bundled({
@@ -190,7 +191,9 @@ test('preview menu metadata stays lazy and sampling reuses the recorded scene', 
                 opening: (time) => ({ time }),
                 talk: (time, locale) => ({ time, locale }),
                 sample: (time) => {
-                    if (!frames.has(time)) frames.set(time, { time });
+                    if (!frames.has(time)) {
+                        frames.set(time, { time });
+                    }
                     return frames.get(time);
                 },
             };

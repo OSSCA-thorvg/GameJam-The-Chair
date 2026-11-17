@@ -6,8 +6,8 @@ export const SPEECH_FONT = 'Jua';
 export type FontName =
     typeof SIGN_FONT | typeof LABEL_FONT | typeof SPEECH_FONT;
 
-export const fontCss = (font: string, size: number) =>
+export const fontCss = (font: string, size: number): string =>
     `${size}px "${font}",system-ui,sans-serif`;
 
-export const fitGlyphs = (content: string) =>
+export const fitGlyphs = (content: string): string =>
     content.replace(/…/g, '...').replace(/·/g, '.');

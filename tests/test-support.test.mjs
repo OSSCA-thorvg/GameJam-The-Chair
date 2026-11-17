@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { runUntil } from './support/until.mjs';
 
 test('bounded simulation stops on the target and does not step an already satisfied condition', () => {

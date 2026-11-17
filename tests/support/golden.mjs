@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+
 import { canonicalJson } from './canonical-json.mjs';
 import {
     balancePolicy,
@@ -24,7 +25,9 @@ function traced(game) {
                     );
                 };
             }
-            if (key === 'drainEvents') return () => held.splice(0);
+            if (key === 'drainEvents') {
+                return () => held.splice(0);
+            }
             return target[key];
         },
     });
@@ -72,7 +75,9 @@ export const GOLDEN_SCENARIOS = {
         game.startStage(3);
         driveStageThree(game);
         game.setInput('left');
-        for (let i = 0; i < 600; i++) game.step();
+        for (let i = 0; i < 600; i++) {
+            game.step();
+        }
         return digest();
     },
     'rooftop duct': () =>

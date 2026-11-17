@@ -1,14 +1,14 @@
-import { setPlayer, type CoreState } from '../../../state';
-import type { GameEvent } from '../../../types';
-import { orbitStep } from './decide';
-import { STAGE_FIVE } from '../data';
+import { inSatelliteLight, orbitStep } from './decide';
 import { FOCUS_DAMAGE } from '../../../level';
-import {
-    applyFocusHit,
-    applyFocusRecovery,
-} from '../../../systems/focus/apply';
+import { setPlayer } from '../../../state';
+import { applyFocusHit } from '../../../systems/focus/apply';
+import { applyFocusRecovery } from '../../../systems/focus/recovery';
+import { STAGE_FIVE } from '../data';
 
-export function applyOrbit(s: CoreState, out: GameEvent[], dt: number) {
+import type { CoreState } from '../../../state';
+import type { GameEvent } from '../../../types';
+
+export function applyOrbit(s: CoreState, out: GameEvent[], dt: number): void {
     const result = orbitStep(s.orbit, s.p, s.keys, dt);
     s.orbit = result.orbit;
     setPlayer(s, result.p);
@@ -27,7 +27,9 @@ export function applyOrbit(s: CoreState, out: GameEvent[], dt: number) {
         return;
     }
     // Takeover skips shared focus recovery; apply it here.
-    if (s.orbit.phase !== 'parked') applyFocusRecovery(s, dt);
+    if (s.orbit.phase !== 'parked') {
+        applyFocusRecovery(s, dt, inSatelliteLight(s.orbit, s.p, s.orbit.z));
+    }
     if (result.flag > s.checkpoint) {
         s.focus.value = 100;
         s.focus.recoveryClock = 0;
@@ -38,7 +40,9 @@ export function applyOrbit(s: CoreState, out: GameEvent[], dt: number) {
         s.focus.value = 100;
         s.focus.recoveryClock = 0;
         s.checkpoint = STAGE_FIVE.restarts.length + 1;
-        if (s.completedStage < 4) s.completedStage = 4;
+        if (s.completedStage < 4) {
+            s.completedStage = 4;
+        }
         out.push({ type: 'cue', id: 'checkpoint' });
     }
 }

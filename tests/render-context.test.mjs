@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const { createRenderCtx, createRenderResources, createGame, createEffects } =
@@ -51,8 +52,8 @@ test('nested transform and layer scopes restore their callers even when drawing 
         createGame().getSnapshot(),
         createEffects().snapshot(),
     );
-    const outer = { key: 'outer' },
-        inner = { key: 'inner' };
+    const outer = { key: 'outer' };
+    const inner = { key: 'inner' };
     ctx.ox = 12;
     ctx.withLayer(outer, () => {
         assert.throws(

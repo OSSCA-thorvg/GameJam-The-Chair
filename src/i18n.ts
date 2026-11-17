@@ -595,7 +595,9 @@ export function translate(message: Message, locale: Locale): string {
 export function resolveLocale(languages: readonly string[]): Locale {
     for (const language of languages) {
         const base = language.toLowerCase().split('-')[0];
-        if (base === 'en' || base === 'ko') return base;
+        if (base === 'en' || base === 'ko') {
+            return base;
+        }
     }
     return 'en';
 }
@@ -627,9 +629,11 @@ export function browserLocale(): Locale {
     return pageLocale(location.search, navigator.languages, saved);
 }
 
-export function keepLangOnLinks(root: ParentNode = document) {
+export function keepLangOnLinks(root: ParentNode = document): void {
     const lang = asLocale(new URLSearchParams(location.search).get('lang'));
-    if (!lang) return;
+    if (!lang) {
+        return;
+    }
     for (const link of root.querySelectorAll<HTMLAnchorElement>(
         'a[href^="/"]',
     )) {

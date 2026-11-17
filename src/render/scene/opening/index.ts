@@ -1,5 +1,3 @@
-import type { RenderCtx } from '../../context';
-import { drawWorld } from '../office/world';
 import { drawBubbles } from './bubble';
 import { drawClock } from './clock';
 import {
@@ -8,7 +6,11 @@ import {
     drawRageFlash,
     drawSunbeams,
 } from './mood';
-import { OPENING_BEATS, type OpeningFrame } from './timeline';
+import { OPENING_BEATS } from './timeline';
+import { drawWorld } from '../office/world';
+
+import type { OpeningFrame } from './timeline';
+import type { RenderCtx } from '../../context';
 
 export {
     openingFrame,
@@ -19,7 +21,7 @@ export {
     type OpeningFrame,
 } from './timeline';
 
-export function drawOpening(ctx: RenderCtx, frame: OpeningFrame) {
+export function drawOpening(ctx: RenderCtx, frame: OpeningFrame): void {
     ctx.commands = [];
     if (frame.shot === 'office') {
         ctx.chairPose = {
@@ -38,6 +40,10 @@ export function drawOpening(ctx: RenderCtx, frame: OpeningFrame) {
         drawChairMood(ctx, frame);
         drawRageFlash(ctx, frame, OPENING_BEATS.rage);
     }
-    if (frame.iris !== null && frame.iris < 1) drawClock(ctx, frame);
-    if (frame.shot === 'office') drawBubbles(ctx, frame);
+    if (frame.iris !== null && frame.iris < 1) {
+        drawClock(ctx, frame);
+    }
+    if (frame.shot === 'office') {
+        drawBubbles(ctx, frame);
+    }
 }

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const {
@@ -37,8 +38,8 @@ function context(time, over = {}) {
 }
 
 test('wind tilts only the chair while the worker keeps typing and gameplay stays untouched', () => {
-    const calm = context(0.3),
-        gust = context(5.3);
+    const calm = context(0.3);
+    const gust = context(5.3);
     const before = structuredClone(gust.state);
     player(calm);
     player(gust);
@@ -76,12 +77,12 @@ test('wind tilts only the chair while the worker keeps typing and gameplay stays
 });
 
 test('spray curves with the headwind only in stage four and stays attached at the nozzle', () => {
-    const calm = context(0.3),
-        gust = context(5.3);
+    const calm = context(0.3);
+    const gust = context(5.3);
     sprayPlume(calm);
     sprayPlume(gust);
-    const calmCone = calm.commands[0],
-        gustCone = gust.commands[0];
+    const calmCone = calm.commands[0];
+    const gustCone = gust.commands[0];
     const reach = (cone) => cone.curves[0][4] - cone.points[0][0];
     assert.ok(
         reach(gustCone) < reach(calmCone) - 50,

@@ -1,16 +1,9 @@
+import { createBucket, createCleaning } from './cleaning/decide';
+import { createCopier, createUrgentCopier } from './copier/decide';
+
+import type { Bucket, Cleaning } from './cleaning/decide';
+import type { Copier, UrgentCopier } from './copier/decide';
 import type { Paper } from '../../types';
-import {
-    createCopier,
-    createUrgentCopier,
-    type Copier,
-    type UrgentCopier,
-} from './copier/decide';
-import {
-    createBucket,
-    createCleaning,
-    type Bucket,
-    type Cleaning,
-} from './cleaning/decide';
 
 export type OfficeState = {
     copier: Copier;

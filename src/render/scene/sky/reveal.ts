@@ -1,6 +1,3 @@
-import { STAGE_FOUR } from '../../../game/stages/sky/data';
-import { createOrbitState } from '../../../game/stages/orbit/state';
-import type { RenderCtx } from '../../context';
 import {
     REVEAL_DURATION,
     revealChairOrbit,
@@ -8,9 +5,13 @@ import {
     revealTravel,
     SKY_DEPARTURE,
 } from './camera';
-import { ORBIT_WATCH } from '../orbit/watch';
+import { createOrbitState } from '../../../game/stages/orbit/state';
+import { STAGE_FOUR } from '../../../game/stages/sky/data';
 import { orbitEnding } from '../orbit/ending';
 import { drawOrbitShot } from '../orbit/shot';
+import { ORBIT_WATCH } from '../orbit/watch';
+
+import type { RenderCtx } from '../../context';
 
 const smooth = (value: number) => {
     const t = Math.max(0, Math.min(1, value));
@@ -19,7 +20,7 @@ const smooth = (value: number) => {
 
 const FLYING = orbitEnding(createOrbitState());
 
-export function drawSkyReveal(ctx: RenderCtx) {
+export function drawSkyReveal(ctx: RenderCtx): void {
     const { sky } = ctx.state;
     const { settle, turn } = STAGE_FOUR.reveal;
     const elapsed = sky.phase === 'depth' ? settle + turn + sky.age : sky.age;

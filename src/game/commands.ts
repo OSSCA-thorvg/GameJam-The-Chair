@@ -1,10 +1,10 @@
-import { resetAttempt, startStage, type CoreState } from './state';
-import type { StageId } from './types';
-import type { GameEvent, Input } from './types';
-import { stageHooks } from './stages/hooks';
 import { PHYSICS } from './level';
 import * as Det from './math';
+import { stageHooks } from './stages/hooks';
+import { resetAttempt, startStage } from './state';
 
+import type { CoreState } from './state';
+import type { StageId, GameEvent, Input } from './types';
 export type Command =
     | { type: 'keys'; keys: Input[] }
     | { type: 'jump' }
@@ -15,15 +15,12 @@ export type Command =
     | { type: 'reset' }
     | { type: 'restart' }
     | { type: 'startStage'; id: StageId };
-
 function isRecord(value: unknown): value is Record<string, unknown> {
     return !!value && typeof value === 'object' && !Array.isArray(value);
 }
-
 function isArray(value: unknown): value is unknown[] {
     return Array.isArray(value);
 }
-
 function isInput(value: unknown): value is Input {
     return (
         value === 'left' ||
@@ -36,30 +33,26 @@ function isInput(value: unknown): value is Input {
         value === 'brake'
     );
 }
-
 function isStageId(value: unknown): value is StageId {
     return (
         value === 1 || value === 2 || value === 3 || value === 4 || value === 5
     );
 }
-
 export function parseCommand(value: unknown): Command {
     if (!isRecord(value) || typeof value.type !== 'string') {
         throw new Error('bad command');
     }
+    return parseCommandRecord(value);
+}
+function parseCommandRecord(value: Record<string, unknown>): Command {
     switch (value.type) {
         case 'keys': {
-            if (
-                !isArray(value.keys) ||
-                value.keys.length > 8 ||
-                !value.keys.every(isInput)
-            ) {
-                throw new Error('bad command keys');
-            }
-            return { type: 'keys', keys: [...new Set(value.keys)] };
+            return { type: 'keys', keys: parseInputKeys(value.keys) };
         }
         case 'startStage':
-            if (!isStageId(value.id)) throw new Error('bad command stage');
+            if (!isStageId(value.id)) {
+                throw new Error('bad command stage');
+            }
             return { type: 'startStage', id: value.id };
         case 'jump':
         case 'spray':
@@ -73,8 +66,11 @@ export function parseCommand(value: unknown): Command {
             throw new Error('bad command type');
     }
 }
-
-export function runCommand(s: CoreState, command: Command, out: GameEvent[]) {
+export function runCommand(
+    s: CoreState,
+    command: Command,
+    out: GameEvent[],
+): void {
     switch (command.type) {
         case 'keys':
             s.keys = [...command.keys];
@@ -86,7 +82,9 @@ export function runCommand(s: CoreState, command: Command, out: GameEvent[]) {
             spray(s, out);
             return;
         case 'interact':
-            if (s.mode === 'play') stageHooks(s.stage).interact?.(s);
+            if (s.mode === 'play') {
+                stageHooks(s.stage).interact?.(s);
+            }
             return;
         case 'leaveMeeting':
             stageHooks(s.stage).leave?.(s);
@@ -98,7 +96,9 @@ export function runCommand(s: CoreState, command: Command, out: GameEvent[]) {
             resetAttempt(s, out);
             return;
         case 'restart':
-            if (s.mode === 'play') s.deaths++;
+            if (s.mode === 'play') {
+                s.deaths++;
+            }
             resetAttempt(s, out);
             return;
         case 'startStage':
@@ -106,13 +106,13 @@ export function runCommand(s: CoreState, command: Command, out: GameEvent[]) {
             return;
     }
 }
-
 function jump(s: CoreState) {
-    if (s.mode !== 'play' || stageHooks(s.stage).canJump?.(s) === false) return;
+    if (s.mode !== 'play' || stageHooks(s.stage).canJump?.(s) === false) {
+        return;
+    }
     s.jumpQ = PHYSICS.jump.buffer;
 }
-
-export function spray(s: CoreState, out: GameEvent[]) {
+export function spray(s: CoreState, out: GameEvent[]): void {
     const hooks = stageHooks(s.stage);
     if (
         s.mode !== 'play' ||
@@ -135,9 +135,16 @@ export function spray(s: CoreState, out: GameEvent[]) {
     out.push({ type: 'cue', id: 'spray' });
     hooks.onSpray?.(s, dx);
 }
-
 function pause(s: CoreState) {
-    if (s.mode !== 'play' && s.mode !== 'pause') return;
+    if (s.mode !== 'play' && s.mode !== 'pause') {
+        return;
+    }
     s.mode = s.mode === 'play' ? 'pause' : 'play';
     s.keys = [];
+}
+function parseInputKeys(value: unknown): Input[] {
+    if (!isArray(value) || value.length > 8 || !value.every(isInput)) {
+        throw new Error('bad command keys');
+    }
+    return [...new Set(value)];
 }

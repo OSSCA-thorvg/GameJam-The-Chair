@@ -67,3 +67,7 @@
 - 글꼴: Black Han Sans, Do Hyeon, Jua. SIL OFL 1.1 라이선스를 따릅니다. [글꼴 라이선스](src/assets/fonts/)를 참고하세요.
 - OSSCA ThorVG 게임잼을 위해 제작했습니다.
 - 프로젝트 라이선스: [MIT](LICENSE).
+
+## 개발
+
+코딩 규칙과 검증 명령은 [Coding style](CODING_STYLE.md)에 정리되어 있습니다.

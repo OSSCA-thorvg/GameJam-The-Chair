@@ -1,15 +1,17 @@
-import { createGame, type GameSnapshot } from '../game/game';
+import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
+import { parseState, createGame } from '../game/game';
 import { LEVEL, FIXED_STEP } from '../game/level';
-import { deathShotLength } from '../render/death-shot';
+import { monitorPhase } from '../game/stages/office/monitor/decide';
 import { FOCUS_LOSS_DURATION } from '../game/systems/focus/decide';
+import { deathShotLength } from '../render/death-shot';
 import { createEffects } from '../render/effects';
 import {
     CLEANER_RECOVERY_END,
     CLEANER_RECOVERY_START,
 } from '../render/scene/office/cleaning';
-import { monitorPhase } from '../game/stages/office/monitor/decide';
-import { type PreviewScene, type PreviewFrame } from './types';
-import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
+
+import type { PreviewScene, PreviewFrame } from './types';
+import type { GameSnapshot } from '../game/game';
 
 export function cleanerRecovery(): PreviewScene {
     const game = createGame();
@@ -279,7 +281,9 @@ export function personalBelongings(): PreviewScene {
             player: { ...base.player, x, y: 368 },
         };
         effects.observe(state);
-        if (tick % 2 === 0) frames.push(capture(game, effects, state));
+        if (tick % 2 === 0) {
+            frames.push(capture(game, effects, state));
+        }
     }
     return recordedScene(
         'personal-belongings',
@@ -432,7 +436,9 @@ export function extinguisherSpray(): PreviewScene {
     game.spray();
     game.setInput();
     const effects = createEffects();
-    for (const event of game.drainEvents()) effects.receive(event);
+    for (const event of game.drainEvents()) {
+        effects.receive(event);
+    }
     const frame = () => capture(game, effects);
     const frames = [frame()];
     for (let i = 0; i < 54; i++) {
@@ -460,7 +466,7 @@ export function urgentCopier(
 ): PreviewScene {
     const game = createGame();
     game.startStage(1);
-    const saved = JSON.parse(game.serialize());
+    const saved = parseState(game.serialize());
     saved.lessons = { moved: true, jumped: true };
     saved.p = {
         ...saved.p,

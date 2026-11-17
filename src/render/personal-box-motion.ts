@@ -45,7 +45,11 @@ function advance(
     return reaction;
 }
 
-export function createPersonalBoxObserver() {
+export function createPersonalBoxObserver(): {
+    observe(input: PersonalBoxInput): void;
+    snapshot: () => PersonalBoxReaction;
+    restore(next: PersonalBoxReaction): void;
+} {
     let reaction: PersonalBoxReaction = { kind: 'idle' };
     let previous: PersonalBoxInput | null = null;
     return {
@@ -58,7 +62,9 @@ export function createPersonalBoxObserver() {
             ) {
                 reaction = { kind: 'idle' };
             }
-            if (input.stage === 3) reaction = advance(reaction, input);
+            if (input.stage === 3) {
+                reaction = advance(reaction, input);
+            }
             previous = input;
         },
         snapshot: () => reaction,
@@ -71,7 +77,10 @@ export function createPersonalBoxObserver() {
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
-export function personalBoxPose(reaction: PersonalBoxReaction, time: number) {
+export function personalBoxPose(
+    reaction: PersonalBoxReaction,
+    time: number,
+): { bend: number; leaf: number; badgeTurn: number; badgeSwing: number } {
     const elapsed =
         reaction.kind === 'farewell'
             ? time - reaction.passed - PERSONAL_BOX.farewellDelay

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import test from 'node:test';
+
 import {
     applyCommand,
     balancePolicy,
@@ -11,7 +12,9 @@ import {
 
 function deepFreeze(value) {
     if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-        for (const child of Object.values(value)) deepFreeze(child);
+        for (const child of Object.values(value)) {
+            deepFreeze(child);
+        }
         Object.freeze(value);
     }
     return value;
@@ -56,7 +59,9 @@ function stepView(s) {
 test('a command or step that throws leaves the previous state intact', () => {
     const game = createGame({ seed: 1 });
     game.startStage(2);
-    for (let i = 0; i < 30; i++) game.step();
+    for (let i = 0; i < 30; i++) {
+        game.step();
+    }
     const before = game.serialize();
     assert.throws(() => game.startStage(9));
     assert.equal(game.serialize(), before);
@@ -70,8 +75,11 @@ test('the game core has no hidden time or randomness sources', () => {
     const walk = (dir) => {
         for (const entry of readdirSync(dir, { withFileTypes: true })) {
             const path = join(dir, entry.name);
-            if (entry.isDirectory()) walk(path);
-            else if (path.endsWith('.ts')) files.push(path);
+            if (entry.isDirectory()) {
+                walk(path);
+            } else if (path.endsWith('.ts')) {
+                files.push(path);
+            }
         }
     };
     walk('src/game');

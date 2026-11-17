@@ -7,13 +7,16 @@ import {
     integer,
     choice,
 } from '../../validation/primitives';
+
 import type { RooftopState } from './state';
 
 function entrance(value: unknown, path: string) {
     const data = record(value, path);
     const kind = choice(data.kind, ['opening', 'ready'], `${path}.kind`);
     exact(data, kind === 'opening' ? ['kind', 'age'] : ['kind'], path);
-    if (kind === 'opening') finite(data.age, `${path}.age`);
+    if (kind === 'opening') {
+        finite(data.age, `${path}.age`);
+    }
 }
 
 function duct(value: unknown, path: string) {
@@ -73,10 +76,12 @@ function flight(value: unknown, path: string) {
         finite(data.dist, `${path}.dist`);
         finite(data.speed, `${path}.speed`);
     }
-    if (kind !== 'course') finite(data.age, `${path}.age`);
+    if (kind !== 'course') {
+        finite(data.age, `${path}.age`);
+    }
 }
 
-export function rooftop(value: unknown, path: string) {
+export function rooftop(value: unknown, path: string): void {
     const data = record(value, path);
     exactFields<RooftopState>(
         data,

@@ -136,7 +136,9 @@ for (const file of tracked) {
         continue;
     }
     const absolute = resolve(root, file);
-    if (!existsSync(absolute)) continue;
+    if (!existsSync(absolute)) {
+        continue;
+    }
     const destination = moves.get(file) ?? file;
     const original = readFileSync(absolute, 'utf8');
     let source = original.replace(
@@ -149,10 +151,14 @@ for (const file of tracked) {
                 `${target}/index.ts`,
                 `${target}.mjs`,
             ].find(existsSync);
-            if (!oldTarget) return match;
+            if (!oldTarget) {
+                return match;
+            }
             const targetFile = relative(root, oldTarget);
             const newTarget = moves.get(targetFile) ?? targetFile;
-            if (destination === file && newTarget === targetFile) return match;
+            if (destination === file && newTarget === targetFile) {
+                return match;
+            }
             let newSpecifier = relative(
                 dirname(resolve(root, destination)),
                 resolve(root, newTarget),
@@ -169,7 +175,7 @@ for (const file of tracked) {
     for (const [oldFile, newFile] of moves) {
         source = source.replaceAll(oldFile, newFile);
         const pattern = new RegExp(
-            `${escape(oldFile.replace(/\.ts$/, ''))}(?=$|[.'\"\x60\\s)])`,
+            `${escape(oldFile.replace(/\.ts$/, ''))}(?=$|[.'"\x60\\s)])`,
             'g',
         );
         source = source.replace(pattern, modulePath(newFile));

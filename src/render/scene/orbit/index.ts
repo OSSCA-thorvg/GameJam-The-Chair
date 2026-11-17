@@ -1,16 +1,19 @@
-import type { RenderCtx } from '../../context';
-import { REVEAL_DURATION } from '../sky/camera';
 import { endingFade, orbitEnding } from './ending';
 import { drawOrbitShot } from './shot';
 import { STAGE_FIVE } from '../../../game/stages/orbit/data';
+import { REVEAL_DURATION } from '../sky/camera';
+
+import type { RenderCtx } from '../../context';
 
 export const ENTRY_FRAMING = 2.5;
 const IGNITION = 1.2;
 
-export function drawOrbit(ctx: RenderCtx) {
+export function drawOrbit(ctx: RenderCtx): void {
     ctx.commands = [];
     const { orbit, player: p } = ctx.state;
-    if (!orbit) return;
+    if (!orbit) {
+        return;
+    }
     const ending = orbitEnding(orbit);
     if (Math.round(ending.dark * 255) >= 255) {
         endingFade(ctx, ending);

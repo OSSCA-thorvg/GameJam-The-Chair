@@ -19,18 +19,30 @@ export function canvasBox(
     height: number,
     extent?: number[],
 ): [number, number] | null {
-    if (cmd.fill === null && !cmd.stroke) return null;
-    let xMin = Infinity,
-        yMin = Infinity,
-        xMax = -Infinity,
-        yMax = -Infinity;
+    if (cmd.fill === null && !cmd.stroke) {
+        return null;
+    }
+    let xMin = Infinity;
+    let yMin = Infinity;
+    let xMax = -Infinity;
+    let yMax = -Infinity;
     const take = (x: number, y: number) => {
-        if (x < xMin) xMin = x;
-        if (x > xMax) xMax = x;
-        if (y < yMin) yMin = y;
-        if (y > yMax) yMax = y;
+        if (x < xMin) {
+            xMin = x;
+        }
+        if (x > xMax) {
+            xMax = x;
+        }
+        if (y < yMin) {
+            yMin = y;
+        }
+        if (y > yMax) {
+            yMax = y;
+        }
     };
-    for (const [x, y] of cmd.points) take(x, y);
+    for (const [x, y] of cmd.points) {
+        take(x, y);
+    }
     for (const c of cmd.curves ?? []) {
         take(c[0], c[1]);
         take(c[2], c[3]);

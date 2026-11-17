@@ -1,14 +1,15 @@
-import { createGame } from '../game/game';
+import { recordedScene, capture, stepGame } from './recording';
+import { parseState, createGame } from '../game/game';
 import { STAGE_FOUR } from '../game/stages/sky/data';
+import { createEffects } from '../render/effects';
+import { ATTENDANCE } from '../render/scene/shared/attendance-bubble';
 import {
     revealGlideStart,
     SKY_DEPARTURE,
     SKY_TURN,
 } from '../render/scene/sky/camera';
-import { ATTENDANCE } from '../render/scene/shared/attendance-bubble';
-import { createEffects } from '../render/effects';
-import { type PreviewScene } from './types';
-import { recordedScene, capture, stepGame } from './recording';
+
+import type { PreviewScene } from './types';
 
 export function cloudEntry(): PreviewScene {
     const game = createGame();
@@ -206,9 +207,9 @@ export function skyParrots(): PreviewScene {
     game.startStage(4);
     const base = game.getSnapshot();
     const effects = createEffects().snapshot();
-    const period = 8.2,
-        passes = 10,
-        duration = period * passes;
+    const period = 8.2;
+    const passes = 10;
+    const duration = period * passes;
     return {
         id: 'sky-parrots',
         label: 'Sky · Parrot colours (one bird per pass)',
@@ -239,10 +240,10 @@ export function skyRobotParrot(): PreviewScene {
     game.startStage(4);
     const base = game.getSnapshot();
     const effects = createEffects().snapshot();
-    const period = 8.2,
-        start = period * 19,
-        duration = period * 2,
-        hit = 5.3;
+    const period = 8.2;
+    const start = period * 19;
+    const duration = period * 2;
+    const hit = 5.3;
     return {
         id: 'sky-robot-parrot',
         label: 'Sky · Robot parrots (liquid metal, black chrome) and gear knock',
@@ -401,7 +402,7 @@ export function skyEnding(): PreviewScene {
 export function skyToOrbit(): PreviewScene {
     const game = createGame();
     game.startStage(4);
-    const start = JSON.parse(game.serialize());
+    const start = parseState(game.serialize());
     Object.assign(start.sky, { phase: 'reveal', age: 0 });
     Object.assign(start.p, { x: 5045, y: -2338, vx: 0, vy: 0 });
     start.ground = false;
@@ -435,7 +436,9 @@ export function skyToOrbit(): PreviewScene {
         );
         stepGame(game, effects);
         frames.push(capture(game, effects));
-        if (age > 7.5) break;
+        if (age > 7.5) {
+            break;
+        }
     }
     return recordedScene(
         'sky-to-orbit',

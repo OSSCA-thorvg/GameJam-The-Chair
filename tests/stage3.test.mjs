@@ -1,9 +1,9 @@
-import { runUntil } from './support/until.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { driveStageThree } from './support/stage3-route.mjs';
-import { bundled } from './support/load.mjs';
 
+import { bundled } from './support/load.mjs';
+import { driveStageThree } from './support/stage3-route.mjs';
+import { runUntil } from './support/until.mjs';
 const { createGame } = await bundled({
     entryPoints: ['src/game/game.ts'],
     bundle: true,
@@ -12,7 +12,6 @@ const { createGame } = await bundled({
     format: 'esm',
 });
 const dt = 1 / 120;
-
 test('extinguisher must be collected and does not leak into other stages', () => {
     const game = createGame();
     for (const stage of [1, 2, 3]) {
@@ -32,7 +31,6 @@ test('extinguisher must be collected and does not leak into other stages', () =>
     game.startStage(1);
     assert.equal(game.getSnapshot().hasExtinguisher, false);
 });
-
 test('held spray repeats every 0.24 seconds, three bursts per time in the air, and right input propels right', () => {
     const game = createGame();
     game.startStage(3);
@@ -69,9 +67,13 @@ test('held spray repeats every 0.24 seconds, three bursts per time in the air, a
         assert.ok(Math.abs(times[i] - times[i - 1] - 0.24) < dt);
     }
     game.release('spray');
-    for (let i = 0; i < 60; i++) game.step(dt);
+    for (let i = 0; i < 60; i++) {
+        game.step(dt);
+    }
     assert.equal(game.getSnapshot().spray.burst, 0);
-    for (let i = 0; i < 600 && !game.getSnapshot().ground; i++) game.step(dt);
+    for (let i = 0; i < 600 && !game.getSnapshot().ground; i++) {
+        game.step(dt);
+    }
     assert.equal(game.getSnapshot().airSprays, 0, 'landing refills the bursts');
     game.drainEvents();
     game.spray();
@@ -81,56 +83,8 @@ test('held spray repeats every 0.24 seconds, three bursts per time in the air, a
             .some((event) => event.type === 'cue' && event.id === 'spray'),
     );
 });
-
 test('dropping off the roof onto the sales graph rides it into an airborne stage-four start', () => {
-    const game = createGame();
-    game.startStage(3);
-    const flags = new Set(),
-        landings = new Set(),
-        reactions = new Set();
-    const ride = driveStageThree(
-        game,
-        (state) => state.firstFlight.kind === 'ride',
-        (state) => {
-            flags.add(state.checkpoint);
-            reactions.add(state.ductReaction.kind);
-            if (state.ground) {
-                if (
-                    state.player.x > 1480 &&
-                    state.player.x < 1780 &&
-                    Math.abs(state.player.y - 248) < 18
-                ) {
-                    landings.add('R1');
-                }
-                if (
-                    state.player.x > 1240 &&
-                    state.player.x < 1540 &&
-                    Math.abs(state.player.y - 78) < 18
-                ) {
-                    landings.add('L1');
-                }
-                if (
-                    state.player.x > 1480 &&
-                    state.player.x < 1780 &&
-                    Math.abs(state.player.y + 92) < 18
-                ) {
-                    landings.add('R2');
-                }
-                if (
-                    state.player.x > 1240 &&
-                    state.player.x < 1540 &&
-                    Math.abs(state.player.y + 262) < 18
-                ) {
-                    landings.add('L2');
-                }
-            }
-        },
-    );
-    assert.deepEqual([...flags], [0, 1, 2, 3, 4]);
-    assert.deepEqual(landings, new Set(['R1', 'L1', 'R2', 'L2']));
-    assert.deepEqual([...reactions], ['idle', 'reacting', 'done']);
-    assert.equal(ride.mode, 'play');
-    assert.equal(ride.deaths, 0);
+    const { ride, game } = verifyDetails();
     assert.ok(
         ride.player.x > 2400 && ride.player.x < 2560,
         'the chair boards where the board meets the roof edge',
@@ -148,8 +102,8 @@ test('dropping off the roof onto the sales graph rides it into an airborne stage
     game.advance(1);
     assert.deepEqual(game.getSnapshot(), paused);
     game.pause();
-    let beforeTransition = game.getSnapshot(),
-        sawFlight = false;
+    let beforeTransition = game.getSnapshot();
+    let sawFlight = false;
     for (let i = 0; i < 120 * 14 && game.getSnapshot().stage === 3; i++) {
         beforeTransition = game.getSnapshot();
         assert.ok(
@@ -207,7 +161,9 @@ test('dropping off the roof onto the sales graph rides it into an airborne stage
     }
     const settled = game.getSnapshot();
     game.setInput('right');
-    for (let i = 0; i < 120; i++) game.step(dt);
+    for (let i = 0; i < 120; i++) {
+        game.step(dt);
+    }
     assert.ok(
         game.getSnapshot().player.x > settled.player.x + 50,
         'airborne starting area remains controllable',
@@ -217,7 +173,6 @@ test('dropping off the roof onto the sales graph rides it into an airborne stage
     assert.equal(game.getSnapshot().hasExtinguisher, true);
     assert.equal(game.getSnapshot().firstFlight.kind, 'course');
 });
-
 test('entrance moves the chair to the first block and closes before enabling controls', () => {
     const game = createGame();
     game.startStage(3);
@@ -225,7 +180,9 @@ test('entrance moves the chair to the first block and closes before enabling con
     assert.deepEqual(game.getSnapshot().people, []);
     game.setInput('left');
     game.jump();
-    for (let i = 0; i < 60; i++) game.step(dt);
+    for (let i = 0; i < 60; i++) {
+        game.step(dt);
+    }
     assert.equal(
         game.getSnapshot().player.x,
         100,
@@ -241,11 +198,15 @@ test('entrance moves the chair to the first block and closes before enabling con
     game.advance(2);
     assert.deepEqual(game.getSnapshot(), paused);
     game.pause();
-    for (let i = 0; i < 80; i++) game.step(dt);
+    for (let i = 0; i < 80; i++) {
+        game.step(dt);
+    }
     const emerging = game.getSnapshot();
     assert.equal(emerging.rooftopEntrance.kind, 'opening');
     assert.ok(emerging.player.x > 100 && emerging.player.x < 235);
-    for (let i = 0; i < 100; i++) game.step(dt);
+    for (let i = 0; i < 100; i++) {
+        game.step(dt);
+    }
     const closing = game.getSnapshot();
     assert.equal(
         closing.rooftopEntrance.kind,
@@ -259,17 +220,20 @@ test('entrance moves the chair to the first block and closes before enabling con
     );
     game.setInput('left');
     game.jump();
-    for (let i = 0; i < 90; i++) game.step(dt);
+    for (let i = 0; i < 90; i++) {
+        game.step(dt);
+    }
     assert.equal(game.getSnapshot().rooftopEntrance.kind, 'ready');
     assert.ok(Math.abs(game.getSnapshot().player.x - 235) < 1);
     game.setInput('left');
-    for (let i = 0; i < 40; i++) game.step(dt);
+    for (let i = 0; i < 40; i++) {
+        game.step(dt);
+    }
     assert.ok(
         game.getSnapshot().player.x < 230,
         'controls activate after the door closes',
     );
 });
-
 test('the sales graph waits until the chair rolls onto it', () => {
     const game = createGame();
     game.startStage(3);
@@ -279,7 +243,9 @@ test('the sales graph waits until the chair rolls onto it', () => {
             state.checkpoint === 4 && state.ground && state.player.x > 2000,
     );
     game.setInput('left');
-    for (let i = 0; i < 120 * 2; i++) game.step(dt);
+    for (let i = 0; i < 120 * 2; i++) {
+        game.step(dt);
+    }
     assert.equal(
         game.getSnapshot().firstFlight.kind,
         'course',
@@ -297,7 +263,6 @@ test('the sales graph waits until the chair rolls onto it', () => {
     assert.equal(state.firstFlight.kind, 'ride');
     assert.equal(state.deaths, 0);
 });
-
 test('a steam blast costs focus once per blast', async () => {
     const { STAGE_THREE, ventPhase } = await bundled({
         stdin: {
@@ -338,7 +303,6 @@ test('a steam blast costs focus once per blast', async () => {
         'the same blast only counts once',
     );
 });
-
 test('the duct sneeze steam costs focus when it knocks the chair back', async () => {
     const { STAGE_THREE } = await bundled({
         stdin: {
@@ -367,8 +331,61 @@ test('the duct sneeze steam costs focus when it knocks the chair back', async ()
         game.restore(JSON.stringify(now));
         game.step(dt);
         const snap = game.getSnapshot();
-        if (snap.focusNotice?.kind === 'steam') hit = snap;
+        if (snap.focusNotice?.kind === 'steam') {
+            hit = snap;
+        }
     }
     assert.ok(hit, 'the sneeze registers as a steam hit');
     assert.equal(hit.focus, 100 - 15);
 });
+function verifyDetails() {
+    const game = createGame();
+    game.startStage(3);
+    const flags = new Set();
+    const landings = new Set();
+    const reactions = new Set();
+    const ride = driveStageThree(
+        game,
+        (state) => state.firstFlight.kind === 'ride',
+        (state) => {
+            flags.add(state.checkpoint);
+            reactions.add(state.ductReaction.kind);
+            if (state.ground) {
+                if (
+                    state.player.x > 1480 &&
+                    state.player.x < 1780 &&
+                    Math.abs(state.player.y - 248) < 18
+                ) {
+                    landings.add('R1');
+                }
+                if (
+                    state.player.x > 1240 &&
+                    state.player.x < 1540 &&
+                    Math.abs(state.player.y - 78) < 18
+                ) {
+                    landings.add('L1');
+                }
+                if (
+                    state.player.x > 1480 &&
+                    state.player.x < 1780 &&
+                    Math.abs(state.player.y + 92) < 18
+                ) {
+                    landings.add('R2');
+                }
+                if (
+                    state.player.x > 1240 &&
+                    state.player.x < 1540 &&
+                    Math.abs(state.player.y + 262) < 18
+                ) {
+                    landings.add('L2');
+                }
+            }
+        },
+    );
+    assert.deepEqual([...flags], [0, 1, 2, 3, 4]);
+    assert.deepEqual(landings, new Set(['R1', 'L1', 'R2', 'L2']));
+    assert.deepEqual([...reactions], ['idle', 'reacting', 'done']);
+    assert.equal(ride.mode, 'play');
+    assert.equal(ride.deaths, 0);
+    return { ride, game };
+}

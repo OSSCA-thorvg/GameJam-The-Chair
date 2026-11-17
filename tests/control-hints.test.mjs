@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const { createGame, createRenderCtx, officeControlHints, rooftopSprayHint } =

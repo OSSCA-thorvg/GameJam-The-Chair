@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { loadSource } from './support/load.mjs';
 
 const {
@@ -31,10 +32,14 @@ for (const stage of [1, 2, 3, 4, 5]) {
         first.spray.dir.x += 10;
         first.cleaning.spilled = !first.cleaning.spilled;
         first.lessons.jumped = !first.lessons.jumped;
-        for (const solid of first.solids) solid.p[0].x += 10;
+        for (const solid of first.solids) {
+            solid.p[0].x += 10;
+        }
         first.corridor.lesson += 1;
         first.sky.depth += 10;
-        if (first.orbit) first.orbit.z += 10;
+        if (first.orbit) {
+            first.orbit.z += 10;
+        }
         assert.equal(game.serialize(), saved);
         assert.deepEqual(second, expected);
         assert.deepEqual(game.getSnapshot(), expected);
@@ -199,8 +204,12 @@ test('every nested snapshot object belongs to that snapshot', () => {
 test('office projections use stage data and keep hazard counters distinct', () => {
     const game = createGame({ seed: 42 });
     const state = JSON.parse(game.serialize());
-    const { binCooldown, lightCooldown, slipCooldown, ...office } =
-        state.office;
+    const {
+        binCooldown: _binCooldown,
+        lightCooldown: _lightCooldown,
+        slipCooldown: _slipCooldown,
+        ...office
+    } = state.office;
     office.paperHits = 2;
     office.binFalls = 3;
     office.lightHits = 4;

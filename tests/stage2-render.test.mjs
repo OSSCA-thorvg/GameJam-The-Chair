@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { bundled } from './support/load.mjs';
-import { orientationHop } from './support/harness.mjs';
+import test from 'node:test';
 
+import { orientationHop } from './support/harness.mjs';
+import { bundled } from './support/load.mjs';
 const { createGame, createRenderCtx, drawBuilding } = await bundled({
     stdin: {
         contents: `export { createGame } from './src/game/game';
@@ -53,15 +53,21 @@ function render(state, locale, width) {
             font: `${text.size}px ${text.font}`,
             color: text.fill,
         }));
-    let defs = '',
-        shapes = '';
+    let defs = '';
+    let shapes = '';
     ctx.commands.forEach((c, i) => {
-        if (c.text) return;
+        if (c.text) {
+            return;
+        }
         for (const point of c.points) {
-            for (const n of point) assert.ok(Number.isFinite(n));
+            for (const n of point) {
+                assert.ok(Number.isFinite(n));
+            }
         }
         for (const curve of c.curves ?? []) {
-            for (const n of curve) assert.ok(Number.isFinite(n));
+            for (const n of curve) {
+                assert.ok(Number.isFinite(n));
+            }
         }
         const d = `M${c.points[0].join(',')} ${c.points
             .slice(1)
@@ -95,7 +101,6 @@ function render(state, locale, width) {
         svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="510" data-player-x="${state.player.x}" data-time="${state.time}" data-cam="${ctx.cam}"><defs>${defs}</defs>${shapes}</svg>`,
     };
 }
-
 test('window workers keep their appearance while typing and vary with the stage seed', () => {
     const game = createGame();
     game.startStage(2);
@@ -114,7 +119,6 @@ test('window workers keep their appearance while typing and vary with the stage 
         render(second, 'en', 1000).svg,
     );
 });
-
 test('corridor and meeting render finite vector paths in both languages and narrow views', async () => {
     const game = createGame();
     game.startStage(2);
@@ -124,106 +128,9 @@ test('corridor and meeting render finite vector paths in both languages and narr
         ),
     );
     const frames = new Map();
-    let visited = false;
-    for (let i = 0; i < 7200; i++) {
-        const state = game.getSnapshot();
-        if (state.canEnterMeeting && !frames.has('entrance')) {
-            frames.set('entrance', state);
-        }
-        if (state.canEnterMeeting && !visited) {
-            game.interact();
-            visited = true;
-        }
-        if (
-            state.corridor.dispatchAge > 1.8 &&
-            state.corridor.dispatchAge < 2.1 &&
-            !frames.has('chairs')
-        ) {
-            frames.set('chairs', state);
-        }
-        if (
-            state.corridor.room.kind === 'meeting' &&
-            state.corridor.room.age > 3.7 &&
-            !frames.has('meeting')
-        ) {
-            frames.set('meeting', state);
-        }
-        if (
-            state.corridor.pace === 'express' &&
-            state.corridor.chat.kind === 'rush' &&
-            !frames.has('rush')
-        ) {
-            frames.set('rush', state);
-        }
-        if (
-            state.player.x > 5200 &&
-            state.player.x < 5300 &&
-            !frames.has('sleeper')
-        ) {
-            frames.set('sleeper', state);
-        }
-        if (frames.size === 5) break;
-        assert.equal(state.mode, 'play');
-        const waitingForMeeting = !visited && state.player.x > 510;
-        const correction = -state.player.a * 12 - state.player.w * 4;
-        game.setInput(
-            ...(waitingForMeeting
-                ? state.player.vx > 10
-                    ? ['left']
-                    : state.player.vx < -10
-                      ? ['right']
-                      : []
-                : state.corridor.convoy === 'free'
-                  ? ['right']
-                  : []),
-            ...(correction < -0.4 ? ['q'] : correction > 0.4 ? ['e'] : []),
-        );
-        if (orientationHop(state)) game.jump();
-        game.step(1 / 120);
-        game.drainEvents();
-    }
-    assert.deepEqual(
-        new Set(frames.keys()),
-        new Set(['entrance', 'chairs', 'meeting', 'sleeper', 'rush']),
-    );
-    for (const [name, state] of frames) {
-        for (const locale of ['en', 'ko']) {
-            for (const width of [540, 1000]) {
-                const frame = render(state, locale, width);
-                if (name === 'entrance') {
-                    assert.ok(
-                        frame.labels.some(
-                            ({ text }) =>
-                                text ===
-                                (locale === 'en' ? '↓ Enter' : '↓ 들어가기'),
-                        ),
-                    );
-                }
-                if (locale === 'en') {
-                    for (const { text } of frame.labels) {
-                        assert.doesNotMatch(text, /[가-힣]/);
-                    }
-                }
-                for (const { text } of frame.labels) {
-                    assert.doesNotMatch(
-                        text,
-                        /^(Exit|Lift shaft|Mechanical room)/,
-                    );
-                }
-                if (process.env.STAGE2_PREVIEW_DIR) {
-                    await mkdir(process.env.STAGE2_PREVIEW_DIR, {
-                        recursive: true,
-                    });
-                    await writeFile(
-                        `${process.env.STAGE2_PREVIEW_DIR}/${name}-${locale}-${width}.svg`,
-                        frame.svg,
-                    );
-                }
-            }
-        }
-    }
+    verifyDetails2(game, frames);
+    await verifyDetails(frames);
 });
-
 test('the two meeting doors have distinct titles and chair complaints come from below the seats', () => {
     const game = createGame();
     game.startStage(2);
@@ -258,7 +165,6 @@ test('the two meeting doors have distinct titles and chair complaints come from 
         );
     }
 });
-
 test('the loan-return line sits just above the purple facilitator', () => {
     const game = createGame();
     game.startStage(2);
@@ -284,3 +190,121 @@ test('the loan-return line sits just above the purple facilitator', () => {
         'the bubble is next to the facilitator head, below the board',
     );
 });
+function verifyDetails2(game, frames) {
+    let visited = false;
+    for (let i = 0; i < 7200; i++) {
+        let state;
+        ({ state, visited } = verifyDetails2Details(game, frames, visited));
+        if (frames.size === 5) {
+            break;
+        }
+        assert.equal(state.mode, 'play');
+        const waitingForMeeting = !visited && state.player.x > 510;
+        const correction = -state.player.a * 12 - state.player.w * 4;
+        game.setInput(
+            ...(waitingForMeeting
+                ? state.player.vx > 10
+                    ? ['left']
+                    : state.player.vx < -10
+                      ? ['right']
+                      : []
+                : state.corridor.convoy === 'free'
+                  ? ['right']
+                  : []),
+            ...(correction < -0.4 ? ['q'] : correction > 0.4 ? ['e'] : []),
+        );
+        if (orientationHop(state)) {
+            game.jump();
+        }
+        game.step(1 / 120);
+        game.drainEvents();
+    }
+}
+function verifyDetails2Details(game, frames, visited) {
+    let state;
+    ({ state, visited } = verifyDetails2DetailsDetails(game, frames, visited));
+    return { state, visited };
+}
+function verifyDetails2DetailsDetails(game, frames, visited) {
+    const state = game.getSnapshot();
+    if (state.canEnterMeeting && !frames.has('entrance')) {
+        frames.set('entrance', state);
+    }
+    if (state.canEnterMeeting && !visited) {
+        game.interact();
+        visited = true;
+    }
+    return verifyDetails2DetailsDetailsDetails(state, frames, visited);
+}
+function verifyDetails2DetailsDetailsDetails(state, frames, visited) {
+    if (
+        state.corridor.dispatchAge > 1.8 &&
+        state.corridor.dispatchAge < 2.1 &&
+        !frames.has('chairs')
+    ) {
+        frames.set('chairs', state);
+    }
+    if (
+        state.corridor.room.kind === 'meeting' &&
+        state.corridor.room.age > 3.7 &&
+        !frames.has('meeting')
+    ) {
+        frames.set('meeting', state);
+    }
+    if (
+        state.corridor.pace === 'express' &&
+        state.corridor.chat.kind === 'rush' &&
+        !frames.has('rush')
+    ) {
+        frames.set('rush', state);
+    }
+    if (
+        state.player.x > 5200 &&
+        state.player.x < 5300 &&
+        !frames.has('sleeper')
+    ) {
+        frames.set('sleeper', state);
+    }
+    return { state, visited };
+}
+async function verifyDetails(frames) {
+    assert.deepEqual(
+        new Set(frames.keys()),
+        new Set(['entrance', 'chairs', 'meeting', 'sleeper', 'rush']),
+    );
+    for (const [name, state] of frames) {
+        for (const locale of ['en', 'ko']) {
+            for (const width of [540, 1000]) {
+                const frame = render(state, locale, width);
+                await verifyDetailsDetails(name, frame, locale, width);
+            }
+        }
+    }
+}
+async function verifyDetailsDetails(name, frame, locale, width) {
+    if (name === 'entrance') {
+        assert.ok(
+            frame.labels.some(
+                ({ text }) =>
+                    text === (locale === 'en' ? '↓ Enter' : '↓ 들어가기'),
+            ),
+        );
+    }
+    if (locale === 'en') {
+        for (const { text } of frame.labels) {
+            assert.doesNotMatch(text, /[가-힣]/);
+        }
+    }
+    for (const { text } of frame.labels) {
+        assert.doesNotMatch(text, /^(Exit|Lift shaft|Mechanical room)/);
+    }
+    if (process.env.STAGE2_PREVIEW_DIR) {
+        await mkdir(process.env.STAGE2_PREVIEW_DIR, {
+            recursive: true,
+        });
+        await writeFile(
+            `${process.env.STAGE2_PREVIEW_DIR}/${name}-${locale}-${width}.svg`,
+            frame.svg,
+        );
+    }
+}

@@ -1,8 +1,8 @@
-import type { RenderCtx } from '../../context';
 import { personalBoxPose } from '../../personal-box-motion';
-import type { Vector } from '../../types';
 
-export function personalBoxBadge(ctx: RenderCtx) {
+import type { RenderCtx } from '../../context';
+import type { Vector } from '../../types';
+export function personalBoxBadge(ctx: RenderCtx): void {
     const { ox, oy, rotation, localScale } = ctx;
     ctx.ox += 130 * localScale;
     ctx.oy -= 30 * localScale;
@@ -25,14 +25,18 @@ export function personalBoxBadge(ctx: RenderCtx) {
         card.map(([x, y]) => [x * width, y]),
         width < 0 ? '#bec8c5' : '#d6ddd7',
     );
-    if (width > 0) badgePortrait(ctx, width);
-    ctx.rod(-3 * width, -2, 3 * width, -2, 3, '#adb7ba');
+    if (width > 0) {
+        badgePortrait(ctx, width);
+    }
+    ctx.rod(-3 * width, -2, 3 * width, -2, {
+        w: 3,
+        c: '#adb7ba',
+    });
     ctx.ox = ox;
     ctx.oy = oy;
     ctx.rotation = rotation;
     ctx.localScale = localScale;
 }
-
 function badgePortrait(ctx: RenderCtx, width: number) {
     const polygon = (points: Vector[], color: string) =>
         ctx.polygon(

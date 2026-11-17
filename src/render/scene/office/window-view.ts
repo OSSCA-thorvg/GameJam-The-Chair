@@ -40,14 +40,14 @@ export function windowView(dusk: number): WindowView {
     ) as WindowView;
 }
 
-export function officeTint(dusk: number) {
+export function officeTint(dusk: number): { color: string; strength: number } {
     return {
         color: mix('#f4b98c', '#2e3766', dusk),
         strength: 0.5 + dusk * 0.38,
     };
 }
 
-export function underOfficeTint(color: string, dusk: number) {
+export function underOfficeTint(color: string, dusk: number): string {
     const { color: tint, strength } = officeTint(dusk);
     const t = rgb(tint);
     return hex(

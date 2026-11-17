@@ -1,10 +1,15 @@
 import { GRAPH_CORNERS, STAGE_THREE } from '../../../game/stages/rooftop/data';
+
 import type { RenderCtx } from '../../context';
 
 const PEAK = STAGE_THREE.graph.points[1];
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
-export function graphTargetPose(distance: number) {
+export function graphTargetPose(distance: number): {
+    y: number;
+    check: number;
+    pending: number;
+} {
     const sincePeak = distance - GRAPH_CORNERS[1];
     const move = clamp((sincePeak - 100) / 120);
     return {
@@ -14,7 +19,7 @@ export function graphTargetPose(distance: number) {
     };
 }
 
-export function graphTarget(ctx: RenderCtx, distance: number) {
+export function graphTarget(ctx: RenderCtx, distance: number): void {
     const pose = graphTargetPose(distance);
     const pulse = 0.65 + 0.15 * Math.cos(ctx.t * 2);
     ctx.beginLayer({
@@ -27,8 +32,8 @@ export function graphTarget(ctx: RenderCtx, distance: number) {
         { width: 1.5, color: '#88d8a7', dash: [7, 6] },
     );
     ctx.endLayer();
-    const x = PEAK.x + 260,
-        y = pose.y - 17;
+    const x = PEAK.x + 260;
+    const y = pose.y - 17;
     if (pose.check > 0) {
         ctx.beginLayer({
             key: 'graph-target-check',

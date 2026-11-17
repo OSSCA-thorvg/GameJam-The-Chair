@@ -3,18 +3,9 @@ import {
     normalizeReplaySettings,
     readReplaySources,
     REPLAY_DEFAULTS,
-    type ReplaySettings,
-    type ReplaySource,
 } from './game/replay';
 import { CONFIG_VERSION } from './game/stages/index';
-import {
-    browserLocale,
-    isMessage,
-    keepLangOnLinks,
-    translate,
-    type Locale,
-    type Message,
-} from './i18n';
+import { browserLocale, isMessage, keepLangOnLinks, translate } from './i18n';
 import { createRenderer } from './render/renderer';
 import { createReplayPlayer } from './ui/replay-player';
 import {
@@ -23,6 +14,9 @@ import {
     loadBrowserData,
     stamp,
 } from './ui/replay-store';
+
+import type { ReplaySettings, ReplaySource } from './game/replay';
+import type { Locale, Message } from './i18n';
 import './style.css';
 import './preview.css';
 import './replay-tool.css';
@@ -35,13 +29,17 @@ const t = (message: Message) => translate(message, locale);
 document.documentElement.lang = locale;
 for (const element of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
     const key = element.dataset.i18n!;
-    if (isMessage(key)) element.textContent = t(key);
+    if (isMessage(key)) {
+        element.textContent = t(key);
+    }
 }
 for (const element of document.querySelectorAll<HTMLElement>(
     '[data-i18n-aria]',
 )) {
     const key = element.dataset.i18nAria!;
-    if (isMessage(key)) element.setAttribute('aria-label', t(key));
+    if (isMessage(key)) {
+        element.setAttribute('aria-label', t(key));
+    }
 }
 
 const root = $('#chair-office-one');
@@ -106,7 +104,7 @@ function load(text: string, origin: string) {
             open(sources[0]);
         }
     } catch (error) {
-        status.textContent = `${t('replay.badFile')} (${error instanceof Error ? error.message : error})`;
+        status.textContent = `${t('replay.badFile')} (${error instanceof Error ? error.message : String(error)})`;
     }
 }
 
@@ -184,10 +182,14 @@ function fill(list: HTMLElement, facts: Array<[string, string]>) {
 }
 
 function showCommands(tick: number) {
-    if (!selected) return;
+    if (!selected) {
+        return;
+    }
     const commands = selected.file.commands;
     let next = commands.findIndex(([at]) => at >= tick);
-    if (next < 0) next = commands.length;
+    if (next < 0) {
+        next = commands.length;
+    }
     const from = Math.max(0, next - 4);
     $('#commands').replaceChildren(
         ...commands.slice(from, next + 8).map(([at, command], i) => {
@@ -196,7 +198,9 @@ function showCommands(tick: number) {
             button.type = 'button';
             const { type, ...rest } = command;
             button.textContent = `${at} · ${type}${Object.keys(rest).length ? ' ' + JSON.stringify(rest) : ''}`;
-            if (from + i === next) item.className = 'next';
+            if (from + i === next) {
+                item.className = 'next';
+            }
             button.addEventListener('click', () => {
                 player.seek(at);
                 player.setPlaying(false);
@@ -210,7 +214,9 @@ function showCommands(tick: number) {
 let lastShown = -1;
 function showState() {
     const state = player.state;
-    if (!state || state.tick === lastShown) return;
+    if (!state || state.tick === lastShown) {
+        return;
+    }
     lastShown = state.tick;
     const p = state.p;
     const n = (value: number) => value.toFixed(1);
@@ -226,7 +232,7 @@ function showState() {
             `x ${n(p.x)} y ${n(p.y)} · v ${n(p.vx)}, ${n(p.vy)} · a ${p.a.toFixed(2)}`,
         ],
         ['ground', String(state.ground)],
-        ['focus', String(state.focus)],
+        ['focus', String(state.focus.value)],
         ['keys', state.keys.join(', ') || '—'],
         ['deaths', String(state.deaths)],
     ]);
@@ -250,16 +256,22 @@ $<HTMLInputElement>('#file').addEventListener('change', (event) => {
 });
 function loadBrowser() {
     const text = loadBrowserData();
-    if (text) load(text, t('tool.browserData'));
-    else status.textContent = t('tool.noBrowserData');
+    if (text) {
+        load(text, t('tool.browserData'));
+    } else {
+        status.textContent = t('tool.noBrowserData');
+    }
 }
 $('#browser-data').addEventListener('click', loadBrowser);
 $('#load-paste').addEventListener('click', () =>
     load($<HTMLTextAreaElement>('#paste').value, t('tool.paste')),
 );
 sourcesSelect.addEventListener('change', () => {
-    const source = sources[Number(sourcesSelect.value)];
-    if (source) open(source);
+    const index = Number(sourcesSelect.value);
+    const source = index >= 0 ? sources.at(index) : undefined;
+    if (source) {
+        open(source);
+    }
 });
 document.addEventListener('dragover', (event) => event.preventDefault());
 document.addEventListener('drop', (event) => {
@@ -301,13 +313,17 @@ function frame(ms: number) {
     last = ms;
     player.advance(dt);
     const view = player.view();
-    if (view && renderer) renderer.draw(view, player.effects());
+    if (view && renderer) {
+        renderer.draw(view, player.effects());
+    }
     player.drainEvents();
     showState();
     requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-if (loadBrowserData()) loadBrowser();
+if (loadBrowserData()) {
+    loadBrowser();
+}
 
 (window as Window & { replayTool?: unknown }).replayTool = {
     load,

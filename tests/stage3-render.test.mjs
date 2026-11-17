@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { driveStageThree } from './support/stage3-route.mjs';
+
 import { bundled } from './support/load.mjs';
+import { driveStageThree } from './support/stage3-route.mjs';
 const {
     createGame,
     createRenderCtx,
@@ -19,7 +20,6 @@ const {
     platform: 'node',
     format: 'esm',
 });
-
 test('the rooftop sales chart has no information banner above it', () => {
     const game = createGame();
     game.startStage(3);
@@ -32,9 +32,7 @@ test('the rooftop sales chart has no information banner above it', () => {
         W: 3500,
         VW: 3500,
     });
-
     drawRooftop(ctx);
-
     const banner = ctx.commands.find((command) => {
         if (command.fill !== '#e9e2d2' || command.points.length !== 4) {
             return false;
@@ -49,7 +47,6 @@ test('the rooftop sales chart has no information banner above it', () => {
     });
     assert.equal(banner, undefined);
 });
-
 test('the rooftop sales chart support ends cleanly at the top edge', () => {
     const game = createGame();
     game.startStage(3);
@@ -62,9 +59,7 @@ test('the rooftop sales chart support ends cleanly at the top edge', () => {
         W: 3500,
         VW: 3500,
     });
-
     drawRooftop(ctx);
-
     const braces = ctx.commands.filter(
         (command) =>
             command.fill === '#353e4d' &&
@@ -79,7 +74,6 @@ test('the rooftop sales chart support ends cleanly at the top edge', () => {
     );
     assert.ok(top >= -620, `support protrudes above the chart: ${top}`);
 });
-
 test('entrance replaces the falling chart with an employee board with an initially tidy row', () => {
     const game = createGame();
     game.startStage(3);
@@ -163,7 +157,6 @@ test('entrance replaces the falling chart with an employee board with an initial
         }
     }
 });
-
 test('the shut door jolts only the player portrait into a drop and swing, with repeatable seeking', () => {
     const game = createGame();
     game.startStage(3);
@@ -234,101 +227,17 @@ test('the shut door jolts only the player portrait into a drop and swing, with r
     assert.deepEqual(render(0), start);
     assert.deepEqual(render(336), falling);
 });
-
 test('rooftop renders the live course and first flight in both languages and narrow views', () => {
-    const game = createGame();
-    game.startStage(3);
-    const frames = new Map([['room', game.getSnapshot()]]);
-    const ascentStartY = STAGE_THREE.graph.points.at(-1).y - 28;
-    const ascentHalfY = (ascentStartY + STAGE_FOUR.arrivalY) / 2;
-    driveStageThree(
-        game,
-        (state) => state.stage === 4,
-        (state, phase) => {
-            if (state.stage === 4) {
-                frames.set('bread-clouds', { ...state, time: 2.6 });
-            }
-            if (state.hasExtinguisher && !frames.has('pickup')) {
-                frames.set('pickup', state);
-            }
-            if (phase === 8 && !frames.has('shaft')) frames.set('shaft', state);
-            if (state.ductReaction.kind === 'reacting') {
-                const age = state.ductReaction.age;
-                const name =
-                    age < 0.12 ? 'inhale' : age < 0.2 ? 'twitch' : 'sneeze';
-                if (!frames.has(name)) frames.set(name, state);
-            }
-            if (state.checkpoint === 4 && !frames.has('upper')) {
-                frames.set('upper', state);
-            }
-            if (state.firstFlight.kind === 'flight') {
-                if (!frames.has('ascent-start')) {
-                    frames.set('ascent-start', {
-                        ...state,
-                        player: { ...state.player, y: ascentStartY },
-                    });
-                }
-                if (!frames.has('ascent-half')) {
-                    frames.set('ascent-half', {
-                        ...state,
-                        player: { ...state.player, y: ascentHalfY },
-                    });
-                }
-                if (state.firstFlight.age > 1.4 && !frames.has('flight')) {
-                    frames.set('flight', state);
-                }
-            }
-        },
-    );
-    assert.equal(frames.size, 11);
+    const frames = verifyDetails2();
     for (const [name, state] of frames) {
         for (const locale of ['en', 'ko']) {
             for (const width of [540, 1000]) {
-                const ctx = createRenderCtx({});
-                Object.assign(ctx, {
+                const { gradientHas, ctx } = verifyDetails3(
                     state,
-                    player: state.player,
-                    mode: state.mode,
                     locale,
-                    t: state.time,
-                    cam: Math.max(
-                        0,
-                        Math.min(
-                            state.player.x - width * 0.35,
-                            state.level.length - width,
-                        ),
-                    ),
-                    vertical: Math.max(0, 330 - state.player.y),
-                    VW: width,
-                    W: width,
-                    H: 510,
-                });
-                if (state.stage === 4) drawCloudStart(ctx);
-                else drawRooftop(ctx);
-                assert.ok(
-                    ctx.commands.some(
-                        (command) => typeof command.fill !== 'string',
-                    ),
-                    'ThorVG retains gradient fills',
+                    width,
+                    name,
                 );
-                const gradientHas = (rgb) =>
-                    ctx.commands.some(
-                        (command) =>
-                            command.fill &&
-                            typeof command.fill !== 'string' &&
-                            command.fill.stops.some(([, color]) =>
-                                rgb.every(
-                                    (channel, index) =>
-                                        color[index] === channel,
-                                ),
-                            ),
-                    );
-                if (name === 'ascent-start') {
-                    assert.ok(
-                        gradientHas([253, 248, 239]),
-                        'the ascent starts with the stage-three cloud colour',
-                    );
-                }
                 if (name === 'ascent-half') {
                     assert.ok(
                         gradientHas([251, 233, 190]),
@@ -341,53 +250,147 @@ test('rooftop renders the live course and first flight in both languages and nar
                         'the transition ends at golden bread',
                     );
                 }
-                if (state.stage === 3) {
-                    assert.ok(
-                        ctx.commands.some((command) => command.curves?.length),
-                        'rooftop retains curved effects',
-                    );
-                }
-                for (const command of ctx.commands) {
-                    for (const point of [
-                        ...command.points,
-                        ...(command.curves ?? []),
-                    ]) {
-                        assert.ok(point.every(Number.isFinite));
-                    }
-                    if (command.fill && typeof command.fill !== 'string') {
-                        assert.ok(
-                            command.fill.stops.every(([, color]) =>
-                                color.every(Number.isFinite),
-                            ),
-                        );
-                    }
-                }
-                const labels = ctx.commands
-                    .filter((command) => command.text)
-                    .map((command) => command.text.content);
-                const [, playerY] = ctx.screenPoint(
-                    state.player.x,
-                    state.player.y,
-                );
-                assert.ok(
-                    playerY > 120 && playerY < 450,
-                    `${name}: chair remains in view`,
-                );
-                for (const label of labels) {
-                    assert.doesNotMatch(label, /[←→↑↓↗↖]/);
-                }
-                if (name === 'pickup') assert.ok(labels.includes('Space'));
-                if (locale === 'en') {
-                    for (const label of labels) {
-                        assert.doesNotMatch(label, /[가-힣]/);
-                    }
-                }
-                if (name === 'flight') {
-                    assert.ok(
-                        labels.every((label) => !/Wi-Fi|와이파이/.test(label)),
-                    );
-                }
+                verifyDetails4(state, ctx, name, locale);
             }
         }
     }
 });
+function verifyDetails4(state, ctx, name, locale) {
+    if (state.stage === 3) {
+        assert.ok(
+            ctx.commands.some((command) => command.curves?.length),
+            'rooftop retains curved effects',
+        );
+    }
+    for (const command of ctx.commands) {
+        for (const point of [...command.points, ...(command.curves ?? [])]) {
+            assert.ok(point.every(Number.isFinite));
+        }
+        if (command.fill && typeof command.fill !== 'string') {
+            assert.ok(
+                command.fill.stops.every(([, color]) =>
+                    color.every(Number.isFinite),
+                ),
+            );
+        }
+    }
+    const labels = ctx.commands
+        .filter((command) => command.text)
+        .map((command) => command.text.content);
+    const [, playerY] = ctx.screenPoint(state.player.x, state.player.y);
+    assert.ok(playerY > 120 && playerY < 450, `${name}: chair remains in view`);
+    for (const label of labels) {
+        assert.doesNotMatch(label, /[←→↑↓↗↖]/);
+    }
+    if (name === 'pickup') {
+        assert.ok(labels.includes('Space'));
+    }
+    if (locale === 'en') {
+        for (const label of labels) {
+            assert.doesNotMatch(label, /[가-힣]/);
+        }
+    }
+    if (name === 'flight') {
+        assert.ok(labels.every((label) => !/Wi-Fi|와이파이/.test(label)));
+    }
+}
+function verifyDetails3(state, locale, width, name) {
+    const ctx = createRenderCtx({});
+    Object.assign(ctx, {
+        state,
+        player: state.player,
+        mode: state.mode,
+        locale,
+        t: state.time,
+        cam: Math.max(
+            0,
+            Math.min(state.player.x - width * 0.35, state.level.length - width),
+        ),
+        vertical: Math.max(0, 330 - state.player.y),
+        VW: width,
+        W: width,
+        H: 510,
+    });
+    if (state.stage === 4) {
+        drawCloudStart(ctx);
+    } else {
+        drawRooftop(ctx);
+    }
+    assert.ok(
+        ctx.commands.some((command) => typeof command.fill !== 'string'),
+        'ThorVG retains gradient fills',
+    );
+    const gradientHas = (rgb) =>
+        ctx.commands.some(
+            (command) =>
+                command.fill &&
+                typeof command.fill !== 'string' &&
+                command.fill.stops.some(([, color]) =>
+                    rgb.every((channel, index) => color[index] === channel),
+                ),
+        );
+    if (name === 'ascent-start') {
+        assert.ok(
+            gradientHas([253, 248, 239]),
+            'the ascent starts with the stage-three cloud colour',
+        );
+    }
+    return { gradientHas, ctx };
+}
+function verifyDetails2() {
+    const game = createGame();
+    game.startStage(3);
+    const frames = new Map([['room', game.getSnapshot()]]);
+    const ascentStartY = STAGE_THREE.graph.points.at(-1).y - 28;
+    const ascentHalfY = (ascentStartY + STAGE_FOUR.arrivalY) / 2;
+    driveStageThree(
+        game,
+        (state) => state.stage === 4,
+        (state, phase) => {
+            if (state.stage === 4) {
+                frames.set('bread-clouds', { ...state, time: 2.6 });
+            }
+            verifyDetails(state, frames, phase, ascentStartY, ascentHalfY);
+        },
+    );
+    assert.equal(frames.size, 11);
+    return frames;
+}
+function verifyDetails(state, frames, phase, ascentStartY, ascentHalfY) {
+    if (state.hasExtinguisher && !frames.has('pickup')) {
+        frames.set('pickup', state);
+    }
+    verifyDetailsDetails(phase, frames, state, ascentStartY, ascentHalfY);
+}
+function verifyDetailsDetails(phase, frames, state, ascentStartY, ascentHalfY) {
+    if (phase === 8 && !frames.has('shaft')) {
+        frames.set('shaft', state);
+    }
+    if (state.ductReaction.kind === 'reacting') {
+        const age = state.ductReaction.age;
+        const name = age < 0.12 ? 'inhale' : age < 0.2 ? 'twitch' : 'sneeze';
+        if (!frames.has(name)) {
+            frames.set(name, state);
+        }
+    }
+    if (state.checkpoint === 4 && !frames.has('upper')) {
+        frames.set('upper', state);
+    }
+    if (state.firstFlight.kind === 'flight') {
+        if (!frames.has('ascent-start')) {
+            frames.set('ascent-start', {
+                ...state,
+                player: { ...state.player, y: ascentStartY },
+            });
+        }
+        if (!frames.has('ascent-half')) {
+            frames.set('ascent-half', {
+                ...state,
+                player: { ...state.player, y: ascentHalfY },
+            });
+        }
+        if (state.firstFlight.age > 1.4 && !frames.has('flight')) {
+            frames.set('flight', state);
+        }
+    }
+}

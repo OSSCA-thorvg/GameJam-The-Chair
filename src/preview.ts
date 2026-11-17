@@ -1,10 +1,12 @@
+import { browserLocale, keepLangOnLinks } from './i18n';
+import { previewScenes } from './preview-scenes';
 import { createRenderer } from './render/renderer';
-import { previewScenes, type PreviewScene } from './preview-scenes';
 import { createSplashPlayer } from './ui/splash';
-import { browserLocale, keepLangOnLinks, type Locale } from './i18n';
+
+import type { Locale } from './i18n';
+import type { PreviewScene } from './preview-scenes';
 import './style.css';
 import './preview.css';
-
 const root = document.querySelector<HTMLElement>('#chair-office-one')!;
 const select = document.querySelector<HTMLSelectElement>('#motion')!;
 const slider = document.querySelector<HTMLInputElement>('#time')!;
@@ -18,7 +20,6 @@ const renderer = createRenderer(root, () => locale);
 const splashCanvas =
     document.querySelector<HTMLCanvasElement>('#splash-preview')!;
 const splash = createSplashPlayer(splashCanvas);
-
 for (const scene of previewScenes) {
     select.add(new Option(scene.label, scene.id));
 }
@@ -31,50 +32,48 @@ let time = 0;
 let playing = false;
 let previousFrame: number | null = null;
 let scheduledFrame: number | null = null;
-
 function render() {
     const isSplash = scene.id === 'startup-splash';
     root.querySelector('.scene')?.classList.toggle('splash-scene', isSplash);
     splashCanvas.hidden = !isSplash;
-    if (isSplash) splash.draw(time);
-    else {
+    if (isSplash) {
+        splash.draw(time);
+    } else {
         const { state, effects } = scene.sample(time);
         const width = root.querySelector('canvas')!.clientWidth;
         const worldWidth = width < 520 ? 540 : Math.max(760, width);
         if (scene.opening) {
             renderer.draw(state, effects, undefined, scene.opening(time));
         } else if (scene.title) {
-            renderer.draw(
-                state,
-                effects,
-                undefined,
-                undefined,
-                undefined,
-                time,
-            );
+            renderer.draw(state, effects, undefined, undefined, {
+                talk: undefined,
+                titleTime: time,
+            });
         } else {
             renderer.draw(
                 state,
                 effects,
                 (scene.follow ? state.player.x : scene.focusX) - worldWidth / 2,
                 undefined,
-                scene.talk?.(time, locale),
+                {
+                    talk: scene.talk?.(time, locale),
+                },
             );
         }
     }
     slider.value = String(time);
     value.value = `${time.toFixed(2)} s`;
 }
-
 function pause() {
     playing = false;
     previousFrame = null;
-    if (scheduledFrame !== null) cancelAnimationFrame(scheduledFrame);
+    if (scheduledFrame !== null) {
+        cancelAnimationFrame(scheduledFrame);
+    }
     scheduledFrame = null;
     playButton.textContent = 'Play';
     playButton.setAttribute('aria-label', 'Play animation');
 }
-
 function seek(next: number, persist = true) {
     time = Math.max(0, Math.min(scene.duration, next));
     render();
@@ -84,7 +83,6 @@ function seek(next: number, persist = true) {
         history.replaceState(null, '', url);
     }
 }
-
 function selectScene(next: PreviewScene, at = 0) {
     pause();
     scene = next;
@@ -106,10 +104,11 @@ function selectScene(next: PreviewScene, at = 0) {
     history.replaceState(null, '', url);
     seek(at);
 }
-
 function frame(ms: number) {
     scheduledFrame = null;
-    if (!playing) return;
+    if (!playing) {
+        return;
+    }
     if (previousFrame !== null) {
         const next = time + Math.max(0, (ms - previousFrame) / 1000);
         seek(next >= scene.duration ? next % scene.duration : next, false);
@@ -117,10 +116,11 @@ function frame(ms: number) {
     previousFrame = ms;
     scheduledFrame = requestAnimationFrame(frame);
 }
-
 select.addEventListener('change', () => {
     const next = previewScenes.find((item) => item.id === select.value);
-    if (next) selectScene(next.create());
+    if (next) {
+        selectScene(next.create());
+    }
 });
 slider.addEventListener('input', () => {
     pause();
@@ -146,7 +146,9 @@ playButton.addEventListener('click', () => {
     scheduledFrame = requestAnimationFrame(frame);
 });
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden) pause();
+    if (document.hidden) {
+        pause();
+    }
 });
 const resize = new ResizeObserver(() => requestAnimationFrame(render));
 resize.observe(root);

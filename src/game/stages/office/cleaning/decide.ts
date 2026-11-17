@@ -1,6 +1,7 @@
 import { FOCUS_DAMAGE, LEVEL, RULES } from '../../../level';
-import type { Point } from '../../../types';
+
 import type { FocusHit } from '../../../systems/focus/decide';
+import type { Point } from '../../../types';
 
 export type Cleaning = {
     x: number;
@@ -38,7 +39,7 @@ export function waterExposure(
     bucketAge: number,
     p: Readonly<Point>,
     cleaningX: number = LEVEL.cleaning.x,
-) {
+): boolean {
     return (
         bucketAge < RULES.waterExposure &&
         Math.abs(p.x - cleaningX) < 210 &&
@@ -58,12 +59,14 @@ export function cleaningStep(
     const { p } = input;
     const cleaning = { ...input.cleaning };
     const bucket = { ...input.bucket };
-    let splash = false,
-        followup = false,
-        soak: FocusHit | null = null;
+    let splash = false;
+    let followup = false;
+    let soak: FocusHit | null = null;
     const nearBucket = Math.abs(p.x - cleaning.x) < 150;
     const upright = bucket.age >= RULES.bucketReset;
-    if (upright && !nearBucket) bucket.armed = true;
+    if (upright && !nearBucket) {
+        bucket.armed = true;
+    }
     if (upright && bucket.armed && nearBucket && p.y > LEVEL.floor - 200) {
         bucket.age = 0;
         bucket.armed = false;
@@ -97,7 +100,7 @@ export function slipping(
     p: Readonly<Point>,
     cleaning: Readonly<Cleaning>,
     grounded: boolean,
-) {
+): boolean {
     return (
         grounded &&
         cleaning.spilled &&

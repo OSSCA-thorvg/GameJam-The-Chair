@@ -6,9 +6,10 @@ import {
     string,
     choice,
 } from '../../validation/primitives';
+
 import type { SkyState } from './data';
 
-export function sky(value: unknown, path: string) {
+export function sky(value: unknown, path: string): void {
     const data = record(value, path);
     exactFields<SkyState>(
         data,
@@ -45,7 +46,9 @@ export function sky(value: unknown, path: string) {
     ]) {
         finite(data[key], `${path}.${key}`);
     }
-    if (data.standing !== null) string(data.standing, `${path}.standing`, 100);
+    if (data.standing !== null) {
+        string(data.standing, `${path}.standing`, 100);
+    }
     integer(data.airSprays, `${path}.airSprays`);
     if (data.knockKind !== null) {
         choice(data.knockKind, ['paper', 'bird', 'gear'], `${path}.knockKind`);

@@ -1,6 +1,7 @@
+import { PLAYER_OUTLINES } from '../player/art';
+
 import type { Vector } from '../../types';
 import type { Point3, SkyProjection } from '../shared/projection';
-import { PLAYER_OUTLINES } from '../player/art';
 
 const OUTLINE: Vector[] = [
     ...PLAYER_OUTLINES.hair.slice(0, 3),
@@ -34,7 +35,7 @@ function vertex(section: Section, [x, y]: Vector, bob: number): Point3 {
     ];
 }
 
-export function endingHair(view: SkyProjection, bob: number) {
+export function endingHair(view: SkyProjection, bob: number): void {
     const area = OUTLINE.reduce((sum, p, i) => {
         const next = OUTLINE[(i + 1) % OUTLINE.length];
         return sum - p[0] * next[1] + next[0] * p[1];

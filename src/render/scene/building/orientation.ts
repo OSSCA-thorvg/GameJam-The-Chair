@@ -1,6 +1,7 @@
-import { STAGE_TWO, type Obstacle } from '../../../game/stages/building/data';
-import type { RenderCtx } from '../../context';
+import { STAGE_TWO } from '../../../game/stages/building/data';
 
+import type { Obstacle } from '../../../game/stages/building/data';
+import type { RenderCtx } from '../../context';
 const FLOOR = 420;
 const { obstacles } = STAGE_TWO.orientation;
 const SLEEPERS = [
@@ -29,8 +30,7 @@ const SLEEPERS = [
         skin: '#eac09a',
     },
 ];
-
-export function obstacleHop(x: number) {
+export function obstacleHop(x: number): number {
     for (const obstacle of obstacles) {
         const span = obstacle.width + 110;
         const d = x - (obstacle.x - span / 2);
@@ -40,16 +40,18 @@ export function obstacleHop(x: number) {
     }
     return 0;
 }
-
-export function orientationFloor(ctx: RenderCtx) {
+export function orientationFloor(ctx: RenderCtx): void {
     let sleeper = 0;
     for (const obstacle of obstacles) {
-        if (obstacle.kind === 'sleeper') sleeper++;
+        if (obstacle.kind === 'sleeper') {
+            sleeper++;
+        }
         if (obstacle.x < ctx.cam - 160 || obstacle.x > ctx.cam + ctx.VW + 160) {
             continue;
         }
-        if (obstacle.kind === 'cable') cable(ctx, obstacle);
-        else {
+        if (obstacle.kind === 'cable') {
+            cable(ctx, obstacle);
+        } else {
             sleepingColleague(
                 ctx,
                 obstacle,
@@ -59,11 +61,14 @@ export function orientationFloor(ctx: RenderCtx) {
         }
     }
 }
-
 function cable(ctx: RenderCtx, { x, width, height }: Obstacle) {
     ctx.rect(x - 90, 380, 18, 22, '#e6e2d4');
-    ctx.ellipse(x - 84, 391, 1.6, 3.5, '#5c6266');
-    ctx.ellipse(x - 78, 391, 1.6, 3.5, '#5c6266');
+    ctx.ellipse(x - 84, 391, 1.6, 3.5, {
+        c: '#5c6266',
+    });
+    ctx.ellipse(x - 78, 391, 1.6, 3.5, {
+        c: '#5c6266',
+    });
     ctx.strokePath(
         [x - 81, 398],
         [[x - 80, 418, x - 60, 419, x - width / 2, FLOOR - 3]],
@@ -80,17 +85,12 @@ function cable(ctx: RenderCtx, { x, width, height }: Obstacle) {
         '#3b4048',
     );
     for (let i = -1; i <= 1; i++) {
-        ctx.rod(
-            x + i * 9 - 3,
-            FLOOR - height + 3,
-            x + i * 9 + 3,
-            FLOOR - 2,
-            2,
-            '#f2c14e',
-        );
+        ctx.rod(x + i * 9 - 3, FLOOR - height + 3, x + i * 9 + 3, FLOOR - 2, {
+            w: 2,
+            c: '#f2c14e',
+        });
     }
 }
-
 function sleepingColleague(
     ctx: RenderCtx,
     { x, width, height }: Obstacle,
@@ -98,8 +98,8 @@ function sleepingColleague(
     seed: number,
 ) {
     const breath = 1 + Math.sin(ctx.t * 1.7 + seed * 1.3) * 0.12;
-    const w = width / 2,
-        h = height * breath;
+    const w = width / 2;
+    const h = height * breath;
     ctx.effectPath(
         [x - w, FLOOR],
         [
@@ -120,10 +120,12 @@ function sleepingColleague(
                 FLOOR,
             ],
         ],
-        ctx.gradientFill(x, FLOOR - h, x, FLOOR, [
-            [0, look.bag[0]],
-            [1, look.bag[1]],
-        ]),
+        ctx.gradientFill(x, FLOOR - h, x, FLOOR, {
+            stops: [
+                [0, look.bag[0]],
+                [1, look.bag[1]],
+            ],
+        }),
     );
     ctx.strokePath(
         [x - w * 0.7, FLOOR - h * 0.55],
@@ -139,9 +141,16 @@ function sleepingColleague(
         ],
         { width: 1.5, color: look.seam },
     );
-    ctx.ellipse(x - w - 5, FLOOR - 9, 10, 9, look.skin);
-    ctx.ellipse(x - w - 7, FLOOR - 15, 10, 5, look.hair);
-    ctx.rod(x - w - 11, FLOOR - 8, x - w - 5, FLOOR - 8, 1.2, '#5a3f34');
+    ctx.ellipse(x - w - 5, FLOOR - 9, 10, 9, {
+        c: look.skin,
+    });
+    ctx.ellipse(x - w - 7, FLOOR - 15, 10, 5, {
+        c: look.hair,
+    });
+    ctx.rod(x - w - 11, FLOOR - 8, x - w - 5, FLOOR - 8, {
+        w: 1.2,
+        c: '#5a3f34',
+    });
     for (let i = 0; i < 3; i++) {
         const age = (ctx.t * 0.5 + i / 3 + seed * 0.17) % 1;
         ctx.text(
@@ -149,10 +158,12 @@ function sleepingColleague(
             x - w - 2 + age * 26 + i * 4,
             FLOOR - 26 - age * 46,
             11 + age * 9,
-            '#f3f0e6',
             {
-                outline: { width: 1.4, color: '#4b5a70' },
-                opacity: Math.min(1, (1 - age) * 2.5),
+                fill: '#f3f0e6',
+                opts: {
+                    outline: { width: 1.4, color: '#4b5a70' },
+                    opacity: Math.min(1, (1 - age) * 2.5),
+                },
             },
         );
     }

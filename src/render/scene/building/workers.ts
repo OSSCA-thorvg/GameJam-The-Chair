@@ -1,8 +1,6 @@
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-
 type WorkerRole = 'facilitator' | 'jacket' | 'vest';
-
 type HairStyle = 'parted' | 'bun' | 'bob' | 'crop' | 'wavy';
 type OfficeAppearance = {
     hairstyle: HairStyle;
@@ -47,7 +45,6 @@ const SHIRTS = [
     { shirt: '#9c5364', sleeve: '#bf7c89' },
     { shirt: '#577e8c', sleeve: '#85a7ae' },
 ];
-
 export function officeAppearance(
     seed: number,
     officeIndex: number,
@@ -132,23 +129,33 @@ const HAIR_SHAPES: Record<HairStyle, Vector[]> = {
         [-10, 5],
     ],
 };
-
 export function head(
     ctx: RenderCtx,
     x: number,
     y: number,
     facing: number,
-    hair: string,
-    hairstyle: HairStyle = 'parted',
-    glasses = false,
-    skin = '#ddbd9d',
-) {
+    {
+        hair,
+        hairstyle = 'parted',
+        glasses = false,
+        skin = '#ddbd9d',
+    }: {
+        hair: string;
+        hairstyle?: HairStyle;
+        glasses?: boolean;
+        skin?: string;
+    },
+): void {
     const shape = (points: Vector[], color: string) =>
         ctx.polygon(
             points.map(([px, py]) => [x + facing * px, y + py]),
             color,
         );
-    if (hairstyle === 'bun') ctx.ellipse(x - facing * 13, y + 6, 8, 9, hair);
+    if (hairstyle === 'bun') {
+        ctx.ellipse(x - facing * 13, y + 6, 8, 9, {
+            c: hair,
+        });
+    }
     if (hairstyle === 'bob') {
         shape(
             [
@@ -191,32 +198,38 @@ export function head(
             ay: number,
             bx: number,
             by: number,
-            width: number,
-            color: string,
-        ) =>
-            ctx.rod(
-                x + facing * ax,
-                y + ay,
-                x + facing * bx,
-                y + by,
+            {
                 width,
                 color,
-            );
-        rod(-8, -4, 14.6, -3, 1.6, '#374958');
-        rod(15.2, -6.5, 15.2, 3.5, 1.6, '#9cc4d4');
-        rod(15.2, -6.8, 15.2, -5.6, 2, '#374958');
-        rod(15.2, 2.6, 15.2, 3.8, 2, '#374958');
+            }: {
+                width: number;
+                color: string;
+            },
+        ) =>
+            ctx.rod(x + facing * ax, y + ay, x + facing * bx, y + by, {
+                w: width,
+                c: color,
+            });
+        rod(-8, -4, 14.6, -3, { width: 1.6, color: '#374958' });
+        rod(15.2, -6.5, 15.2, 3.5, { width: 1.6, color: '#9cc4d4' });
+        rod(15.2, -6.8, 15.2, -5.6, { width: 2, color: '#374958' });
+        rod(15.2, 2.6, 15.2, 3.8, { width: 2, color: '#374958' });
     }
 }
-
 function facilitatorArms(
     ctx: RenderCtx,
     x: number,
     y: number,
     facing: number,
-    fabric: string,
-    light: string,
-    palm?: Vector,
+    {
+        fabric,
+        light,
+        palm,
+    }: {
+        fabric: string;
+        light: string;
+        palm?: Vector;
+    },
 ) {
     const shape = (points: Vector[], color: string) =>
         ctx.polygon(
@@ -261,6 +274,30 @@ function facilitatorArms(
         ],
         light,
     );
+    facilitatorArmsDetails(shape, palm, x, y, {
+        ctx,
+        facing,
+        fabric,
+        light,
+    });
+}
+function facilitatorArmsDetails(
+    shape: (points: Vector[], color: string) => void,
+    palm: Vector | undefined,
+    x: number,
+    y: number,
+    {
+        ctx,
+        facing,
+        fabric,
+        light,
+    }: {
+        ctx: RenderCtx;
+        facing: number;
+        fabric: string;
+        light: string;
+    },
+) {
     shape(
         [
             [-11, -57],
@@ -273,9 +310,17 @@ function facilitatorArms(
     if (palm) {
         const elbowX = x + (palm[0] - x) * 0.56;
         const elbowY = y - 72;
-        ctx.rod(x + facing * 13, y - 79, elbowX, elbowY, 9, fabric);
-        ctx.rod(elbowX, elbowY, palm[0], palm[1], 7, light);
-        ctx.ellipse(palm[0], palm[1], 4, 3.2, '#ddbd9d');
+        ctx.rod(x + facing * 13, y - 79, elbowX, elbowY, {
+            w: 9,
+            c: fabric,
+        });
+        ctx.rod(elbowX, elbowY, palm[0], palm[1], {
+            w: 7,
+            c: light,
+        });
+        ctx.ellipse(palm[0], palm[1], 4, 3.2, {
+            c: '#ddbd9d',
+        });
     } else {
         shape(
             [
@@ -302,108 +347,35 @@ function facilitatorArms(
         );
     }
 }
-
 export function worker(
     ctx: RenderCtx,
     x: number,
     y: number,
     role: WorkerRole,
-    facing = 1,
-    palm?: Vector,
-) {
-    const facilitator = role === 'facilitator';
-    const vest = role === 'vest';
-    const fabric = facilitator ? '#715c75' : vest ? '#877b70' : '#5b6b83';
-    const light = facilitator ? '#88718a' : vest ? '#9b8c7d' : '#72829a';
-    const hair = facilitator ? '#4f414d' : vest ? '#494755' : '#424b5a';
-    const stride = palm ? 5 : 0;
-    const shape = (points: Vector[], color: string) =>
-        ctx.polygon(
-            points.map(([px, py]) => [x + facing * px, y + py]),
-            color,
-        );
-
-    ctx.ellipse(x, y + 1, 25, 3, '#35465624');
-    shape(
-        [
-            [-13, -45],
-            [12, -45],
-            [16 + stride, -4],
-            [6 + stride, -4],
-            [0, -35],
-            [-6, -4],
-            [-16 - stride, -4],
-        ],
-        '#485467',
+    {
+        facing = 1,
+        palm,
+    }: {
+        facing?: number;
+        palm?: Vector;
+    } = {},
+): void {
+    const { facilitator, fabric, light, vest, shape } = workerDetails2(
+        role,
+        palm,
+        ctx,
+        x,
+        {
+            facing,
+            y,
+        },
     );
-    shape(
-        [
-            [-16 - stride, -7],
-            [-6, -7],
-            [-4, 0],
-            [-22 - stride, 0],
-            [-22 - stride, -3],
-        ],
-        '#34404c',
-    );
-    shape(
-        [
-            [6 + stride, -7],
-            [16 + stride, -7],
-            [23 + stride, -2],
-            [23 + stride, 0],
-            [6 + stride, 0],
-        ],
-        '#34404c',
-    );
-    const hem = facilitator ? -35 : -43;
-    shape(
-        [
-            [-17, -84],
-            [-8, -90],
-            [10, -90],
-            [20, -83],
-            [16, -67],
-            [19, hem],
-            [-17, hem],
-            [-15, -63],
-            [-23, -68],
-        ],
-        fabric,
-    );
-    shape(
-        [
-            [-17, -84],
-            [-8, -90],
-            [-5, hem],
-            [-17, hem],
-            [-15, -63],
-            [-23, -68],
-        ],
-        light,
-    );
-    shape(
-        [
-            [-9, -89],
-            [11, -89],
-            [2, -67],
-        ],
-        '#e8e3d3',
-    );
-    shape(
-        [
-            [-6, -98],
-            [7, -98],
-            [9, -89],
-            [1, -84],
-            [-6, -90],
-        ],
-        '#b99a80',
-    );
-    head(ctx, x, y - 105, facing, hair, facilitator ? 'bun' : 'parted');
-
     if (facilitator) {
-        facilitatorArms(ctx, x, y, facing, fabric, light, palm);
+        facilitatorArms(ctx, x, y, facing, {
+            fabric,
+            light,
+            palm,
+        });
     } else if (vest) {
         shape(
             [
@@ -415,40 +387,7 @@ export function worker(
             ],
             '#a76e56',
         );
-        shape(
-            [
-                [-17, -77],
-                [-23, -61],
-                [-13, -54],
-                [6, -58],
-                [4, -64],
-                [-11, -62],
-                [-8, -74],
-            ],
-            '#e9e3d6',
-        );
-        shape(
-            [
-                [13, -79],
-                [20, -70],
-                [15, -59],
-                [8, -60],
-                [10, -69],
-                [7, -77],
-            ],
-            '#e9e3d6',
-        );
-        shape(
-            [
-                [9, -69],
-                [6, -77],
-                [8, -86],
-                [13, -85],
-                [13, -77],
-                [15, -70],
-            ],
-            '#ddbd9d',
-        );
+        workerDetails3(shape);
     } else {
         shape(
             [
@@ -494,13 +433,184 @@ export function worker(
         );
     }
 }
-
+function workerDetails3(shape: (points: Vector[], color: string) => void) {
+    shape(
+        [
+            [-17, -77],
+            [-23, -61],
+            [-13, -54],
+            [6, -58],
+            [4, -64],
+            [-11, -62],
+            [-8, -74],
+        ],
+        '#e9e3d6',
+    );
+    shape(
+        [
+            [13, -79],
+            [20, -70],
+            [15, -59],
+            [8, -60],
+            [10, -69],
+            [7, -77],
+        ],
+        '#e9e3d6',
+    );
+    shape(
+        [
+            [9, -69],
+            [6, -77],
+            [8, -86],
+            [13, -85],
+            [13, -77],
+            [15, -70],
+        ],
+        '#ddbd9d',
+    );
+}
+function workerDetails2(
+    role: string,
+    palm: Vector | undefined,
+    ctx: RenderCtx,
+    x: number,
+    {
+        facing,
+        y,
+    }: {
+        facing: number;
+        y: number;
+    },
+) {
+    const facilitator = role === 'facilitator';
+    const vest = role === 'vest';
+    const fabric = facilitator ? '#715c75' : vest ? '#877b70' : '#5b6b83';
+    const light = facilitator ? '#88718a' : vest ? '#9b8c7d' : '#72829a';
+    const hair = facilitator ? '#4f414d' : vest ? '#494755' : '#424b5a';
+    const stride = palm ? 5 : 0;
+    const shape = (points: Vector[], color: string) =>
+        ctx.polygon(
+            points.map(([px, py]) => [x + facing * px, y + py]),
+            color,
+        );
+    ctx.ellipse(x, y + 1, 25, 3, {
+        c: '#35465624',
+    });
+    shape(
+        [
+            [-13, -45],
+            [12, -45],
+            [16 + stride, -4],
+            [6 + stride, -4],
+            [0, -35],
+            [-6, -4],
+            [-16 - stride, -4],
+        ],
+        '#485467',
+    );
+    shape(
+        [
+            [-16 - stride, -7],
+            [-6, -7],
+            [-4, 0],
+            [-22 - stride, 0],
+            [-22 - stride, -3],
+        ],
+        '#34404c',
+    );
+    shape(
+        [
+            [6 + stride, -7],
+            [16 + stride, -7],
+            [23 + stride, -2],
+            [23 + stride, 0],
+            [6 + stride, 0],
+        ],
+        '#34404c',
+    );
+    workerDetails(facilitator, shape, fabric, light, {
+        ctx,
+        x,
+        y,
+        facing,
+        hair,
+    });
+    return { facilitator, fabric, light, vest, shape };
+}
+function workerDetails(
+    facilitator: boolean,
+    shape: (points: Vector[], color: string) => void,
+    fabric: string,
+    light: string,
+    {
+        ctx,
+        x,
+        y,
+        facing,
+        hair,
+    }: {
+        ctx: RenderCtx;
+        x: number;
+        y: number;
+        facing: number;
+        hair: string;
+    },
+) {
+    const hem = facilitator ? -35 : -43;
+    shape(
+        [
+            [-17, -84],
+            [-8, -90],
+            [10, -90],
+            [20, -83],
+            [16, -67],
+            [19, hem],
+            [-17, hem],
+            [-15, -63],
+            [-23, -68],
+        ],
+        fabric,
+    );
+    shape(
+        [
+            [-17, -84],
+            [-8, -90],
+            [-5, hem],
+            [-17, hem],
+            [-15, -63],
+            [-23, -68],
+        ],
+        light,
+    );
+    shape(
+        [
+            [-9, -89],
+            [11, -89],
+            [2, -67],
+        ],
+        '#e8e3d3',
+    );
+    shape(
+        [
+            [-6, -98],
+            [7, -98],
+            [9, -89],
+            [1, -84],
+            [-6, -90],
+        ],
+        '#b99a80',
+    );
+    head(ctx, x, y - 105, facing, {
+        hair,
+        hairstyle: facilitator ? 'bun' : 'parted',
+    });
+}
 export function typingWorker(
     ctx: RenderCtx,
     x: number,
     y: number,
     look: OfficeAppearance,
-) {
+): void {
     const { shirt, sleeve, skin } = look;
     const tap = Math.sin(ctx.t * 16 + x * 0.07) * 1.4;
     ctx.rect(x - 21, y - 39, 11, 37, '#556673');
@@ -533,11 +643,24 @@ export function typingWorker(
         ],
         skin,
     );
-    head(ctx, x, y - 58, 1, look.hair, look.hairstyle, look.glasses, skin);
+    head(ctx, x, y - 58, 1, {
+        hair: look.hair,
+        hairstyle: look.hairstyle,
+        glasses: look.glasses,
+        skin,
+    });
     ctx.rect(x - 29, y, 74, 7, '#a7a18e');
-    ctx.rod(x - 3, y - 34, x + 6, y - 14, 8, sleeve);
-    ctx.rod(x + 6, y - 14, x + 24, y - 5 + tap, 5, skin);
-    ctx.ellipse(x + 26, y - 4 + tap, 4, 2.5, skin);
+    ctx.rod(x - 3, y - 34, x + 6, y - 14, {
+        w: 8,
+        c: sleeve,
+    });
+    ctx.rod(x + 6, y - 14, x + 24, y - 5 + tap, {
+        w: 5,
+        c: skin,
+    });
+    ctx.ellipse(x + 26, y - 4 + tap, 4, 2.5, {
+        c: skin,
+    });
     ctx.rect(x + 17, y - 3, 17, 3, '#455665');
     ctx.polygon(
         [
@@ -548,6 +671,9 @@ export function typingWorker(
         ],
         '#526674',
     );
-    ctx.rod(x + 36, y - 14, x + 36, y - 3, 3, '#526674');
+    ctx.rod(x + 36, y - 14, x + 36, y - 3, {
+        w: 3,
+        c: '#526674',
+    });
     ctx.rect(x + 31, y - 3, 12, 3, '#526674');
 }

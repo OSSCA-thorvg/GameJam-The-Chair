@@ -1,26 +1,33 @@
-import { translate, type Message } from '../../../i18n';
-import type { RenderCtx } from '../../context';
+import { translate } from '../../../i18n';
 import { SPEECH_FONT } from '../../fonts';
-import type { Vector } from '../../types';
 
+import type { Message } from '../../../i18n';
+import type { RenderCtx } from '../../context';
+import type { Vector } from '../../types';
 export const CHAIR_SLATE = '#4c5368';
 const CHAIR_INK = '#f4f1ea';
-
 function body(
     ctx: RenderCtx,
     x: number,
     y: number,
     width: number,
-    spiky: boolean,
-    fill: string,
-    gradient: [string, string] | null,
-    alpha: number,
+    {
+        spiky,
+        fill,
+        gradient,
+        alpha,
+    }: {
+        spiky: boolean;
+        fill: string;
+        gradient: [string, string] | null;
+        alpha: number;
+    },
 ) {
     if (spiky) {
         const points: Vector[] = [];
         for (let i = 0; i < 32; i++) {
-            const a = (i / 32) * Math.PI * 2,
-                r = i % 2 ? 0.84 : 1;
+            const a = (i / 32) * Math.PI * 2;
+            const r = i % 2 ? 0.84 : 1;
             points.push([
                 x + ((Math.cos(a) * width) / 2) * r,
                 y + Math.sin(a) * 32 * r,
@@ -66,33 +73,40 @@ function body(
             ],
         ],
         gradient
-            ? ctx.gradientFill(
-                  x,
-                  y - 22,
-                  x,
-                  y + 22,
-                  [
+            ? ctx.gradientFill(x, y - 22, x, y + 22, {
+                  stops: [
                       [0, gradient[0]],
                       [1, gradient[1]],
                   ],
                   alpha,
-              )
+              })
             : fill,
     );
 }
-
 export function bubble(
     ctx: RenderCtx,
     text: Message,
     x: number,
     y: number,
-    width: number,
-    spiky = false,
-    alpha = 1,
-    tail: boolean | 'right' = true,
-) {
+    {
+        width,
+        spiky = false,
+        alpha = 1,
+        tail = true,
+    }: {
+        width: number;
+        spiky?: boolean;
+        alpha?: number;
+        tail?: boolean | 'right';
+    },
+): void {
     const fill = ctx.tint(spiky ? '#fff1b2' : '#e2e8df', alpha);
-    body(ctx, x, y, width, spiky, fill, ['#ffffff', '#e2e8df'], alpha);
+    body(ctx, x, y, width, {
+        spiky,
+        fill,
+        gradient: ['#ffffff', '#e2e8df'],
+        alpha,
+    });
     if (tail) {
         ctx.polygon(
             [
@@ -103,40 +117,39 @@ export function bubble(
             fill,
         );
     }
-    ctx.label(
-        translate(text, ctx.locale),
-        x,
-        y + 5,
-        13,
-        ctx.tint('#344955', alpha),
-        SPEECH_FONT,
-    );
+    ctx.label(translate(text, ctx.locale), x, y + 5, 13, {
+        color: ctx.tint('#344955', alpha),
+        font: SPEECH_FONT,
+    });
 }
-
 export function chairBubble(
     ctx: RenderCtx,
     text: Message,
     x: number,
     y: number,
-    width: number,
     {
-        spiky = false,
-        alpha = 1,
-        side = -1,
-        to,
-        dots = 3,
+        width,
+        options: { spiky = false, alpha = 1, side = -1, to, dots = 3 } = {},
     }: {
-        spiky?: boolean;
-        alpha?: number;
-        side?: number;
-        to?: Vector;
-        dots?: number;
-    } = {},
-) {
+        width: number;
+        options?: {
+            spiky?: boolean;
+            alpha?: number;
+            side?: number;
+            to?: Vector;
+            dots?: number;
+        };
+    },
+): void {
     const fill = ctx.tint(CHAIR_SLATE, alpha * 0.92);
-    body(ctx, x, y, width, spiky, fill, null, alpha);
-    const edge = spiky ? 30 : 22,
-        above = to !== undefined && to[1] < y;
+    body(ctx, x, y, width, {
+        spiky,
+        fill,
+        gradient: null,
+        alpha,
+    });
+    const edge = spiky ? 30 : 22;
+    const above = to !== undefined && to[1] < y;
     const start: Vector = [
         to
             ? Math.max(x - width / 2 + 16, Math.min(x + width / 2 - 16, to[0]))
@@ -144,23 +157,18 @@ export function chairBubble(
         above ? y - edge : y + edge,
     ];
     chairTrail(ctx, start, to ?? [x + side * 20, y + 50], fill, dots);
-    ctx.label(
-        translate(text, ctx.locale),
-        x,
-        y + 5,
-        13,
-        ctx.tint(CHAIR_INK, alpha),
-        SPEECH_FONT,
-    );
+    ctx.label(translate(text, ctx.locale), x, y + 5, 13, {
+        color: ctx.tint(CHAIR_INK, alpha),
+        font: SPEECH_FONT,
+    });
 }
-
 export function chairTrail(
     ctx: RenderCtx,
     from: Vector,
     to: Vector,
     fill: string,
     dots = 3,
-) {
+): void {
     const steps =
         dots === 3
             ? [
@@ -178,7 +186,9 @@ export function chairTrail(
             from[1] + (to[1] - from[1]) * k,
             r,
             r,
-            fill,
+            {
+                c: fill,
+            },
         );
     }
 }

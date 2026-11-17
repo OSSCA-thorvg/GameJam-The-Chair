@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { begin, runWith, sampleCommands } from './support/harness.mjs';
+
 import { determinismTests } from './support/determinism.mjs';
+import { begin, runWith, sampleCommands } from './support/harness.mjs';
 
 const scenarios = [
     { name: 'office', start: { stage: 1 }, ticks: 120 * 40 },

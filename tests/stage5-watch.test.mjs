@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { loadSource } from './support/load.mjs';
 
+import { loadSource } from './support/load.mjs';
 const {
     FIVE,
     createGame,
@@ -29,12 +29,10 @@ const {
     export { attendanceBubble } from './src/render/scene/shared/attendance-bubble';
     export { orbitReaction } from './src/render/scene/orbit/reaction';
 `);
-
 const words = (commands) =>
     commands
         .filter((command) => command.text)
         .map((command) => command.text.content);
-
 function orbitFrame(z, t, age = 10) {
     const game = createGame();
     game.startStage(5);
@@ -61,7 +59,6 @@ const glows = (z) =>
                 (command) => command.layer?.key === 'orbit-cctv-light',
             ).length,
     );
-
 test('a camera lamp is a dim dot ahead, blinks while the chair passes, then stays lit', () => {
     assert.ok(
         beats.every((t) => cctvLamp(ORBIT_WATCH.before + 1, t) === 'idle'),
@@ -76,7 +73,6 @@ test('a camera lamp is a dim dot ahead, blinks while the chair passes, then stay
         'stays lit once passed',
     );
 });
-
 test('stage five glows red only at the cameras the chair has reached', () => {
     assert.ok(
         glows(0).every((count) => count === 0),
@@ -85,7 +81,6 @@ test('stage five glows red only at the cameras the chair has reached', () => {
     const first = Math.min(...ORBIT_WATCH.route.map((spot) => spot.z));
     assert.ok(glows(first - 100).some((count) => count > 0));
 });
-
 test('every camera ahead keeps blinking its red REC lamp, out of step with the others', () => {
     const rec = beats.map(
         (t) =>
@@ -99,7 +94,6 @@ test('every camera ahead keeps blinking its red REC lamp, out of step with the o
     );
     assert.ok(new Set(rec).size > 1, 'lamps blink');
 });
-
 test('the reveal glides forward to exactly where stage five starts', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
     assert.equal(
@@ -122,20 +116,21 @@ test('the reveal glides forward to exactly where stage five starts', () => {
         'every reveal camera is behind the view before stage five',
     );
 });
-
 test('the cameras get time to sink in before the glide, which arrives at stage five already at cruise speed', () => {
     const { settle, turn, hold } = STAGE_FOUR.reveal;
-    const start = revealGlideStart(settle),
-        end = settle + turn + hold;
+    const start = revealGlideStart(settle);
+    const end = settle + turn + hold;
     const seen = (appear) => {
         for (let at = settle; at <= settle + turn; at += 1 / 120) {
-            if (revealChairOrbit(at, settle) >= appear) return at;
+            if (revealChairOrbit(at, settle) >= appear) {
+                return at;
+            }
         }
         return Infinity;
     };
     const appears = ORBIT_WATCH.reveal.map((spot) => spot.appear);
-    const first = seen(Math.min(...appears)),
-        last = seen(Math.max(...appears));
+    const first = seen(Math.min(...appears));
+    const last = seen(Math.max(...appears));
     assert.ok(
         last - first >= 3.5,
         `the cameras turn up one by one over ${(last - first).toFixed(1)} s`,
@@ -175,7 +170,6 @@ test('the cameras get time to sink in before the glide, which arrives at stage f
         'stage five starts at the same cruise speed',
     );
 });
-
 test('the cameras come in several models and sizes, spread to every corner of the rear view', () => {
     const kinds = new Set(ORBIT_WATCH.reveal.map((spot) => spot.kind));
     assert.ok(kinds.size >= 4, `models: ${[...kinds]}`);
@@ -191,7 +185,6 @@ test('the cameras come in several models and sizes, spread to every corner of th
         'sizes vary',
     );
 });
-
 test('the attendance bubble says its line in both languages', () => {
     for (const [locale, line] of [
         ['en', 'Attendance confirmed.'],
@@ -203,7 +196,6 @@ test('the attendance bubble says its line in both languages', () => {
         assert.deepEqual(words(ctx.commands), [line]);
     }
 });
-
 test('the rider answers each camera beat in one curved ThorVG bubble', () => {
     const ctx = createRenderCtx({});
     Object.assign(ctx, { W: 1000, H: 510 });
@@ -230,7 +222,6 @@ test('the rider answers each camera beat in one curved ThorVG bubble', () => {
         );
     }
 });
-
 test('the far speck above the door twinkles from the first frame of stage five', () => {
     const specks = beats.map((t) =>
         orbitFrame(0, t * 8).find(
@@ -244,7 +235,6 @@ test('the far speck above the door twinkles from the first frame of stage five',
         'its glow grows and shrinks',
     );
 });
-
 test('there are no billboards, and lenses and lamps glint out of the clouds in stage five', () => {
     assert.equal(ORBIT_WATCH.billboards, undefined);
     const glints = beats.map(
@@ -263,12 +253,10 @@ test('there are no billboards, and lenses and lamps glint out of the clouds in s
         'both white and red',
     );
 });
-
 const { orbitStep, inSatelliteLight, STAGE_FIVE } = await loadSource(`
     export { orbitStep, inSatelliteLight } from './src/game/stages/orbit/course/decide';
     export { STAGE_FIVE } from './src/game/stages/orbit/data';
 `);
-
 const chairAt = (x, y = 0) => ({ x, y, vx: 0, vy: 0, a: 0, w: 0 });
 const centred = () =>
     STAGE_FIVE.satelliteLight.beams.map(() => ({ x: 0, y: 0 }));
@@ -282,15 +270,14 @@ const cruising = (z) => ({
     freeze: 0,
     settled: 0,
 });
-
 test('5-1: the satellite light slows the chair and shoves it out of its rectangle', () => {
     const first = STAGE_FIVE.satelliteLight.beams[0];
-    const x = 40,
-        z = (first.from + first.to) / 2;
+    const x = 40;
+    const z = (first.from + first.to) / 2;
     assert.ok(inSatelliteLight({ aims: centred() }, chairAt(x), z));
-    let orbit = cruising(z),
-        p = chairAt(x),
-        slowest = orbit.speed;
+    let orbit = cruising(z);
+    let p = chairAt(x);
+    let slowest = orbit.speed;
     for (let i = 0; i < 120; i++) {
         ({ orbit, p } = orbitStep(orbit, p, [], 1 / 120));
         slowest = Math.min(slowest, orbit.speed);
@@ -301,10 +288,9 @@ test('5-1: the satellite light slows the chair and shoves it out of its rectangl
     );
     assert.ok(p.x > x, 'pushed away from the middle of the rectangle');
 });
-
 test("5-1: inside a beam's rectangle the chair is caught, and outside it nothing happens", () => {
-    const first = STAGE_FIVE.satelliteLight.beams[0],
-        r = STAGE_FIVE.satelliteLight.chairRadius;
+    const first = STAGE_FIVE.satelliteLight.beams[0];
+    const r = STAGE_FIVE.satelliteLight.chairRadius;
     assert.equal(
         STAGE_FIVE.satelliteLight.shelters,
         undefined,
@@ -351,20 +337,15 @@ test("5-1: inside a beam's rectangle the chair is caught, and outside it nothing
         );
     }
 });
-
 test('nothing the chair has flown past is drawn between it and the camera', () => {
     const view = createSkyProjection(1000, 510, 1, { distance: 690 });
     const satellite = { x: 0, y: 560, z: 3000 };
     const watchers = (travel) =>
-        orbitWatchers(
-            view,
-            (x, y, z) => [z - travel, 15 + y, x],
-            travel,
-            0,
-            1,
-            undefined,
-            [satellite],
-        );
+        orbitWatchers(view, (x, y, z) => [z - travel, 15 + y, x], travel, 0, {
+            shown: 1,
+            satelliteLightPoint: undefined,
+            satellites: [satellite],
+        });
     assert.equal(
         watchers(satellite.z - 5).length - watchers(satellite.z + 5).length,
         1,

@@ -1,8 +1,9 @@
-import { installInputEnvironment, inputButton } from './support/input.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { driveStageThree } from './support/stage3-route.mjs';
+
+import { installInputEnvironment, inputButton } from './support/input.mjs';
 import { bundled } from './support/load.mjs';
+import { driveStageThree } from './support/stage3-route.mjs';
 const { createGame, bindInput } = await bundled({
     stdin: {
         contents: `export { createGame } from './src/game/game'; export { bindInput } from './src/ui/input';`,
@@ -13,31 +14,10 @@ const { createGame, bindInput } = await bundled({
     platform: 'node',
     format: 'esm',
 });
-
 test('Space holds spray in stage three, releases on keyup/blur, and touch controls release', async (t) => {
     const { window, key } = installInputEnvironment(t);
-    const spray = inputButton();
-    const leanLeft = inputButton({ lean: 'left' }),
-        leanRight = inputButton({ lean: 'right' });
-    const game = createGame();
-    game.startStage(3);
-    driveStageThree(game, (state) => state.hasExtinguisher);
-    const root = {
-        isConnected: true,
-        querySelector: (selector) =>
-            selector === '[data-spray]' ? spray : null,
-        querySelectorAll: (selector) =>
-            selector === '[data-lean]' ? [leanLeft, leanRight] : [],
-    };
-    const unbind = bindInput(root, game);
-    const settle = () => {
-        game.restart();
-        for (let i = 0; i < 20; i++) game.step(1 / 120);
-        game.drainEvents();
-    };
-    const advance = () => {
-        for (let i = 0; i < 60; i++) game.step(1 / 120);
-    };
+    const { settle, advance, game, spray, leanLeft, leanRight, unbind } =
+        verifyDetails();
     try {
         settle();
         key('keydown', ' ', 'Space');
@@ -79,14 +59,18 @@ test('Space holds spray in stage three, releases on keyup/blur, and touch contro
         game.step(1 / 120);
         assert.ok(game.getSnapshot().player.vy < -300);
         game.startStage(1);
-        for (let i = 0; i < 20; i++) game.step(1 / 120);
+        for (let i = 0; i < 20; i++) {
+            game.step(1 / 120);
+        }
         key('keydown', ' ', 'Space');
         game.step(1 / 120);
         assert.ok(
             game.getSnapshot().player.vy > -300,
             'Space no longer jumps in the office',
         );
-        for (let i = 0; i < 20; i++) game.step(1 / 120);
+        for (let i = 0; i < 20; i++) {
+            game.step(1 / 120);
+        }
         key('keydown', 'ArrowUp');
         game.step(1 / 120);
         assert.ok(
@@ -115,3 +99,32 @@ test('Space holds spray in stage three, releases on keyup/blur, and touch contro
         unbind();
     }
 });
+function verifyDetails() {
+    const spray = inputButton();
+    const leanLeft = inputButton({ lean: 'left' });
+    const leanRight = inputButton({ lean: 'right' });
+    const game = createGame();
+    game.startStage(3);
+    driveStageThree(game, (state) => state.hasExtinguisher);
+    const root = {
+        isConnected: true,
+        querySelector: (selector) =>
+            selector === '[data-spray]' ? spray : null,
+        querySelectorAll: (selector) =>
+            selector === '[data-lean]' ? [leanLeft, leanRight] : [],
+    };
+    const unbind = bindInput(root, game);
+    const settle = () => {
+        game.restart();
+        for (let i = 0; i < 20; i++) {
+            game.step(1 / 120);
+        }
+        game.drainEvents();
+    };
+    const advance = () => {
+        for (let i = 0; i < 60; i++) {
+            game.step(1 / 120);
+        }
+    };
+    return { settle, advance, game, spray, leanLeft, leanRight, unbind };
+}

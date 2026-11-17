@@ -1,8 +1,15 @@
+import { impactReplay, impactStep } from './decide';
+
 import type { CoreState } from '../../state';
 import type { GameEvent, Point } from '../../types';
-import { impactReplay, impactStep } from './decide';
-export function applyHeadHit(s: CoreState, out: GameEvent[], point: Point) {
-    if (s.mode !== 'play') return;
+export function applyHeadHit(
+    s: CoreState,
+    out: GameEvent[],
+    point: Point,
+): void {
+    if (s.mode !== 'play') {
+        return;
+    }
     s.deaths++;
     s.lossReason = 'head';
     s.keys = [];
@@ -12,11 +19,15 @@ export function applyHeadHit(s: CoreState, out: GameEvent[], point: Point) {
     out.push({ type: 'cue', id: 'head-comment' });
 }
 
-export function applyImpact(s: CoreState, out: GameEvent[], dt: number) {
-    if (!s.impact) return;
+export function applyImpact(s: CoreState, out: GameEvent[], dt: number): void {
+    if (!s.impact) {
+        return;
+    }
     const r = impactStep(s.impact, dt);
     s.impact = r.impact;
-    if (r.pose) s.p = r.pose;
+    if (r.pose) {
+        s.p = r.pose;
+    }
     if (r.done) {
         s.mode = 'dead';
         out.push({ type: 'cue', id: 'head-game-over' });

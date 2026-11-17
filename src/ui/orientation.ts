@@ -10,12 +10,16 @@ export function bindOrientation(
         '(pointer: coarse) and (orientation: portrait)',
     );
     const onChange = () => {
-        if (portrait.matches && game.status().mode === 'play') game.pause();
+        if (portrait.matches && game.status().mode === 'play') {
+            game.pause();
+        }
     };
     portrait.addEventListener('change', onChange);
 
     const onStart = (event: Event) => {
-        if (!matchMedia('(pointer: coarse)').matches) return;
+        if (!matchMedia('(pointer: coarse)').matches) {
+            return;
+        }
         if (
             !(event.target instanceof Element) ||
             !event.target.closest('[data-start],[data-resume]')
@@ -25,7 +29,7 @@ export function bindOrientation(
         void goLandscape();
     };
     root.addEventListener('click', onStart);
-    return () => {
+    return (): void => {
         portrait.removeEventListener('change', onChange);
         root.removeEventListener('click', onStart);
     };
@@ -34,7 +38,9 @@ export function bindOrientation(
 async function goLandscape() {
     try {
         if (!document.fullscreenElement) {
-            await document.documentElement.requestFullscreen?.({
+            const target: Partial<Pick<HTMLElement, 'requestFullscreen'>> =
+                document.documentElement;
+            await target.requestFullscreen?.({
                 navigationUI: 'hide',
             });
         }

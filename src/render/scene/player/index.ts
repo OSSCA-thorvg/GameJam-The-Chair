@@ -1,16 +1,16 @@
-import { LEVEL } from '../../../game/level';
-import { ART } from '../../art';
-import { playerChair } from './chair';
 import { PLAYER_OUTLINES } from './art';
+import { playerChair } from './chair';
 import {
     chairStains,
     riderFaceStains,
     riderSplash,
     riderStains,
 } from './stains';
-import type { RenderCtx } from '../../context';
+import { LEVEL } from '../../../game/level';
+import { ART } from '../../art';
 
-export function player(ctx: RenderCtx) {
+import type { RenderCtx } from '../../context';
+export function player(ctx: RenderCtx): void {
     const p = ctx.player;
     const state = ctx.state;
     ctx.ox = p.x + ART.player.offsetX;
@@ -40,10 +40,11 @@ export function player(ctx: RenderCtx) {
     ctx.ox = ctx.oy = ctx.rotation = 0;
     ctx.localScale = 1;
 }
-
 function chairAfterimages(ctx: RenderCtx) {
     const shiver = ctx.chairPose.shiver;
-    if (shiver <= 0) return;
+    if (shiver <= 0) {
+        return;
+    }
     const base = { ox: ctx.ox, oy: ctx.oy };
     ctx.beginLayer({ key: 'opening-chair-afterimage', opacity: 0.5 * shiver });
     for (const side of [-1, 1]) {
@@ -55,7 +56,6 @@ function chairAfterimages(ctx: RenderCtx) {
     }
     ctx.endLayer();
 }
-
 function focusTension(ctx: RenderCtx) {
     const state = ctx.state;
     const live = ctx.mode !== 'intro' && state.lossReason !== 'focus';
@@ -72,21 +72,21 @@ function focusTension(ctx: RenderCtx) {
     const lift = critical * (0.75 + 0.25 * Math.sin(t * 5));
     return { drift: Math.min(1, drift), sweat, stall, critical, lift };
 }
-
 function shiftLocal(ctx: RenderCtx, dx: number, dy: number) {
     const k = ctx.localScale;
-    const c = Math.cos(ctx.rotation),
-        s = Math.sin(ctx.rotation);
+    const c = Math.cos(ctx.rotation);
+    const s = Math.sin(ctx.rotation);
     ctx.ox += (dx * c - dy * s) * k;
     ctx.oy += (dx * s + dy * c) * k;
 }
-
 function riderWorry(ctx: RenderCtx) {
     const tension = focusTension(ctx);
     if (tension.sweat > 0) {
         const fall = (ctx.t * 0.9) % 1;
         const alpha = tension.sweat * (1 - fall * 0.7);
-        ctx.ellipse(-12, -86 + fall * 12, 1.8, 2.6, ctx.tint('#9fd3ec', alpha));
+        ctx.ellipse(-12, -86 + fall * 12, 1.8, 2.6, {
+            c: ctx.tint('#9fd3ec', alpha),
+        });
         ctx.polygon(
             [
                 [-13.6, -86 + fall * 12],
@@ -101,20 +101,18 @@ function riderWorry(ctx: RenderCtx) {
         // Keep invisible dots to avoid paint-order rebuilds when blinking.
         for (let i = 0; i < 3; i++) {
             const on = (ctx.t * 2.4 - i * 0.35) % 1.6 < 1.1;
-            ctx.ellipse(
-                -4 + i * 6,
-                -108 - i * 1.5,
-                1.8,
-                1.8,
-                ctx.tint('#f5eddc', on ? tension.critical : 0),
-            );
+            ctx.ellipse(-4 + i * 6, -108 - i * 1.5, 1.8, 1.8, {
+                c: ctx.tint('#f5eddc', on ? tension.critical : 0),
+            });
         }
-        ctx.text('?', 17, -108, 15 + pop * 2, '#f5eddc', {
-            outline: { width: 1.6, color: '#28303b' },
+        ctx.text('?', 17, -108, 15 + pop * 2, {
+            fill: '#f5eddc',
+            opts: {
+                outline: { width: 1.6, color: '#28303b' },
+            },
         });
     }
 }
-
 function riderBody(ctx: RenderCtx) {
     const C = ctx.C;
     ctx.polygon(PLAYER_OUTLINES.farLeg, '#4e5b70');
@@ -158,7 +156,6 @@ function riderBody(ctx: RenderCtx) {
         ],
         '#383f4e',
     );
-
     ctx.polygon(PLAYER_OUTLINES.shirt, C.shirt);
     riderStains(ctx, ctx.soaks);
     ctx.polygon(
@@ -204,7 +201,6 @@ function riderBody(ctx: RenderCtx) {
         '#a65e44',
     );
 }
-
 function riderHead(ctx: RenderCtx) {
     const C = ctx.C;
     const state = ctx.state;
@@ -239,15 +235,31 @@ function riderHead(ctx: RenderCtx) {
               : 0;
     const tension = focusTension(ctx);
     const glance = Math.max(notice, tension.drift, tension.lift);
-    ctx.ellipse(-7, -81, 2.7, 3.4, C.skin);
+    ctx.ellipse(-7, -81, 2.7, 3.4, {
+        c: C.skin,
+    });
     ctx.rect(10.4 - glance * 5, -84, 1.3, 2.2, '#446d82');
-    ctx.rod(-5, -83.4, 14.8, -84.6, 1.2, '#3a414b');
-    ctx.rod(15.2, -87.6, 15.2, -79, 1.4, '#83c8e4');
-    ctx.rod(15.2, -87.8, 15.2, -86.9, 1.7, '#50606a');
-    ctx.rod(15.2, -79.7, 15.2, -78.8, 1.7, '#50606a');
-    ctx.rod(9, -71, 12, -71, 1, '#9c775f');
+    ctx.rod(-5, -83.4, 14.8, -84.6, {
+        w: 1.2,
+        c: '#3a414b',
+    });
+    ctx.rod(15.2, -87.6, 15.2, -79, {
+        w: 1.4,
+        c: '#83c8e4',
+    });
+    ctx.rod(15.2, -87.8, 15.2, -86.9, {
+        w: 1.7,
+        c: '#50606a',
+    });
+    ctx.rod(15.2, -79.7, 15.2, -78.8, {
+        w: 1.7,
+        c: '#50606a',
+    });
+    ctx.rod(9, -71, 12, -71, {
+        w: 1,
+        c: '#9c775f',
+    });
 }
-
 function riderArms(ctx: RenderCtx) {
     const C = ctx.C;
     const state = ctx.state;
@@ -299,8 +311,10 @@ function riderArms(ctx: RenderCtx) {
         ],
         '#a8b9c3',
     );
-
-    ctx.rod(18, -29, 55, -29, 3, C.steel);
+    ctx.rod(18, -29, 55, -29, {
+        w: 3,
+        c: C.steel,
+    });
     const tap =
         state.lossReason === 'focus' || focusTension(ctx).stall
             ? 0
@@ -331,7 +345,6 @@ function riderArms(ctx: RenderCtx) {
         C.skin,
     );
 }
-
 function riderEffects(ctx: RenderCtx) {
     const C = ctx.C;
     const state = ctx.state;
@@ -339,7 +352,10 @@ function riderEffects(ctx: RenderCtx) {
         state.focusNotice?.kind === 'water' ||
         state.focusNotice?.kind === 'steam'
     ) {
-        ctx.rod(7, -39, 44, -57, 5, C.skin);
+        ctx.rod(7, -39, 44, -57, {
+            w: 5,
+            c: C.skin,
+        });
     }
     if (ctx.saveFlash > 0) {
         ctx.rect(40, -52, 11, 11, '#e0ecd2');
@@ -356,8 +372,14 @@ function riderEffects(ctx: RenderCtx) {
             ],
             C.paper,
         );
-        ctx.rod(-8, -82, 9, -80, 1, '#a8a79e');
-        ctx.rod(-8, -77, 7, -75, 1, '#a8a79e');
+        ctx.rod(-8, -82, 9, -80, {
+            w: 1,
+            c: '#a8a79e',
+        });
+        ctx.rod(-8, -77, 7, -75, {
+            w: 1,
+            c: '#a8a79e',
+        });
     }
     if (state.focusNotice?.kind === 'water') {
         riderSplash(ctx, state.focusNotice.life);
@@ -384,17 +406,24 @@ function riderEffects(ctx: RenderCtx) {
             ],
             '#c4ae73',
         );
-        ctx.rod(-3, -98, 0, -88, 2, '#849267');
+        ctx.rod(-3, -98, 0, -88, {
+            w: 2,
+            c: '#849267',
+        });
     }
 }
-
-export function debugCollisions(ctx: RenderCtx) {
-    if (!ART.debugCollisions) return;
+export function debugCollisions(ctx: RenderCtx): void {
+    if (!ART.debugCollisions) {
+        return;
+    }
     ctx.ox = ctx.player.x;
     ctx.oy = ctx.player.y;
     ctx.rotation = ctx.player.a;
     for (const part of LEVEL.playerContacts) {
-        ctx.ripple(part.x, part.y, part.r, part.r, 1, '#ff0055');
+        ctx.ripple(part.x, part.y, part.r, part.r, {
+            width: 1,
+            color: '#ff0055',
+        });
     }
     ctx.ox = ctx.oy = ctx.rotation = 0;
 }

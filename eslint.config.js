@@ -1,5 +1,8 @@
+import js from '@eslint/js';
+import prettier from 'eslint-config-prettier/flat';
+import importPlugin from 'eslint-plugin-import';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
-import stylistic from '@stylistic/eslint-plugin';
 
 const ENGINE_MATH =
     "Math.sin/cos/tan/exp/atan2/hypot and friends may differ in the last bit between browsers, which breaks replays recorded elsewhere. Use the deterministic versions in src/game/math.ts (import * as Det from '.../math').";
@@ -34,9 +37,50 @@ const NOT_DETERMINISTIC =
     'The game core must be deterministic: take time from state.time/state.tick, randomness from state.rng (rng.ts), and keep browser APIs in the shell (main.ts, ui/).';
 
 export default tseslint.config(
+    { ignores: ['dist/**', 'node_modules/**'] },
+    {
+        files: ['**/*.{js,mjs,ts}'],
+        extends: [js.configs.recommended],
+        rules: {
+            'no-empty': ['error', { allowEmptyCatch: true }],
+            'no-constant-binary-expression': 'error',
+        },
+    },
+    {
+        files: ['src/**/*.ts', 'vite.config.ts'],
+        extends: [tseslint.configs.recommendedTypeChecked],
+        plugins: { import: importPlugin },
+        settings: {
+            'import/parsers': { '@typescript-eslint/parser': ['.ts'] },
+            'import/resolver': { typescript: { project: './tsconfig.json' } },
+        },
+        languageOptions: { globals: globals.browser },
+        rules: {
+            '@typescript-eslint/no-unnecessary-condition': 'error',
+            'import/no-cycle': 'error',
+        },
+    },
+    {
+        files: ['**/*.{js,mjs}'],
+        languageOptions: { globals: globals.node },
+    },
+    {
+        files: ['tests/**/*.ts'],
+        extends: [tseslint.configs.recommended],
+        languageOptions: {
+            parserOptions: {
+                projectService: true,
+                tsconfigRootDir: import.meta.dirname,
+            },
+        },
+    },
     {
         files: ['scripts/**/*.mjs', 'tests/**/*.mjs'],
         rules: {
+            'no-unused-vars': [
+                'error',
+                { args: 'none', varsIgnorePattern: '^_' },
+            ],
             'no-unreachable': 'error',
             'no-dupe-keys': 'error',
             'no-duplicate-case': 'error',
@@ -45,7 +89,6 @@ export default tseslint.config(
     {
         plugins: {
             '@typescript-eslint': tseslint.plugin,
-            '@stylistic': stylistic,
         },
         rules: {
             'prefer-const': 'error',
@@ -53,18 +96,6 @@ export default tseslint.config(
             eqeqeq: ['error', 'always', { null: 'ignore' }],
             curly: ['error', 'multi-line'],
             'object-shorthand': ['error', 'always'],
-            '@stylistic/max-statements-per-line': ['error', { max: 1 }],
-            '@stylistic/max-len': [
-                'error',
-                {
-                    code: 80,
-                    tabWidth: 4,
-                    ignoreUrls: true,
-                    ignoreStrings: true,
-                    ignoreTemplateLiterals: true,
-                    ignoreRegExpLiterals: true,
-                },
-            ],
         },
     },
     {
@@ -91,7 +122,6 @@ export default tseslint.config(
             ],
         },
     },
-    { ignores: ['dist/**', 'node_modules/**'] },
     {
         files: ['src/game/**/*.ts'],
         languageOptions: { parser: tseslint.parser },
@@ -170,4 +200,66 @@ export default tseslint.config(
             ],
         },
     },
+    {
+        files: ['**/*.{js,mjs,ts}'],
+        plugins: { import: importPlugin },
+        rules: {
+            'import/order': [
+                'error',
+                {
+                    groups: [
+                        'builtin',
+                        'external',
+                        'internal',
+                        ['parent', 'sibling', 'index'],
+                        'type',
+                    ],
+                    'newlines-between': 'always',
+                    alphabetize: { order: 'asc', caseInsensitive: true },
+                },
+            ],
+            'import/no-duplicates': ['error', { 'prefer-inline': false }],
+            'no-else-return': ['error', { allowElseIf: false }],
+            'one-var': ['error', 'never'],
+            'max-lines-per-function': [
+                'error',
+                { max: 100, skipBlankLines: true, skipComments: true },
+            ],
+            'max-depth': ['error', 4],
+            'max-params': ['error', 5],
+            complexity: ['error', 15],
+        },
+    },
+    {
+        files: ['src/**/*.ts', 'tests/**/*.ts', 'vite.config.ts'],
+        rules: {
+            '@typescript-eslint/naming-convention': [
+                'error',
+                {
+                    selector: 'variable',
+                    format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
+                    leadingUnderscore: 'allow',
+                },
+                { selector: 'function', format: ['camelCase', 'PascalCase'] },
+                {
+                    selector: 'parameter',
+                    format: ['camelCase'],
+                    leadingUnderscore: 'allow',
+                },
+                { selector: 'typeLike', format: ['PascalCase'] },
+            ],
+            '@typescript-eslint/consistent-type-imports': [
+                'error',
+                { prefer: 'type-imports', fixStyle: 'separate-type-imports' },
+            ],
+            '@typescript-eslint/consistent-type-exports': 'error',
+            '@typescript-eslint/consistent-type-assertions': [
+                'error',
+                { assertionStyle: 'as', objectLiteralTypeAssertions: 'never' },
+            ],
+            '@typescript-eslint/explicit-module-boundary-types': 'error',
+        },
+    },
+    prettier,
+    { rules: { curly: ['error', 'all'] } },
 );

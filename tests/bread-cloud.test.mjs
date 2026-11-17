@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { loadSource } from './support/load.mjs';
 
+import { loadSource } from './support/load.mjs';
 const { createRenderCtx, breadCloud, puffCloud, CLOUD_TONES } =
     await loadSource(`
     export { createRenderCtx } from './tests/support/render-context';
@@ -16,15 +16,21 @@ const context = () =>
         cam: 0,
         vertical: 0,
     });
-
 test('shared bread clouds use the exact stage four silhouette, gradients and underside fade', () => {
     for (const near of [false, true]) {
-        const retained = context(),
-            reference = context();
-        breadCloud(retained, 500, 300, 1, 901, near);
-        puffCloud(reference, 500, 300, 1, 901, CLOUD_TONES.bread, {
-            alpha: near ? 0.95 : 0.72,
-            fade: true,
+        const retained = context();
+        const reference = context();
+        breadCloud(retained, 500, 300, 1, {
+            seed: 901,
+            near,
+        });
+        puffCloud(reference, 500, 300, 1, {
+            seed: 901,
+            tone: CLOUD_TONES.bread,
+            options: {
+                alpha: near ? 0.95 : 0.72,
+                fade: true,
+            },
         });
         assert.deepEqual(retained.commands, reference.commands);
     }

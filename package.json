@@ -12,10 +12,11 @@
     "replay:check": "node scripts/replay-check.mjs",
     "golden:update": "node scripts/golden-update.mjs",
     "route:update": "node scripts/route-update.mjs",
-    "lint": "eslint src vite.config.ts eslint.config.js scripts tests",
+    "lint": "eslint src vite.config.ts eslint.config.js scripts tests --max-warnings 0",
     "test:fast": "node scripts/test-fast.mjs",
-    "lint:fix": "eslint src vite.config.ts eslint.config.js scripts tests --fix",
-    "format": "prettier --write \"src/**/*.ts\" vite.config.ts eslint.config.js \"scripts/**/*.mjs\" \"tests/**/*.mjs\""
+    "lint:fix": "eslint src vite.config.ts eslint.config.js scripts tests --fix --max-warnings 0",
+    "format": "prettier --write \"src/**/*.ts\" vite.config.ts eslint.config.js \"scripts/**/*.mjs\" \"tests/**/*.{ts,mjs}\"",
+    "format:check": "prettier --check \"src/**/*.ts\" vite.config.ts eslint.config.js \"scripts/**/*.mjs\" \"tests/**/*.{ts,mjs}\""
   },
   "engines": {
     "node": ">=22.0.0"
@@ -24,10 +25,14 @@
     "@thorvg/webcanvas": "1.1.3"
   },
   "devDependencies": {
-    "@stylistic/eslint-plugin": "^6.0.1",
+    "@eslint/js": "^9.39.5",
     "@types/node": "^22.20.5",
     "esbuild": "0.25.12",
     "eslint": "9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import": "^2.32.0",
+    "globals": "^17.14.0",
     "prettier": "^3.10.1",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.2",

@@ -1,3 +1,4 @@
+import { STAGE_TWO } from './data';
 import {
     exactFields,
     record,
@@ -9,8 +10,8 @@ import {
     choice,
     point,
 } from '../../validation/primitives';
+
 import type { BuildingState } from './state';
-import { STAGE_TWO } from './data';
 
 function room(value: unknown, path: string) {
     const data = record(value, path);
@@ -57,7 +58,9 @@ function chat(value: unknown, path: string) {
               : ['kind', 'age'],
         path,
     );
-    if (kind !== 'waiting') finite(data.age, `${path}.age`);
+    if (kind !== 'waiting') {
+        finite(data.age, `${path}.age`);
+    }
     if (kind === 'orientation') {
         integer(
             data.line,
@@ -104,10 +107,12 @@ function lift(value: unknown, path: string) {
         kind === 'arriving' || kind === 'open' ? ['kind', 'age'] : ['kind'],
         path,
     );
-    if (kind === 'arriving' || kind === 'open') finite(data.age, `${path}.age`);
+    if (kind === 'arriving' || kind === 'open') {
+        finite(data.age, `${path}.age`);
+    }
 }
 
-export function building(value: unknown, path: string) {
+export function building(value: unknown, path: string): void {
     const data = record(value, path);
     exactFields<BuildingState>(data, { furniture: true, corridor: true }, path);
     array(data.furniture, `${path}.furniture`, 3).forEach((item, index) => {

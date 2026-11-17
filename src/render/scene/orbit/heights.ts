@@ -1,7 +1,8 @@
-import type { RenderCtx } from '../../context';
-import type { LayerSpec, Vector } from '../../types';
 import { STAGE_FIVE } from '../../../game/stages/orbit/data';
 import { seeded } from '../shared/cloud-art';
+
+import type { RenderCtx } from '../../context';
+import type { LayerSpec, Vector } from '../../types';
 
 const H = STAGE_FIVE.heights;
 const smooth = (value: number) => {
@@ -9,7 +10,11 @@ const smooth = (value: number) => {
     return t * t * (3 - 2 * t);
 };
 
-export function orbitHeights(z: number) {
+export function orbitHeights(z: number): {
+    air: number;
+    space: number;
+    shadow: number;
+} {
     return {
         air: smooth((z - H.air) / 2400),
         space: smooth((z - H.space) / 1600),
@@ -28,8 +33,14 @@ const STARS = (() => {
     }));
 })();
 
-export function inOpacity(ctx: RenderCtx, layer: LayerSpec, draw: () => void) {
-    if (layer.opacity !== undefined && layer.opacity <= 0) return;
+export function inOpacity(
+    ctx: RenderCtx,
+    layer: LayerSpec,
+    draw: () => void,
+): void {
+    if (layer.opacity !== undefined && layer.opacity <= 0) {
+        return;
+    }
     const from = ctx.commands.length;
     draw();
     for (let i = from; i < ctx.commands.length; i++) {
@@ -49,7 +60,7 @@ const screen = (ctx: RenderCtx, bottom = ctx.H): Vector[] => [
 // Integer screens per turn keep stars aligned after a full rotation.
 export const PANORAMA = 5;
 
-export const panoramaX = (x: number, spin: number) => {
+export const panoramaX = (x: number, spin: number): number => {
     const u = x - (spin / (Math.PI * 2)) * PANORAMA;
     return ((((u + 0.5) % PANORAMA) + PANORAMA) % PANORAMA) - 0.5;
 };
@@ -60,7 +71,7 @@ export function orbitHighSky(
     yaw = 0,
     spin = 0,
     bottom = ctx.H,
-) {
+): void {
     if (h.air > 0 && h.space < 1) {
         ctx.commands.push({
             kind: 'path',
@@ -91,13 +102,15 @@ export function orbitHighSky(
         });
     }
     const stars = Math.max(h.air * 0.5, h.space);
-    if (stars <= 0) return;
+    if (stars <= 0) {
+        return;
+    }
     for (const star of STARS) {
         const twinkle = 0.55 + 0.45 * Math.sin(ctx.t * 1.3 + star.phase);
         const shift = yaw * 0.35 + (spin / (Math.PI * 2)) * PANORAMA;
-        const x = ((((star.x - shift) % 1) + 1) % 1) * ctx.W,
-            y = star.y * ctx.H,
-            r = star.r * (ctx.W / 1000);
+        const x = ((((star.x - shift) % 1) + 1) % 1) * ctx.W;
+        const y = star.y * ctx.H;
+        const r = star.r * (ctx.W / 1000);
         ctx.commands.push({
             kind: 'path',
             points: [
@@ -116,9 +129,11 @@ const alpha = (value: number) =>
         .toString(16)
         .padStart(2, '0');
 
-export function orbitShadow(ctx: RenderCtx, h: Heights, sunrise: Vector) {
+export function orbitShadow(ctx: RenderCtx, h: Heights, sunrise: Vector): void {
     const shadow = h.shadow;
-    if (shadow <= 0) return;
+    if (shadow <= 0) {
+        return;
+    }
     ctx.commands.push({
         kind: 'path',
         points: screen(ctx),

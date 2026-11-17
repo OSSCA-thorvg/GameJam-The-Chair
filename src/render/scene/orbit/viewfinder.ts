@@ -1,27 +1,27 @@
+import { STAGE_FIVE } from '../../../game/stages/orbit/data';
+import { LABEL_FONT } from '../../fonts';
+
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
-import { LABEL_FONT } from '../../fonts';
-import { STAGE_FIVE } from '../../../game/stages/orbit/data';
-
 const B = STAGE_FIVE.bounds;
 const MARGIN = { x: 70, top: 95, bottom: 75 };
-
 const hex = (color: string, alpha: number) =>
     color +
     Math.round(Math.max(0, Math.min(1, alpha)) * 255)
         .toString(16)
         .padStart(2, '0');
-
 export function orbitViewfinder(
     ctx: RenderCtx,
     plane: (x: number, y: number) => Vector,
     lit: number,
     shown: number,
     hitStop = 0,
-) {
-    if (shown <= 0.01) return;
-    const [x0, y0] = plane(-B.x - MARGIN.x, B.y + MARGIN.top),
-        [x1, y1] = plane(B.x + MARGIN.x, -B.y - MARGIN.bottom);
+): void {
+    if (shown <= 0.01) {
+        return;
+    }
+    const [x0, y0] = plane(-B.x - MARGIN.x, B.y + MARGIN.top);
+    const [x1, y1] = plane(B.x + MARGIN.x, -B.y - MARGIN.bottom);
     const blink = lit > 0.1 && Math.sin(ctx.t * 9) > -0.2 ? lit : 0;
     const L = Math.min(x1 - x0, y1 - y0) * 0.1;
     const stroke =
@@ -56,10 +56,12 @@ export function orbitViewfinder(
             layer,
         });
     }
-    if (lit <= 0.1) return;
-    const size = ctx.clamp(ctx.H * 0.032, 11, 18),
-        cx = x0 + L * 0.5,
-        cy = y0 + L * 0.75;
+    if (lit <= 0.1) {
+        return;
+    }
+    const size = ctx.clamp(ctx.H * 0.032, 11, 18);
+    const cx = x0 + L * 0.5;
+    const cy = y0 + L * 0.75;
     if (blink > 0) {
         const r = size * 0.32;
         ctx.commands.push({
@@ -83,8 +85,11 @@ export function orbitViewfinder(
             layer,
         });
     }
-    ctx.screenText('REC', cx + size * 1.4, cy, size, '#ffffff', {
-        font: LABEL_FONT,
-        opacity: lit * shown,
+    ctx.screenText('REC', cx + size * 1.4, cy, size, {
+        fill: '#ffffff',
+        opts: {
+            font: LABEL_FONT,
+            opacity: lit * shown,
+        },
     });
 }

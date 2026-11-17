@@ -1,10 +1,10 @@
-import type { Vector } from '../../types';
-import type { DeepReadonly, Person } from '../../../game/types';
-import type { RenderCtx } from '../../context';
-import { bucketAngle, bucketOrigin, bucketPoint } from '../../bucket';
 import { drawPour, drawPuddle, puddleShape } from './water';
+import { bucketAngle, bucketOrigin, bucketPoint } from '../../bucket';
 import { player } from '../player';
 
+import type { DeepReadonly, Person } from '../../../game/types';
+import type { RenderCtx } from '../../context';
+import type { Vector } from '../../types';
 type CleanerControls = {
     approach: number;
     hipDrop: number;
@@ -34,10 +34,8 @@ type CleanerPose = {
     frontArm: LimbPose;
     rearArm: LimbPose;
 };
-
 export const CLEANER_RECOVERY_START = 1.35;
 export const CLEANER_RECOVERY_END = 4.45;
-
 const RESTING_CLEANER: CleanerControls = {
     approach: 0,
     hipDrop: 0,
@@ -238,14 +236,14 @@ const CLEANER_BEATS: readonly CleanerBeat[] = [
         pose: { ...RESTING_CLEANER, approach: 1, bucketTilt: 0, retreat: 1 },
     },
 ];
-
 function mix(a: number, b: number, amount: number) {
     return a + (b - a) * amount;
 }
-
 function sampleCleaner(age: number): CleanerControls {
     let previous = CLEANER_BEATS[0];
-    if (age <= previous.at) return previous.pose;
+    if (age <= previous.at) {
+        return previous.pose;
+    }
     for (let i = 1; i < CLEANER_BEATS.length; i++) {
         const next = CLEANER_BEATS[i];
         if (age <= next.at) {
@@ -270,7 +268,6 @@ function sampleCleaner(age: number): CleanerControls {
     }
     return previous.pose;
 }
-
 function bucketPose(ctx: RenderCtx, motion: CleanerControls): BucketPose {
     const angle = ctx.cleaning.spilled
         ? bucketAngle(
@@ -292,7 +289,6 @@ function bucketPose(ctx: RenderCtx, motion: CleanerControls): BucketPose {
         rearGrip: bucketPoint(origin, angle, 12, -66),
     };
 }
-
 function cleanerHead(ctx: RenderCtx, x = 0, y = 0, facing = 1) {
     const headPart = (points: Vector[], fill: string) =>
         ctx.polygon(
@@ -362,7 +358,6 @@ function cleanerHead(ctx: RenderCtx, x = 0, y = 0, facing = 1) {
         '#4b5059',
     );
 }
-
 function mopHandle(
     ctx: RenderCtx,
     n: DeepReadonly<Person>,
@@ -376,7 +371,6 @@ function mopHandle(
         ctx.F - 17 + x * Math.sin(angle) + y * Math.cos(angle),
     ];
 }
-
 function cleanerMop(ctx: RenderCtx, n: DeepReadonly<Person>, fall: number) {
     ctx.ox = n.x + 76 * 0.85;
     ctx.oy = ctx.F - 17;
@@ -404,55 +398,8 @@ function cleanerMop(ctx: RenderCtx, n: DeepReadonly<Person>, fall: number) {
     ctx.ox = ctx.oy = ctx.rotation = 0;
     ctx.localScale = 1;
 }
-
 function drawManager(ctx: RenderCtx) {
-    ctx.polygon(
-        [
-            [-25, -48],
-            [24, -48],
-            [20, -4],
-            [7, -4],
-            [1, -40],
-            [-5, -4],
-            [-19, -4],
-        ],
-        '#455064',
-    );
-    ctx.polygon(
-        [
-            [-19, -8],
-            [-6, -8],
-            [-4, -1],
-            [-26, -1],
-            [-26, -4],
-        ],
-        '#333b4a',
-    );
-    ctx.polygon(
-        [
-            [7, -8],
-            [20, -8],
-            [29, -3],
-            [29, -1],
-            [7, -1],
-        ],
-        '#333b4a',
-    );
-    ctx.polygon(
-        [
-            [-31, -101],
-            [-13, -108],
-            [11, -108],
-            [31, -99],
-            [34, -77],
-            [25, -70],
-            [26, -44],
-            [-26, -44],
-            [-24, -68],
-            [-35, -75],
-        ],
-        '#57637a',
-    );
+    drawManagerDetails(ctx);
     ctx.polygon(
         [
             [-31, -101],
@@ -473,6 +420,56 @@ function drawManager(ctx: RenderCtx) {
         ],
         '#e0dfd2',
     );
+    drawManagerDetails2(ctx);
+    ctx.polygon(
+        [
+            [-19, -143],
+            [-15, -142],
+            [-16, -130],
+            [-20, -134],
+        ],
+        '#7a818d',
+    );
+    ctx.polygon(
+        [
+            [10, -137],
+            [17, -137],
+            [17, -135],
+            [10, -135],
+        ],
+        '#484655',
+    );
+    ctx.polygon(
+        [
+            [-28, -84],
+            [0, -79],
+            [22, -83],
+            [24, -72],
+            [-1, -68],
+            [-27, -72],
+        ],
+        '#424e64',
+    );
+    ctx.polygon(
+        [
+            [-13, -80],
+            [-5, -79],
+            [-3, -73],
+            [-13, -74],
+        ],
+        '#d4b18e',
+    );
+    ctx.polygon(
+        [
+            [11, -80],
+            [19, -82],
+            [21, -76],
+            [12, -74],
+        ],
+        '#d4b18e',
+    );
+}
+function drawManagerDetails2(ctx: RenderCtx) {
     ctx.polygon(
         [
             [-4, -102],
@@ -522,56 +519,125 @@ function drawManager(ctx: RenderCtx) {
         ],
         '#434957',
     );
+}
+function drawManagerDetails(ctx: RenderCtx) {
     ctx.polygon(
         [
-            [-19, -143],
-            [-15, -142],
-            [-16, -130],
-            [-20, -134],
+            [-25, -48],
+            [24, -48],
+            [20, -4],
+            [7, -4],
+            [1, -40],
+            [-5, -4],
+            [-19, -4],
         ],
-        '#7a818d',
+        '#455064',
     );
     ctx.polygon(
         [
-            [10, -137],
-            [17, -137],
-            [17, -135],
-            [10, -135],
+            [-19, -8],
+            [-6, -8],
+            [-4, -1],
+            [-26, -1],
+            [-26, -4],
         ],
-        '#484655',
+        '#333b4a',
     );
     ctx.polygon(
         [
-            [-28, -84],
-            [0, -79],
-            [22, -83],
-            [24, -72],
-            [-1, -68],
-            [-27, -72],
+            [7, -8],
+            [20, -8],
+            [29, -3],
+            [29, -1],
+            [7, -1],
         ],
-        '#424e64',
+        '#333b4a',
     );
     ctx.polygon(
         [
-            [-13, -80],
-            [-5, -79],
-            [-3, -73],
-            [-13, -74],
+            [-31, -101],
+            [-13, -108],
+            [11, -108],
+            [31, -99],
+            [34, -77],
+            [25, -70],
+            [26, -44],
+            [-26, -44],
+            [-24, -68],
+            [-35, -75],
         ],
-        '#d4b18e',
-    );
-    ctx.polygon(
-        [
-            [11, -80],
-            [19, -82],
-            [21, -76],
-            [12, -74],
-        ],
-        '#d4b18e',
+        '#57637a',
     );
 }
-
 function drawAdmin(ctx: RenderCtx) {
+    drawAdminDetails2(ctx);
+    ctx.polygon(
+        [
+            [-20, -104],
+            [-8, -108],
+            [-5, -41],
+            [-21, -39],
+            [-17, -76],
+            [-25, -79],
+        ],
+        '#78647d',
+    );
+    ctx.polygon(
+        [
+            [-8, -108],
+            [10, -108],
+            [1, -82],
+        ],
+        '#ddd4c5',
+    );
+    drawAdminDetails(ctx);
+    ctx.polygon(
+        [
+            [-2, -79],
+            [13, -81],
+            [10, -68],
+            [0, -68],
+        ],
+        '#ac9e92',
+    );
+    ctx.polygon(
+        [
+            [-1, -76],
+            [33, -75],
+            [29, -51],
+            [-5, -53],
+        ],
+        '#b8a682',
+    );
+    ctx.polygon(
+        [
+            [4, -72],
+            [28, -71],
+            [25, -55],
+            [1, -56],
+        ],
+        '#d8cbb4',
+    );
+    ctx.polygon(
+        [
+            [10, -74],
+            [23, -74],
+            [23, -70],
+            [10, -70],
+        ],
+        '#8b8e95',
+    );
+    ctx.polygon(
+        [
+            [-7, -65],
+            [4, -61],
+            [3, -55],
+            [-10, -59],
+        ],
+        '#d7b697',
+    );
+}
+function drawAdminDetails2(ctx: RenderCtx) {
     ctx.polygon(
         [
             [-19, -53],
@@ -619,25 +685,8 @@ function drawAdmin(ctx: RenderCtx) {
         ],
         '#66566e',
     );
-    ctx.polygon(
-        [
-            [-20, -104],
-            [-8, -108],
-            [-5, -41],
-            [-21, -39],
-            [-17, -76],
-            [-25, -79],
-        ],
-        '#78647d',
-    );
-    ctx.polygon(
-        [
-            [-8, -108],
-            [10, -108],
-            [1, -82],
-        ],
-        '#ddd4c5',
-    );
+}
+function drawAdminDetails(ctx: RenderCtx) {
     ctx.polygon(
         [
             [-8, -117],
@@ -674,7 +723,9 @@ function drawAdmin(ctx: RenderCtx) {
         ],
         '#4b3f49',
     );
-    ctx.ellipse(-18, -124, 10, 10, '#4b3f49');
+    ctx.ellipse(-18, -124, 10, 10, {
+        c: '#4b3f49',
+    });
     ctx.polygon(
         [
             [10, -133],
@@ -684,54 +735,8 @@ function drawAdmin(ctx: RenderCtx) {
         ],
         '#514552',
     );
-    ctx.polygon(
-        [
-            [-2, -79],
-            [13, -81],
-            [10, -68],
-            [0, -68],
-        ],
-        '#ac9e92',
-    );
-    ctx.polygon(
-        [
-            [-1, -76],
-            [33, -75],
-            [29, -51],
-            [-5, -53],
-        ],
-        '#b8a682',
-    );
-    ctx.polygon(
-        [
-            [4, -72],
-            [28, -71],
-            [25, -55],
-            [1, -56],
-        ],
-        '#d8cbb4',
-    );
-    ctx.polygon(
-        [
-            [10, -74],
-            [23, -74],
-            [23, -70],
-            [10, -70],
-        ],
-        '#8b8e95',
-    );
-    ctx.polygon(
-        [
-            [-7, -65],
-            [4, -61],
-            [3, -55],
-            [-10, -59],
-        ],
-        '#d7b697',
-    );
 }
-
-export function person(ctx: RenderCtx, n: DeepReadonly<Person>) {
+export function person(ctx: RenderCtx, n: DeepReadonly<Person>): void {
     if (n.id === 'cleaner') {
         const motion = sampleCleaner(0);
         const pose = cleanerPose(ctx, n, motion, bucketPose(ctx, motion));
@@ -743,7 +748,9 @@ export function person(ctx: RenderCtx, n: DeepReadonly<Person>) {
     ctx.ox = n.x;
     ctx.oy = F - 17;
     ctx.localScale = 0.85;
-    ctx.ellipse(-2, 0, 30, 3, '#515c6d62');
+    ctx.ellipse(-2, 0, 30, 3, {
+        c: '#515c6d62',
+    });
     switch (n.id) {
         case 'manager':
             drawManager(ctx);
@@ -755,7 +762,6 @@ export function person(ctx: RenderCtx, n: DeepReadonly<Person>) {
     ctx.ox = ctx.oy = 0;
     ctx.localScale = 1;
 }
-
 function kneeBetween(root: Vector, end: Vector, direction: number): Vector {
     const dx = end[0] - root[0];
     const dy = end[1] - root[1];
@@ -771,7 +777,6 @@ function kneeBetween(root: Vector, end: Vector, direction: number): Vector {
             ((direction * dx) / distance) * bend,
     ];
 }
-
 function armPose(
     root: Vector,
     rest: Vector,
@@ -792,7 +797,6 @@ function armPose(
         ],
     };
 }
-
 function cleanerPose(
     ctx: RenderCtx,
     n: DeepReadonly<Person>,
@@ -887,24 +891,35 @@ function cleanerPose(
         ),
     };
 }
-
 function drawArm(ctx: RenderCtx, arm: LimbPose, near: boolean) {
-    ctx.rod(
-        ...arm.root,
-        ...arm.joint,
-        near ? 9 : 7,
-        near ? '#79909f' : '#6c8393',
-    );
-    ctx.ellipse(...arm.joint, near ? 5 : 4, 4, '#a5b3b9');
-    ctx.rod(...arm.joint, ...arm.end, near ? 6 : 5, '#e0be9c');
-    ctx.ellipse(...arm.end, 4, 3.4, '#e0be9c');
+    ctx.rod(arm.root[0], arm.root[1], arm.joint[0], arm.joint[1], {
+        w: near ? 9 : 7,
+        c: near ? '#79909f' : '#6c8393',
+    });
+    ctx.ellipse(arm.joint[0], arm.joint[1], near ? 5 : 4, 4, {
+        c: '#a5b3b9',
+    });
+    ctx.rod(arm.joint[0], arm.joint[1], arm.end[0], arm.end[1], {
+        w: near ? 6 : 5,
+        c: '#e0be9c',
+    });
+    ctx.ellipse(arm.end[0], arm.end[1], 4, 3.4, {
+        c: '#e0be9c',
+    });
 }
-
 function drawLeg(ctx: RenderCtx, leg: LimbPose, near: boolean, facing: number) {
     const fill = near ? '#536373' : '#485867';
-    ctx.rod(...leg.root, ...leg.joint, near ? 11 : 10, fill);
-    ctx.rod(...leg.joint, ...leg.end, near ? 9 : 8, fill);
-    ctx.ellipse(...leg.joint, near ? 4.5 : 4, 4.5, fill);
+    ctx.rod(leg.root[0], leg.root[1], leg.joint[0], leg.joint[1], {
+        w: near ? 11 : 10,
+        c: fill,
+    });
+    ctx.rod(leg.joint[0], leg.joint[1], leg.end[0], leg.end[1], {
+        w: near ? 9 : 8,
+        c: fill,
+    });
+    ctx.ellipse(leg.joint[0], leg.joint[1], near ? 4.5 : 4, 4.5, {
+        c: fill,
+    });
     const [x, y] = leg.end;
     const direction = facing < 0 ? -1 : 1;
     ctx.polygon(
@@ -917,14 +932,15 @@ function drawLeg(ctx: RenderCtx, leg: LimbPose, near: boolean, facing: number) {
         '#3c4753',
     );
 }
-
 function drawCleanerBody(
     ctx: RenderCtx,
     n: DeepReadonly<Person>,
     pose: CleanerPose,
     motion: CleanerControls,
 ) {
-    ctx.ellipse(pose.hip[0], ctx.F - 17, 28, 2.5, '#515c6d62');
+    ctx.ellipse(pose.hip[0], ctx.F - 17, 28, 2.5, {
+        c: '#515c6d62',
+    });
     cleanerMop(ctx, n, motion.mopFall);
     drawArm(ctx, pose.rearArm, false);
     drawLeg(ctx, pose.rearLeg, false, pose.facing);
@@ -958,7 +974,6 @@ function drawCleanerBody(
     ctx.ox = ctx.oy = 0;
     ctx.localScale = 1;
 }
-
 function drawBucket(ctx: RenderCtx, bucket: BucketPose) {
     const left = ctx.cleaning.spilled
         ? 1 - ctx.clamp(ctx.state.bucketAge / 1.2, 0, 1)
@@ -975,27 +990,46 @@ function drawBucket(ctx: RenderCtx, bucket: BucketPose) {
         ],
         '#c0a775',
     );
-    ctx.ellipse(-2, -50, 22, 6, '#4f5a50');
+    ctx.ellipse(-2, -50, 22, 6, {
+        c: '#4f5a50',
+    });
     if (left > 0) {
         ctx.ellipse(
             -2,
             -50 + (1 - left) * 2,
             21 * (0.55 + 0.45 * left),
             5 * (0.5 + 0.5 * left),
-            '#647260',
+            {
+                c: '#647260',
+            },
         );
     }
-    ctx.rod(-24, -46, -19, -66, 3, '#7d8790');
-    ctx.rod(-19, -66, 18, -66, 3, '#7d8790');
-    ctx.rod(18, -66, 23, -46, 3, '#7d8790');
+    ctx.rod(-24, -46, -19, -66, {
+        w: 3,
+        c: '#7d8790',
+    });
+    ctx.rod(-19, -66, 18, -66, {
+        w: 3,
+        c: '#7d8790',
+    });
+    ctx.rod(18, -66, 23, -46, {
+        w: 3,
+        c: '#7d8790',
+    });
     ctx.rect(-21, -7, 41, 7, '#8d8b74');
-    ctx.ellipse(-15, 2, 5, 5, '#555f66');
-    ctx.ellipse(15, 2, 5, 5, '#555f66');
+    ctx.ellipse(-15, 2, 5, 5, {
+        c: '#555f66',
+    });
+    ctx.ellipse(15, 2, 5, 5, {
+        c: '#555f66',
+    });
     ctx.rect(-11, -36, 19, 13, '#eee1b5');
     ctx.ox = ctx.oy = ctx.rotation = 0;
 }
-
-export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
+export function cleaningDraw(
+    ctx: RenderCtx,
+    cleaner?: DeepReadonly<Person>,
+): void {
     const F = ctx.F;
     const cleaning = ctx.cleaning;
     const state = ctx.state;
@@ -1008,16 +1042,26 @@ export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
     const puddle = puddleShape(ctx);
     if (puddle) {
         drawPuddle(ctx, puddle, () => {
-            if (cleaner && pose) drawCleanerBody(ctx, cleaner, pose, motion);
+            if (cleaner && pose) {
+                drawCleanerBody(ctx, cleaner, pose, motion);
+            }
             drawBucket(ctx, bucket);
-            if (pose) drawArm(ctx, pose.frontArm, true);
+            if (pose) {
+                drawArm(ctx, pose.frontArm, true);
+            }
             if (Math.abs(p.x - puddle.cx) < puddle.rx + 70 && p.y > F - 140) {
                 player(ctx);
             }
         });
         if (state.slip) {
-            ctx.rod(p.x - 95, F - 2, p.x - 30, F - 2, 3, '#5e716c');
-            ctx.rod(p.x - 82, F + 4, p.x - 18, F + 4, 2, '#61736e');
+            ctx.rod(p.x - 95, F - 2, p.x - 30, F - 2, {
+                w: 3,
+                c: '#5e716c',
+            });
+            ctx.rod(p.x - 82, F + 4, p.x - 18, F + 4, {
+                w: 2,
+                c: '#61736e',
+            });
         }
     }
     const tip = Math.abs(bucket.angle) / 1.25;
@@ -1026,10 +1070,16 @@ export function cleaningDraw(ctx: RenderCtx, cleaner?: DeepReadonly<Person>) {
         F + 1,
         28 + tip * 5,
         3,
-        '#515c6d48',
+        {
+            c: '#515c6d48',
+        },
     );
-    if (cleaner && pose) drawCleanerBody(ctx, cleaner, pose, motion);
+    if (cleaner && pose) {
+        drawCleanerBody(ctx, cleaner, pose, motion);
+    }
     drawBucket(ctx, bucket);
-    if (pose) drawArm(ctx, pose.frontArm, true);
+    if (pose) {
+        drawArm(ctx, pose.frontArm, true);
+    }
     drawPour(ctx);
 }

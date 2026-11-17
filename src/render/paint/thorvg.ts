@@ -1,3 +1,17 @@
+import { effectScaleForArea } from '../perf';
+import { canvasBox } from './commands';
+
+import type { RenderStats } from '../perf';
+import type { Item } from './commands';
+import type { RenderCtx } from '../context';
+import type { FontName } from '../fonts';
+import type {
+    Blend,
+    PathCommand,
+    Gradient,
+    LayerSpec,
+    TextSpec,
+} from '../types';
 import type {
     Canvas,
     LinearGradient,
@@ -7,18 +21,6 @@ import type {
     Text,
     ThorVGNamespace,
 } from '@thorvg/webcanvas';
-import type { RenderCtx } from '../context';
-import type {
-    Blend,
-    PathCommand,
-    Gradient,
-    LayerSpec,
-    TextSpec,
-} from '../types';
-import type { FontName } from '../fonts';
-import { effectScaleForArea, type RenderStats } from '../perf';
-import { canvasBox, type Item } from './commands';
-
 type LayerSlot = {
     scene: Scene;
     shapes: Shape[];
@@ -27,12 +29,9 @@ type LayerSlot = {
     maskInvert: boolean;
     retainedGeometry: string | null;
 };
-
 type TextSlot = { back: Text; front: Text; font: string; content: string };
-
 type AppliedStyle = { stroked: boolean; trimmed: boolean; blended: boolean };
 const PX_TO_PT = 72 / 96;
-
 export type PaintPool = {
     top: Shape[];
     texts: TextSlot[];
@@ -40,7 +39,6 @@ export type PaintPool = {
     styled: Map<Shape, AppliedStyle>;
     signature: string;
 };
-
 export function createPaintPool(): PaintPool {
     return {
         top: [],
@@ -50,19 +48,19 @@ export function createPaintPool(): PaintPool {
         signature: '',
     };
 }
-
 function staleSlot(slot: LayerSlot, spec: LayerSpec) {
-    if (slot.clip && !spec.clip) return true;
+    if (slot.clip && !spec.clip) {
+        return true;
+    }
     if (slot.mask && (!spec.mask || slot.maskInvert !== !!spec.maskInvert)) {
         return true;
     }
     return false;
 }
-
-export function thorvgTextWidth(TVG: ThorVGNamespace) {
-    const probe = new TVG.Text();
+export function thorvgTextWidth(tvg: ThorVGNamespace) {
+    const probe = new tvg.Text();
     const cache = new Map<string, number>();
-    return (content: string, font: FontName) => {
+    return (content: string, font: FontName): number => {
         const key = `${font}\n${content}`;
         let width = cache.get(key);
         if (width === undefined) {
@@ -76,57 +74,99 @@ export function thorvgTextWidth(TVG: ThorVGNamespace) {
         return width;
     };
 }
-
-function blendOf(TVG: ThorVGNamespace, blend: Blend | undefined) {
+function blendOf(tvg: ThorVGNamespace, blend: Blend | undefined) {
     switch (blend) {
         case 'multiply':
-            return TVG.BlendMethod.Multiply;
+            return tvg.BlendMethod.Multiply;
         case 'screen':
-            return TVG.BlendMethod.Screen;
+            return tvg.BlendMethod.Screen;
         case 'add':
-            return TVG.BlendMethod.Add;
+            return tvg.BlendMethod.Add;
         case 'overlay':
-            return TVG.BlendMethod.Overlay;
+            return tvg.BlendMethod.Overlay;
         case 'normal':
         case undefined:
-            return TVG.BlendMethod.Normal;
+            return tvg.BlendMethod.Normal;
     }
 }
-
 function fillOf(
-    TVG: ThorVGNamespace,
+    tvg: ThorVGNamespace,
     g: Gradient,
 ): LinearGradient | RadialGradient {
     const fill =
         g.radius === undefined
-            ? new TVG.LinearGradient(...g.from, ...g.to)
-            : new TVG.RadialGradient(...g.from, g.radius);
+            ? new tvg.LinearGradient(...g.from, ...g.to)
+            : new tvg.RadialGradient(...g.from, g.radius);
     fill.setStops(...g.stops);
     return fill;
 }
-
 function tracePath(s: Shape, cmd: PathCommand) {
     s.reset();
     s.moveTo(...cmd.points[0]);
-    for (let j = 1; j < cmd.points.length; j++) s.lineTo(...cmd.points[j]);
-    for (const c of cmd.curves || []) s.cubicTo(...c);
-    if (!cmd.open) s.close();
+    for (let j = 1; j < cmd.points.length; j++) {
+        s.lineTo(...cmd.points[j]);
+    }
+    for (const c of cmd.curves || []) {
+        s.cubicTo(...c);
+    }
+    if (!cmd.open) {
+        s.close();
+    }
 }
-
 function applyShape(
     ctx: Pick<RenderCtx, 'rgba'>,
-    TVG: ThorVGNamespace,
+    tvg: ThorVGNamespace,
     styled: PaintPool['styled'],
     s: Shape,
     cmd: PathCommand,
 ) {
     tracePath(s, cmd);
+    const style = applyShapeStroke(cmd, s, ctx, tvg, styled);
+    if (style.stroked || style.trimmed || style.blended) {
+        styled.set(s, style);
+    } else {
+        styled.delete(s);
+    }
+    s.visible(true);
+}
+
+function applyShapeStroke(
+    cmd: PathCommand,
+    s: Shape,
+    ctx: Pick<RenderCtx, 'rgba'>,
+    tvg: ThorVGNamespace,
+    styled: Map<Shape, AppliedStyle>,
+) {
+    const style = applyShapePaint(cmd, s, ctx, tvg, styled);
+    if (cmd.trim) {
+        s.trimPath(cmd.trim[0], cmd.trim[1], true);
+        style.trimmed = true;
+    } else if (style.trimmed) {
+        s.trimPath(0, 1, true);
+        style.trimmed = false;
+    }
+    if (cmd.blend && cmd.blend !== 'normal') {
+        s.blend(blendOf(tvg, cmd.blend));
+        style.blended = true;
+    } else if (style.blended) {
+        s.blend(tvg.BlendMethod.Normal);
+        style.blended = false;
+    }
+    return style;
+}
+function applyShapePaint(
+    cmd: PathCommand,
+    s: Shape,
+    ctx: Pick<RenderCtx, 'rgba'>,
+    tvg: ThorVGNamespace,
+    styled: Map<Shape, AppliedStyle>,
+) {
     if (cmd.fill === null) {
         s.fill(0, 0, 0, 0);
     } else if (typeof cmd.fill === 'string') {
         s.fill(...ctx.rgba(cmd.fill));
     } else {
-        const g = fillOf(TVG, cmd.fill);
+        const g = fillOf(tvg, cmd.fill);
         s.fill(g);
         g.dispose();
     }
@@ -138,14 +178,14 @@ function applyShape(
     if (cmd.stroke) {
         const k = cmd.stroke;
         const gradient =
-            typeof k.color === 'string' ? null : fillOf(TVG, k.color);
+            typeof k.color === 'string' ? null : fillOf(tvg, k.color);
         s.stroke({
             width: k.width,
             ...(gradient
                 ? { gradient }
                 : { color: ctx.rgba(k.color as string) }),
-            cap: k.cap === 'round' ? TVG.StrokeCap.Round : TVG.StrokeCap.Butt,
-            join: TVG.StrokeJoin.Round,
+            cap: k.cap === 'round' ? tvg.StrokeCap.Round : tvg.StrokeCap.Butt,
+            join: tvg.StrokeJoin.Round,
             dash: k.dash ?? [],
             dashOffset: k.dashOffset ?? 0,
         });
@@ -155,26 +195,8 @@ function applyShape(
         s.stroke({ width: 0, dash: [] });
         style.stroked = false;
     }
-    if (cmd.trim) {
-        s.trimPath(cmd.trim[0], cmd.trim[1], true);
-        style.trimmed = true;
-    } else if (style.trimmed) {
-        s.trimPath(0, 1, true);
-        style.trimmed = false;
-    }
-    if (cmd.blend && cmd.blend !== 'normal') {
-        s.blend(blendOf(TVG, cmd.blend));
-        style.blended = true;
-    } else if (style.blended) {
-        s.blend(TVG.BlendMethod.Normal);
-        style.blended = false;
-    }
-    if (style.stroked || style.trimmed || style.blended) {
-        styled.set(s, style);
-    } else styled.delete(s);
-    s.visible(true);
+    return style;
 }
-
 function applyText(
     ctx: Pick<RenderCtx, 'rgba'>,
     slot: TextSlot,
@@ -190,8 +212,8 @@ function applyText(
         slot.front.text(spec.content);
         slot.content = spec.content;
     }
-    const c = Math.cos(spec.rotation),
-        s = Math.sin(spec.rotation);
+    const c = Math.cos(spec.rotation);
+    const s = Math.sin(spec.rotation);
     const matrix = {
         e11: c,
         e12: -s,
@@ -227,26 +249,94 @@ function applyText(
         slot.back.visible(false);
     }
 }
-
 type LayerMetrics = {
     shapeCount: number;
     activeCount: number;
     area: number;
     effectScale: number;
 };
-
 function recordLayerStats(
     stats: RenderStats,
     spec: LayerSpec,
     { shapeCount, activeCount, area, effectScale }: LayerMetrics,
 ) {
+    const effects: string[] = measureLayerEffects(
+        spec,
+        stats,
+        shapeCount,
+        activeCount,
+        {
+            effectScale,
+            area,
+        },
+    );
+    stats.layerList.push({ key: spec.key, shapes: activeCount, area, effects });
+}
+
+function measureLayerEffects(
+    spec: LayerSpec,
+    stats: RenderStats,
+    shapeCount: number,
+    activeCount: number,
+    {
+        effectScale,
+        area,
+    }: {
+        effectScale: number;
+        area: number;
+    },
+) {
     const blurred =
         !!spec.blur || (!!spec.motionBlur && spec.motionBlur.distance > 0.5);
+    const effects: string[] = countLayerShapes(
+        stats,
+        shapeCount,
+        activeCount,
+        spec,
+        {
+            effectScale,
+            blurred,
+            area,
+        },
+    );
+    if (spec.motionBlur && spec.motionBlur.distance > 0.5) {
+        effects.push('motion');
+    }
+    if (effectScale < 1) {
+        effects.push(`budget${Math.round(effectScale * 100)}%`);
+    }
+    if (spec.clip) {
+        effects.push('clip');
+    }
+    if (spec.mask) {
+        effects.push(spec.maskInvert ? 'invmask' : 'mask');
+    }
+    return effects;
+}
+function countLayerShapes(
+    stats: RenderStats,
+    shapeCount: number,
+    activeCount: number,
+    spec: LayerSpec,
+    {
+        effectScale,
+        blurred,
+        area,
+    }: {
+        effectScale: number;
+        blurred: boolean;
+        area: number;
+    },
+) {
     stats.layers++;
     stats.layerShapes += shapeCount;
     stats.parkedShapes += shapeCount - activeCount;
-    if (spec.clip) stats.clips++;
-    if (spec.mask) stats.masks++;
+    if (spec.clip) {
+        stats.clips++;
+    }
+    if (spec.mask) {
+        stats.masks++;
+    }
     if (spec.blur) {
         stats.gaussianBlurs++;
         stats.blurAmount += spec.blur * effectScale;
@@ -255,27 +345,24 @@ function recordLayerStats(
         stats.motionBlurs++;
         stats.blurAmount += spec.motionBlur.distance * effectScale;
     }
-    if (blurred) stats.blurArea += area;
+    if (blurred) {
+        stats.blurArea += area;
+    }
     const effects: string[] = [];
     if (spec.opacity !== undefined && spec.opacity < 1) {
         effects.push(`α${spec.opacity.toFixed(2)}`);
     }
-    if (spec.blend && spec.blend !== 'normal') effects.push(spec.blend);
-    if (spec.blur) effects.push(`blur${spec.blur}`);
-    if (spec.motionBlur && spec.motionBlur.distance > 0.5) {
-        effects.push('motion');
+    if (spec.blend && spec.blend !== 'normal') {
+        effects.push(spec.blend);
     }
-    if (effectScale < 1) {
-        effects.push(`budget${Math.round(effectScale * 100)}%`);
+    if (spec.blur) {
+        effects.push(`blur${spec.blur}`);
     }
-    if (spec.clip) effects.push('clip');
-    if (spec.mask) effects.push(spec.maskInvert ? 'invmask' : 'mask');
-    stats.layerList.push({ key: spec.key, shapes: activeCount, area, effects });
+    return effects;
 }
-
 function applyLayerEffects(
     ctx: Pick<RenderCtx, 'rgba'>,
-    TVG: ThorVGNamespace,
+    tvg: ThorVGNamespace,
     slot: LayerSlot,
     spec: LayerSpec,
     effectScale: number,
@@ -293,13 +380,13 @@ function applyLayerEffects(
             quality,
         );
     }
-    scene.blend(blendOf(TVG, spec.blend));
+    scene.blend(blendOf(tvg, spec.blend));
     scene.opacity(
         Math.round(Math.max(0, Math.min(1, spec.opacity ?? 1)) * 255),
     );
     if (spec.clip) {
         if (!slot.clip) {
-            slot.clip = new TVG.Shape();
+            slot.clip = new tvg.Shape();
             scene.clip(slot.clip);
         }
         tracePath(slot.clip, spec.clip);
@@ -307,39 +394,44 @@ function applyLayerEffects(
     }
     if (spec.mask) {
         if (!slot.mask) {
-            slot.mask = new TVG.Shape();
+            slot.mask = new tvg.Shape();
             slot.maskInvert = !!spec.maskInvert;
             scene.mask(
                 slot.mask,
                 slot.maskInvert
-                    ? TVG.MaskMethod.InvAlpha
-                    : TVG.MaskMethod.Alpha,
+                    ? tvg.MaskMethod.InvAlpha
+                    : tvg.MaskMethod.Alpha,
             );
         }
         const fill = spec.mask.fill;
         tracePath(slot.mask, spec.mask);
-        if (fill === null) slot.mask.fill(255, 255, 255, 255);
-        else if (typeof fill === 'string') {
+        if (fill === null) {
+            slot.mask.fill(255, 255, 255, 255);
+        } else if (typeof fill === 'string') {
             slot.mask.fill(...ctx.rgba(fill));
         } else {
-            const g = fillOf(TVG, fill);
+            const g = fillOf(tvg, fill);
             slot.mask.fill(g);
             g.dispose();
         }
     }
 }
-
 function syncLayer(
     ctx: Pick<RenderCtx, 'rgba' | 'W' | 'H'>,
-    TVG: ThorVGNamespace,
+    tvg: ThorVGNamespace,
     pool: PaintPool,
-    item: Extract<Item, { layer: LayerSpec }>,
+    item: Extract<
+        Item,
+        {
+            layer: LayerSpec;
+        }
+    >,
     stats?: RenderStats,
 ) {
     let slot = pool.layers.get(item.key);
     if (!slot) {
         slot = {
-            scene: new TVG.Scene(),
+            scene: new tvg.Scene(),
             shapes: [],
             clip: null,
             mask: null,
@@ -349,44 +441,16 @@ function syncLayer(
         pool.layers.set(item.key, slot);
     }
     const { scene, shapes } = slot;
-    const spec = item.layer;
-    const extent =
-        stats || spec.effectBudget
-            ? [Infinity, Infinity, -Infinity, -Infinity]
-            : undefined;
-    if (spec.retained && extent) {
-        const bounds = spec.retained.bounds;
-        extent[0] = Math.max(0, bounds.left);
-        extent[1] = Math.max(0, bounds.top);
-        extent[2] = Math.min(ctx.W, bounds.right);
-        extent[3] = Math.min(ctx.H, bounds.bottom);
-    }
-    const retainedReady =
-        !!spec.retained && slot.retainedGeometry === spec.retained.geometry;
-    let i = 0;
-    let anchor: [number, number] | null = null;
-    for (const cmd of item.cmds) {
-        const box: [number, number] | null = spec.retained
-            ? [
-                  Math.max(0, spec.retained.bounds.left),
-                  Math.max(0, spec.retained.bounds.top),
-              ]
-            : canvasBox(cmd, ctx.W, ctx.H, extent);
-        if (!box) continue;
-        anchor ??= box;
-        let s = shapes[i];
-        if (!s) {
-            s = new TVG.Shape();
-            shapes.push(s);
-            scene.add(s);
-        }
-        if (!retainedReady) applyShape(ctx, TVG, pool.styled, s, cmd);
-        i++;
-    }
-    if (spec.retained) {
-        scene.transform(spec.retained.transform);
-        slot.retainedGeometry = spec.retained.geometry;
-    }
+    const preparedFields1 = prepareLayerShapes(item, stats, ctx, slot, {
+        shapes,
+        tvg,
+        scene,
+        pool,
+    });
+    const anchor: [number, number] | null = preparedFields1.anchor;
+    const extent: number[] | undefined = preparedFields1.extent;
+    const spec: LayerSpec = preparedFields1.spec;
+    let i: number = preparedFields1.i;
     // Re-adding shapes leaks ThorVG references; park unused shapes inside
     // the drawn area.
     const [px, py] = anchor ?? [0, 0];
@@ -410,7 +474,7 @@ function syncLayer(
         });
     }
     for (; i < shapes.length; i++) {
-        applyShape(ctx, TVG, pool.styled, shapes[i], {
+        applyShape(ctx, tvg, pool.styled, shapes[i], {
             kind: 'path',
             points: [
                 [px, py],
@@ -421,88 +485,127 @@ function syncLayer(
             fill: '#00000001',
         });
     }
-
-    applyLayerEffects(ctx, TVG, slot, spec, effectScale);
+    applyLayerEffects(ctx, tvg, slot, spec, effectScale);
     scene.visible(true);
     return scene;
 }
-
+function prepareLayerShapes(
+    item: {
+        layer: LayerSpec;
+        key: string;
+        cmds: PathCommand[];
+    },
+    stats: RenderStats | undefined,
+    ctx: Pick<RenderCtx, 'rgba' | 'W' | 'H'>,
+    slot: LayerSlot,
+    {
+        shapes,
+        tvg,
+        scene,
+        pool,
+    }: {
+        shapes: Shape[];
+        tvg: ThorVGNamespace;
+        scene: Scene;
+        pool: PaintPool;
+    },
+) {
+    const spec = item.layer;
+    const extent =
+        stats || spec.effectBudget
+            ? [Infinity, Infinity, -Infinity, -Infinity]
+            : undefined;
+    if (spec.retained && extent) {
+        const bounds = spec.retained.bounds;
+        extent[0] = Math.max(0, bounds.left);
+        extent[1] = Math.max(0, bounds.top);
+        extent[2] = Math.min(ctx.W, bounds.right);
+        extent[3] = Math.min(ctx.H, bounds.bottom);
+    }
+    const retainedReady =
+        !!spec.retained && slot.retainedGeometry === spec.retained.geometry;
+    let i = 0;
+    let anchor: [number, number] | null = null;
+    for (const cmd of item.cmds) {
+        const box: [number, number] | null = spec.retained
+            ? [
+                  Math.max(0, spec.retained.bounds.left),
+                  Math.max(0, spec.retained.bounds.top),
+              ]
+            : canvasBox(cmd, ctx.W, ctx.H, extent);
+        if (!box) {
+            continue;
+        }
+        anchor ??= box;
+        let s = shapes.at(i);
+        if (!s) {
+            s = new tvg.Shape();
+            shapes.push(s);
+            scene.add(s);
+        }
+        if (!retainedReady) {
+            applyShape(ctx, tvg, pool.styled, s, cmd);
+        }
+        i++;
+    }
+    if (spec.retained) {
+        scene.transform(spec.retained.transform);
+        slot.retainedGeometry = spec.retained.geometry;
+    }
+    return { anchor, extent, spec, i };
+}
 export function paintThorvg(
     ctx: RenderCtx,
-    TVG: ThorVGNamespace,
-    tvg: Canvas,
+    tvg: ThorVGNamespace,
+    canvas: Canvas,
     pool: PaintPool,
-    items: Item[],
-    stats?: RenderStats,
-) {
+    {
+        items,
+        stats,
+    }: {
+        items: Item[];
+        stats?: RenderStats;
+    },
+): void {
     const syncStart = stats ? performance.now() : 0;
-
     let topCount = 0;
     let textCount = 0;
     let signature = '';
     for (const item of items) {
-        if ('cmd' in item) topCount++;
-        else if ('text' in item) signature += `${topCount}:text${textCount++};`;
-        else signature += `${topCount}:${item.key};`;
+        if ('cmd' in item) {
+            topCount++;
+        } else if ('text' in item) {
+            signature += `${topCount}:text${textCount++};`;
+        } else {
+            signature += `${topCount}:${item.key};`;
+        }
     }
     while (pool.top.length < topCount) {
-        pool.top.push(new TVG.Shape());
+        pool.top.push(new tvg.Shape());
         signature += '+';
     }
     while (pool.texts.length < textCount) {
-        const make = () => new TVG.Text().align(0.5, 0.5);
+        const make = () => new tvg.Text().align(0.5, 0.5);
         pool.texts.push({ back: make(), front: make(), font: '', content: '' });
         signature += '+';
     }
-    signature += `${pool.top.length}/${pool.texts.length}`;
-    // ThorVG cannot detach clips or masks; replace the scene to avoid GL
-    // smearing.
-    for (const item of items) {
-        if (!('layer' in item)) continue;
-        const slot = pool.layers.get(item.key);
-        if (slot && staleSlot(slot, item.layer)) {
-            pool.layers.delete(item.key);
-            pool.signature = '';
-        }
-    }
-    // Empty the canvas before adding children: ThorVG 1.1.3 crashes if such a
-    // scene is then removed.
-    const reorder = signature !== pool.signature;
-    if (reorder) {
-        pool.signature = '';
-        tvg.remove();
-    }
 
-    let topIndex = 0;
-    let textIndex = 0;
-    const order: Array<Shape | Scene | Text> = [];
-    for (const item of items) {
-        if ('cmd' in item) {
-            const s = pool.top[topIndex++];
-            applyShape(ctx, TVG, pool.styled, s, item.cmd);
-            order.push(s);
-            continue;
-        }
-        if ('text' in item) {
-            const slot = pool.texts[textIndex++];
-            applyText(ctx, slot, item.text);
-            order.push(slot.back, slot.front);
-            if (stats) stats.texts++;
-            continue;
-        }
-        order.push(syncLayer(ctx, TVG, pool, item, stats));
-    }
-    for (let i = topIndex; i < pool.top.length; i++) pool.top[i].visible(false);
-    for (let i = textIndex; i < pool.texts.length; i++) {
-        pool.texts[i].back.visible(false);
-        pool.texts[i].front.visible(false);
-    }
-
+    const preparedPool = synchronizePaintOrder(signature, pool, items, canvas, {
+        ctx,
+        tvg,
+        stats,
+    });
+    const { reorder, order, topIndex, textIndex } = preparedPool;
+    signature = preparedPool.signature;
     if (reorder) {
-        for (const paint of order) tvg.add(paint);
-        for (let i = topIndex; i < pool.top.length; i++) tvg.add(pool.top[i]);
+        for (const paint of order) {
+            canvas.add(paint);
+        }
+        for (let i = topIndex; i < pool.top.length; i++) {
+            canvas.add(pool.top[i]);
+        }
         for (let i = textIndex; i < pool.texts.length; i++) {
-            tvg.add(pool.texts[i].back).add(pool.texts[i].front);
+            canvas.add(pool.texts[i].back).add(pool.texts[i].front);
         }
         // Commit the signature only after success so a failed rebuild is
         // retried.
@@ -515,9 +618,74 @@ export function paintThorvg(
         stats.reorder = reorder;
         const renderStart = performance.now();
         stats.syncMs = renderStart - syncStart;
-        tvg.update().render();
+        canvas.update().render();
         stats.renderMs = performance.now() - renderStart;
         return;
     }
-    tvg.update().render();
+    canvas.update().render();
+}
+function synchronizePaintOrder(
+    signature: string,
+    pool: PaintPool,
+    items: Item[],
+    canvas: Canvas,
+    {
+        ctx,
+        tvg,
+        stats,
+    }: {
+        ctx: RenderCtx;
+        tvg: ThorVGNamespace;
+        stats: RenderStats | undefined;
+    },
+) {
+    signature += `${pool.top.length}/${pool.texts.length}`;
+    // ThorVG cannot detach clips or masks; replace the scene to avoid GL
+    // smearing.
+    for (const item of items) {
+        if (!('layer' in item)) {
+            continue;
+        }
+        const slot = pool.layers.get(item.key);
+        if (slot && staleSlot(slot, item.layer)) {
+            pool.layers.delete(item.key);
+            pool.signature = '';
+        }
+    }
+    // Empty the canvas before adding children: ThorVG 1.1.3 crashes if such a
+    // scene is then removed.
+    const reorder = signature !== pool.signature;
+    if (reorder) {
+        pool.signature = '';
+        canvas.remove();
+    }
+    let topIndex = 0;
+    let textIndex = 0;
+    const order: Array<Shape | Scene | Text> = [];
+    for (const item of items) {
+        if ('cmd' in item) {
+            const s = pool.top[topIndex++];
+            applyShape(ctx, tvg, pool.styled, s, item.cmd);
+            order.push(s);
+            continue;
+        }
+        if ('text' in item) {
+            const slot = pool.texts[textIndex++];
+            applyText(ctx, slot, item.text);
+            order.push(slot.back, slot.front);
+            if (stats) {
+                stats.texts++;
+            }
+            continue;
+        }
+        order.push(syncLayer(ctx, tvg, pool, item, stats));
+    }
+    for (let i = topIndex; i < pool.top.length; i++) {
+        pool.top[i].visible(false);
+    }
+    for (let i = textIndex; i < pool.texts.length; i++) {
+        pool.texts[i].back.visible(false);
+        pool.texts[i].front.visible(false);
+    }
+    return { reorder, order, topIndex, textIndex, signature };
 }

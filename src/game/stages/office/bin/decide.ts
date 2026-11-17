@@ -1,7 +1,11 @@
 import { LEVEL } from '../../../level';
+
 import type { Player } from '../../../types';
 
-export function fallsIntoBin(p: Readonly<Player>, binCooldown: number) {
+export function fallsIntoBin(
+    p: Readonly<Player>,
+    binCooldown: number,
+): boolean {
     const bin = LEVEL.bin;
     return (
         binCooldown === 0 &&

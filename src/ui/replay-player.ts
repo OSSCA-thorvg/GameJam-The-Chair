@@ -1,362 +1,531 @@
-import { FIXED_STEP } from '../game/level';
-import { viewState } from '../game/game';
-import {
-    buildTimeline,
-    seekTimeline,
-    type ReplayCursor,
-    type ReplayFile,
-    type ReplaySettings,
-    type Timeline,
-} from '../game/replay';
-import type { GameEvent } from '../game/types';
-import { translate, type Locale, type Message } from '../i18n';
-import { createEffects } from '../render/effects';
 import { createFeedback } from './feedback';
 import { buildPersonalBoxTrack, personalBoxAt } from './personal-box-replay';
+import { viewState } from '../game/game';
+import { FIXED_STEP } from '../game/level';
+import { buildTimeline, seekTimeline } from '../game/replay';
+import { translate } from '../i18n';
+import { createEffects } from '../render/effects';
 
+import type {
+    ReplayCursor,
+    ReplayFile,
+    ReplaySettings,
+    Timeline,
+} from '../game/replay';
+import type { GameSnapshot } from '../game/snapshot';
+import type { GameEvent } from '../game/types';
+import type { Locale, Message } from '../i18n';
+import type { Effects } from '../render/effects';
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
 const HOLD_SECONDS = 1;
-
 export function createReplayPlayer(
     root: HTMLElement,
     getLocale: () => Locale,
     getSettings: () => ReplaySettings,
     onClose: () => void,
     { closable = true } = {},
-) {
-    const q = <T extends HTMLElement>(selector: string) =>
-        root.querySelector<T>(selector);
-    const bar = q<HTMLElement>('[data-replay-bar]');
-    const playButton = q<HTMLButtonElement>('[data-replay-play]');
-    const seekInput = q<HTMLInputElement>('[data-replay-seek]');
-    const speedSelect = q<HTMLSelectElement>('[data-replay-speed]');
-    const loopButton = q<HTMLButtonElement>('[data-replay-loop]');
-    const timeLabel = q<HTMLElement>('[data-replay-time]');
-    const noteLabel = q<HTMLElement>('[data-replay-note]');
-    const markerTrack = q<HTMLElement>('[data-replay-markers]');
-    const t = (message: Message) => translate(message, getLocale());
-
-    let timeline: Timeline | null = null;
-    let cursor: ReplayCursor | null = null;
-    let playing = false;
-    let loop = false;
-    let speed = 1;
-    let acc = 0;
-    let hold = 0;
-    let heldTick = -1;
-    let effects = createEffects();
-    let feedback = createFeedback(getLocale);
-    let pending: GameEvent[] = [];
-    let personalBoxTrack: ReturnType<typeof buildPersonalBoxTrack> = [];
-
-    function receive(events: readonly GameEvent[]) {
-        if (!cursor) return;
-        const state = cursor.state;
-        effects.observe({
+): ReplayPlayer {
+    return new ReplayPlayerRuntime(
+        root,
+        getLocale,
+        getSettings,
+        onClose,
+        closable,
+    ).api();
+}
+export type ReplayPlayer = {
+    open(file: ReplayFile): Timeline;
+    close(): void;
+    readonly active: boolean;
+    readonly timeline: Timeline | null;
+    readonly tick: number;
+    readonly state: ReplayCursor['state'] | null;
+    readonly playing: boolean;
+    seek(tick: number): void;
+    setPlaying(value: boolean): void;
+    advance(dt: number): void;
+    view(): ReturnType<typeof viewState> | null;
+    drainEvents(): GameEvent[];
+    effects(): ReturnType<ReturnType<typeof createEffects>['snapshot']>;
+    feedback(): ReturnType<ReturnType<typeof createFeedback>['snapshot']>;
+    destroy(): void;
+};
+class ReplayPlayerRuntime {
+    private root!: HTMLElement;
+    private getLocale!: () => Locale;
+    private getSettings!: () => ReplaySettings;
+    private onClose!: () => void;
+    private closable!: boolean;
+    private q: <T extends HTMLElement>(selector: string) => T | null = <
+        T extends HTMLElement,
+    >(
+        selector: string,
+    ) => {
+        return this.root.querySelector<T>(selector);
+    };
+    private bar!: HTMLElement | null;
+    private playButton!: HTMLButtonElement | null;
+    private seekInput!: HTMLInputElement | null;
+    private speedSelect!: HTMLSelectElement | null;
+    private loopButton!: HTMLButtonElement | null;
+    private timeLabel!: HTMLElement | null;
+    private noteLabel!: HTMLElement | null;
+    private markerTrack!: HTMLElement | null;
+    private t: (message: Message) => string = (message: Message) => {
+        return translate(message, this.getLocale());
+    };
+    private timeline!: Timeline | null;
+    private cursor!: ReplayCursor | null;
+    private playing!: boolean;
+    private loop!: boolean;
+    private speed!: number;
+    private acc!: number;
+    private hold!: number;
+    private heldTick!: number;
+    private effects!: Effects;
+    private feedback!: {
+        receive: (event: GameEvent, state: GameSnapshot) => void;
+        snapshot: () => {
+            reaction: {
+                text: string;
+                life: number;
+                face: string;
+                priority: number;
+            } | null;
+            speech: {
+                text: string;
+                name: string;
+                x: number;
+                life: number;
+            } | null;
+            status: string;
+            panel: {
+                k: string;
+                title: string;
+                button: string;
+                desc: string;
+            } | null;
+        };
+    };
+    private pending!: GameEvent[];
+    private personalBoxTrack!: ReturnType<typeof buildPersonalBoxTrack>;
+    private controller!: AbortController;
+    private options!: {
+        signal: AbortSignal;
+    };
+    constructor(
+        root: HTMLElement,
+        getLocale: () => Locale,
+        getSettings: () => ReplaySettings,
+        onClose: () => void,
+        closable: boolean,
+    ) {
+        this.root = root;
+        this.getLocale = getLocale;
+        this.getSettings = getSettings;
+        this.onClose = onClose;
+        this.closable = closable;
+        this.bindPlaybackControls();
+        this.q('[data-replay-next]')?.addEventListener(
+            'click',
+            () => {
+                this.setPlaying(false);
+                this.stepOnce(true);
+                this.sync();
+            },
+            this.options,
+        );
+        this.q('[data-replay-exit]')?.addEventListener(
+            'click',
+            () => this.close(),
+            this.options,
+        );
+        this.loopButton?.addEventListener(
+            'click',
+            () => {
+                this.loop = !this.loop;
+                this.sync();
+            },
+            this.options,
+        );
+        this.seekInput?.addEventListener(
+            'input',
+            () => this.seek(Number(this.seekInput?.value)),
+            this.options,
+        );
+        this.speedSelect?.addEventListener(
+            'change',
+            () => {
+                this.speed = Number(this.speedSelect?.value) || 1;
+            },
+            this.options,
+        );
+        window.addEventListener(
+            'keydown',
+            (e) => {
+                if (
+                    !this.timeline ||
+                    e.target instanceof HTMLInputElement ||
+                    e.target instanceof HTMLSelectElement
+                ) {
+                    return;
+                }
+                const handled: Partial<Record<string, () => void>> = {
+                    ' ': () => this.playButton?.click(),
+                    ArrowLeft: () =>
+                        this.q<HTMLButtonElement>(
+                            '[data-replay-prev]',
+                        )?.click(),
+                    ArrowRight: () =>
+                        this.q<HTMLButtonElement>(
+                            '[data-replay-next]',
+                        )?.click(),
+                    ...(this.closable ? { Escape: () => this.close() } : {}),
+                };
+                const action = handled[e.key];
+                if (!action) {
+                    return;
+                }
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                action();
+            },
+            { ...this.options, capture: true },
+        );
+    }
+    private receive = (events: readonly GameEvent[]) => {
+        if (!this.cursor) {
+            return;
+        }
+        const state = this.cursor.state;
+        this.effects.observe({
             stage: state.stage,
             deaths: state.deaths,
             time: state.time,
             player: state.p,
             mode: state.mode,
         });
-        if (!events.length) return;
-        const view = viewState(cursor.state);
-        for (const event of events) {
-            effects.receive(event);
-            feedback.receive(event, view);
+        if (!events.length) {
+            return;
         }
-        pending.push(...events);
-    }
-
-    // Playback errors are reported by the timeline; keep them out of the page
-    // frame loop.
-    function stepOnce(manual = false): boolean {
+        const view = viewState(this.cursor.state);
+        for (const event of events) {
+            this.effects.receive(event);
+            this.feedback.receive(event, view);
+        }
+        this.pending.push(...events);
+    };
+    private stepOnce = (manual = false): boolean => {
         try {
-            return advanceCursor(manual);
+            return this.advanceCursor(manual);
         } catch {
             return false;
         }
-    }
-
-    function advanceCursor(manual: boolean): boolean {
-        if (!cursor) return false;
-        while (cursor.pending() === 'command') {
-            const mode = cursor.state.mode;
+    };
+    private advanceCursor = (manual: boolean): boolean => {
+        if (!this.cursor) {
+            return false;
+        }
+        while (this.cursor.pending() === 'command') {
+            const mode = this.cursor.state.mode;
             if (
                 !manual &&
                 (mode === 'dead' || mode === 'won') &&
-                heldTick !== cursor.state.tick
+                this.heldTick !== this.cursor.state.tick
             ) {
-                heldTick = cursor.state.tick;
-                hold = HOLD_SECONDS;
+                this.heldTick = this.cursor.state.tick;
+                this.hold = HOLD_SECONDS;
                 return true;
             }
-            receive(cursor.next() ?? []);
+            this.receive(this.cursor.next() ?? []);
         }
-        const events = cursor.next();
-        if (!events) return false;
-        receive(events);
+        const events = this.cursor.next();
+        if (!events) {
+            return false;
+        }
+        this.receive(events);
         return true;
-    }
-
-    function seek(tick: number) {
-        if (!timeline) return;
+    };
+    private seek = (tick: number) => {
+        if (!this.timeline) {
+            return;
+        }
         const target = Math.max(
-            timeline.startTick,
-            Math.min(timeline.endTick, Math.round(tick)),
+            this.timeline.startTick,
+            Math.min(this.timeline.endTick, Math.round(tick)),
         );
-        const warmup = Math.round(getSettings().warmupSeconds / FIXED_STEP);
-        cursor = seekTimeline(timeline, target - warmup);
-        effects = createEffects();
-        effects.restorePersonalBox(
-            personalBoxAt(personalBoxTrack, cursor.state.tick),
+        const warmup = Math.round(
+            this.getSettings().warmupSeconds / FIXED_STEP,
         );
-        feedback = createFeedback(getLocale);
-        pending = [];
-        hold = 0;
-        heldTick = -1;
-        acc = 0;
-        while (cursor.state.tick < target && cursor.pending() !== 'end') {
-            receive(cursor.next() ?? []);
+        this.cursor = seekTimeline(this.timeline, target - warmup);
+        this.effects = createEffects();
+        this.effects.restorePersonalBox(
+            personalBoxAt(this.personalBoxTrack, this.cursor.state.tick),
+        );
+        this.feedback = createFeedback(this.getLocale);
+        this.pending = [];
+        this.hold = 0;
+        this.heldTick = -1;
+        this.acc = 0;
+        while (
+            this.cursor.state.tick < target &&
+            this.cursor.pending() !== 'end'
+        ) {
+            this.receive(this.cursor.next() ?? []);
         }
-        pending = [];
-        sync();
-    }
-
-    function sync() {
-        if (!timeline || !cursor) return;
-        const tick = cursor.state.tick;
-        if (seekInput) seekInput.value = String(tick);
-        if (timeLabel) {
-            timeLabel.textContent = `${((tick - timeline.startTick) * FIXED_STEP).toFixed(2)} / ${((timeline.endTick - timeline.startTick) * FIXED_STEP).toFixed(2)} s`;
+        this.pending = [];
+        this.sync();
+    };
+    private sync = () => {
+        if (!this.timeline || !this.cursor) {
+            return;
         }
-        if (playButton) {
-            playButton.textContent = playing ? '❚❚' : '▶';
-            playButton.setAttribute(
+        const tick = this.cursor.state.tick;
+        if (this.seekInput) {
+            this.seekInput.value = String(tick);
+        }
+        if (this.timeLabel) {
+            this.timeLabel.textContent = `${((tick - this.timeline.startTick) * FIXED_STEP).toFixed(2)} / ${((this.timeline.endTick - this.timeline.startTick) * FIXED_STEP).toFixed(2)} s`;
+        }
+        if (this.playButton) {
+            this.playButton.textContent = this.playing ? '❚❚' : '▶';
+            this.playButton.setAttribute(
                 'aria-label',
-                t(playing ? 'replay.pause' : 'replay.play'),
+                this.t(this.playing ? 'replay.pause' : 'replay.play'),
             );
         }
-        loopButton?.setAttribute('aria-pressed', String(loop));
-    }
-
-    function notes() {
-        if (!timeline) return '';
+        this.loopButton?.setAttribute('aria-pressed', String(this.loop));
+    };
+    private notes = () => {
+        if (!this.timeline) {
+            return '';
+        }
         const seconds = (tick: number) =>
-            ((tick - timeline!.startTick) * FIXED_STEP).toFixed(2) + 's';
+            ((tick - this.timeline!.startTick) * FIXED_STEP).toFixed(2) + 's';
         const parts: string[] = [];
-        if (timeline.versionMismatch) parts.push(t('replay.otherVersion'));
-        if (timeline.divergedAt !== null) {
+        if (this.timeline.versionMismatch) {
+            parts.push(this.t('replay.otherVersion'));
+        }
+        if (this.timeline.divergedAt !== null) {
             parts.push(
-                `${t('replay.diverged')} ${seconds(timeline.divergedAt)}`,
+                `${this.t('replay.diverged')} ${seconds(this.timeline.divergedAt)}`,
             );
         }
-        if (timeline.error) {
+        if (this.timeline.error) {
             parts.push(
-                `${t('replay.errorAt')} ${seconds(timeline.error.tick)}: ${timeline.error.message}`,
+                `${this.t('replay.errorAt')} ${seconds(this.timeline.error.tick)}: ${this.timeline.error.message}`,
             );
         }
-        if (timeline.file.truncated) parts.push(t('replay.truncated'));
+        if (this.timeline.file.truncated) {
+            parts.push(this.t('replay.truncated'));
+        }
         return parts.join(' · ');
-    }
-
-    function drawMarkers() {
-        if (!markerTrack || !timeline) return;
-        markerTrack.replaceChildren();
-        const span = Math.max(1, timeline.endTick - timeline.startTick);
-        for (const marker of timeline.markers) {
+    };
+    private drawMarkers = () => {
+        if (!this.markerTrack || !this.timeline) {
+            return;
+        }
+        this.markerTrack.replaceChildren();
+        const span = Math.max(
+            1,
+            this.timeline.endTick - this.timeline.startTick,
+        );
+        for (const marker of this.timeline.markers) {
             const dot = document.createElement('i');
             dot.className = `replay-marker replay-marker-${marker.kind}`;
-            dot.style.left = `${((marker.tick - timeline.startTick) / span) * 100}%`;
-            dot.title = `${marker.kind} · ${((marker.tick - timeline.startTick) * FIXED_STEP).toFixed(2)}s`;
-            markerTrack.append(dot);
+            dot.style.left = `${((marker.tick - this.timeline.startTick) / span) * 100}%`;
+            dot.title = `${marker.kind} · ${((marker.tick - this.timeline.startTick) * FIXED_STEP).toFixed(2)}s`;
+            this.markerTrack.append(dot);
         }
-    }
-
-    function setPlaying(value: boolean) {
-        playing = value;
-        acc = 0;
-        sync();
-    }
-
-    const controller = new AbortController();
-    const options = { signal: controller.signal };
-    playButton?.addEventListener(
-        'click',
-        () => {
-            if (
-                !playing &&
-                cursor &&
-                timeline &&
-                cursor.state.tick >= timeline.endTick
-            ) {
-                seek(timeline.startTick);
-            }
-            setPlaying(!playing);
-        },
-        options,
-    );
-    q('[data-replay-prev]')?.addEventListener(
-        'click',
-        () => {
-            setPlaying(false);
-            if (cursor) seek(cursor.state.tick - 1);
-        },
-        options,
-    );
-    q('[data-replay-next]')?.addEventListener(
-        'click',
-        () => {
-            setPlaying(false);
-            stepOnce(true);
-            sync();
-        },
-        options,
-    );
-    q('[data-replay-exit]')?.addEventListener('click', () => close(), options);
-    loopButton?.addEventListener(
-        'click',
-        () => {
-            loop = !loop;
-            sync();
-        },
-        options,
-    );
-    seekInput?.addEventListener(
-        'input',
-        () => seek(Number(seekInput.value)),
-        options,
-    );
-    speedSelect?.addEventListener(
-        'change',
-        () => {
-            speed = Number(speedSelect.value) || 1;
-        },
-        options,
-    );
-    window.addEventListener(
-        'keydown',
-        (e) => {
-            if (
-                !timeline ||
-                e.target instanceof HTMLInputElement ||
-                e.target instanceof HTMLSelectElement
-            ) {
-                return;
-            }
-            const handled: Record<string, () => void> = {
-                ' ': () => playButton?.click(),
-                ArrowLeft: () =>
-                    q<HTMLButtonElement>('[data-replay-prev]')?.click(),
-                ArrowRight: () =>
-                    q<HTMLButtonElement>('[data-replay-next]')?.click(),
-                ...(closable ? { Escape: () => close() } : {}),
-            };
-            const action = handled[e.key];
-            if (!action) return;
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            action();
-        },
-        { ...options, capture: true },
-    );
-
-    function open(file: ReplayFile) {
-        timeline = buildTimeline(file, getSettings().keyframeInterval);
-        personalBoxTrack = buildPersonalBoxTrack(timeline);
-        speed = getSettings().playbackSpeed;
-        if (speedSelect) {
-            speedSelect.replaceChildren(
-                ...[...new Set([...SPEEDS, speed])]
+    };
+    private setPlaying = (value: boolean) => {
+        this.playing = value;
+        this.acc = 0;
+        this.sync();
+    };
+    private open = (file: ReplayFile) => {
+        this.timeline = buildTimeline(
+            file,
+            this.getSettings().keyframeInterval,
+        );
+        this.personalBoxTrack = buildPersonalBoxTrack(this.timeline);
+        this.speed = this.getSettings().playbackSpeed;
+        if (this.speedSelect) {
+            this.speedSelect.replaceChildren(
+                ...[...new Set([...SPEEDS, this.speed])]
                     .sort((a, b) => a - b)
                     .map((value) => {
                         const option = document.createElement('option');
                         option.value = String(value);
                         option.textContent = `${value}×`;
-                        option.selected = value === speed;
+                        option.selected = value === this.speed;
                         return option;
                     }),
             );
         }
-        if (seekInput) {
-            seekInput.min = String(timeline.startTick);
-            seekInput.max = String(timeline.endTick);
-            seekInput.step = '1';
+        if (this.seekInput) {
+            this.seekInput.min = String(this.timeline.startTick);
+            this.seekInput.max = String(this.timeline.endTick);
+            this.seekInput.step = '1';
         }
-        if (noteLabel) noteLabel.textContent = notes();
-        drawMarkers();
-        seek(timeline.startTick);
-        if (bar) bar.hidden = false;
-        root.classList.add('replaying');
-        setPlaying(true);
-        playButton?.focus();
-        return timeline;
-    }
-
-    function close() {
-        if (!timeline) return;
-        timeline = null;
-        cursor = null;
-        playing = false;
-        if (bar) bar.hidden = true;
-        root.classList.remove('replaying');
-        onClose();
-    }
-
-    return {
-        open,
-        close,
-        get active() {
-            return !!timeline;
-        },
-        get timeline() {
-            return timeline;
-        },
-        get tick() {
-            return cursor?.state.tick ?? 0;
-        },
-        get state() {
-            return cursor?.state ?? null;
-        },
-        get playing() {
-            return playing;
-        },
-        seek(tick: number) {
-            seek(tick);
-        },
-        setPlaying,
-        advance(dt: number) {
-            if (!timeline || !playing || !Number.isFinite(dt) || dt < 0) return;
-            effects.advance(Math.min(dt, 0.25) * speed);
-            acc += Math.min(dt, 0.25) * speed;
-            while (acc >= FIXED_STEP) {
-                acc -= FIXED_STEP;
-                if (hold > 0) {
-                    hold -= FIXED_STEP;
-                    continue;
+        if (this.noteLabel) {
+            this.noteLabel.textContent = this.notes();
+        }
+        this.drawMarkers();
+        this.seek(this.timeline.startTick);
+        if (this.bar) {
+            this.bar.hidden = false;
+        }
+        this.root.classList.add('replaying');
+        this.setPlaying(true);
+        this.playButton?.focus();
+        return this.timeline;
+    };
+    private close = () => {
+        if (!this.timeline) {
+            return;
+        }
+        this.timeline = null;
+        this.cursor = null;
+        this.playing = false;
+        if (this.bar) {
+            this.bar.hidden = true;
+        }
+        this.root.classList.remove('replaying');
+        this.onClose();
+    };
+    private bindPlaybackControls() {
+        this.bar = this.q<HTMLElement>('[data-replay-bar]');
+        this.playButton = this.q<HTMLButtonElement>('[data-replay-play]');
+        this.seekInput = this.q<HTMLInputElement>('[data-replay-seek]');
+        this.speedSelect = this.q<HTMLSelectElement>('[data-replay-speed]');
+        this.loopButton = this.q<HTMLButtonElement>('[data-replay-loop]');
+        this.timeLabel = this.q<HTMLElement>('[data-replay-time]');
+        this.noteLabel = this.q<HTMLElement>('[data-replay-note]');
+        this.markerTrack = this.q<HTMLElement>('[data-replay-markers]');
+        this.timeline = null;
+        this.cursor = null;
+        this.playing = false;
+        this.loop = false;
+        this.speed = 1;
+        this.acc = 0;
+        this.hold = 0;
+        this.heldTick = -1;
+        this.effects = createEffects();
+        this.feedback = createFeedback(this.getLocale);
+        this.pending = [];
+        this.personalBoxTrack = [];
+        this.controller = new AbortController();
+        this.options = { signal: this.controller.signal };
+        this.playButton?.addEventListener(
+            'click',
+            () => {
+                if (
+                    !this.playing &&
+                    this.cursor &&
+                    this.timeline &&
+                    this.cursor.state.tick >= this.timeline.endTick
+                ) {
+                    this.seek(this.timeline.startTick);
                 }
-                if (!stepOnce()) {
-                    if (loop) seek(timeline.startTick);
-                    else {
-                        playing = false;
-                        break;
-                    }
+                this.setPlaying(!this.playing);
+            },
+            this.options,
+        );
+        this.q('[data-replay-prev]')?.addEventListener(
+            'click',
+            () => {
+                this.setPlaying(false);
+                if (this.cursor) {
+                    this.seek(this.cursor.state.tick - 1);
+                }
+            },
+            this.options,
+        );
+    }
+    api(): ReplayPlayer {
+        const readActive = () => {
+            return !!this.timeline;
+        };
+        const readTimeline = () => {
+            return this.timeline;
+        };
+        const readTick = () => {
+            return this.cursor?.state.tick ?? 0;
+        };
+        const readState = () => {
+            return this.cursor?.state ?? null;
+        };
+        const readPlaying = () => {
+            return this.playing;
+        };
+        return {
+            open: this.open,
+            close: this.close,
+            get active() {
+                return readActive();
+            },
+            get timeline() {
+                return readTimeline();
+            },
+            get tick() {
+                return readTick();
+            },
+            get state() {
+                return readState();
+            },
+            get playing() {
+                return readPlaying();
+            },
+            seek: this.apiSeek,
+            setPlaying: this.setPlaying,
+            advance: this.apiAdvance,
+            view: this.apiView,
+            drainEvents: this.apiDrainEvents,
+            effects: this.apiEffects,
+            feedback: this.apiFeedback,
+            destroy: this.apiDestroy,
+        };
+    }
+    private apiSeek = (tick: number) => {
+        this.seek(tick);
+    };
+    private apiAdvance = (dt: number) => {
+        if (!this.timeline || !this.playing || !Number.isFinite(dt) || dt < 0) {
+            return;
+        }
+        this.effects.advance(Math.min(dt, 0.25) * this.speed);
+        this.acc += Math.min(dt, 0.25) * this.speed;
+        while (this.acc >= FIXED_STEP) {
+            this.acc -= FIXED_STEP;
+            if (this.hold > 0) {
+                this.hold -= FIXED_STEP;
+                continue;
+            }
+            if (!this.stepOnce()) {
+                if (this.loop) {
+                    this.seek(this.timeline.startTick);
+                } else {
+                    this.playing = false;
+                    break;
                 }
             }
-            sync();
-        },
-        view() {
-            return cursor ? viewState(cursor.state) : null;
-        },
-        drainEvents() {
-            return pending.splice(0);
-        },
-        effects: () => effects.snapshot(),
-        feedback: () => feedback.snapshot(),
-        destroy() {
-            controller.abort();
-        },
+        }
+        this.sync();
+    };
+    private apiView = () => {
+        return this.cursor ? viewState(this.cursor.state) : null;
+    };
+    private apiDrainEvents = () => {
+        return this.pending.splice(0);
+    };
+    private apiEffects = () => {
+        return this.effects.snapshot();
+    };
+    private apiFeedback = () => {
+        return this.feedback.snapshot();
+    };
+    private apiDestroy = () => {
+        this.controller.abort();
     };
 }
-
-export type ReplayPlayer = ReturnType<typeof createReplayPlayer>;

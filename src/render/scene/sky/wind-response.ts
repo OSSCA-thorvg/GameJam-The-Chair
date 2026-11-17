@@ -1,9 +1,13 @@
 import { skyGust } from '../../../game/stages/sky/data';
 import { ART } from '../../art';
+
 import type { RenderCtx } from '../../context';
 import type { Vector } from '../../types';
 
-export function skyWindResponse(ctx: Pick<RenderCtx, 'state' | 't'>) {
+export function skyWindResponse(ctx: Pick<RenderCtx, 'state' | 't'>): {
+    chairTilt: number;
+    plumeDrift: number;
+} {
     if (
         ctx.state.stage !== 4 ||
         ctx.state.sky.phase !== 'course' ||
@@ -22,10 +26,12 @@ export function skyWindResponse(ctx: Pick<RenderCtx, 'state' | 't'>) {
 
 export function sprayOrigin(ctx: RenderCtx): Vector {
     const wind = skyWindResponse(ctx);
-    if (wind.plumeDrift === 0) return [ctx.player.x - 45, ctx.player.y - 15];
+    if (wind.plumeDrift === 0) {
+        return [ctx.player.x - 45, ctx.player.y - 15];
+    }
     const angle = ctx.player.a + wind.chairTilt;
-    const x = -45 * ART.player.scale,
-        y = -15 * ART.player.scale;
+    const x = -45 * ART.player.scale;
+    const y = -15 * ART.player.scale;
     return [
         ctx.player.x +
             ART.player.offsetX +

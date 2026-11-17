@@ -1,21 +1,29 @@
-import { translate, type Locale, type Message } from '../i18n';
-import type { GameEvent } from '../game/types';
-import {
-    REACTION_LIFE,
-    SPEECH_LIFE,
-    type Reaction,
-    type Speech,
-} from './types';
-import type { GameSnapshot } from '../game/game';
+import { translate } from '../i18n';
+import { REACTION_LIFE, SPEECH_LIFE } from './types';
 import { ART } from '../render/art';
+
+import type { Locale, Message } from '../i18n';
+import type { Reaction, Speech } from './types';
+import type { GameSnapshot } from '../game/game';
+import type { GameEvent } from '../game/types';
 const NPC_COPY = {
     manager: { name: 'person.manager', text: 'npc.manager.leave' },
     cleaner: { name: 'person.kim', text: 'npc.cleaner.mop' },
     admin: { name: 'person.admin', text: 'npc.admin.sort' },
-} satisfies Record<string, { name: Message; text: Message }>;
+} satisfies Record<
+    string,
+    {
+        name: Message;
+        text: Message;
+    }
+>;
 const STAGE_CLEAR: Record<
     1 | 2 | 3 | 4 | 5,
-    { status: Message; title: Message; button: Message }
+    {
+        status: Message;
+        title: Message;
+        button: Message;
+    }
 > = {
     1: {
         status: 'status.stage1Clear',
@@ -43,211 +51,276 @@ const STAGE_CLEAR: Record<
         button: 'button.retryStage',
     },
 };
-export function createFeedback(getLocale: () => Locale = () => 'en') {
-    let reaction: (Omit<Reaction, 'text'> & { text: Message }) | null = null;
-    let speech:
-        | (Omit<Speech, 'text' | 'name'> & { text: Message; name: Message })
-        | null = null;
-    let status: Message = 'empty';
-    let waterRemarked = false;
-    let panel: {
-        k: Message;
-        title: Message;
-        desc: string;
-        button: Message;
-    } | null = null;
-    function say(text: Message) {
-        reaction = { text, face: '', life: REACTION_LIFE, priority: 1 };
-    }
-    function npc(text: Message, name: Message, x: number) {
-        speech = { text, name, x, life: SPEECH_LIFE };
-    }
-    function overlay(
-        k: Message,
-        title: Message,
-        desc = '',
-        button: Message = 'button.retry',
-    ) {
-        reaction = null;
-        panel = { k, title, desc, button };
-    }
-    function receive(event: GameEvent, state: GameSnapshot) {
-        if (event.type === 'reset') {
-            reaction = null;
-            speech = null;
-            panel = null;
-            waterRemarked = false;
-            status =
-                state.stage === 2 || state.officeCheckpoint
-                    ? 'status.startingCheckpoint'
-                    : 'status.starting';
-        }
-        if (
-            event.type === 'tick' &&
-            reaction &&
-            (reaction.life -= event.dt) <= 0
-        ) {
-            reaction = null;
-        }
-        if (event.type === 'tick' && speech && (speech.life -= event.dt) <= 0) {
-            speech = null;
-        }
-        if (event.type !== 'cue') return;
-        if (state.stage === 1) {
-            const person = event.person;
-            switch (event.id) {
-                case 'person-comment':
-                    if (person && !speech) {
-                        npc(
-                            NPC_COPY[person.id].text,
-                            NPC_COPY[person.id].name,
-                            person.x,
-                        );
-                    }
-                    break;
-                case 'reverse-comment':
-                    if (person) {
-                        npc('npc.return', NPC_COPY[person.id].name, person.x);
-                    }
-                    break;
-                case 'water-comment':
-                    npc('npc.cleaner.spill', NPC_COPY.cleaner.name, 1000);
-                    break;
-                case 'head-comment':
-                    npc('npc.manager.injury', NPC_COPY.manager.name, 320);
-                    break;
-                case 'bin-comment':
-                    npc('npc.admin.injury', NPC_COPY.admin.name, 1810);
-                    break;
-                case 'light-comment':
-                    npc(
-                        'npc.coworker.bright',
-                        'person.coworker',
-                        ART.monitors[event.monitorIndex].x,
-                    );
-                    break;
-                case 'first-volley':
-                    say('player.firstVolley');
-                    break;
-                case 'paper-hit':
-                    say('player.paperHit');
-                    break;
-                case 'convoy-bump':
-                    say('player.bumpHit');
-                    break;
-                case 'urgent-volley':
-                    say('player.urgentVolley');
-                    break;
-                case 'bundle-hit':
-                    say('player.bundleHit');
-                    break;
-                case 'light-hit':
-                    say('player.lightHit');
-                    break;
-                case 'bin-fall':
-                case 'bin-game-over':
-                case 'checkpoint':
-                case 'extinguisher-pickup':
-                case 'focus-game-over':
-                case 'focus-lost':
-                case 'head-game-over':
-                case 'head-hit':
-                case 'lift-game-over':
-                case 'practice-cleared':
-                case 'rolling':
-                case 'slipping':
-                case 'spray':
-                case 'stage-clear':
-                case 'water-followup':
-                case 'water-spilled':
-                    break;
-            }
-        }
-        switch (event.id) {
-            case 'practice-cleared':
-                say('player.approved');
-                break;
-            case 'checkpoint':
-                status = 'status.checkpoint';
-                break;
-            case 'water-spilled':
-                if (!waterRemarked) {
-                    say('player.laptop');
-                    waterRemarked = true;
-                }
-                break;
-            case 'head-hit':
-                reaction = null;
-                status = 'status.headImpact';
-                break;
-            case 'head-game-over':
-                overlay('panel.headKicker', 'panel.headTitle');
-                break;
-            case 'bin-fall':
-                reaction = null;
-                status = 'status.binFall';
-                break;
-            case 'bin-game-over':
-                overlay('panel.binKicker', 'panel.binTitle');
-                break;
-            case 'lift-game-over':
-                overlay('panel.liftKicker', 'panel.liftTitle');
-                break;
-            case 'focus-lost':
-                reaction = null;
-                status = 'status.focusLost';
-                break;
-            case 'focus-game-over':
-                overlay('panel.focusKicker', 'panel.focusTitle');
-                break;
-            case 'extinguisher-pickup':
-                status = 'status.extinguisherPickup';
-                break;
-            case 'stage-clear': {
-                const clear = STAGE_CLEAR[state.stage];
-                status = clear.status;
-                overlay('empty', clear.title, '', clear.button);
-                break;
-            }
-            case 'bin-comment':
-            case 'bundle-hit':
-            case 'convoy-bump':
-            case 'first-volley':
-            case 'head-comment':
-            case 'light-comment':
-            case 'light-hit':
-            case 'paper-hit':
-            case 'person-comment':
-            case 'reverse-comment':
-            case 'rolling':
-            case 'slipping':
-            case 'spray':
-            case 'urgent-volley':
-            case 'water-comment':
-            case 'water-followup':
-                break;
-        }
-    }
-    function snapshot() {
-        const t = (message: Message) => translate(message, getLocale());
-        return {
-            reaction: reaction ? { ...reaction, text: t(reaction.text) } : null,
-            speech: speech
-                ? { ...speech, text: t(speech.text), name: t(speech.name) }
-                : null,
-            status: t(status),
-            panel: panel
-                ? {
-                      ...panel,
-                      k: t(panel.k),
-                      title: t(panel.title),
-                      button: t(panel.button),
-                  }
-                : null,
-        };
-    }
-    return { receive, snapshot };
+export function createFeedback(getLocale: () => Locale = () => 'en'): {
+    receive: (event: GameEvent, state: GameSnapshot) => void;
+    snapshot: () => {
+        reaction: {
+            text: string;
+            life: number;
+            face: string;
+            priority: number;
+        } | null;
+        speech: {
+            text: string;
+            name: string;
+            x: number;
+            life: number;
+        } | null;
+        status: string;
+        panel: {
+            k: string;
+            title: string;
+            button: string;
+            desc: string;
+        } | null;
+    };
+} {
+    return new FeedbackRuntime(getLocale).api();
 }
 export type FeedbackState = ReturnType<
     ReturnType<typeof createFeedback>['snapshot']
 >;
+class FeedbackRuntime {
+    private getLocale!: () => Locale;
+    private reaction!:
+        | (Omit<Reaction, 'text'> & {
+              text: Message;
+          })
+        | null;
+    private speech!:
+        | (Omit<Speech, 'text' | 'name'> & {
+              text: Message;
+              name: Message;
+          })
+        | null;
+    private status!: Message;
+    private waterRemarked!: boolean;
+    private panel!: {
+        k: Message;
+        title: Message;
+        desc: string;
+        button: Message;
+    } | null;
+    constructor(getLocale: () => Locale) {
+        this.getLocale = getLocale;
+        this.reaction = null;
+        this.speech = null;
+        this.status = 'empty';
+        this.waterRemarked = false;
+        this.panel = null;
+    }
+    private say = (text: Message) => {
+        this.reaction = { text, face: '', life: REACTION_LIFE, priority: 1 };
+    };
+    private npc = (text: Message, name: Message, x: number) => {
+        this.speech = { text, name, x, life: SPEECH_LIFE };
+    };
+    private overlay = (
+        k: Message,
+        title: Message,
+        desc = '',
+        button: Message = 'button.retry',
+    ) => {
+        this.reaction = null;
+        this.panel = { k, title, desc, button };
+    };
+    private receive = (event: GameEvent, state: GameSnapshot) => {
+        if (event.type === 'reset') {
+            this.reaction = null;
+            this.speech = null;
+            this.panel = null;
+            this.waterRemarked = false;
+            this.status =
+                state.stage === 2 || state.officeCheckpoint
+                    ? 'status.startingCheckpoint'
+                    : 'status.starting';
+        }
+        this.advanceFeedbackTimers(event);
+        if (event.type !== 'cue') {
+            return;
+        }
+        if (state.stage === 1) {
+            this.receiveOfficeCue(event);
+        }
+        this.receiveSharedCue(event, state);
+    };
+    private receiveOfficeCue(event: CueEvent) {
+        const person = event.person;
+        if (event.id === 'person-comment' && person && !this.speech) {
+            this.npc(
+                NPC_COPY[person.id].text,
+                NPC_COPY[person.id].name,
+                person.x,
+            );
+        } else if (event.id === 'reverse-comment' && person) {
+            this.npc('npc.return', NPC_COPY[person.id].name, person.x);
+        } else if (event.id === 'light-comment') {
+            this.npc(
+                'npc.coworker.bright',
+                'person.coworker',
+                ART.monitors[event.monitorIndex].x,
+            );
+        }
+        const remark = OFFICE_REMARKS[event.id];
+        if (remark) {
+            this.npc(remark.text, remark.name, remark.x);
+        }
+        const reaction = OFFICE_REACTIONS[event.id];
+        if (reaction) {
+            this.say(reaction);
+        }
+    }
+    private receiveSharedCue(event: CueEvent, state: GameSnapshot) {
+        const status = CUE_STATUS[event.id];
+        if (status) {
+            this.status = status;
+        }
+        const panel = CUE_PANELS[event.id];
+        if (panel) {
+            this.overlay(panel.k, panel.title);
+        }
+        if (['head-hit', 'bin-fall', 'focus-lost'].includes(event.id)) {
+            this.reaction = null;
+        }
+        if (event.id === 'practice-cleared') {
+            this.say('player.approved');
+        }
+        if (event.id === 'water-spilled' && !this.waterRemarked) {
+            this.say('player.laptop');
+            this.waterRemarked = true;
+        }
+        if (event.id === 'stage-clear') {
+            const clear = STAGE_CLEAR[state.stage];
+            this.status = clear.status;
+            this.overlay('empty', clear.title, '', clear.button);
+        }
+    }
+    private snapshot = () => {
+        const t = (message: Message) => translate(message, this.getLocale());
+        return {
+            reaction: this.reaction
+                ? { ...this.reaction, text: t(this.reaction.text) }
+                : null,
+            speech: this.speech
+                ? {
+                      ...this.speech,
+                      text: t(this.speech.text),
+                      name: t(this.speech.name),
+                  }
+                : null,
+            status: t(this.status),
+            panel: this.panel
+                ? {
+                      ...this.panel,
+                      k: t(this.panel.k),
+                      title: t(this.panel.title),
+                      button: t(this.panel.button),
+                  }
+                : null,
+        };
+    };
+    private advanceFeedbackTimers(event: GameEvent) {
+        if (
+            event.type === 'tick' &&
+            this.reaction &&
+            (this.reaction.life -= event.dt) <= 0
+        ) {
+            this.reaction = null;
+        }
+        if (
+            event.type === 'tick' &&
+            this.speech &&
+            (this.speech.life -= event.dt) <= 0
+        ) {
+            this.speech = null;
+        }
+    }
+    api(): {
+        receive: (event: GameEvent, state: GameSnapshot) => void;
+        snapshot: () => {
+            reaction: {
+                text: string;
+                life: number;
+                face: string;
+                priority: number;
+            } | null;
+            speech: {
+                text: string;
+                name: string;
+                x: number;
+                life: number;
+            } | null;
+            status: string;
+            panel: {
+                k: string;
+                title: string;
+                button: string;
+                desc: string;
+            } | null;
+        };
+    } {
+        return { receive: this.receive, snapshot: this.snapshot };
+    }
+}
+type CueEvent = Extract<
+    GameEvent,
+    {
+        type: 'cue';
+    }
+>;
+type CueId = CueEvent['id'];
+const OFFICE_REMARKS: Partial<
+    Record<
+        CueId,
+        {
+            text: Message;
+            name: Message;
+            x: number;
+        }
+    >
+> = {
+    'water-comment': {
+        text: 'npc.cleaner.spill',
+        name: NPC_COPY.cleaner.name,
+        x: 1000,
+    },
+    'head-comment': {
+        text: 'npc.manager.injury',
+        name: NPC_COPY.manager.name,
+        x: 320,
+    },
+    'bin-comment': {
+        text: 'npc.admin.injury',
+        name: NPC_COPY.admin.name,
+        x: 1810,
+    },
+};
+const OFFICE_REACTIONS: Partial<Record<CueId, Message>> = {
+    'first-volley': 'player.firstVolley',
+    'paper-hit': 'player.paperHit',
+    'convoy-bump': 'player.bumpHit',
+    'urgent-volley': 'player.urgentVolley',
+    'bundle-hit': 'player.bundleHit',
+    'light-hit': 'player.lightHit',
+};
+const CUE_STATUS: Partial<Record<CueId, Message>> = {
+    checkpoint: 'status.checkpoint',
+    'head-hit': 'status.headImpact',
+    'bin-fall': 'status.binFall',
+    'focus-lost': 'status.focusLost',
+    'extinguisher-pickup': 'status.extinguisherPickup',
+};
+const CUE_PANELS: Partial<
+    Record<
+        CueId,
+        {
+            k: Message;
+            title: Message;
+        }
+    >
+> = {
+    'head-game-over': { k: 'panel.headKicker', title: 'panel.headTitle' },
+    'bin-game-over': { k: 'panel.binKicker', title: 'panel.binTitle' },
+    'lift-game-over': { k: 'panel.liftKicker', title: 'panel.liftTitle' },
+    'focus-game-over': { k: 'panel.focusKicker', title: 'panel.focusTitle' },
+};

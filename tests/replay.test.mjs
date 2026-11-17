@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
 import { createGame } from './support/harness.mjs';
 import { testRealtimeReplay } from './support/realtime-replay.mjs';
 
@@ -12,7 +13,9 @@ test('held keys are recorded only when they change', () => {
         onCommand: (tick, command) => log.push([tick, command]),
     });
     game.reset();
-    for (let i = 0; i < 5; i++) game.press('right');
+    for (let i = 0; i < 5; i++) {
+        game.press('right');
+    }
     game.setInput('right');
     game.release('left');
     game.step();

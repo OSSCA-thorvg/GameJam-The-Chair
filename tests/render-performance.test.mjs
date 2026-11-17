@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { loadSource } from './support/load.mjs';
 
+import { loadSource } from './support/load.mjs';
 const {
     createGame,
     createRenderCtx,
@@ -18,7 +18,6 @@ const {
     export { puffCloud, CLOUD_TONES } from './src/render/scene/shared/cloud-art';
     export { effectScaleForArea } from './src/render/perf';
 `);
-
 function stageContext(stage, camera = 0) {
     const game = createGame();
     game.startStage(stage);
@@ -38,7 +37,6 @@ function stageContext(stage, camera = 0) {
     });
     return ctx;
 }
-
 test('the stage three takeoff and the stage four sky draw no white sun disc', () => {
     const disc = (commands) =>
         commands.find(
@@ -55,13 +53,11 @@ test('the stage three takeoff and the stage four sky draw no white sun disc', ()
         !sky.commands.some((command) => command.layer?.key === 'sky-sun'),
     );
 });
-
 test('effect budgets reduce sampling smoothly without deleting the ThorVG effect', () => {
-    assert.equal(effectScaleForArea(50_000, 100_000), 1);
-    assert.equal(effectScaleForArea(400_000, 100_000), 0.55);
-    assert.equal(effectScaleForArea(1_000_000, 100_000, 0.65), 0.65);
+    assert.equal(effectScaleForArea(50000, 100000), 1);
+    assert.equal(effectScaleForArea(400000, 100000), 0.55);
+    assert.equal(effectScaleForArea(1000000, 100000, 0.65), 0.65);
 });
-
 test('rooftop scene omits distant structures and restores them when the camera reaches them', () => {
     const entrance = stageContext(3, 0);
     drawRooftop(entrance);
@@ -77,7 +73,6 @@ test('rooftop scene omits distant structures and restores them when the camera r
         ),
         'the distant duct effects are not built',
     );
-
     const billboard = stageContext(3, 2200);
     drawRooftop(billboard);
     assert.ok(
@@ -87,18 +82,22 @@ test('rooftop scene omits distant structures and restores them when the camera r
         'the billboard returns inside the viewport',
     );
 });
-
 test('small projected clouds use fewer curves while retaining ThorVG gradients', () => {
-    const distant = stageContext(4),
-        near = stageContext(4);
-    puffCloud(distant, 500, 250, 0.45, 77, CLOUD_TONES.bread);
-    puffCloud(near, 500, 250, 1.5, 77, CLOUD_TONES.bread);
+    const distant = stageContext(4);
+    const near = stageContext(4);
+    puffCloud(distant, 500, 250, 0.45, {
+        seed: 77,
+        tone: CLOUD_TONES.bread,
+    });
+    puffCloud(near, 500, 250, 1.5, {
+        seed: 77,
+        tone: CLOUD_TONES.bread,
+    });
     const curves = (ctx) =>
         ctx.commands.reduce(
             (sum, command) => sum + (command.curves?.length ?? 0),
             0,
         );
-
     assert.ok(
         curves(distant) < curves(near),
         'distant clouds have a smaller path payload',
@@ -110,7 +109,6 @@ test('small projected clouds use fewer curves while retaining ThorVG gradients',
         'LOD retains gradient volume',
     );
 });
-
 test('retained groups build local geometry once and move it with an absolute Scene transform', () => {
     const ctx = stageContext(3, 0);
     let builds = 0;
@@ -119,14 +117,12 @@ test('retained groups build local geometry once and move it with an absolute Sce
         ctx.rect(10, 20, 30, 40, '#336699');
     };
     const bounds = { left: 10, top: 20, right: 40, bottom: 60 };
-
     ctx.retainedGroup('test-geometry', bounds, draw);
     const first = ctx.commands[0];
     ctx.commands = [];
     ctx.cam = 5;
     ctx.retainedGroup('test-geometry', bounds, draw);
     const second = ctx.commands[0];
-
     assert.equal(builds, 1);
     assert.deepEqual(
         second.points,

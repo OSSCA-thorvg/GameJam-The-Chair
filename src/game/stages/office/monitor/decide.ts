@@ -1,9 +1,13 @@
 import { FOCUS_DAMAGE, LEVEL } from '../../../level';
-import type { Point } from '../../../types';
+
 import type { FocusHit } from '../../../systems/focus/decide';
+import type { Point } from '../../../types';
 
 export type MonitorSpec = { wall: number; period: number; offset: number };
-export function monitorPhase(m: MonitorSpec, t: number) {
+export function monitorPhase(
+    m: MonitorSpec,
+    t: number,
+): { phase: number; warning: boolean; active: boolean; remaining: number } {
     const phase = (((t + m.offset) % m.period) + m.period) % m.period;
     return {
         phase,
@@ -30,10 +34,14 @@ export function monitorContact(
     previousX: number,
     time: number,
 ): MonitorContact | null {
-    if (p.y + 28 < 300) return null;
+    if (p.y + 28 < 300) {
+        return null;
+    }
     for (let i = 0; i < LEVEL.monitors.length; i++) {
         const spec = LEVEL.monitors[i];
-        if (!monitorPhase(spec, time).active) continue;
+        if (!monitorPhase(spec, time).active) {
+            continue;
+        }
         if (p.x + 35 > spec.wall - 8 && p.x - 35 < spec.wall + 22) {
             const side = previousX < spec.wall ? -1 : 1;
             return {

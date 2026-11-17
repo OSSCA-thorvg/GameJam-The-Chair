@@ -1,6 +1,5 @@
 import type { RenderCtx } from '../../context';
-
-export function monitorDraw(ctx: RenderCtx) {
+export function monitorDraw(ctx: RenderCtx): void {
     const F = ctx.F;
     const TAU = ctx.TAU;
     for (const monitor of ctx.monitors) {
@@ -12,19 +11,15 @@ export function monitorDraw(ctx: RenderCtx) {
             const envelope = Math.min(1, age / 0.12, (1.3 - age) / 0.22);
             const pulse = 0.82 + 0.18 * Math.sin(age * TAU * 2);
             const end = monitor.wall;
-            const beam = ctx.gradientFill(
-                x,
-                y,
-                end - 35,
-                F,
-                [
+            const beam = ctx.gradientFill(x, y, end - 35, F, {
+                stops: [
                     [0, '#fffbe7cc'],
                     [0.22, '#fff3c47c'],
                     [0.7, '#f5d79950'],
                     [1, '#f5d79900'],
                 ],
-                envelope * pulse,
-            );
+                alpha: envelope * pulse,
+            });
             ctx.gradientPolygon(
                 [
                     [x - 18, y - 10],
@@ -41,75 +36,22 @@ export function monitorDraw(ctx: RenderCtx) {
                     [end + 8, F + 8],
                     [end - 70, F - 74],
                 ],
-                ctx.gradientFill(
-                    x,
-                    y,
-                    end,
-                    F,
-                    [
+                ctx.gradientFill(x, y, end, F, {
+                    stops: [
                         [0, '#fffdf0ed'],
                         [0.4, '#fff6cc98'],
                         [1, '#ffe8a91a'],
                     ],
-                    envelope,
-                ),
+                    alpha: envelope,
+                }),
             );
-            for (let i = 0; i < 4; i++) {
-                const f = (age * 1.15 + i / 4) % 1;
-                const xx = x + (end - x) * f;
-                const yy = y + (F - y) * f;
-                const w = 3 + f * 24;
-                const a = Math.sin(f * Math.PI) * envelope;
-                ctx.gradientPolygon(
-                    [
-                        [xx - w, yy - 8],
-                        [xx + w * 0.6, yy + 5],
-                        [xx + w * 0.6 - 4, yy + 9],
-                        [xx - w - 4, yy - 4],
-                    ],
-                    ctx.gradientFill(
-                        xx - w,
-                        yy,
-                        xx + w,
-                        yy,
-                        [
-                            [0, '#fff8dc00'],
-                            [0.5, '#fffbe8c0'],
-                            [1, '#fff8dc00'],
-                        ],
-                        a,
-                    ),
-                );
-            }
-            const glow = 14 + 3 * Math.sin(u * TAU);
-            ctx.gradientPolygon(
-                [
-                    [x - 30, y - 26],
-                    [x + 26, y - 26],
-                    [x + 26, y + 26],
-                    [x - 30, y + 26],
-                ],
-                ctx.gradientFill(
-                    x - 28,
-                    y,
-                    x + 28,
-                    y,
-                    [
-                        [0, '#fff6cf00'],
-                        [0.5, '#fffbe4a0'],
-                        [1, '#fff6cf00'],
-                    ],
-                    envelope,
-                ),
-            );
-            ctx.rod(
-                x - glow,
-                y - 3,
-                x + glow,
-                y - 3,
-                2,
-                ctx.tint('#fffce7', envelope * 0.85),
-            );
+            monitorDrawDetails(age, x, end, y, {
+                F,
+                envelope,
+                ctx,
+                u,
+                TAU,
+            });
             ctx.gradientPolygon(
                 [
                     [end - 80, F - 1],
@@ -117,18 +59,14 @@ export function monitorDraw(ctx: RenderCtx) {
                     [end + 48, F + 17],
                     [end - 80, F + 17],
                 ],
-                ctx.gradientFill(
-                    end - 80,
-                    F,
-                    end + 48,
-                    F,
-                    [
+                ctx.gradientFill(end - 80, F, end + 48, F, {
+                    stops: [
                         [0, '#efd39c00'],
                         [0.5, '#fff1c7b0'],
                         [1, '#efd39c00'],
                     ],
-                    envelope * pulse,
-                ),
+                    alpha: envelope * pulse,
+                }),
             );
         } else if (monitor.warning) {
             const charge = monitor.phase / 0.8;
@@ -143,15 +81,81 @@ export function monitorDraw(ctx: RenderCtx) {
             }
             ctx.rect(x - 19, y - 12, 32 * charge, 5, '#ead5a4');
             const blink = 0.45 + 0.55 * Math.sin(charge * Math.PI * 3) ** 2;
-            ctx.ellipse(
-                x - 3,
-                y - 2,
-                4 + charge * 5,
-                3 + charge * 3,
-                ctx.tint('#fff4c6', blink * 0.65),
-            );
-            ctx.rod(x - 5, y - 21, x - 5, y - 29 - charge * 5, 2, '#dca468');
-            ctx.rod(x - 22, y - 16, x - 28 - charge * 4, y - 23, 2, '#dca468');
+            ctx.ellipse(x - 3, y - 2, 4 + charge * 5, 3 + charge * 3, {
+                c: ctx.tint('#fff4c6', blink * 0.65),
+            });
+            ctx.rod(x - 5, y - 21, x - 5, y - 29 - charge * 5, {
+                w: 2,
+                c: '#dca468',
+            });
+            ctx.rod(x - 22, y - 16, x - 28 - charge * 4, y - 23, {
+                w: 2,
+                c: '#dca468',
+            });
         }
     }
+}
+function monitorDrawDetails(
+    age: number,
+    x: number,
+    end: number,
+    y: number,
+    {
+        F: floor,
+        envelope,
+        ctx,
+        u,
+        TAU: tau,
+    }: {
+        F: number;
+        envelope: number;
+        ctx: RenderCtx;
+        u: number;
+        TAU: number;
+    },
+) {
+    for (let i = 0; i < 4; i++) {
+        const f = (age * 1.15 + i / 4) % 1;
+        const xx = x + (end - x) * f;
+        const yy = y + (floor - y) * f;
+        const w = 3 + f * 24;
+        const a = Math.sin(f * Math.PI) * envelope;
+        ctx.gradientPolygon(
+            [
+                [xx - w, yy - 8],
+                [xx + w * 0.6, yy + 5],
+                [xx + w * 0.6 - 4, yy + 9],
+                [xx - w - 4, yy - 4],
+            ],
+            ctx.gradientFill(xx - w, yy, xx + w, yy, {
+                stops: [
+                    [0, '#fff8dc00'],
+                    [0.5, '#fffbe8c0'],
+                    [1, '#fff8dc00'],
+                ],
+                alpha: a,
+            }),
+        );
+    }
+    const glow = 14 + 3 * Math.sin(u * tau);
+    ctx.gradientPolygon(
+        [
+            [x - 30, y - 26],
+            [x + 26, y - 26],
+            [x + 26, y + 26],
+            [x - 30, y + 26],
+        ],
+        ctx.gradientFill(x - 28, y, x + 28, y, {
+            stops: [
+                [0, '#fff6cf00'],
+                [0.5, '#fffbe4a0'],
+                [1, '#fff6cf00'],
+            ],
+            alpha: envelope,
+        }),
+    );
+    ctx.rod(x - glow, y - 3, x + glow, y - 3, {
+        w: 2,
+        c: ctx.tint('#fffce7', envelope * 0.85),
+    });
 }

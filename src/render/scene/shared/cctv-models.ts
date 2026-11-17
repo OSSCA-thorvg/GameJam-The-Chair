@@ -1,13 +1,13 @@
-import type { Vector } from '../../types';
 import type { Point3, SkyProjection } from './projection';
+import type { Vector } from '../../types';
 
 export const CCTV_KINDS = ['bullet', 'dome', 'ptz', 'webcam', 'long'] as const;
 export type CctvKind = (typeof CCTV_KINDS)[number];
 
 // Models face +u; v points up and w out of the silhouette plane.
 export function placer(anchor: Point3, yaw: number, scale = 1) {
-    const cos = Math.cos(yaw),
-        sin = Math.sin(yaw);
+    const cos = Math.cos(yaw);
+    const sin = Math.sin(yaw);
     return ([u, v, w]: Point3): Point3 => [
         anchor[0] + (u * cos + w * sin) * scale,
         anchor[1] + v * scale,
@@ -16,7 +16,7 @@ export function placer(anchor: Point3, yaw: number, scale = 1) {
 }
 export type Place = ReturnType<typeof placer>;
 
-export const aim = (ahead: number, across: number) =>
+export const aim = (ahead: number, across: number): number =>
     Math.atan2(-across, ahead);
 export const rect = (
     u0: number,
@@ -187,6 +187,10 @@ const long: Model = (view, place) => {
 
 const MODELS: Record<CctvKind, Model> = { bullet, dome, ptz, webcam, long };
 
-export function cctvModel(view: SkyProjection, kind: CctvKind, place: Place) {
+export function cctvModel(
+    view: SkyProjection,
+    kind: CctvKind,
+    place: Place,
+): Point3 {
     return MODELS[kind](view, place);
 }

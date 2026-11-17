@@ -1,4 +1,4 @@
-import { startMark, type StageDefinition } from '../types';
+import { startMark } from '../types';
 import {
     CHAIR_CHAT,
     CHAIR_CHAT_INTERVAL,
@@ -6,6 +6,8 @@ import {
     CHAIR_DEPARTURE_LINES,
     STAGE_TWO,
 } from './data';
+
+import type { StageDefinition } from '../types';
 
 export const building: StageDefinition = {
     id: 2,

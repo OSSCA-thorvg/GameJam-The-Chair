@@ -1,11 +1,12 @@
-import { translate, type Message } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { REACTION_LIFE, SPEECH_LIFE } from '../../../ui/types';
-import type { RenderCtx } from '../../context';
 import { LABEL_FONT, SPEECH_FONT } from '../../fonts';
-import type { SceneTalk } from '../../types';
 import { wrap } from '../opening/bubble';
 import { PathBuilder, push } from '../opening/shapes';
 
+import type { Message } from '../../../i18n';
+import type { RenderCtx } from '../../context';
+import type { SceneTalk } from '../../types';
 const PAPER = '#f7ecd8ed';
 const INK = '#4b493f';
 const STAGE_TITLES: Record<number, Message> = {
@@ -16,23 +17,25 @@ const STAGE_TITLES: Record<number, Message> = {
     5: 'stageLabel.stage5',
 };
 const TITLE_TIME = 2.2;
-
 const easeOutBack = (u: number) => 1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2;
-
 function presence(age: number, life: number) {
     return {
         scale: 0.55 + 0.45 * easeOutBack(Math.min(1, age / 0.2)),
         alpha: Math.min(1, life / 0.25, age / 0.08),
     };
 }
-
 function bubblePath(
     x: number,
     y: number,
     w: number,
     h: number,
-    tip: [number, number],
-    scale: number,
+    {
+        tip,
+        scale,
+    }: {
+        tip: [number, number];
+        scale: number;
+    },
 ) {
     const r = Math.min(9, h / 2);
     const tw = 7;
@@ -54,22 +57,28 @@ function bubblePath(
         .line(...s(x, y + r))
         .corner(...s(x, y), ...s(x + r, y));
 }
-
 type Line = { text: string; size: number; color: string };
-
 function speechBubble(
     ctx: RenderCtx,
     key: string,
     lines: Line[],
     tipX: number,
-    bottom: number,
-    age: number,
-    life: number,
+    {
+        bottom,
+        age,
+        life,
+    }: {
+        bottom: number;
+        age: number;
+        life: number;
+    },
 ) {
     const { scale, alpha } = presence(age, life);
-    if (alpha <= 0) return;
-    const padX = 13,
-        padY = 8;
+    if (alpha <= 0) {
+        return;
+    }
+    const padX = 13;
+    const padY = 8;
     const widths = lines.map((line) =>
         ctx.measureText(line.text, line.size, SPEECH_FONT),
     );
@@ -83,7 +92,13 @@ function speechBubble(
         bottom + 8,
     ];
     ctx.beginLayer({ key, opacity: alpha });
-    push(ctx, bubblePath(x, y, w, h, tip, scale).command(PAPER));
+    push(
+        ctx,
+        bubblePath(x, y, w, h, {
+            tip,
+            scale,
+        }).command(PAPER),
+    );
     ctx.endLayer();
     let lineY = y + padY;
     lines.forEach((line, i) => {
@@ -91,15 +106,17 @@ function speechBubble(
             tip[0] + (x + w / 2 - tip[0]) * scale,
             tip[1] + (lineY + heights[i] / 2 - tip[1]) * scale,
         ];
-        ctx.screenText(line.text, cx, cy, line.size * scale, line.color, {
-            font: SPEECH_FONT,
-            opacity: alpha,
+        ctx.screenText(line.text, cx, cy, line.size * scale, {
+            fill: line.color,
+            opts: {
+                font: SPEECH_FONT,
+                opacity: alpha,
+            },
         });
         lineY += heights[i];
     });
 }
-
-export function drawTalk(ctx: RenderCtx, talk: SceneTalk) {
+export function drawTalk(ctx: RenderCtx, talk: SceneTalk): void {
     const { state, mode, cam, scale, vertical } = ctx;
     const size = ctx.W < 520 ? 13 : 15;
     const reaction = talk.reaction;
@@ -116,9 +133,11 @@ export function drawTalk(ctx: RenderCtx, talk: SceneTalk) {
             'talk-reaction',
             lines,
             (ctx.player.x - cam) * scale,
-            bottom,
-            REACTION_LIFE - reaction.life,
-            reaction.life,
+            {
+                bottom,
+                age: REACTION_LIFE - reaction.life,
+                life: reaction.life,
+            },
         );
     }
     const speech = talk.speech;
@@ -142,40 +161,34 @@ export function drawTalk(ctx: RenderCtx, talk: SceneTalk) {
             (mode === 'dead'
                 ? 105
                 : Math.max(110, (ctx.F - 177 + vertical) * scale)) - 8;
-        speechBubble(
-            ctx,
-            'talk-speech',
-            lines,
-            speechX,
+        speechBubble(ctx, 'talk-speech', lines, speechX, {
             bottom,
-            SPEECH_LIFE - speech.life,
-            speech.life,
-        );
+            age: SPEECH_LIFE - speech.life,
+            life: speech.life,
+        });
     }
 }
-
-export function drawStageTitle(ctx: RenderCtx) {
+export function drawStageTitle(ctx: RenderCtx): void {
     const t = ctx.state.time;
-    if (ctx.mode !== 'play' || t > TITLE_TIME) return;
-    const text = translate(
-        STAGE_TITLES[ctx.state.stage] ?? 'stageLabel.stage1',
-        ctx.locale,
-    );
+    if (ctx.mode !== 'play' || t > TITLE_TIME) {
+        return;
+    }
+    const text = translate(STAGE_TITLES[ctx.state.stage], ctx.locale);
     const size = ctx.W < 520 ? 14 : 17;
-    const w = ctx.measureText(text, size, LABEL_FONT) + 34,
-        h = size + 18;
+    const w = ctx.measureText(text, size, LABEL_FONT) + 34;
+    const h = size + 18;
     const drop = easeOutBack(Math.min(1, t / 0.45));
     const alpha = Math.min(1, t / 0.12, (TITLE_TIME - t) / 0.3);
-    const cx = ctx.W / 2,
-        cy = (ctx.W < 520 ? 68 : 70) + h / 2 - (1 - drop) * 50;
+    const cx = ctx.W / 2;
+    const cy = (ctx.W < 520 ? 68 : 70) + h / 2 - (1 - drop) * 50;
     const tilt = Math.sin(t * 9) * Math.max(0, 0.6 - t) * 0.08;
     const corner = (dx: number, dy: number): [number, number] => [
         cx + dx * Math.cos(tilt) - dy * Math.sin(tilt),
         cy + dx * Math.sin(tilt) + dy * Math.cos(tilt),
     ];
-    const r = 7,
-        hw = w / 2,
-        hh = h / 2;
+    const r = 7;
+    const hw = w / 2;
+    const hh = h / 2;
     const card = new PathBuilder(...corner(-hw + r, -hh))
         .line(...corner(hw - r, -hh))
         .corner(...corner(hw, -hh), ...corner(hw, -hh + r))
@@ -188,9 +201,12 @@ export function drawStageTitle(ctx: RenderCtx) {
     ctx.beginLayer({ key: 'stage-title', opacity: alpha });
     push(ctx, card.command('#28303bdc', { width: 1.5, color: '#f6eddc33' }));
     ctx.endLayer();
-    ctx.screenText(text, cx, cy, size, '#f6eddc', {
-        font: LABEL_FONT,
-        opacity: alpha,
-        rotation: tilt,
+    ctx.screenText(text, cx, cy, size, {
+        fill: '#f6eddc',
+        opts: {
+            font: LABEL_FONT,
+            opacity: alpha,
+            rotation: tilt,
+        },
     });
 }

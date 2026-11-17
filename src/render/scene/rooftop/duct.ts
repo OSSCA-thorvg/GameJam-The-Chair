@@ -3,10 +3,10 @@ import {
     ductTimings,
     ventPhase,
 } from '../../../game/stages/rooftop/data';
-import type { RenderCtx } from '../../context';
 import { ART } from '../../art';
 
-export function rooftopDuct(ctx: RenderCtx) {
+import type { RenderCtx } from '../../context';
+export function rooftopDuct(ctx: RenderCtx): void {
     const duct = STAGE_THREE.duct;
     const reaction = ctx.state.ductReaction;
     const age =
@@ -24,8 +24,46 @@ export function rooftopDuct(ctx: RenderCtx) {
         );
     });
     const shake = twitching ? Math.sin(age * 110) * 2.3 : 0;
-    const x = duct.x + shake,
-        y = duct.y;
+    const x = duct.x + shake;
+    const y = duct.y;
+    drawDuctBack(ctx, x, y);
+    for (const burst of bursts) {
+        const timing = ductTimings(burst.kind);
+        if (burst.age < timing.inhale) {
+            for (let i = 0; i < 7; i++) {
+                const u = (burst.age * 5 + i / 7) % 1;
+                const px = x - 160 * (1 - u);
+                const py = y + Math.sin(i * 2.3) * (1 - u) * 30;
+                ctx.ellipse(px, py, 4 + (1 - u) * 7, 3 + (1 - u) * 4, {
+                    c: '#f5f1e2b0',
+                });
+                ctx.effectPath(
+                    [px - 16, py + 3],
+                    [[px - 8, py, px + 4, py - 2, px + 13, py]],
+                    ctx.gradientFill(px - 16, py, px + 13, py, {
+                        stops: [
+                            [0, '#fff7e500'],
+                            [1, '#fff7e5b0'],
+                        ],
+                    }),
+                );
+            }
+        }
+        const sneezeAge = burst.age - timing.inhale - timing.twitch;
+        if (sneezeAge >= 0 && sneezeAge < timing.sneeze) {
+            const pace = Math.pow(duct.sneezeDuration / timing.sneeze, 0.6);
+            ductSteam(ctx, x, y, sneezeAge * pace, {
+                duration: timing.sneeze * pace,
+                strength: burst.kind === 'first' ? 1 : 0.95,
+            });
+        }
+    }
+    const sneezeAge = age - duct.inhaleDuration - duct.twitchDuration;
+    if (sneezeAge >= 0) {
+        ductProps(ctx, x, y, sneezeAge);
+    }
+}
+function drawDuctBack(ctx: RenderCtx, x: number, y: number) {
     const top = -150;
     ctx.effectPath(
         [x + 20, y - 33],
@@ -39,52 +77,16 @@ export function rooftopDuct(ctx: RenderCtx) {
             [x + 78, y + 32, x + 40, y + 32, x + 20, y + 32],
             [x + 20, y + 16, x + 20, y - 16, x + 20, y - 33],
         ],
-        ctx.gradientFill(x + 20, 0, x + 180, 0, [
-            [0, '#adb8c7'],
-            [0.42, '#7c8ea6'],
-            [0.73, '#a3afc1'],
-            [1, '#7b8da5'],
-        ]),
+        ctx.gradientFill(x + 20, 0, x + 180, 0, {
+            stops: [
+                [0, '#adb8c7'],
+                [0.42, '#7c8ea6'],
+                [0.73, '#a3afc1'],
+                [1, '#7b8da5'],
+            ],
+        }),
     );
-    ctx.effectPath(
-        [x + 25, y - 31],
-        [
-            [x + 66, y - 31, x + 95, y - 31, x + 104, y - 31],
-            [x + 125, y - 31, x + 137, y - 48, x + 137, y - 68],
-            [x + 137, y - 172, x + 137, top + 50, x + 137, top],
-            [x + 133, top, x + 129, top, x + 126, top],
-            [x + 126, top + 90, x + 126, y - 115, x + 126, y - 68],
-            [x + 126, y - 48, x + 120, y - 39, x + 102, y - 39],
-            [x + 76, y - 39, x + 47, y - 39, x + 25, y - 39],
-            [x + 25, y - 36, x + 25, y - 34, x + 25, y - 31],
-        ],
-        ctx.gradientFill(x, 0, x + 140, 0, [
-            [0, '#d6dce2'],
-            [1, '#bdc8d5'],
-        ]),
-    );
-    for (const sx of [x + 40, x + 108]) {
-        ctx.rect(sx, y - 41, 11, 80, '#afbdcc');
-        ctx.rod(sx + 2, y - 40, sx + 2, y + 38, 2, '#d8dfe5');
-        for (const by of [y - 32, y + 29]) {
-            ctx.ellipse(sx + 7, by, 2, 2, '#546d87');
-        }
-    }
-    for (let sy = top + 50; sy < y - 90; sy += 144) {
-        ctx.rect(x + 120, sy, 65, 11, '#b1bdcd');
-        for (const bx of [x + 126, x + 178]) {
-            ctx.ellipse(bx, sy + 5, 2, 2, '#596f87');
-        }
-    }
-    ctx.polygon(
-        [
-            [x, y - 25],
-            [x + 24, y - 38],
-            [x + 24, y + 35],
-            [x, y + 29],
-        ],
-        '#ced5dd',
-    );
+    drawDuctFront(ctx, x, y, top);
     ctx.polygon(
         [
             [x + 4, y - 20],
@@ -105,128 +107,102 @@ export function rooftopDuct(ctx: RenderCtx) {
             ],
             '#8da0b7',
         );
-        ctx.rod(x + 3, ly + 6, x + 21, ly - 3, 2, '#d2dbe3');
+        ctx.rod(x + 3, ly + 6, x + 21, ly - 3, {
+            w: 2,
+            c: '#d2dbe3',
+        });
     }
-    for (const burst of bursts) {
-        const timing = ductTimings(burst.kind);
-        if (burst.age < timing.inhale) {
-            for (let i = 0; i < 7; i++) {
-                const u = (burst.age * 5 + i / 7) % 1;
-                const px = x - 160 * (1 - u),
-                    py = y + Math.sin(i * 2.3) * (1 - u) * 30;
-                ctx.ellipse(
-                    px,
-                    py,
-                    4 + (1 - u) * 7,
-                    3 + (1 - u) * 4,
-                    '#f5f1e2b0',
-                );
-                ctx.effectPath(
-                    [px - 16, py + 3],
-                    [[px - 8, py, px + 4, py - 2, px + 13, py]],
-                    ctx.gradientFill(px - 16, py, px + 13, py, [
-                        [0, '#fff7e500'],
-                        [1, '#fff7e5b0'],
-                    ]),
-                );
-            }
-        }
-        const sneezeAge = burst.age - timing.inhale - timing.twitch;
-        if (sneezeAge >= 0 && sneezeAge < timing.sneeze) {
-            const pace = Math.pow(duct.sneezeDuration / timing.sneeze, 0.6);
-            ductSteam(
-                ctx,
-                x,
-                y,
-                sneezeAge * pace,
-                timing.sneeze * pace,
-                burst.kind === 'first' ? 1 : 0.95,
-            );
-        }
-    }
-    const sneezeAge = age - duct.inhaleDuration - duct.twitchDuration;
-    if (sneezeAge >= 0) ductProps(ctx, x, y, sneezeAge);
 }
-
+function drawDuctFront(ctx: RenderCtx, x: number, y: number, top: number) {
+    ctx.effectPath(
+        [x + 25, y - 31],
+        [
+            [x + 66, y - 31, x + 95, y - 31, x + 104, y - 31],
+            [x + 125, y - 31, x + 137, y - 48, x + 137, y - 68],
+            [x + 137, y - 172, x + 137, top + 50, x + 137, top],
+            [x + 133, top, x + 129, top, x + 126, top],
+            [x + 126, top + 90, x + 126, y - 115, x + 126, y - 68],
+            [x + 126, y - 48, x + 120, y - 39, x + 102, y - 39],
+            [x + 76, y - 39, x + 47, y - 39, x + 25, y - 39],
+            [x + 25, y - 36, x + 25, y - 34, x + 25, y - 31],
+        ],
+        ctx.gradientFill(x, 0, x + 140, 0, {
+            stops: [
+                [0, '#d6dce2'],
+                [1, '#bdc8d5'],
+            ],
+        }),
+    );
+    for (const sx of [x + 40, x + 108]) {
+        ctx.rect(sx, y - 41, 11, 80, '#afbdcc');
+        ctx.rod(sx + 2, y - 40, sx + 2, y + 38, {
+            w: 2,
+            c: '#d8dfe5',
+        });
+        for (const by of [y - 32, y + 29]) {
+            ctx.ellipse(sx + 7, by, 2, 2, {
+                c: '#546d87',
+            });
+        }
+    }
+    for (let sy = top + 50; sy < y - 90; sy += 144) {
+        ctx.rect(x + 120, sy, 65, 11, '#b1bdcd');
+        for (const bx of [x + 126, x + 178]) {
+            ctx.ellipse(bx, sy + 5, 2, 2, {
+                c: '#596f87',
+            });
+        }
+    }
+    ctx.polygon(
+        [
+            [x, y - 25],
+            [x + 24, y - 38],
+            [x + 24, y + 35],
+            [x, y + 29],
+        ],
+        '#ced5dd',
+    );
+}
 function hash(n: number) {
     const v = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return v - Math.floor(v);
 }
-
 const smooth = (v: number) => v * v * (3 - 2 * v);
-
 function ductSteam(
     ctx: RenderCtx,
     x: number,
     y: number,
     age: number,
-    duration: number,
-    strength: number,
-    blurAngle = 180,
+    {
+        duration,
+        strength,
+        blurAngle = 180,
+    }: {
+        duration: number;
+        strength: number;
+        blurAngle?: number;
+    },
 ) {
     const count = Math.round(14 + 16 * strength);
     const emit = duration * 0.42;
     const mouthX = x + 4;
     const fadeIn = Math.min(1, age / 0.05);
-
-    const jet =
-        Math.max(0, 1 - age / (0.22 * Math.max(0.5, strength))) * fadeIn;
-    if (jet > 0) {
-        const len =
-            (150 + 140 * strength) * smooth(Math.min(1, age / 0.08 + 0.25));
-        ctx.beginLayer({
-            key: 'duct-steam-jet',
-            blur: 3,
-            motionBlur: { distance: 10 * ctx.scale, angle: blurAngle },
-            effectBudget: { area: 90_000, minScale: 0.65 },
-        });
-        ctx.effectPath(
-            [mouthX, y - 22],
-            [
-                [
-                    mouthX - len * 0.35,
-                    y - 30,
-                    mouthX - len * 0.75,
-                    y - 44,
-                    mouthX - len,
-                    y - 34,
-                ],
-                [
-                    mouthX - len - 22,
-                    y - 8,
-                    mouthX - len - 14,
-                    y + 30,
-                    mouthX - len,
-                    y + 36,
-                ],
-                [
-                    mouthX - len * 0.7,
-                    y + 40,
-                    mouthX - len * 0.3,
-                    y + 30,
-                    mouthX,
-                    y + 24,
-                ],
-            ],
-            ctx.gradientFill(mouthX, y, mouthX - len, y, [
-                [0, '#f7fbff00'],
-                [0.12, ctx.tint('#f7fbff', 0.55 * jet)],
-                [0.55, ctx.tint('#eef3f6', 0.38 * jet)],
-                [1, '#eef3f600'],
-            ]),
-        );
-        ctx.endLayer();
-    }
-
+    drawSteamJet(age, strength, fadeIn, ctx, {
+        blurAngle,
+        mouthX,
+        y,
+    });
     ctx.beginLayer({
         key: 'duct-steam',
         blur: 2.2,
-        effectBudget: { area: 130_000, minScale: 0.65 },
+        effectBudget: { area: 130000, minScale: 0.65 },
     });
     for (let i = 0; i < count; i++) {
         const born = (i / count) * emit;
         const t = age - born;
-        if (t <= 0) continue;
+        if (t <= 0) {
+            continue;
+        }
         const life = duration - born;
         const seed = i * 7.31 + strength * 13;
         const late = born / emit;
@@ -264,9 +240,11 @@ function ductSteam(
             fade *
             (0.5 + 0.25 * hash(seed + 8)) *
             (0.75 + 0.25 * strength);
-        if (alpha < 0.01) continue;
-        const hx = px - r * 0.12,
-            hy = py - r * 0.22;
+        if (alpha < 0.01) {
+            continue;
+        }
+        const hx = px - r * 0.12;
+        const hy = py - r * 0.22;
         ctx.effectPath(
             [px - r, py],
             [
@@ -283,52 +261,12 @@ function ductSteam(
             ]),
         );
     }
-    ctx.endLayer();
-
-    ctx.beginLayer({
-        key: 'duct-steam-wisps',
-        blur: 2.6,
-        effectBudget: { area: 110_000, minScale: 0.65 },
+    drawSteamWisps(ctx, strength, age, fadeIn, {
+        duration,
+        mouthX,
+        y,
     });
-    const strands = Math.round(4 + 4 * strength);
-    for (let i = 0; i < strands; i++) {
-        const seed = 91 + i * 3.7 + strength * 5;
-        const t = age - i * 0.025;
-        if (t <= 0) continue;
-        const reach =
-            (230 + 120 * hash(seed)) * strength * (1 - Math.exp(-3.2 * t));
-        const lift = 30 * t * t + (16 * (hash(seed + 1) - 0.5) * reach) / 100;
-        const curl = (hash(seed + 2) - 0.5) * 70 * Math.min(1, t * 2);
-        const fade =
-            fadeIn * Math.pow(Math.max(0, 1 - age / duration), 1.6) * 0.2;
-        if (fade < 0.01 || reach < 20) continue;
-        const sx = mouthX - 40,
-            sy = y + (hash(seed + 3) - 0.5) * 30;
-        const ex = mouthX - reach,
-            ey = sy - lift - reach * 0.12;
-        ctx.strokePath(
-            [sx, sy],
-            [
-                [
-                    sx - reach * 0.35,
-                    sy + curl,
-                    ex + reach * 0.25,
-                    ey - curl,
-                    ex,
-                    ey,
-                ],
-            ],
-            {
-                width: 5 + 7 * hash(seed + 4) * strength,
-                color: ctx.tint('#f6f9fb', fade),
-                cap: 'round',
-            },
-            { trim: [Math.min(0.6, t * 0.5), 1] },
-        );
-    }
-    ctx.endLayer();
 }
-
 export const DUCT_PROP_COLORS = {
     can: '#2340a8',
     cup: '#f4ece0',
@@ -336,7 +274,6 @@ export const DUCT_PROP_COLORS = {
     tie: '#b23a3f',
     paper: ART.palette.paper,
 } as const;
-
 type PropKind = 'can' | 'cup' | 'spill' | 'badge' | 'tie' | 'paper';
 type Flight = {
     kind: PropKind;
@@ -578,7 +515,135 @@ const PROPS: readonly Flight[] = [
         bounce: 0,
     },
 ];
-
+function drawSteamJet(
+    age: number,
+    strength: number,
+    fadeIn: number,
+    ctx: RenderCtx,
+    {
+        blurAngle,
+        mouthX,
+        y,
+    }: {
+        blurAngle: number;
+        mouthX: number;
+        y: number;
+    },
+) {
+    const jet =
+        Math.max(0, 1 - age / (0.22 * Math.max(0.5, strength))) * fadeIn;
+    if (jet > 0) {
+        const len =
+            (150 + 140 * strength) * smooth(Math.min(1, age / 0.08 + 0.25));
+        ctx.beginLayer({
+            key: 'duct-steam-jet',
+            blur: 3,
+            motionBlur: { distance: 10 * ctx.scale, angle: blurAngle },
+            effectBudget: { area: 90000, minScale: 0.65 },
+        });
+        ctx.effectPath(
+            [mouthX, y - 22],
+            [
+                [
+                    mouthX - len * 0.35,
+                    y - 30,
+                    mouthX - len * 0.75,
+                    y - 44,
+                    mouthX - len,
+                    y - 34,
+                ],
+                [
+                    mouthX - len - 22,
+                    y - 8,
+                    mouthX - len - 14,
+                    y + 30,
+                    mouthX - len,
+                    y + 36,
+                ],
+                [
+                    mouthX - len * 0.7,
+                    y + 40,
+                    mouthX - len * 0.3,
+                    y + 30,
+                    mouthX,
+                    y + 24,
+                ],
+            ],
+            ctx.gradientFill(mouthX, y, mouthX - len, y, {
+                stops: [
+                    [0, '#f7fbff00'],
+                    [0.12, ctx.tint('#f7fbff', 0.55 * jet)],
+                    [0.55, ctx.tint('#eef3f6', 0.38 * jet)],
+                    [1, '#eef3f600'],
+                ],
+            }),
+        );
+        ctx.endLayer();
+    }
+}
+function drawSteamWisps(
+    ctx: RenderCtx,
+    strength: number,
+    age: number,
+    fadeIn: number,
+    {
+        duration,
+        mouthX,
+        y,
+    }: {
+        duration: number;
+        mouthX: number;
+        y: number;
+    },
+) {
+    ctx.endLayer();
+    ctx.beginLayer({
+        key: 'duct-steam-wisps',
+        blur: 2.6,
+        effectBudget: { area: 110000, minScale: 0.65 },
+    });
+    const strands = Math.round(4 + 4 * strength);
+    for (let i = 0; i < strands; i++) {
+        const seed = 91 + i * 3.7 + strength * 5;
+        const t = age - i * 0.025;
+        if (t <= 0) {
+            continue;
+        }
+        const reach =
+            (230 + 120 * hash(seed)) * strength * (1 - Math.exp(-3.2 * t));
+        const lift = 30 * t * t + (16 * (hash(seed + 1) - 0.5) * reach) / 100;
+        const curl = (hash(seed + 2) - 0.5) * 70 * Math.min(1, t * 2);
+        const fade =
+            fadeIn * Math.pow(Math.max(0, 1 - age / duration), 1.6) * 0.2;
+        if (fade < 0.01 || reach < 20) {
+            continue;
+        }
+        const sx = mouthX - 40;
+        const sy = y + (hash(seed + 3) - 0.5) * 30;
+        const ex = mouthX - reach;
+        const ey = sy - lift - reach * 0.12;
+        ctx.strokePath(
+            [sx, sy],
+            [
+                [
+                    sx - reach * 0.35,
+                    sy + curl,
+                    ex + reach * 0.25,
+                    ey - curl,
+                    ex,
+                    ey,
+                ],
+            ],
+            {
+                width: 5 + 7 * hash(seed + 4) * strength,
+                color: ctx.tint('#f6f9fb', fade),
+                cap: 'round',
+            },
+            { trim: [Math.min(0.6, t * 0.5), 1] },
+        );
+    }
+    ctx.endLayer();
+}
 function flight(x: number, y: number, age: number, f: Flight) {
     const u = Math.min(1, Math.max(0, (age - f.delay) / f.time));
     const ease = 1 - Math.pow(1 - u, 2);
@@ -597,11 +662,12 @@ function flight(x: number, y: number, age: number, f: Flight) {
             Math.sign(f.bounce);
     return { x: px, y: py, rotation, flying: u < 1, after };
 }
-
 function ductProps(ctx: RenderCtx, x: number, y: number, age: number) {
     const from = x + 6;
     for (const f of PROPS) {
-        if (f.kind === 'spill') coffeeSpill(ctx, from, y, age, f);
+        if (f.kind === 'spill') {
+            coffeeSpill(ctx, from, y, age, f);
+        }
     }
     for (const f of PROPS) {
         const at = flight(from, y, age, f);
@@ -615,17 +681,21 @@ function ductProps(ctx: RenderCtx, x: number, y: number, age: number) {
         ctx.oy = at.y;
         ctx.rotation = at.rotation;
         ctx.localScale = SCALE[f.kind];
-        if (f.kind === 'can') energyCan(ctx);
-        else if (f.kind === 'cup' || f.kind === 'spill') {
+        if (f.kind === 'can') {
+            energyCan(ctx);
+        } else if (f.kind === 'cup' || f.kind === 'spill') {
             coffeeCup(ctx, f.kind === 'spill' && !at.flying);
-        } else if (f.kind === 'badge') idBadge(ctx, at.flying ? age : -1);
-        else if (f.kind === 'paper') printout(ctx);
-        else necktie(ctx, at.flying ? age + f.delay * 9 : -1);
+        } else if (f.kind === 'badge') {
+            idBadge(ctx, at.flying ? age : -1);
+        } else if (f.kind === 'paper') {
+            printout(ctx);
+        } else {
+            necktie(ctx, at.flying ? age + f.delay * 9 : -1);
+        }
     }
     ctx.ox = ctx.oy = ctx.rotation = 0;
     ctx.localScale = 1;
 }
-
 function coffeeCup(ctx: RenderCtx, empty: boolean) {
     ctx.polygon(
         [
@@ -643,12 +713,14 @@ function coffeeCup(ctx: RenderCtx, empty: boolean) {
             [6, 13],
             [-6, 13],
         ],
-        ctx.gradientFill(-8, 0, 8, 0, [
-            [0, '#8a7a6640'],
-            [0.35, '#ffffff00'],
-            [0.5, '#ffffff50'],
-            [1, '#6f604f55'],
-        ]),
+        ctx.gradientFill(-8, 0, 8, 0, {
+            stops: [
+                [0, '#8a7a6640'],
+                [0.35, '#ffffff00'],
+                [0.5, '#ffffff50'],
+                [1, '#6f604f55'],
+            ],
+        }),
     );
     ctx.polygon(
         [
@@ -670,9 +742,10 @@ function coffeeCup(ctx: RenderCtx, empty: boolean) {
         ],
         '#dcd5ca',
     );
-    ctx.ellipse(3, -14, 1.6, 0.9, empty ? '#5b3a22' : '#a89f92');
+    ctx.ellipse(3, -14, 1.6, 0.9, {
+        c: empty ? '#5b3a22' : '#a89f92',
+    });
 }
-
 function coffeeSpill(
     ctx: RenderCtx,
     x: number,
@@ -683,26 +756,34 @@ function coffeeSpill(
     for (let i = 0; i < 7; i++) {
         const release = f.delay + 0.08 + i * 0.04;
         const t = age - release;
-        if (t < 0) continue;
-        const h = Math.sin(i * 12.9898) * 43758.5453,
-            r = h - Math.floor(h);
+        if (t < 0) {
+            continue;
+        }
+        const h = Math.sin(i * 12.9898) * 43758.5453;
+        const r = h - Math.floor(h);
         const start = flight(x, y, release, f);
-        const landX = f.to[0] - 30 + r * 50,
-            landY = f.to[1] + 3.5;
+        const landX = f.to[0] - 30 + r * 50;
+        const landY = f.to[1] + 3.5;
         const u = Math.min(1, t / (0.28 + r * 0.15));
-        if (u >= 1) continue;
+        if (u >= 1) {
+            continue;
+        }
         const px = start.x + (landX - start.x) * u;
         const py =
             start.y +
             (landY - start.y) * u * u -
             Math.sin(u * Math.PI) * (8 + r * 12);
-        ctx.ellipse(px, py, 1.4, 1.8, '#5b3a22d0');
+        ctx.ellipse(px, py, 1.4, 1.8, {
+            c: '#5b3a22d0',
+        });
     }
     const after = age - f.delay - f.time;
-    if (after <= 0) return;
+    if (after <= 0) {
+        return;
+    }
     const spread = 1 - Math.exp(-after * 2.2);
-    const left = f.to[0] - 10 - 22 * spread,
-        right = f.to[0] + 4 + 8 * spread;
+    const left = f.to[0] - 10 - 22 * spread;
+    const right = f.to[0] + 4 + 8 * spread;
     const top = f.to[1] + 4;
     ctx.effectPath(
         [left, top],
@@ -710,27 +791,35 @@ function coffeeSpill(
             [left + 2, top - 1.6, right - 4, top - 1.6, right, top],
             [right - 2, top + 0.6, left + 2, top + 0.6, left, top],
         ],
-        ctx.gradientFill(left, 0, right, 0, [
-            [0, '#4a2c1890'],
-            [0.5, '#5b3a22d8'],
-            [1, '#4a2c18b0'],
-        ]),
+        ctx.gradientFill(left, 0, right, 0, {
+            stops: [
+                [0, '#4a2c1890'],
+                [0.5, '#5b3a22d8'],
+                [1, '#4a2c18b0'],
+            ],
+        }),
     );
     ctx.ellipse(
         left + (right - left) * 0.4,
         top - 0.7,
         (right - left) * 0.15,
         0.5,
-        '#c79b6e80',
+        {
+            c: '#c79b6e80',
+        },
     );
 }
-
 function printout(ctx: RenderCtx) {
     ctx.rect(-10, -6, 20, 12, DUCT_PROP_COLORS.paper);
-    ctx.rod(-6, -2, 6, -2, 1, '#9a9e9d');
-    ctx.rod(-6, 2, 3, 2, 1, '#b3b3a7');
+    ctx.rod(-6, -2, 6, -2, {
+        w: 1,
+        c: '#9a9e9d',
+    });
+    ctx.rod(-6, 2, 3, 2, {
+        w: 1,
+        c: '#b3b3a7',
+    });
 }
-
 function energyCan(ctx: RenderCtx) {
     ctx.rect(-8, -18, 16, 36, DUCT_PROP_COLORS.can);
     ctx.gradientPolygon(
@@ -740,13 +829,15 @@ function energyCan(ctx: RenderCtx) {
             [8, 18],
             [-8, 18],
         ],
-        ctx.gradientFill(-8, 0, 8, 0, [
-            [0, '#0c1d5e80'],
-            [0.3, '#ffffff00'],
-            [0.42, '#ffffff55'],
-            [0.55, '#ffffff00'],
-            [1, '#0c1d5e90'],
-        ]),
+        ctx.gradientFill(-8, 0, 8, 0, {
+            stops: [
+                [0, '#0c1d5e80'],
+                [0.3, '#ffffff00'],
+                [0.42, '#ffffff55'],
+                [0.55, '#ffffff00'],
+                [1, '#0c1d5e90'],
+            ],
+        }),
     );
     ctx.polygon(
         [
@@ -763,7 +854,6 @@ function energyCan(ctx: RenderCtx) {
     ctx.rect(-5, -23, 10, 2, '#e9edf1');
     ctx.rect(-7, 17, 14, 4, '#aab3be');
 }
-
 function idBadge(ctx: RenderCtx, flutter: number) {
     if (flutter < 0) {
         ctx.strokePath(
@@ -801,7 +891,6 @@ function idBadge(ctx: RenderCtx, flutter: number) {
     ctx.rect(-8, 11, 16, 2, '#d2cfc4');
     ctx.rect(-5, 14, 10, 2, '#d2cfc4');
 }
-
 function necktie(ctx: RenderCtx, flutter: number) {
     const w = flutter < 0 ? 0 : Math.sin(flutter * 30) * 5;
     const w2 = flutter < 0 ? 0 : Math.sin(flutter * 30 + 1.4) * 7;
@@ -824,13 +913,15 @@ function necktie(ctx: RenderCtx, flutter: number) {
         DUCT_PROP_COLORS.tie,
     );
     for (let i = 0; i < 3; i++) {
-        const sy = -10 + i * 11,
-            k = (sy + 17) / 39;
-        ctx.rod(-7 + w * k, sy + 4, 7 + w * k, sy - 2, 2.4, '#e3b450');
+        const sy = -10 + i * 11;
+        const k = (sy + 17) / 39;
+        ctx.rod(-7 + w * k, sy + 4, 7 + w * k, sy - 2, {
+            w: 2.4,
+            c: '#e3b450',
+        });
     }
 }
-
-export function rooftopVents(ctx: RenderCtx) {
+export function rooftopVents(ctx: RenderCtx): void {
     for (const vent of STAGE_THREE.vents) {
         const phase = ventPhase(vent, ctx.state.time);
         const rattle =
@@ -840,8 +931,9 @@ export function rooftopVents(ctx: RenderCtx) {
         ctx.withTransform({}, () => {
             ctx.ox = vent.x + (vent.axis === 'x' ? rattle * 0.6 : rattle * 0.4);
             ctx.oy = vent.y + (vent.axis === 'x' ? rattle * 0.4 : 0);
-            if (vent.axis === 'y') ctx.rotation = -Math.PI / 2;
-            else if (vent.dir > 0) {
+            if (vent.axis === 'y') {
+                ctx.rotation = -Math.PI / 2;
+            } else if (vent.dir > 0) {
                 ctx.ox = 2 * ctx.ox;
                 ctx.rotation = Math.PI;
                 ctx.mirror = { y: 0, k: 1 };
@@ -860,7 +952,9 @@ export function rooftopVents(ctx: RenderCtx) {
                         cy - 14 + i * 9 - u * 10,
                         3 + u * 7,
                         2 + u * 4,
-                        ctx.tint('#f4f7f9', 0.45 * (1 - u)),
+                        {
+                            c: ctx.tint('#f4f7f9', 0.45 * (1 - u)),
+                        },
                     );
                 }
             }
@@ -870,25 +964,23 @@ export function rooftopVents(ctx: RenderCtx) {
                     0.6,
                 );
                 const angle = vent.axis === 'y' ? 90 : vent.dir > 0 ? 0 : 180;
-                ductSteam(
-                    ctx,
-                    cx - 14,
-                    cy,
-                    phase.age * pace,
-                    vent.blow * pace,
-                    0.9,
-                    angle,
-                );
+                ductSteam(ctx, cx - 14, cy, phase.age * pace, {
+                    duration: vent.blow * pace,
+                    strength: 0.9,
+                    blurAngle: angle,
+                });
             }
         });
     }
 }
-
 function ventGrille(
     ctx: RenderCtx,
     x: number,
     y: number,
-    phase: { kind: string; age: number },
+    phase: {
+        kind: string;
+        age: number;
+    },
 ) {
     ctx.polygon(
         [
@@ -910,13 +1002,20 @@ function ventGrille(
     );
     for (let i = 0; i < 4; i++) {
         const ly = y - 17 + i * 11;
-        ctx.rod(x - 2, ly + 5, x - 11, ly - 2, 2.5, '#c3ccd6');
+        ctx.rod(x - 2, ly + 5, x - 11, ly - 2, {
+            w: 2.5,
+            c: '#c3ccd6',
+        });
     }
     for (const by of [y - 27, y + 27]) {
-        ctx.ellipse(x - 7, by, 1.6, 1.6, '#566b82');
+        ctx.ellipse(x - 7, by, 1.6, 1.6, {
+            c: '#566b82',
+        });
     }
     const lit =
         phase.kind === 'blow' ||
         (phase.kind === 'warn' && Math.sin(phase.age * 26) > 0);
-    ctx.ellipse(x - 7, y - 36, 3, 3, lit ? '#ff5b4a' : '#6a2a27');
+    ctx.ellipse(x - 7, y - 36, 3, 3, {
+        c: lit ? '#ff5b4a' : '#6a2a27',
+    });
 }

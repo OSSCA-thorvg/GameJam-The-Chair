@@ -1,28 +1,27 @@
-import { createGame, type Game, type GameSnapshot } from '../game/game';
-import type { Input } from '../game/types';
+import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
+import { parseState, createGame } from '../game/game';
 import { STAGE_TWO } from '../game/stages/building/data';
 import { createEffects } from '../render/effects';
-import { type PreviewScene } from './types';
-import { FRAME_TIME, recordedScene, capture, stepGame } from './recording';
 
+import type { PreviewScene } from './types';
+import type { Game, GameSnapshot } from '../game/game';
+import type { Input } from '../game/types';
 export function convoyRide(x: number, line: number, said = false): Game {
     const game = createGame();
     game.startStage(2);
-    const saved = JSON.parse(game.serialize());
+    const saved = parseState(game.serialize());
     const cruise = STAGE_TWO.orientation.cruise;
     saved.checkpoint = 2;
     saved.lessons = { moved: true, jumped: true };
     saved.p = { ...saved.p, x, y: 392, vx: cruise, vy: 0, a: 0, w: 0 };
     saved.ground = true;
-    saved.building.furniture = saved.building.furniture.map(
-        (chair: object, i: number) => ({
-            ...chair,
-            x: x + 90 - i * 130,
-            vx: cruise,
-            released: true,
-            cheer: 0,
-        }),
-    );
+    saved.building.furniture = saved.building.furniture.map((chair, i) => ({
+        ...chair,
+        x: x + 90 - i * 130,
+        vx: cruise,
+        released: true,
+        cheer: 0,
+    }));
     Object.assign(saved.building.corridor, {
         dispatchStarted: true,
         dispatchAge: 10,
@@ -33,31 +32,39 @@ export function convoyRide(x: number, line: number, said = false): Game {
     game.restore(JSON.stringify(saved));
     return game;
 }
-
-export function orientationHop(state: GameSnapshot) {
-    if (!state.ground) return false;
+export function orientationHop(state: GameSnapshot): boolean {
+    if (!state.ground) {
+        return false;
+    }
     const p = state.player;
     return STAGE_TWO.orientation.obstacles.some((obstacle) => {
         const time = (obstacle.x - p.x) / Math.max(1, p.vx);
         return time > 0.36 && time < 0.44;
     });
 }
-
 export function orientationRun(
     id: string,
     label: string,
     x: number,
     line: number,
-    hop: boolean,
-    frameCount: number,
-    markers: PreviewScene['markers'],
+    {
+        hop,
+        frameCount,
+        markers,
+    }: {
+        hop: boolean;
+        frameCount: number;
+        markers: PreviewScene['markers'];
+    },
 ): PreviewScene {
     const game = convoyRide(x, line);
     const effects = createEffects();
     const frames = [capture(game, effects)];
     for (let i = 0; i < frameCount; i++) {
         const state = game.getSnapshot();
-        if (hop && orientationHop(state)) game.jump();
+        if (hop && orientationHop(state)) {
+            game.jump();
+        }
         game.setInput(
             ...(state.corridor.convoy === 'carried'
                 ? []
@@ -68,7 +75,6 @@ export function orientationRun(
     }
     return { ...recordedScene(id, label, x, markers, frames), follow: true };
 }
-
 export function expressRun(
     id: string,
     label: string,
@@ -85,12 +91,13 @@ export function expressRun(
     const frames = [capture(game, effects)];
     let off = false;
     for (let i = 0; i < 300; i++) {
-        const state = game.getSnapshot(),
-            p = state.player,
-            c = state.corridor;
+        const state = game.getSnapshot();
+        const p = state.player;
+        const c = state.corridor;
         let keys: Input[] = [];
-        if (off || c.convoy === 'free') keys = ['right'];
-        else if (c.convoy === 'carried' && state.ground) {
+        if (off || c.convoy === 'free') {
+            keys = ['right'];
+        } else if (c.convoy === 'carried' && state.ground) {
             if (rampJump && pit.left - p.x > 0 && pit.left - p.x < 35) {
                 game.jump();
             }
@@ -103,7 +110,9 @@ export function expressRun(
         game.setInput(...keys);
         stepGame(game, effects);
         frames.push(capture(game, effects));
-        if (game.getSnapshot().deaths > 0) break;
+        if (game.getSnapshot().deaths > 0) {
+            break;
+        }
     }
     return {
         ...recordedScene(
@@ -116,11 +125,10 @@ export function expressRun(
         follow: true,
     };
 }
-
 export function meetingVisit(visit = 1): PreviewScene {
     const game = createGame({ seed: 8 });
     game.startStage(2);
-    const saved = JSON.parse(game.serialize());
+    const saved = parseState(game.serialize());
     saved.mode = 'play';
     saved.ground = true;
     saved.p.x = STAGE_TWO.meeting - 110;
@@ -165,11 +173,10 @@ export function meetingVisit(visit = 1): PreviewScene {
         frames,
     );
 }
-
 export function chairDispatch(): PreviewScene {
     const game = createGame({ seed: 8 });
     game.startStage(2);
-    const saved = JSON.parse(game.serialize());
+    const saved = parseState(game.serialize());
     saved.mode = 'play';
     saved.ground = true;
     saved.checkpoint = 1;
@@ -196,7 +203,6 @@ export function chairDispatch(): PreviewScene {
         frames,
     );
 }
-
 export function officeTyping(): PreviewScene {
     const game = createGame();
     game.startStage(2);

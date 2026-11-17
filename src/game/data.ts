@@ -2,7 +2,9 @@ import type { DeepReadonly } from './types';
 
 export function deepFreeze<T>(value: T): DeepReadonly<T> {
     if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-        for (const child of Object.values(value)) deepFreeze(child);
+        for (const child of Object.values(value)) {
+            deepFreeze(child);
+        }
         Object.freeze(value);
     }
     return value as DeepReadonly<T>;
@@ -10,7 +12,11 @@ export function deepFreeze<T>(value: T): DeepReadonly<T> {
 
 export function canonicalJson(value: unknown): string {
     return JSON.stringify(value, (_key, entry: unknown) => {
-        if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+        if (
+            entry === null ||
+            typeof entry !== 'object' ||
+            Array.isArray(entry)
+        ) {
             return entry;
         }
         return Object.fromEntries(
@@ -32,7 +38,9 @@ export function configHash(config: unknown): string {
 }
 
 export function clonePlain<T>(value: T): T {
-    if (Array.isArray(value)) return value.map(clonePlain) as T;
+    if (Array.isArray(value)) {
+        return value.map(clonePlain) as T;
+    }
     if (value !== null && typeof value === 'object') {
         const copy: Record<string, unknown> = {};
         for (const key in value) {
