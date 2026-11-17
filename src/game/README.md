@@ -44,6 +44,10 @@ Every value that affects gameplay belongs to one of these categories.
 
 `getSnapshot()` creates the presentation snapshot once per frame. UI decisions use the allocation-free `status()`.
 
+`CoreState` combines common attempt data with the `Activity` union. Change modes through `setActivity()` so the mode, loss reason, and impact playback data stay consistent. Focus-loss activities require zero focus. These fields keep their existing serialized names, including impact data retained after a head-impact death.
+
+`parseState()` checks these relationships and validates the checkpoint against the selected stage before accepting a saved state. A rejected restore leaves the running game unchanged.
+
 `viewState` queries gameplay rules and terrain before projecting data. Shared projections accept only their selected input fields; stage projections live in `stages/<stage>/view.ts` and are exported through `stages/view.ts`. Each projection owns its returned objects and arrays. Raw sky and orbit data are cloned directly at the assembly boundary, without pass-through factory wrappers.
 
 ## Hash ordering and replay compatibility

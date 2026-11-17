@@ -4,7 +4,13 @@ import * as Det from './math';
 import { collide, drivePlayer, fellOffFloor } from './physics';
 import { stageHooks } from './stages/hooks';
 import { PRACTICE_PILE, STAGES, inCheckpointArea } from './stages/index';
-import { cloneState, resetAttempt, setPlayer, snapshot } from './state';
+import {
+    cloneState,
+    resetAttempt,
+    setActivity,
+    setPlayer,
+    snapshot,
+} from './state';
 import { applyFocusLoss } from './systems/focus/apply';
 import { applyFocusRecovery } from './systems/focus/recovery';
 import { applyHeadHit, applyImpact } from './systems/impact/apply';
@@ -375,7 +381,11 @@ class PlayTick {
             if (this.s.stage > this.s.completedStage) {
                 this.s.completedStage = this.s.stage;
             }
-            this.s.mode = 'won';
+            setActivity(this.s, {
+                mode: 'won',
+                lossReason: null,
+                impact: null,
+            });
             this.s.keys = [];
             this.out.push({ type: 'cue', id: 'stage-clear' });
         }

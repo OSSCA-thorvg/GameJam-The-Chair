@@ -1,7 +1,7 @@
 import { PHYSICS } from './level';
 import * as Det from './math';
 import { stageHooks } from './stages/hooks';
-import { resetAttempt, startStage } from './state';
+import { resetAttempt, setActivity, startStage } from './state';
 
 import type { CoreState } from './state';
 import type { StageId, GameEvent, Input } from './types';
@@ -139,7 +139,11 @@ function pause(s: CoreState) {
     if (s.mode !== 'play' && s.mode !== 'pause') {
         return;
     }
-    s.mode = s.mode === 'play' ? 'pause' : 'play';
+    setActivity(s, {
+        mode: s.mode === 'play' ? 'pause' : 'play',
+        lossReason: null,
+        impact: null,
+    });
     s.keys = [];
 }
 function parseInputKeys(value: unknown): Input[] {

@@ -1,5 +1,6 @@
 import { STAGES } from './stages';
 import { office, building, rooftop, sky, orbit } from './stages/validation';
+import { activity } from './validation/activity';
 import {
     exactFields,
     record,
@@ -18,9 +19,6 @@ import {
 
 import type { CoreState } from './state';
 const STAGE_IDS = Object.values(STAGES).map((stage) => stage.id);
-const MAX_CHECKPOINT = Math.max(
-    ...Object.values(STAGES).map((stage) => stage.checkpoints.length - 1),
-);
 export function assertGameState(
     value: unknown,
     path = 'state',
@@ -107,19 +105,13 @@ export function assertGameState(
         );
         finite(notice.life, `${path}.focus.notice.life`);
     }
-    if (data.lossReason !== null) {
-        choice(
-            data.lossReason,
-            ['head', 'bin', 'focus', 'lift'],
-            `${path}.lossReason`,
-        );
-    }
     finite(data.focusLossTime, `${path}.focusLossTime`);
     office(data.office, `${path}.office`);
     building(data.building, `${path}.building`);
     rooftop(data.rooftop, `${path}.rooftop`);
     sky(data.sky, `${path}.sky`);
     orbit(data.orbit, `${path}.orbit`);
+    activity(data, path);
 }
 function readCoreStateRecord(value: unknown, path: string) {
     const data = record(value, path);
@@ -160,8 +152,13 @@ function readCoreStateRecord(value: unknown, path: string) {
         },
         path,
     );
-    choice(data.stage, STAGE_IDS, `${path}.stage`);
-    integer(data.checkpoint, `${path}.checkpoint`, 0, MAX_CHECKPOINT);
+    const stage = choice(data.stage, STAGE_IDS, `${path}.stage`);
+    integer(
+        data.checkpoint,
+        `${path}.checkpoint`,
+        0,
+        STAGES[stage].checkpoints.length - 1,
+    );
     const lessons = record(data.lessons, `${path}.lessons`);
     exact(lessons, ['moved', 'jumped'], `${path}.lessons`);
     boolean(lessons.moved, `${path}.lessons.moved`);

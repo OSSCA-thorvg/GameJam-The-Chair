@@ -1,4 +1,5 @@
 import { focusAfterHit, focusLossStep } from './decide';
+import { setActivity } from '../../state';
 
 import type { FocusHit } from './decide';
 import type { CoreState } from '../../state';
@@ -28,11 +29,13 @@ export function applyFocusHit(
 }
 
 function applyFocusFailure(s: CoreState, out: GameEvent[]) {
-    s.mode = 'focuslost';
-    s.lossReason = 'focus';
+    setActivity(s, {
+        mode: 'focuslost',
+        lossReason: 'focus',
+        impact: null,
+        focus: { ...s.focus, value: 0, recoveryClock: 0 },
+    });
     s.focusLossTime = 0;
-    s.focus.value = 0;
-    s.focus.recoveryClock = 0;
     s.deaths++;
     s.keys = [];
     out.push({ type: 'cue', id: 'focus-lost' });
@@ -49,7 +52,12 @@ export function applyFocusLoss(
     const r = focusLossStep(s.focusLossTime, dt);
     s.focusLossTime = r.time;
     if (r.over) {
-        s.mode = 'dead';
+        setActivity(s, {
+            mode: 'dead',
+            lossReason: 'focus',
+            impact: null,
+            focus: s.focus,
+        });
         out.push({ type: 'cue', id: 'focus-game-over' });
     }
 }

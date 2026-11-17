@@ -129,7 +129,6 @@ export function meetingVisit(visit = 1): PreviewScene {
     const game = createGame({ seed: 8 });
     game.startStage(2);
     const saved = parseState(game.serialize());
-    saved.mode = 'play';
     saved.ground = true;
     saved.p.x = STAGE_TWO.meeting - 110;
     game.restore(JSON.stringify(saved));
@@ -177,7 +176,6 @@ export function chairDispatch(): PreviewScene {
     const game = createGame({ seed: 8 });
     game.startStage(2);
     const saved = parseState(game.serialize());
-    saved.mode = 'play';
     saved.ground = true;
     saved.checkpoint = 1;
     saved.p.x = STAGE_TWO.checkpoints[1].x;
