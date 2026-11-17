@@ -1,4 +1,4 @@
-import { setPlayer } from '../../../state';
+import { setActivity, setPlayer } from '../../../state';
 import { applyFocusHit } from '../../../systems/focus/apply';
 import { STAGES } from '../../index';
 import { STAGE_TWO } from '../data';
@@ -46,8 +46,7 @@ export function applyLiftRide(
     if (r.lost) {
         s.building.corridor.lift = { kind: 'departed' };
         s.building.corridor.convoy = 'free';
-        s.mode = 'dead';
-        s.lossReason = 'lift';
+        setActivity(s, { mode: 'dead', lossReason: 'lift', impact: null });
         s.deaths++;
         s.keys = [];
         out.push({ type: 'cue', id: 'lift-game-over' });

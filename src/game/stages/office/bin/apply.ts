@@ -1,5 +1,5 @@
 import { BIN_REST } from './decide';
-import { setPlayer } from '../../../state';
+import { setActivity, setPlayer } from '../../../state';
 
 import type { CoreState } from '../../../state';
 import type { GameEvent } from '../../../types';
@@ -11,10 +11,9 @@ export function applyBinFall(s: CoreState, out: GameEvent[]): void {
     s.office.dirty = true;
     s.office.binFalls++;
     s.deaths++;
-    s.lossReason = 'bin';
     setPlayer(s, BIN_REST);
     s.keys = [];
-    s.mode = 'dead';
+    setActivity(s, { mode: 'dead', lossReason: 'bin', impact: null });
     out.push({ type: 'cue', id: 'bin-fall' });
     out.push({ type: 'cue', id: 'bin-comment' });
     out.push({ type: 'cue', id: 'bin-game-over' });

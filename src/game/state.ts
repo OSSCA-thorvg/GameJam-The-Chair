@@ -17,7 +17,6 @@ import type {
     GameEvent,
     Input,
     LossReason,
-    Mode,
     Person,
     Player,
     Snapshot,
@@ -44,11 +43,38 @@ export type ExtinguisherState = {
     direction: { x: number; y: number };
 };
 
-export type Attempt = {
+export type Activity = Readonly<
+    | {
+          mode: 'intro' | 'play' | 'pause' | 'won';
+          lossReason: null;
+          impact: null;
+      }
+    | {
+          mode: 'impact' | 'dead';
+          lossReason: 'head';
+          impact: Impact;
+      }
+    | {
+          mode: 'focuslost' | 'dead';
+          lossReason: 'focus';
+          impact: null;
+          focus: FocusState & { value: 0 };
+      }
+    | {
+          mode: 'dead';
+          lossReason: Exclude<LossReason, 'head' | 'focus'>;
+          impact: null;
+      }
+>;
+
+export function setActivity(state: Activity, next: Activity): void {
+    Object.assign(state, next);
+}
+
+export type Attempt = Activity & {
     rng: Rng;
     extinguisher: ExtinguisherState;
 
-    mode: Mode;
     /** Player body; this key is persisted in existing replays. */
     p: Player;
     keys: Input[];
@@ -64,10 +90,8 @@ export type Attempt = {
 
     people: Person[];
     history: Snapshot[];
-    impact: Impact | null;
 
     focus: FocusState;
-    lossReason: LossReason | null;
     focusLossTime: number;
 
     office: OfficeState;
@@ -98,7 +122,7 @@ function createProgress(
 export function createAttempt(
     progress: Progress,
     seed: Rng,
-    mode: Mode = 'play',
+    mode: 'intro' | 'play' = 'play',
 ): Attempt {
     const { stage, checkpoint } = progress;
     const rng = { ...seed };
