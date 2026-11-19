@@ -6,6 +6,7 @@ import {
     LOCALE_STORAGE_KEY,
     translate,
 } from './i18n';
+import { musicTrack } from './presentation/music';
 import { createEffects } from './render/effects';
 import { createRenderer } from './render/renderer';
 import { openingState } from './render/scene/opening/timeline';
@@ -13,6 +14,7 @@ import markup from './scene.html?raw';
 import { createFeedback } from './ui/feedback';
 import { createHud } from './ui/hud';
 import { bindInput } from './ui/input';
+import { createMusic } from './ui/music';
 import { createOpening } from './ui/opening';
 import { bindOrientation } from './ui/orientation';
 import { createPerfOverlay } from './ui/perf-overlay';
@@ -214,6 +216,10 @@ const player = createReplayPlayer(
     () => unbind.sync(),
 );
 const opening = createOpening(root, () => locale);
+const music = createMusic();
+if (startupSplashVisible) {
+    music.play('start', false);
+}
 const hintedInput = { left: 'left', right: 'right', spray: 'spray' } as const;
 const hintedGame: typeof game = {
     ...game,
@@ -269,6 +275,7 @@ function draw() {
     presentFrame();
 }
 let last: number | null = null;
+let musicLast: number | null = null;
 function presentFrame() {
     const { replay, state, events } = readPresentationFrame();
     try {
@@ -282,6 +289,7 @@ function presentFrame() {
         const visual = replay ? player.effects() : effects.snapshot();
         const cutscene = replay ? null : opening.frame();
         const cues = replay ? player.feedback() : feedback.snapshot();
+        music.play(musicTrack(state, !!cutscene), state.mode === 'pause');
         if (cutscene) {
             renderer?.draw(
                 openingState(state, cutscene),
@@ -336,11 +344,16 @@ function frame(ms: number) {
         unbind();
         unbindOrientation();
         opening.destroy();
+        music.destroy();
         player.destroy();
         renderer?.destroy();
         perf.destroy();
         return;
     }
+    music.advance(
+        musicLast === null ? 0 : Math.max(0, (ms - musicLast) / 1000),
+    );
+    musicLast = ms;
     if (startupSplashVisible) {
         last = null;
         requestAnimationFrame(frame);
