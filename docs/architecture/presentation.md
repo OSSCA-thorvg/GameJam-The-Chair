@@ -50,6 +50,10 @@ Canvas2D fallback은 기본 path, fill, stroke, gradient, blend를 그립니다.
 
 정적 DOM 문구는 `main.ts`의 `applyLocale()`이 `[data-i18n]`과 `[data-i18n-aria]`에 적용합니다. 새 문구는 `src/i18n.ts`에 영어와 한국어를 함께 추가합니다.
 
+## 배경음악
+
+`src/presentation/music.ts`의 `musicTrack`이 화면 상태로 곡을 고릅니다. 시작 화면과 오프닝은 `start`, 1·2 스테이지는 `stage1-2`, 3은 `stage3`, 4는 `stage4`, 5는 `stage5`, 궤도 문에 도착한 엔딩은 `ending`입니다. `src/ui/music.ts`는 곡을 반복 재생하고 1.2초 동안 크로스페이드하며, 일시정지 중에는 볼륨을 낮춥니다. 브라우저 자동재생 제한 때문에 첫 클릭이나 키 입력 뒤에 소리가 납니다. 음원은 모든 브라우저에서 재생되는 AAC `assets/bgm/*.m4a`(80 kbps)입니다.
+
 ## 모션 확인
 
 `src/preview-scenes.ts`의 등록 항목은 id, label, 지연 생성 함수 `create()`를 제공합니다. `preview/registration.ts`는 선택한 장면을 처음 한 번 만들고 캐시합니다. 생성된 각 `PreviewScene`은 시간에 따른 `{ state, effects }`를 반환합니다. 실제 코어를 기록하는 장면은 화면 한 프레임마다 120 Hz 틱 두 번을 실행해 60 Hz frame을 만듭니다. 직접 만든 장면도 같은 시간에 항상 같은 snapshot을 반환해야 합니다.
